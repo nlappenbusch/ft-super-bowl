@@ -1,0 +1,72 @@
+<!-- 
+  WordPress Integration Code
+  Kopieren Sie diesen Code in Ihre WordPress-Seite (Custom HTML Block)
+-->
+
+<div id="superbowl-embed-container" style="width: 100%; overflow: hidden;">
+  <iframe 
+    src="https://superbowl.faltintravel.com/embed" 
+    id="superbowl-iframe"
+    title="Super Bowl LXI 2027 Packages"
+    style="
+      width: 100%;
+      border: none;
+      min-height: 3000px;
+      display: block;
+      margin: 0;
+      padding: 0;
+    "
+    scrolling="no"
+    frameborder="0"
+  ></iframe>
+</div>
+
+<script>
+(function() {
+  'use strict';
+  
+  // Auto-Resize Funktion für perfekte Höhe
+  window.addEventListener('message', function(event) {
+    // Sicherheitscheck: Nur von eigener Domain
+    if (event.origin !== 'https://superbowl.faltintravel.com') {
+      return;
+    }
+    
+    if (event.data && event.data.frameHeight) {
+      var iframe = document.getElementById('superbowl-iframe');
+      if (iframe) {
+        iframe.style.height = event.data.frameHeight + 'px';
+      }
+    }
+  });
+  
+  // Smooth Scroll zu Ankern im iFrame
+  window.addEventListener('message', function(event) {
+    if (event.data && event.data.scrollTo) {
+      window.scrollTo({
+        top: event.data.scrollTo,
+        behavior: 'smooth'
+      });
+    }
+  });
+})();
+</script>
+
+<style>
+/* WordPress-Theme-Styles zurücksetzen */
+#superbowl-embed-container {
+  margin-left: calc(-50vw + 50%);
+  margin-right: calc(-50vw + 50%);
+  max-width: 100vw !important;
+}
+
+#superbowl-iframe {
+  width: 100% !important;
+}
+
+/* Falls WordPress Container zu eng ist */
+.page #superbowl-embed-container {
+  margin-left: calc(-50vw + 50%) !important;
+  margin-right: calc(-50vw + 50%) !important;
+}
+</style>

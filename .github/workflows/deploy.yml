@@ -1,0 +1,28 @@
+name: Deploy Super Bowl App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, Linux, X64, docker-prod-01]
+    
+    steps:
+      - name: Deploy to Production
+        run: |
+          echo "Starting deployment..."
+          /opt/super-bowl/deploy.sh
+          
+      - name: Deployment Status
+        if: success()
+        run: |
+          echo "✅ Deployment successful!"
+          echo "App is running on http://your-domain:8082"
+          
+      - name: Deployment Failed
+        if: failure()
+        run: |
+          echo "❌ Deployment failed!"
+          echo "Check container logs with: docker logs super-bowl-app"

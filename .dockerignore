@@ -1,0 +1,42 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Next.js
+.next
+out
+build
+
+# Database (wird via Volume gemountet)
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# Environment
+.env
+.env.local
+.env.production
+.env.development
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Misc
+README.md
+.DS_Store
+Thumbs.db
+
+# PDF samples
+*.pdf
+bilder-hotel/

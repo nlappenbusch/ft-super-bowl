@@ -24,3 +24,15 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* WordPress Embedding Styles */
+.wordpress-embedded {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: white !important;
+}
+
+.wordpress-embed {
+  display: block;
+  width: 100%;
+}

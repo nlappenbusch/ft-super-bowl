@@ -1,0 +1,273 @@
+import { NextResponse } from 'next/server';
+import { generateProductSchema } from '@/lib/schema';
+
+export async function GET() {
+  const packageData = {
+    id: 'dream_hollywood',
+    stars: 4,
+    nights: 4,
+    price: 8950,
+    singleSupplement: 1485,
+    title: 'Dream Hollywood, by Hyatt',
+    description: 'Boutique-Hotel im Herzen von Hollywood mit Rooftop-Pool und Blick auf das Hollywood Sign',
+    hotel: 'Dream Hollywood, by Hyatt',
+    popular: true,
+    availableSpots: 12, // Verfügbare Plätze (Social Proof)
+    rating: 4.8,
+    reviews: 156
+  };
+
+  // HTML für die interaktive Package Card
+  const html = `
+    <style>
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
+      
+      .superbowl-package-card {
+        animation: fadeIn 0.6s ease-out;
+      }
+      
+      .availability-badge {
+        animation: pulse 2s infinite;
+      }
+      
+      .price-update {
+        transition: all 0.3s ease;
+      }
+      
+      .room-option {
+        transition: all 0.2s ease;
+        cursor: pointer;
+      }
+      
+      .room-option:hover {
+        background: #f0f7ff !important;
+        border-color: #184a7b !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(24,74,123,0.15);
+      }
+      
+      .room-option.selected {
+        background: #e8f4fd !important;
+        border-color: #184a7b !important;
+        border-width: 2px !important;
+      }
+      
+      .cta-sticky {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+        display: none;
+        animation: fadeIn 0.3s ease-out;
+      }
+      
+      @media (max-width: 768px) {
+        .cta-sticky {
+          left: 20px;
+          right: 20px;
+        }
+      }
+    </style>
+    
+    <div class="superbowl-package-card" style="max-width: 800px; margin: 0 auto; border: 2px solid #184a7b; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: white; position: relative;">
+      ${packageData.popular ? `
+        <div style="background: linear-gradient(135deg, #f14624 0%, #d63d1f 100%); color: white; padding: 8px 16px; text-align: center; font-weight: bold; font-size: 14px;">
+          ⭐ Offizielles Hospitality-Package
+        </div>
+      ` : ''}
+      
+      <!-- Availability Badge (Social Proof) -->
+      <div class="availability-badge" style="position: absolute; top: 20px; right: 20px; background: rgba(241,70,36,0.95); color: white; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+        ⏰ Nur noch ${packageData.availableSpots} Plätze verfügbar
+      </div>
+      
+      <div style="padding: 32px;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+          <h3 style="font-size: 28px; font-weight: bold; color: #184a7b; margin: 0;">
+            ${packageData.title}
+          </h3>
+          <!-- Star Rating -->
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <span style="color: #fbbf24;">★★★★★</span>
+            <span style="font-size: 14px; color: #666; font-weight: 600;">${packageData.rating}/5</span>
+            <span style="font-size: 13px; color: #999;">(${packageData.reviews} Bewertungen)</span>
+          </div>
+        </div>
+        
+        <p style="color: #666; font-size: 16px; margin: 0 0 24px 0; line-height: 1.5;">
+          ${packageData.description}
+        </p>
+        
+        <!-- Room Type Selection (Interactive) -->
+        <div style="background: #f8f9fa; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
+          <div style="font-size: 16px; font-weight: 600; color: #333; margin-bottom: 16px;">
+            Wählen Sie Ihre Zimmerkategorie:
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px;">
+            <!-- Doppelzimmer Option -->
+            <div class="room-option selected" id="room-double" onclick="selectRoom('double')" 
+                 style="border: 2px solid #184a7b; border-radius: 8px; padding: 16px; background: #e8f4fd; cursor: pointer;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-weight: 600; color: #184a7b; font-size: 16px;">🛏️ Doppelzimmer</div>
+                  <div style="font-size: 13px; color: #666; margin-top: 4px;">${packageData.nights} Nächte</div>
+                </div>
+                <div style="font-size: 20px; font-weight: bold; color: #184a7b;">
+                  ${packageData.price.toLocaleString('de-CH')} €
+                </div>
+              </div>
+            </div>
+            
+            <!-- Einzelzimmer Option -->
+            <div class="room-option" id="room-single" onclick="selectRoom('single')" 
+                 style="border: 1px solid #d1d5db; border-radius: 8px; padding: 16px; background: white; cursor: pointer;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-weight: 600; color: #333; font-size: 16px;">🛏️ Einzelzimmer</div>
+                  <div style="font-size: 13px; color: #666; margin-top: 4px;">${packageData.nights} Nächte</div>
+                </div>
+                <div style="font-size: 20px; font-weight: bold; color: #184a7b;">
+                  ${(packageData.price + packageData.singleSupplement).toLocaleString('de-CH')} €
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Package Details -->
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+            <div>
+              <div style="font-size: 14px; color: #666; margin-bottom: 4px;">📅 Reisezeitraum:</div>
+              <div style="font-weight: 600; color: #333;">12.-16. Februar 2027</div>
+            </div>
+            <div>
+              <div style="font-size: 14px; color: #666; margin-bottom: 4px;">🏨 Übernachtungen:</div>
+              <div style="font-weight: 600; color: #333;">${packageData.nights}x im <span id="room-type-text">Doppelzimmer</span></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Price & CTA -->
+        <div style="border-top: 1px solid #e5e7eb; padding-top: 24px; margin-bottom: 24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div>
+              <div id="price-display" class="price-update" style="font-size: 36px; font-weight: bold; color: #184a7b;">
+                ${packageData.price.toLocaleString('de-CH')} €
+              </div>
+              <div style="font-size: 14px; color: #666;">pro Person im <span id="room-label">Doppelzimmer</span></div>
+            </div>
+            
+            <a id="booking-cta" href="/booking?package=${packageData.id}&room=double&price=${packageData.price}&nights=${packageData.nights}" 
+               style="display: inline-block; background: #f14624; color: white; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; transition: all 0.3s; box-shadow: 0 2px 4px rgba(241,70,36,0.2);"
+               onmouseover="this.style.background='#d63d1f'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(241,70,36,0.3)';"
+               onmouseout="this.style.background='#f14624'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(241,70,36,0.2)';">
+              Jetzt unverbindlich anfragen →
+            </a>
+          </div>
+        </div>
+        
+        <!-- Trust Elements -->
+        <div style="display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #666;">
+            <span style="color: #10b981;">✓</span> Sichere Buchung
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #666;">
+            <span style="color: #10b981;">✓</span> Reisegarantie
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #666;">
+            <span style="color: #10b981;">✓</span> Kostenlose Beratung
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #666;">
+            <span style="color: #10b981;">✓</span> Flexible Zahlung
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Sticky CTA (appears on scroll) -->
+    <div id="sticky-cta" class="cta-sticky">
+      <a id="sticky-booking-link" href="/booking?package=${packageData.id}&room=double&price=${packageData.price}&nights=${packageData.nights}"
+         style="display: block; background: #f14624; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); text-align: center;"
+         onmouseover="this.style.background='#d63d1f'"
+         onmouseout="this.style.background='#f14624'">
+        <span id="sticky-price">${packageData.price.toLocaleString('de-CH')} €</span> - Jetzt anfragen →
+      </a>
+    </div>
+    
+    <script>
+      // Room Selection Logic
+      let selectedRoom = 'double';
+      const priceDouble = ${packageData.price};
+      const priceSingle = ${packageData.price + packageData.singleSupplement};
+      const packageId = '${packageData.id}';
+      const nights = ${packageData.nights};
+      
+      function selectRoom(roomType) {
+        selectedRoom = roomType;
+        
+        // Update UI
+        document.getElementById('room-double').classList.toggle('selected', roomType === 'double');
+        document.getElementById('room-single').classList.toggle('selected', roomType === 'single');
+        
+        // Update price display
+        const price = roomType === 'double' ? priceDouble : priceSingle;
+        const priceDisplay = document.getElementById('price-display');
+        priceDisplay.textContent = price.toLocaleString('de-CH') + ' €';
+        
+        // Update room label
+        const roomLabel = roomType === 'double' ? 'Doppelzimmer' : 'Einzelzimmer';
+        document.getElementById('room-label').textContent = roomLabel;
+        document.getElementById('room-type-text').textContent = roomLabel;
+        
+        // Update CTA links with URL parameters
+        const bookingUrl = '/booking?package=' + packageId + '&room=' + roomType + '&price=' + price + '&nights=' + nights;
+        document.getElementById('booking-cta').href = bookingUrl;
+        document.getElementById('sticky-booking-link').href = bookingUrl;
+        document.getElementById('sticky-price').textContent = price.toLocaleString('de-CH') + ' €';
+        
+        // Animate price change
+        priceDisplay.style.transform = 'scale(1.1)';
+        setTimeout(() => {
+          priceDisplay.style.transform = 'scale(1)';
+        }, 200);
+      }
+      
+      // Sticky CTA on scroll
+      window.addEventListener('scroll', function() {
+        const stickyCta = document.getElementById('sticky-cta');
+        const card = document.querySelector('.superbowl-package-card');
+        
+        if (card) {
+          const cardRect = card.getBoundingClientRect();
+          const isCardVisible = cardRect.bottom > 0 && cardRect.top < window.innerHeight;
+          
+          // Show sticky CTA when card is out of view
+          stickyCta.style.display = !isCardVisible && window.scrollY > 300 ? 'block' : 'none';
+        }
+      });
+    </script>
+    
+    <!-- Schema.org JSON-LD -->
+    <script type="application/ld+json">
+      ${JSON.stringify(generateProductSchema())}
+    </script>
+  `;
+
+  // JSON-Antwort mit HTML und Daten
+  return NextResponse.json({
+    success: true,
+    data: packageData,
+    html: html,
+    schema: generateProductSchema()
+  });
+}

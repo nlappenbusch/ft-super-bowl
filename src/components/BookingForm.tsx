@@ -1,0 +1,616 @@
+﻿'use client';
+
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { Star, Hotel, Calendar, Users, ChevronDown, CheckCircle2, Phone, Mail, ArrowLeft, Bed, AlertCircle, UserCircle, UserCheck } from 'lucide-react';
+import Image from 'next/image';
+
+interface Traveler {
+  salutation: string;
+  firstName: string;
+  lastName: string;
+  birthDate: string;
+  passportNumber?: string;
+}
+
+interface BookingFormData {
+  packageId: string;
+  startDate: string;
+  doubleRooms: number;
+  singleRooms: number;
+  numberOfPersons: number;
+  travelers: Traveler[];
+  email: string;
+  phone: string;
+  message: string;
+  acceptPrivacy: boolean;
+  acceptTerms: boolean;
+}
+
+const selectedPackage = { 
+  id: 'dream_hollywood', 
+  stars: 4, 
+  nights: 4, 
+  price: 8950, 
+  title: 'Dream Hollywood, by Hyatt',
+  singleSurcharge: 1485
+};
+
+// Room configuration presets based on number of persons
+const roomPresets: Record<number, Array<{ label: string; doubleRooms: number; singleRooms: number }>> = {
+  1: [
+    { label: '1 × Einzelzimmer', doubleRooms: 0, singleRooms: 1 }
+  ],
+  2: [
+    { label: '1 × Doppelzimmer', doubleRooms: 1, singleRooms: 0 },
+    { label: '2 × Einzelzimmer', doubleRooms: 0, singleRooms: 2 }
+  ],
+  3: [
+    { label: '1 × Doppelzimmer + 1 × Einzelzimmer', doubleRooms: 1, singleRooms: 1 },
+    { label: '3 × Einzelzimmer', doubleRooms: 0, singleRooms: 3 }
+  ],
+  4: [
+    { label: '2 × Doppelzimmer', doubleRooms: 2, singleRooms: 0 },
+    { label: '1 × Doppelzimmer + 2 × Einzelzimmer', doubleRooms: 1, singleRooms: 2 },
+    { label: '4 × Einzelzimmer', doubleRooms: 0, singleRooms: 4 }
+  ],
+  5: [
+    { label: '1 × Doppelzimmer + 3 × Einzelzimmer', doubleRooms: 1, singleRooms: 3 },
+    { label: '2 × Doppelzimmer + 1 × Einzelzimmer', doubleRooms: 2, singleRooms: 1 },
+    { label: '5 × Einzelzimmer', doubleRooms: 0, singleRooms: 5 }
+  ],
+  6: [
+    { label: '3 × Doppelzimmer', doubleRooms: 3, singleRooms: 0 },
+    { label: '2 × Doppelzimmer + 2 × Einzelzimmer', doubleRooms: 2, singleRooms: 2 },
+    { label: '1 × Doppelzimmer + 4 × Einzelzimmer', doubleRooms: 1, singleRooms: 4 },
+    { label: '6 × Einzelzimmer', doubleRooms: 0, singleRooms: 6 }
+  ],
+  7: [
+    { label: '3 × Doppelzimmer + 1 × Einzelzimmer', doubleRooms: 3, singleRooms: 1 },
+    { label: '2 × Doppelzimmer + 3 × Einzelzimmer', doubleRooms: 2, singleRooms: 3 },
+    { label: '7 × Einzelzimmer', doubleRooms: 0, singleRooms: 7 }
+  ],
+  8: [
+    { label: '4 × Doppelzimmer', doubleRooms: 4, singleRooms: 0 },
+    { label: '3 × Doppelzimmer + 2 × Einzelzimmer', doubleRooms: 3, singleRooms: 2 },
+    { label: '2 × Doppelzimmer + 4 × Einzelzimmer', doubleRooms: 2, singleRooms: 4 },
+    { label: '8 × Einzelzimmer', doubleRooms: 0, singleRooms: 8 }
+  ],
+  9: [
+    { label: '4 × Doppelzimmer + 1 × Einzelzimmer', doubleRooms: 4, singleRooms: 1 },
+    { label: '3 × Doppelzimmer + 3 × Einzelzimmer', doubleRooms: 3, singleRooms: 3 },
+    { label: '9 × Einzelzimmer', doubleRooms: 0, singleRooms: 9 }
+  ],
+  10: [
+    { label: '5 × Doppelzimmer', doubleRooms: 5, singleRooms: 0 },
+    { label: '4 × Doppelzimmer + 2 × Einzelzimmer', doubleRooms: 4, singleRooms: 2 },
+    { label: '3 × Doppelzimmer + 4 × Einzelzimmer', doubleRooms: 3, singleRooms: 4 },
+    { label: '10 × Einzelzimmer', doubleRooms: 0, singleRooms: 10 }
+  ]
+};
+
+const faqItems = [
+  {
+    question: 'Sind meine Plätze nebeneinander?',
+    answer: 'Ja, bei Buchungen werden die Sitzplätze im gleichen Block reserviert.'
+  },
+  {
+    question: 'Wie kann ich bezahlen?',
+    answer: 'Zahlung per Überweisung auf unser Schweizer Bankkonto (CHF oder EUR möglich).'
+  },
+  {
+    question: 'Was ist das Hospitality-Package?',
+    answer: 'Das Package beinhaltet VIP-Eingang, offizielle Pregame-Party mit Catering & Getränken, Live-Entertainment und reservierte Sitzplätze im 500er Level.'
+  }
+];
+
+export default function BookingForm() {
+  const searchParams = useSearchParams();
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [numberOfPersons, setNumberOfPersons] = useState(2);
+  const [roomValidation, setRoomValidation] = useState({ valid: true, message: '' });
+  const [selectedPreset, setSelectedPreset] = useState<string>('0'); // Index of selected preset
+  const [isSubmitHovered, setIsSubmitHovered] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<BookingFormData>({
+    defaultValues: {
+      packageId: 'dream_hollywood',
+      startDate: '2027-02-12',
+      doubleRooms: 1,
+      singleRooms: 0,
+      numberOfPersons: 2,
+      travelers: Array(2).fill({ salutation: '', firstName: '', lastName: '', birthDate: '', passportNumber: '' })
+    }
+  });
+
+  const watchDoubleRooms = watch('doubleRooms');
+  const watchSingleRooms = watch('singleRooms');
+  const watchNumberOfPersons = watch('numberOfPersons');
+
+  // Initialize form from URL parameters (from Package Card)
+  useEffect(() => {
+    if (isInitialized) return;
+    
+    const roomParam = searchParams.get('room'); // 'double' or 'single'
+    const priceParam = searchParams.get('price');
+    const nightsParam = searchParams.get('nights');
+    const packageParam = searchParams.get('package');
+    const personsParam = searchParams.get('persons'); // NEW: number of persons
+
+    if ((roomParam || personsParam) && !isInitialized) {
+      const persons = personsParam ? parseInt(personsParam) : (roomParam === 'single' ? 1 : 2);
+      
+      if (roomParam === 'single') {
+        // Einzelzimmer selected
+        setValue('numberOfPersons', persons);
+        setValue('doubleRooms', 0);
+        setValue('singleRooms', persons);
+        setValue('travelers', Array(persons).fill({ salutation: '', firstName: '', lastName: '', birthDate: '', passportNumber: '' }));
+        setNumberOfPersons(persons);
+        setSelectedPreset('0');
+      } else if (roomParam === 'double') {
+        // Doppelzimmer selected
+        setValue('numberOfPersons', persons);
+        // Smart room allocation based on person count
+        const doubleRooms = Math.floor(persons / 2);
+        const singleRooms = persons % 2;
+        setValue('doubleRooms', doubleRooms);
+        setValue('singleRooms', singleRooms);
+        setValue('travelers', Array(persons).fill({ salutation: '', firstName: '', lastName: '', birthDate: '', passportNumber: '' }));
+        setNumberOfPersons(persons);
+        setSelectedPreset('0');
+      } else if (personsParam) {
+        // Only persons specified, use default room config
+        setValue('numberOfPersons', persons);
+        const doubleRooms = Math.floor(persons / 2);
+        const singleRooms = persons % 2;
+        setValue('doubleRooms', doubleRooms);
+        setValue('singleRooms', singleRooms);
+        setValue('travelers', Array(persons).fill({ salutation: '', firstName: '', lastName: '', birthDate: '', passportNumber: '' }));
+        setNumberOfPersons(persons);
+        setSelectedPreset('0');
+      }
+      setIsInitialized(true);
+    }
+  }, [searchParams, setValue, isInitialized]);
+
+  useEffect(() => {
+    const persons = Number(watchNumberOfPersons) || 2;
+    setNumberOfPersons(persons);
+    
+    // Auto-select first preset when person count changes
+    const presets = roomPresets[persons];
+    if (presets && presets.length > 0) {
+      setSelectedPreset('0');
+      setValue('doubleRooms', presets[0].doubleRooms);
+      setValue('singleRooms', presets[0].singleRooms);
+    }
+  }, [watchNumberOfPersons, setValue]);
+
+  // Handle preset selection
+  const handlePresetChange = (presetIndex: string) => {
+    setSelectedPreset(presetIndex);
+    const presets = roomPresets[numberOfPersons];
+    if (presets && presets[Number(presetIndex)]) {
+      const preset = presets[Number(presetIndex)];
+      setValue('doubleRooms', preset.doubleRooms);
+      setValue('singleRooms', preset.singleRooms);
+    }
+  };
+
+  // Validate room configuration
+  useEffect(() => {
+    const doubleRooms = Number(watchDoubleRooms) || 0;
+    const singleRooms = Number(watchSingleRooms) || 0;
+    const totalBeds = (doubleRooms * 2) + singleRooms;
+    const totalRooms = doubleRooms + singleRooms;
+
+    if (totalRooms === 0) {
+      setRoomValidation({ valid: false, message: 'Bitte mindestens 1 Zimmer auswählen' });
+    } else if (totalBeds < numberOfPersons) {
+      setRoomValidation({ 
+        valid: false, 
+        message: `⚠️ Nicht genug Betten! ${numberOfPersons} Personen benötigen ${totalBeds < numberOfPersons ? numberOfPersons - totalBeds : 0} weitere(s) Bett(en)` 
+      });
+    } else if (totalBeds > numberOfPersons) {
+      setRoomValidation({ 
+        valid: true, 
+        message: `ℹ️ ${totalBeds - numberOfPersons} freie(s) Bett(en)` 
+      });
+    } else {
+      setRoomValidation({ valid: true, message: '✓ Perfekte Aufteilung' });
+    }
+  }, [watchDoubleRooms, watchSingleRooms, numberOfPersons]);
+
+  const calculateTotal = () => {
+    const doubleRooms = Number(watchDoubleRooms) || 0;
+    const singleRooms = Number(watchSingleRooms) || 0;
+    
+    const doubleRoomCost = doubleRooms * 2 * selectedPackage.price;
+    const singleRoomCost = singleRooms * (selectedPackage.price + selectedPackage.singleSurcharge);
+    
+    return doubleRoomCost + singleRoomCost;
+  };
+
+  const onSubmit = async (data: BookingFormData) => {
+    if (!roomValidation.valid) {
+      alert('Bitte überprüfen Sie Ihre Zimmerkonfiguration!');
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          packageId: data.packageId,
+          packageTitle: selectedPackage.title,
+          startDate: data.startDate,
+          numberOfPersons: data.numberOfPersons,
+          doubleRooms: data.doubleRooms,
+          singleRooms: data.singleRooms,
+          travelers: data.travelers,
+          email: data.email,
+          phone: data.phone,
+          message: data.message,
+          totalPrice: calculateTotal()
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('✅ Vielen Dank für Ihre Buchungsanfrage! Wir werden uns in Kürze bei Ihnen melden.');
+        // Optionally redirect to thank you page
+        // window.location.href = '/danke';
+      } else {
+        alert('❌ Fehler beim Absenden: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Submission error:', error);
+      alert('❌ Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className='min-h-screen bg-gray-50'>
+      <header style={{ backgroundImage: 'linear-gradient(202deg, #184a7b 0%, #143047 100%)' }} className='text-white'>
+        <div className='container mx-auto px-4 py-4'>
+          <div className='flex items-center justify-between'>
+            <Link href='/' className='flex items-center gap-3 hover:opacity-80 transition'>
+              <Image src='/faltin-logo.svg' alt='Faltin Travel' width={120} height={40} />
+            </Link>
+            <div className='flex items-center gap-4'>
+              <Phone className='w-5 h-5' />
+              <span className='text-sm font-semibold'>+41 44 700 22 77</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className='container mx-auto px-4 py-8 max-w-6xl'>
+        <div className='grid lg:grid-cols-3 gap-8'>
+          <div className='lg:col-span-2'>
+            <div className='bg-white rounded-xl shadow-lg p-6 md:p-8'>
+              <h1 className='text-3xl font-bold text-gray-900 mb-2'>
+                Super Bowl LXI Buchung
+              </h1>
+              <p className='text-gray-600 mb-8'>
+                Bitte Formular ausfüllen - wir melden uns in Kürze
+              </p>
+
+              <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
+                <div className='bg-blue-50 p-4 rounded-lg'>
+                  <div className='flex items-center gap-2 text-blue-900'>
+                    <Calendar className='w-5 h-5' />
+                    <div>
+                      <div className='font-semibold'>Reisezeitraum (fix)</div>
+                      <div className='text-sm'>Fr. 12. Februar - Di. 16. Februar 2027 (4 Nächte)</div>
+                    </div>
+                  </div>
+                  <input type='hidden' {...register('startDate')} value='2027-02-12' />
+                  <input type='hidden' {...register('packageId')} value='dream_hollywood' />
+                </div>
+
+                <div>
+                  <label className='block text-sm font-semibold text-gray-700 mb-2'>
+                    Anzahl Reisende *
+                  </label>
+                  <div className='relative'>
+                    <Users className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5' />
+                    <select {...register('numberOfPersons', { required: true, min: 1 })} className='w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                        <option key={num} value={num}>{num} {num === 1 ? 'Person' : 'Personen'}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ backgroundImage: 'linear-gradient(135deg, #e8f2f9 0%, #d4e8f7 100%)', borderColor: '#184a7b' }} className='p-6 rounded-xl border-2'>
+                  <div className='flex items-center gap-2 mb-4'>
+                    <Bed className='w-5 h-5' style={{ color: '#184a7b' }} />
+                    <label className='text-lg font-bold text-gray-900'>Zimmeraufteilung *</label>
+                  </div>
+                  
+                  <p className='text-sm text-gray-600 mb-4'>Wählen Sie eine passende Zimmerkombination:</p>
+                  
+                  <div className='space-y-3 mb-4'>
+                    {roomPresets[numberOfPersons]?.map((preset, index) => {
+                      const totalPrice = (preset.doubleRooms * 2 * selectedPackage.price) + 
+                                        (preset.singleRooms * (selectedPackage.price + selectedPackage.singleSurcharge));
+                      const isSelected = selectedPreset === String(index);
+                      
+                      return (
+                        <label
+                          key={index}
+                          style={isSelected ? { borderColor: '#184a7b', backgroundColor: '#e8f2f9' } : {}}
+                          className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                            isSelected 
+                              ? 'shadow-md' 
+                              : 'border-gray-300 bg-white hover:shadow-sm'
+                          }`}
+                          onMouseEnter={(e) => !isSelected && (e.currentTarget.style.borderColor = '#184a7b')}
+                          onMouseLeave={(e) => !isSelected && (e.currentTarget.style.borderColor = '')}
+                          onClick={() => handlePresetChange(String(index))}
+                        >
+                          <div className='flex items-start gap-3 flex-1'>
+                            <input
+                              type='radio'
+                              name='roomPreset'
+                              value={index}
+                              checked={isSelected}
+                              onChange={() => handlePresetChange(String(index))}
+                              className='mt-1 w-4 h-4 text-blue-600'
+                            />
+                            <div className='flex-1'>
+                              <div className='font-semibold text-gray-900 mb-1'>{preset.label}</div>
+                              <div className='flex flex-wrap gap-3 text-xs text-gray-600'>
+                                {preset.doubleRooms > 0 && (
+                                  <div className='flex items-center gap-1'>
+                                    <Bed className='w-3.5 h-3.5' />
+                                    <span>{preset.doubleRooms} DZ × {selectedPackage.price.toLocaleString('de-DE')} € × 2</span>
+                                  </div>
+                                )}
+                                {preset.singleRooms > 0 && (
+                                  <div className='flex items-center gap-1'>
+                                    <Bed className='w-3.5 h-3.5' />
+                                    <span>{preset.singleRooms} EZ × {(selectedPackage.price + selectedPackage.singleSurcharge).toLocaleString('de-DE')} €</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className='text-right ml-4'>
+                            <div className='font-bold text-lg' style={{ color: '#184a7b' }}>{totalPrice.toLocaleString('de-DE')} €</div>
+                            <div className='text-xs text-gray-500'>Gesamt</div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+
+                  {/* Hidden inputs to maintain form state */}
+                  <input type='hidden' {...register('doubleRooms')} />
+                  <input type='hidden' {...register('singleRooms')} />
+
+                  <div className={`p-4 rounded-lg border-2 ${roomValidation.valid ? 'bg-green-50 border-green-300' : 'bg-amber-50 border-amber-300'}`}>
+                    <div className='flex items-start gap-2'>
+                      <AlertCircle className={`w-5 h-5 mt-0.5 shrink-0 ${roomValidation.valid ? 'text-green-600' : 'text-amber-600'}`} />
+                      <div className='flex-1'>
+                        <p className={`text-sm font-semibold ${roomValidation.valid ? 'text-green-900' : 'text-amber-900'}`}>
+                          {roomValidation.message}
+                        </p>
+                        <p className='text-xs text-gray-600 mt-1'>
+                          Gesamt: {Number(watchDoubleRooms) || 0} DZ + {Number(watchSingleRooms) || 0} EZ = {((Number(watchDoubleRooms) || 0) * 2) + (Number(watchSingleRooms) || 0)} Betten für {numberOfPersons} {numberOfPersons === 1 ? 'Person' : 'Personen'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {Array.from({ length: numberOfPersons }).map((_, index) => (
+                  <div key={index} className='p-6 bg-gray-50 rounded-lg space-y-4'>
+                    <div className='flex items-center gap-2 mb-2'>
+                      {index === 0 ? (
+                        <>
+                          <UserCheck className='w-5 h-5' style={{ color: '#184a7b' }} />
+                          <h4 className='font-semibold text-gray-900'>Hauptbucher</h4>
+                        </>
+                      ) : (
+                        <>
+                          <UserCircle className='w-5 h-5 text-gray-600' />
+                          <h4 className='font-semibold text-gray-900'>Reisende {index + 1}</h4>
+                        </>
+                      )}
+                    </div>
+                    <div>
+                      <label className='block text-sm font-semibold text-gray-700 mb-2'>Anrede *</label>
+                      <select {...register(`travelers.${index}.salutation`, { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white'>
+                        <option value=''>Bitte wählen</option>
+                        <option value='herr'>Herr</option>
+                        <option value='frau'>Frau</option>
+                        <option value='divers'>Divers</option>
+                      </select>
+                    </div>
+                    <div className='grid md:grid-cols-2 gap-4'>
+                      <div>
+                        <label className='block text-sm font-semibold text-gray-700 mb-2'>Vorname *</label>
+                        <input type='text' {...register(`travelers.${index}.firstName`, { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white' placeholder='Wie im Reisepass' />
+                      </div>
+                      <div>
+                        <label className='block text-sm font-semibold text-gray-700 mb-2'>Nachname *</label>
+                        <input type='text' {...register(`travelers.${index}.lastName`, { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white' placeholder='Wie im Reisepass' />
+                      </div>
+                    </div>
+                    <div className='grid md:grid-cols-2 gap-4'>
+                      <div>
+                        <label className='block text-sm font-semibold text-gray-700 mb-2'>Geburtsdatum *</label>
+                        <input type='date' {...register(`travelers.${index}.birthDate`, { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white' />
+                      </div>
+                      <div>
+                        <label className='block text-sm font-semibold text-gray-700 mb-2'>Passnummer (optional)</label>
+                        <input type='text' {...register(`travelers.${index}.passportNumber`)} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white' placeholder='Falls vorhanden' />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                <div className='border-t pt-6 space-y-4'>
+                  <h3 className='text-xl font-bold text-gray-900'>Kontaktdaten</h3>
+                  <div>
+                    <label className='block text-sm font-semibold text-gray-700 mb-2'>E-Mail *</label>
+                    <div className='relative'>
+                      <Mail className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5' />
+                      <input type='email' {...register('email', { required: true, pattern: /^\S+@\S+$/i })} className='w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg' />
+                    </div>
+                    {errors.email && <span className='text-red-500 text-sm'>Gültige E-Mail erforderlich</span>}
+                  </div>
+                  <div>
+                    <label className='block text-sm font-semibold text-gray-700 mb-2'>Telefon *</label>
+                    <div className='relative'>
+                      <Phone className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5' />
+                      <input type='tel' {...register('phone', { required: true })} className='w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg' />
+                    </div>
+                    {errors.phone && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
+                  </div>
+                  <div>
+                    <label className='block text-sm font-semibold text-gray-700 mb-2'>Nachricht (optional)</label>
+                    <textarea {...register('message')} rows={4} className='w-full px-4 py-3 border border-gray-300 rounded-lg' placeholder='Besondere Wünsche...' />
+                  </div>
+                  
+                  <div className='space-y-3 pt-2'>
+                    <div className='flex items-start gap-3'>
+                      <input type='checkbox' {...register('acceptTerms', { required: true })} style={{ accentColor: '#184a7b' }} className='mt-1 w-4 h-4 border-gray-300 rounded' />
+                      <label className='text-sm text-gray-700'>
+                        Ich habe die <Link href='/agb' style={{ color: '#184a7b' }} className='hover:underline font-semibold'>Allgemeinen Geschäftsbedingungen (AGB)</Link> gelesen und akzeptiere diese. *
+                      </label>
+                    </div>
+                    {errors.acceptTerms && <span className='text-red-500 text-sm block ml-7'>Pflichtfeld</span>}
+                    
+                    <div className='flex items-start gap-3'>
+                      <input type='checkbox' {...register('acceptPrivacy', { required: true })} style={{ accentColor: '#184a7b' }} className='mt-1 w-4 h-4 border-gray-300 rounded' />
+                      <label className='text-sm text-gray-700'>
+                        Ich habe die <Link href='/datenschutz' style={{ color: '#184a7b' }} className='hover:underline font-semibold'>Datenschutzerklärung</Link> gelesen und akzeptiere diese. *
+                      </label>
+                    </div>
+                    {errors.acceptPrivacy && <span className='text-red-500 text-sm block ml-7'>Pflichtfeld</span>}
+                  </div>
+                </div>
+
+                <button 
+                  type='submit' 
+                  style={{ 
+                    backgroundColor: isSubmitHovered ? '#d63d1f' : '#f14624',
+                    transform: isSubmitHovered ? 'translateY(-2px)' : 'translateY(0)',
+                    boxShadow: isSubmitHovered ? '0 10px 25px rgba(241, 70, 36, 0.3)' : 'none',
+                    transition: 'all 0.3s'
+                  }}
+                  onMouseEnter={() => setIsSubmitHovered(true)}
+                  onMouseLeave={() => setIsSubmitHovered(false)}
+                  className='w-full text-white font-bold py-4 px-6 rounded-lg text-lg shadow-lg'
+                >
+                  Unverbindliche Anfrage absenden
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div className='lg:col-span-1'>
+            <div className='bg-white rounded-xl shadow-lg p-6 mb-6 sticky top-4'>
+              <h3 className='text-xl font-bold text-gray-900 mb-4'>Ihre Auswahl</h3>
+              <div className='space-y-4 mb-6'>
+                <div className='flex items-center justify-between pb-3 border-b'>
+                  <div>
+                    <div className='flex items-center gap-2 mb-1'>
+                      <Hotel className='w-4 h-4' style={{ color: '#184a7b' }} />
+                      <span className='font-semibold text-gray-900'>{selectedPackage.title}</span>
+                    </div>
+                    <div className='flex items-center gap-1'>
+                      {[...Array(selectedPackage.stars)].map((_, i) => (
+                        <Star key={i} className='w-3 h-3 fill-yellow-400 text-yellow-400' />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className='space-y-2 text-sm'>
+                  <div className='flex justify-between'>
+                    <span className='text-gray-600'>Anzahl Personen:</span>
+                    <span className='font-semibold'>{numberOfPersons}</span>
+                  </div>
+                  <div className='flex justify-between'>
+                    <span className='text-gray-600'>Doppelzimmer:</span>
+                    <span className='font-semibold'>{Number(watchDoubleRooms) || 0} DZ</span>
+                  </div>
+                  <div className='flex justify-between'>
+                    <span className='text-gray-600'>Einzelzimmer:</span>
+                    <span className='font-semibold'>{Number(watchSingleRooms) || 0} EZ</span>
+                  </div>
+                  <div className='flex justify-between pt-2 border-t'>
+                    <span className='text-gray-600'>Gesamt Zimmer:</span>
+                    <span className='font-semibold'>{(Number(watchDoubleRooms) || 0) + (Number(watchSingleRooms) || 0)}</span>
+                  </div>
+                </div>
+                <div className='pt-3 border-t'>
+                  <div className='space-y-1 text-xs text-gray-600 mb-3'>
+                    {(Number(watchDoubleRooms) || 0) > 0 && (
+                      <div className='flex justify-between'>
+                        <span>{Number(watchDoubleRooms)} DZ × 2 × {selectedPackage.price.toLocaleString('de-DE')} €</span>
+                        <span className='font-semibold'>{((Number(watchDoubleRooms) || 0) * 2 * selectedPackage.price).toLocaleString('de-DE')} €</span>
+                      </div>
+                    )}
+                    {(Number(watchSingleRooms) || 0) > 0 && (
+                      <div className='flex justify-between'>
+                        <span>{Number(watchSingleRooms)} EZ × {(selectedPackage.price + selectedPackage.singleSurcharge).toLocaleString('de-DE')} €</span>
+                        <span className='font-semibold'>{((Number(watchSingleRooms) || 0) * (selectedPackage.price + selectedPackage.singleSurcharge)).toLocaleString('de-DE')} €</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className='flex justify-between items-center'>
+                    <span className='text-lg font-bold text-gray-900'>Gesamt:</span>
+                    <span className='text-2xl font-bold' style={{ color: '#184a7b' }}>{calculateTotal().toLocaleString('de-DE')} €</span>
+                  </div>
+                  <p className='text-xs text-gray-500 mt-1'>
+                    * {(Number(watchDoubleRooms) || 0) + (Number(watchSingleRooms) || 0)} {((Number(watchDoubleRooms) || 0) + (Number(watchSingleRooms) || 0)) === 1 ? 'Zimmer' : 'Zimmer'}, {numberOfPersons} {numberOfPersons === 1 ? 'Person' : 'Personen'}
+                  </p>
+                </div>
+              </div>
+              <div style={{ backgroundColor: '#e8f2f9' }} className='rounded-lg p-4'>
+                <div className='flex items-start gap-2'>
+                  <CheckCircle2 className='w-5 h-5 shrink-0 mt-0.5' style={{ color: '#184a7b' }} />
+                  <div className='text-sm text-gray-700'>
+                    <p className='font-semibold mb-1'>Inklusive:</p>
+                    <ul className='space-y-1 text-xs'>
+                      <li> Hospitality Super Bowl Ticket</li>
+                      <li> 4 Hotelübernachtungen</li>
+                      <li> Pregame-Party mit Catering</li>
+                      <li> Schweizer Reisegarantie</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* eKomi Trust Badge */}
+              <div className='mt-6 bg-white rounded-lg p-4 shadow-sm'>
+                <p className='text-xs text-gray-600 text-center mb-3 font-semibold'>Vertrauen Sie auf Faltin Travel</p>
+                <div id="widget-container" className="ekomi-widget-container ekomi-widget-sf11936169930865af963"></div>
+                <a href="https://www.ekomi.de/bewertungen-faltintravelcom.html" target="_blank" rel="noopener noreferrer">
+                  <img alt="faltintravel.com Reviews with ekomi.de" src="https://smart-widget-assets.ekomiapps.de/resources/ekomi_logo.png" style={{ display: 'none' }}/>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

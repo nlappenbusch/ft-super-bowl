@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WordPress Preview - Super Bowl 2027</title>
+    <style>
+        /* Simuliert typisches WordPress-Theme */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        
+        /* WordPress Header (Simulation) */
+        .wp-header {
+            background: linear-gradient(202deg, #184a7b 0%, #143047 100%);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .wp-header .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .wp-header .logo {
+            font-size: 24px;
+            font-weight: bold;
+            text-decoration: none;
+            color: white;
+        }
+        
+        .wp-header nav a {
+            color: white;
+            text-decoration: none;
+            margin-left: 30px;
+            font-size: 14px;
+            transition: opacity 0.3s;
+        }
+        
+        .wp-header nav a:hover {
+            opacity: 0.8;
+        }
+        
+        /* WordPress Content Area */
+        .wp-content {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .wp-content-inner {
+            padding: 40px;
+        }
+        
+        /* WordPress Standard Styles */
+        .wp-content h1 {
+            font-size: 36px;
+            color: #184a7b;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #f14624;
+            padding-bottom: 15px;
+        }
+        
+        .wp-content h2 {
+            font-size: 28px;
+            color: #184a7b;
+            margin: 40px 0 20px;
+        }
+        
+        .wp-content p {
+            margin-bottom: 20px;
+            font-size: 16px;
+            line-height: 1.8;
+        }
+        
+        /* WordPress Footer */
+        .wp-footer {
+            background: #2c3e50;
+            color: white;
+            padding: 40px 0;
+            margin-top: 60px;
+        }
+        
+        .wp-footer .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            text-align: center;
+        }
+        
+        /* Loading Spinner */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #184a7b;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Breadcrumb */
+        .breadcrumb {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .breadcrumb a {
+            color: #184a7b;
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Section Spacing */
+        .shortcode-section {
+            margin: 40px 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- WordPress Header (Simulation) -->
+    <header class="wp-header">
+        <div class="container">
+            <a href="/" class="logo">🎿 Faltin Travel</a>
+            <nav>
+                <a href="/">Home</a>
+                <a href="/sportevents">Sportevents</a>
+                <a href="/kulturevents">Kulturevents</a>
+                <a href="/ueber-uns">Über uns</a>
+                <a href="/kontakt">Kontakt</a>
+            </nav>
+        </div>
+    </header>
+    
+    <!-- WordPress Content Area -->
+    <main class="wp-content">
+        <div class="wp-content-inner">
+            <!-- Breadcrumb -->
+            <div class="breadcrumb">
+                <a href="/">Home</a> / <a href="/sportevents">Sportevents</a> / Super Bowl 2027
+            </div>
+            
+            <!-- WordPress Page Title -->
+            <h1>Super Bowl LXI 2027 - Offizielles Hospitality-Package</h1>
+            
+            <!-- WordPress Content (würde ein Editor schreiben) -->
+            <p>
+                Erleben Sie am <strong>7. Februar 2027</strong> das größte Sportevent der Welt 
+                live im legendären <strong>SoFi Stadium</strong> in Los Angeles. Unser exklusives 
+                Hospitality-Package bietet Ihnen das perfekte Rundum-Sorglos-Paket für ein 
+                unvergessliches Super Bowl Erlebnis.
+            </p>
+            
+            <p>
+                Als offizieller Partner bieten wir Ihnen Premium-Tickets kombiniert mit 
+                erstklassigen Hotels und VIP-Services. Genießen Sie exklusiven Zugang zur 
+                Pregame-Party, Premium-Catering und Live-Entertainment.
+            </p>
+            
+            <!-- SHORTCODE 1: Package Card -->
+            <div class="shortcode-section">
+                <h2>Unser Package-Angebot</h2>
+                <div id="shortcode-package" class="loading">
+                    <div class="spinner"></div>
+                    <p>Package wird geladen...</p>
+                </div>
+            </div>
+            
+            <!-- WordPress Content zwischen Shortcodes -->
+            <h2>Was macht unser Package besonders?</h2>
+            <p>
+                Bei Faltin Travel profitieren Sie von über 15 Jahren Erfahrung in der 
+                Organisation von Sportreisen zu den größten Events weltweit. Alle unsere 
+                Packages sind durch die <strong>Schweizer Reisegarantie</strong> abgesichert.
+            </p>
+            
+            <ul style="margin: 20px 0 20px 40px; line-height: 2;">
+                <li>Persönliche Betreuung vor, während und nach der Reise</li>
+                <li>Langjährige Partnerschaften mit Premium-Hotels</li>
+                <li>Offizielle NFL-Hospitality-Tickets</li>
+                <li>Deutschsprachiger Service vor Ort</li>
+                <li>Flexible Zahlungskonditionen</li>
+            </ul>
+            
+            <!-- SHORTCODE 2: FAQs -->
+            <div class="shortcode-section">
+                <div id="shortcode-faqs" class="loading">
+                    <div class="spinner"></div>
+                    <p>FAQs werden geladen...</p>
+                </div>
+            </div>
+            
+            <!-- WordPress Content am Ende -->
+            <h2>Jetzt buchen und Plätze sichern!</h2>
+            <p>
+                Die Verfügbarkeit ist begrenzt. Kontaktieren Sie uns noch heute für ein 
+                unverbindliches Angebot oder buchen Sie direkt online.
+            </p>
+            
+            <div style="text-align: center; margin: 40px 0;">
+                <a href="tel:+41447002277" style="display: inline-block; background: #184a7b; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 0 10px; font-weight: bold;">
+                    📞 +41 44 700 22 77
+                </a>
+                <a href="mailto:info@faltintravel.com" style="display: inline-block; background: #f14624; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 0 10px; font-weight: bold;">
+                    ✉️ E-Mail senden
+                </a>
+            </div>
+        </div>
+    </main>
+    
+    <!-- WordPress Footer -->
+    <footer class="wp-footer">
+        <div class="container">
+            <p>&copy; 2027 Faltin Travel - Ihr Spezialist für Sportreisen</p>
+            <p style="margin-top: 10px; font-size: 14px;">
+                <a href="/agb" style="color: #ccc; text-decoration: none; margin: 0 10px;">AGB</a> |
+                <a href="/datenschutz" style="color: #ccc; text-decoration: none; margin: 0 10px;">Datenschutz</a> |
+                <a href="/impressum" style="color: #ccc; text-decoration: none; margin: 0 10px;">Impressum</a>
+            </p>
+        </div>
+    </footer>
+    
+    <!-- Shortcode-Simulation: Lädt die API Routes -->
+    <script>
+        // Simuliert WordPress Shortcode [superbowl_package]
+        fetch('http://localhost:3000/api/package')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.html) {
+                    document.getElementById('shortcode-package').innerHTML = data.html;
+                }
+            })
+            .catch(error => {
+                console.error('Fehler beim Laden des Packages:', error);
+                document.getElementById('shortcode-package').innerHTML = 
+                    '<div style="padding: 20px; background: #fee; border: 1px solid #fcc; border-radius: 8px; color: #c00;">' +
+                    '⚠️ Fehler: Stellen Sie sicher, dass der Next.js Dev-Server läuft (npm run dev)' +
+                    '</div>';
+            });
+        
+        // Simuliert WordPress Shortcode [superbowl_faqs]
+        fetch('http://localhost:3000/api/faqs')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.html) {
+                    document.getElementById('shortcode-faqs').innerHTML = data.html;
+                }
+            })
+            .catch(error => {
+                console.error('Fehler beim Laden der FAQs:', error);
+                document.getElementById('shortcode-faqs').innerHTML = 
+                    '<div style="padding: 20px; background: #fee; border: 1px solid #fcc; border-radius: 8px; color: #c00;">' +
+                    '⚠️ Fehler: Stellen Sie sicher, dass der Next.js Dev-Server läuft (npm run dev)' +
+                    '</div>';
+            });
+    </script>
+</body>
+</html>
