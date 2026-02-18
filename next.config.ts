@@ -46,8 +46,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Access-Control-Allow-Origin',
-            value: '*' // Erlaubt alle Origins (WordPress kann von überall laden)
-            // Oder spezifisch: value: 'https://faltintravel.com'
+            value: 'https://faltintravel.com' // Nur WordPress erlaubt
           },
           {
             key: 'Access-Control-Allow-Methods',
