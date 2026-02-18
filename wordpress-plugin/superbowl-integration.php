@@ -49,7 +49,20 @@ function superbowl_package_shortcode($atts) {
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.html) {
-                    document.getElementById('<?php echo esc_js($unique_id); ?>').innerHTML = data.html;
+                    var container = document.getElementById('<?php echo esc_js($unique_id); ?>');
+                    container.innerHTML = data.html;
+                    
+                    // Script-Tags extrahieren und ausführen
+                    var scripts = container.querySelectorAll('script');
+                    scripts.forEach(function(script) {
+                        var newScript = document.createElement('script');
+                        if (script.src) {
+                            newScript.src = script.src;
+                        } else {
+                            newScript.textContent = script.textContent;
+                        }
+                        document.body.appendChild(newScript);
+                    });
                 }
             })
             .catch(error => {
