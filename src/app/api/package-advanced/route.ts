@@ -4,6 +4,7 @@ import { generateProductSchema } from '@/lib/schema';
 export async function GET() {
   const packageData = {
     id: 'dream_hollywood',
+    packageName: 'Ticket- & Hotel-Package',
     stars: 4,
     nights: 4,
     price: 8950,
@@ -14,10 +15,17 @@ export async function GET() {
     popular: true,
     availableSpots: 12,
     rating: 4.8,
-    reviews: 156
+    reviews: 156,
+    includes: [
+      { type: 'ticket', name: 'Super Bowl LXI Premium Ticket', category: '500er Level (Lower Bowl)', status: 'OK', icon: '🎟️', description: 'Offizielles NFL Premium-Ticket mit VIP-Zugang' },
+      { type: 'hotel', name: 'Dream Hollywood, by Hyatt', category: '4-Sterne Superior', status: 'OK', icon: '🏨', description: 'Boutique-Hotel mit Rooftop-Pool und Hollywood Sign Blick' },
+      { type: 'transfer', name: 'Flughafen-Hotel-Stadium Transfers', category: 'Hin- und Rückfahrt', status: 'OK', icon: '🚐', description: 'Komfortable Shuttles zu allen wichtigen Locations' },
+      { type: 'hospitality', name: 'VIP Pregame-Party', category: 'Inkl. Catering & Getränke', status: 'OK', icon: '🍾', description: 'Exklusiver Zugang zur offiziellen Pregame-Party' }
+    ],
+    extensionNights: 'Verlängerungsnächte auf Anfrage gegen Aufpreis buchbar'
   };
 
-  // HTML für die Advanced Package Card mit Personen-Auswahl
+  // HTML für die interaktive Package Card
   const html = `
     <style>
       @keyframes fadeIn {
@@ -30,7 +38,7 @@ export async function GET() {
         50% { transform: scale(1.05); }
       }
       
-      .superbowl-package-advanced {
+      .superbowl-package-card {
         animation: fadeIn 0.6s ease-out;
       }
       
@@ -38,109 +46,139 @@ export async function GET() {
         animation: pulse 2s infinite;
       }
       
-      .person-control {
-        display: inline-flex;
-        align-items: center;
-        gap: 16px;
-        background: white;
-        padding: 12px 20px;
-        border-radius: 12px;
-        border: 2px solid #0ea5e9;
-      }
-      
-      .person-btn {
-        width: 36px;
-        height: 36px;
-        border-radius: 8px;
-        border: 2px solid #0ea5e9;
-        background: white;
-        color: #0ea5e9;
-        font-size: 20px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      
-      .person-btn:hover:not(:disabled) {
-        background: #0ea5e9;
-        color: white;
-        transform: scale(1.1);
-      }
-      
-      .person-btn:disabled {
-        opacity: 0.3;
-        cursor: not-allowed;
-      }
-      
-      .person-count {
-        font-size: 18px;
-        font-weight: bold;
-        color: #0ea5e9;
-        min-width: 80px;
-        text-align: center;
-      }
-      
-      .price-highlight {
+      .price-update {
         transition: all 0.3s ease;
       }
       
+      .room-option {
+        transition: all 0.2s ease;
+        cursor: pointer;
+      }
+      
+      .room-option:hover {
+        background: #f0f7ff !important;
+        border-color: #184a7b !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(24,74,123,0.15);
+      }
+      
+      .room-option.selected {
+        background: #e8f4fd !important;
+        border-color: #184a7b !important;
+        border-width: 2px !important;
+      }
+      
+      .sb-pkg {
+        animation: fadeIn 0.6s ease-out;
+      }
+      
+      .sb-badge {
+        animation: pulse 2s infinite;
+      }
+      
+      .cta-sticky {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+        display: none;
+        animation: fadeIn 0.3s ease-out;
+      }
+      
       @media (max-width: 768px) {
-        .person-control {
-          width: 100%;
-          justify-content: center;
+        .cta-sticky {
+          left: 20px;
+          right: 20px;
         }
       }
     </style>
     
-    <div class="superbowl-package-advanced" style="max-width: 800px; margin: 0 auto; border: 2px solid #184a7b; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: white; position: relative;">
-      ${packageData.popular ? `
-        <div style="background: linear-gradient(135deg, #f14624 0%, #d63d1f 100%); color: white; padding: 8px 16px; text-align: center; font-weight: bold; font-size: 14px;">
-          ⭐ Offizielles Hospitality-Package
-        </div>
-      ` : ''}
+    <div class="superbowl-package-card" style="max-width: 900px; margin: 0 auto; border: 2px solid #184a7b; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: white; position: relative;">
+      <!-- PHASE 1: Klare Package-Kommunikation -->
+      <div style="background: linear-gradient(135deg, #f14624 0%, #d63d1f 100%); color: white; padding: 14px 24px; text-align: center;">
+        <div style="font-weight: bold; font-size: 17px; margin-bottom: 4px;">⭐ ${packageData.packageName}</div>
+        <div style="font-size: 13px; opacity: 0.95;">Event-Ticket + Hotel + Transfers + VIP-Zugang</div>
+      </div>
       
       <!-- Availability Badge -->
-      <div class="availability-badge" style="position: absolute; top: 20px; right: 20px; background: rgba(241,70,36,0.95); color: white; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10;">
+      <div class="availability-badge" style="position: absolute; top: 70px; right: 20px; background: rgba(241,70,36,0.95); color: white; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10;">
         ⏰ Nur noch ${packageData.availableSpots} Plätze verfügbar
       </div>
       
       <div style="padding: 32px;">
-        <!-- Title & Rating -->
-        <div style="margin-bottom: 12px;">
+        
+        <div style="margin-bottom: 24px;">
           <h3 style="font-size: 28px; font-weight: bold; color: #184a7b; margin: 0 0 8px 0;">
             ${packageData.title}
           </h3>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="color: #fbbf24;">★★★★★</span>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="color: #fbbf24; font-size: 16px;">★★★★★</span>
             <span style="font-size: 14px; color: #666; font-weight: 600;">${packageData.rating}/5</span>
             <span style="font-size: 13px; color: #999;">(${packageData.reviews} Bewertungen)</span>
           </div>
         </div>
         
-        <p style="color: #666; font-size: 16px; margin: 0 0 24px 0; line-height: 1.5;">
-          ${packageData.description}
-        </p>
-        
-        <!-- Person Count Selection -->
-        <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 24px; border-radius: 12px; margin-bottom: 24px; border: 2px solid #0ea5e9; box-shadow: 0 2px 8px rgba(14,165,233,0.15);">
-          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <div style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); display: flex; align-items: center; justify-content: center; font-size: 24px;">
-                👥
+        <!-- PHASE 1: Leistungsaufschlüsselung -->
+        <div style="background: #f8f9fa; border-left: 4px solid #184a7b; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
+          <div style="font-weight: 700; font-size: 17px; color: #184a7b; margin-bottom: 18px; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 24px;">📦</span>
+            <span>Vollständige Leistungsaufschlüsselung</span>
+          </div>
+          
+          <div style="display: grid; gap: 14px;">
+            ${packageData.includes.map(item => `
+              <div style="display: flex; align-items: start; gap: 14px; padding: 14px; background: white; border-radius: 8px; border: 1px solid #e5e7eb; transition: all 0.2s;" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
+                <div style="font-size: 28px; flex-shrink: 0; line-height: 1;">${item.icon}</div>
+                <div style="flex: 1;">
+                  <div style="font-weight: 600; color: #1f2937; font-size: 15px; margin-bottom: 4px;">${item.name}</div>
+                  <div style="font-size: 13px; color: #6b7280; margin-bottom: 2px;">${item.category}</div>
+                  <div style="font-size: 12px; color: #9ca3af; font-style: italic;">${item.description}</div>
+                </div>
+                <span style="background: ${item.status === 'OK' ? '#dcfce7' : '#fef3c7'}; color: ${item.status === 'OK' ? '#15803d' : '#92400e'}; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;">${item.status}</span>
               </div>
-              <div>
-                <div style="font-weight: 600; color: #0369a1; font-size: 14px; margin-bottom: 4px;">Wählen Sie die</div>
-                <div style="font-weight: 700; color: #0369a1; font-size: 16px;">Anzahl Reisende</div>
+            `).join('')}
+          </div>
+          
+          <div style="margin-top: 16px; padding: 14px; background: #fef3c7; border-radius: 6px; border-left: 3px solid #f59e0b;">
+            <div style="font-size: 12px; color: #92400e; font-weight: 600;">
+              📌 Status-Legende: <strong>OK</strong> = sofort verfügbar & buchbar | <strong>RQ</strong> = auf Anfrage
+            </div>
+          </div>
+        </div>
+        
+        <!-- Room Type Selection (Interactive) -->
+        <div style="background: #f8f9fa; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
+          <div style="font-size: 16px; font-weight: 600; color: #333; margin-bottom: 16px;">
+            Wählen Sie Ihre Zimmerkategorie:
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px;">
+            <!-- Doppelzimmer Option -->
+            <div class="room-option selected" id="room-double" onclick="window.superbowlSelectRoom_${packageData.id}('double')" 
+                 style="border: 2px solid #184a7b; border-radius: 8px; padding: 16px; background: #e8f4fd; cursor: pointer;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-weight: 600; color: #184a7b; font-size: 16px;">🛏️ Doppelzimmer</div>
+                  <div style="font-size: 13px; color: #666; margin-top: 4px;">${packageData.nights} Nächte</div>
+                </div>
+                <div style="font-size: 20px; font-weight: bold; color: #184a7b;">
+                  ${packageData.price.toLocaleString('de-CH')} €
+                </div>
               </div>
             </div>
             
-            <div class="person-control">
-              <button class="person-btn" id="btn-decrease" onclick="window.changePersonCount('decrease')">−</button>
-              <div class="person-count" id="person-display">2 Personen</div>
-              <button class="person-btn" id="btn-increase" onclick="window.changePersonCount('increase')">+</button>
+            <!-- Einzelzimmer Option -->
+            <div class="room-option" id="room-single" onclick="window.superbowlSelectRoom_${packageData.id}('single')" 
+                 style="border: 1px solid #d1d5db; border-radius: 8px; padding: 16px; background: white; cursor: pointer;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-weight: 600; color: #333; font-size: 16px;">🛏️ Einzelzimmer</div>
+                  <div style="font-size: 13px; color: #666; margin-top: 4px;">${packageData.nights} Nächte</div>
+                </div>
+                <div style="font-size: 20px; font-weight: bold; color: #184a7b;">
+                  ${(packageData.price + packageData.singleSupplement).toLocaleString('de-CH')} €
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -154,49 +192,28 @@ export async function GET() {
             </div>
             <div>
               <div style="font-size: 14px; color: #666; margin-bottom: 4px;">🏨 Übernachtungen:</div>
-              <div style="font-weight: 600; color: #333;">${packageData.nights} Nächte im Doppelzimmer</div>
-            </div>
-            <div>
-              <div style="font-size: 14px; color: #666; margin-bottom: 4px;">🛏️ Zimmerkonfiguration:</div>
-              <div style="font-weight: 600; color: #333;">Im nächsten Schritt wählbar</div>
+              <div style="font-weight: 600; color: #333;">${packageData.nights}x im <span id="room-type-text">Doppelzimmer</span></div>
             </div>
           </div>
         </div>
         
         <!-- Price & CTA -->
         <div style="border-top: 1px solid #e5e7eb; padding-top: 24px; margin-bottom: 24px;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 20px;">
-            <!-- Price per Person -->
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
             <div>
-              <div style="font-size: 14px; color: #666; margin-bottom: 8px;">Preis pro Person</div>
-              <div style="font-size: 32px; font-weight: bold; color: #184a7b;">
+              <div id="price-display" class="price-update" style="font-size: 36px; font-weight: bold; color: #184a7b;">
                 ${packageData.price.toLocaleString('de-CH')} €
               </div>
-              <div style="font-size: 13px; color: #666; margin-top: 4px;">pro Person im Doppelzimmer (inkl. alle Leistungen)</div>
+              <div style="font-size: 14px; color: #666;">pro Person im <span id="room-label">Doppelzimmer</span></div>
             </div>
             
-            <!-- Total Price -->
-            <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 16px; border-radius: 8px; border: 2px solid #0ea5e9;">
-              <div style="font-size: 14px; color: #0369a1; margin-bottom: 8px; font-weight: 600;">Gesamtpreis für Ihre Gruppe</div>
-              <div id="total-price" class="price-highlight" style="font-size: 36px; font-weight: bold; color: #0369a1;">
-                ${(packageData.price * 2).toLocaleString('de-CH')} €
-              </div>
-              <div style="font-size: 13px; color: #0369a1; margin-top: 4px;">für <span id="total-persons">2 Personen</span></div>
-            </div>
+            <a id="booking-cta" href="https://superbowl.faltintravel.com/booking?package=${packageData.id}&room=double&price=${packageData.price}&nights=${packageData.nights}" 
+               style="display: inline-block; background: #f14624; color: white; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; transition: all 0.3s; box-shadow: 0 2px 4px rgba(241,70,36,0.2);"
+               onmouseover="this.style.background='#d63d1f'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(241,70,36,0.3)';"
+               onmouseout="this.style.background='#f14624'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(241,70,36,0.2)';">
+              Jetzt unverbindlich anfragen →
+            </a>
           </div>
-          
-          <!-- Important Notes -->
-          <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px; font-size: 13px; color: #92400e;">
-            <div style="font-weight: 600; margin-bottom: 4px;">✓ Basierend auf Doppelzimmer-Belegung</div>
-            <div>✓ Exakte Zimmerkonfiguration im nächsten Schritt</div>
-          </div>
-          
-          <a id="booking-cta" href="https://superbowl.faltintravel.com/booking?package=${packageData.id}&persons=2&price=${packageData.price}&nights=${packageData.nights}" 
-             style="display: block; background: #f14624; color: white; padding: 18px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 18px; text-align: center; transition: all 0.3s; box-shadow: 0 2px 4px rgba(241,70,36,0.2);"
-             onmouseover="this.style.background='#d63d1f'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(241,70,36,0.3)';"
-             onmouseout="this.style.background='#f14624'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(241,70,36,0.2)';">
-            Jetzt für <span id="cta-persons">2 Personen</span> anfragen →
-          </a>
         </div>
         
         <!-- Trust Elements -->
@@ -217,55 +234,65 @@ export async function GET() {
       </div>
     </div>
     
+    <!-- Sticky CTA (appears on scroll) -->
+    <div id="sticky-cta" class="cta-sticky">
+      <a id="sticky-booking-link" href="https://superbowl.faltintravel.com/booking?package=${packageData.id}&room=double&price=${packageData.price}&nights=${packageData.nights}"
+         style="display: block; background: #f14624; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); text-align: center;"
+         onmouseover="this.style.background='#d63d1f'"
+         onmouseout="this.style.background='#f14624'">
+        <span id="sticky-price">${packageData.price.toLocaleString('de-CH')} €</span> - Jetzt anfragen →
+      </a>
+    </div>
+    
     <script>
-      // Person Count Logic - Global Function
-      window.changePersonCount = function(action) {
-        const currentCount = window.sbPersonCount || 2;
-        let newCount = currentCount;
+      // Room Selection Logic - als globale Funktion für WordPress-Kompatibilität
+      window.superbowlSelectRoom_${packageData.id} = function(roomType) {
+        const selectedRoom = roomType;
+        const priceDouble = ${packageData.price};
+        const priceSingle = ${packageData.price + packageData.singleSupplement};
+        const packageId = '${packageData.id}';
+        const nights = ${packageData.nights};
         
-        if (action === 'increase' && currentCount < 20) {
-          newCount = currentCount + 1;
-        } else if (action === 'decrease' && currentCount > 1) {
-          newCount = currentCount - 1;
-        }
+        // Update UI
+        document.getElementById('room-double').classList.toggle('selected', roomType === 'double');
+        document.getElementById('room-single').classList.toggle('selected', roomType === 'single');
         
-        if (newCount !== currentCount) {
-          window.sbPersonCount = newCount;
-          updateDisplay(newCount);
-        }
-      };
-      
-      function updateDisplay(count) {
-        const pricePerPerson = ${packageData.price};
-        const totalPrice = pricePerPerson * count;
+        // Update price display
+        const price = roomType === 'double' ? priceDouble : priceSingle;
+        const priceDisplay = document.getElementById('price-display');
+        priceDisplay.textContent = price.toLocaleString('de-CH') + ' €';
         
-        // Update person count display
-        document.getElementById('person-display').textContent = count + (count === 1 ? ' Person' : ' Personen');
-        document.getElementById('total-persons').textContent = count + (count === 1 ? ' Person' : ' Personen');
-        document.getElementById('cta-persons').textContent = count + (count === 1 ? ' Person' : ' Personen');
+        // Update room label
+        const roomLabel = roomType === 'double' ? 'Doppelzimmer' : 'Einzelzimmer';
+        document.getElementById('room-label').textContent = roomLabel;
+        document.getElementById('room-type-text').textContent = roomLabel;
         
-        // Update total price
-        const totalPriceEl = document.getElementById('total-price');
-        totalPriceEl.textContent = totalPrice.toLocaleString('de-CH') + ' €';
+        // Update CTA links with URL parameters
+        const bookingUrl = 'https://superbowl.faltintravel.com/booking?package=' + packageId + '&room=' + roomType + '&price=' + price + '&nights=' + nights;
+        document.getElementById('booking-cta').href = bookingUrl;
+        document.getElementById('sticky-booking-link').href = bookingUrl;
+        document.getElementById('sticky-price').textContent = price.toLocaleString('de-CH') + ' €';
         
         // Animate price change
-        totalPriceEl.style.transform = 'scale(1.1)';
+        priceDisplay.style.transform = 'scale(1.1)';
         setTimeout(() => {
-          totalPriceEl.style.transform = 'scale(1)';
+          priceDisplay.style.transform = 'scale(1)';
         }, 200);
-        
-        // Update CTA link
-        const bookingUrl = 'https://superbowl.faltintravel.com/booking?package=${packageData.id}&persons=' + count + '&price=' + pricePerPerson + '&nights=${packageData.nights}';
-        document.getElementById('booking-cta').href = bookingUrl;
-        
-        // Update button states
-        document.getElementById('btn-decrease').disabled = count <= 1;
-        document.getElementById('btn-increase').disabled = count >= 20;
-      }
+      };
       
-      // Initialize
-      window.sbPersonCount = 2;
-      updateDisplay(2);
+      // Sticky CTA on scroll
+      window.addEventListener('scroll', function() {
+        const stickyCta = document.getElementById('sticky-cta');
+        const card = document.querySelector('.superbowl-package-card');
+        
+        if (card) {
+          const cardRect = card.getBoundingClientRect();
+          const isCardVisible = cardRect.bottom > 0 && cardRect.top < window.innerHeight;
+          
+          // Show sticky CTA when card is out of view
+          stickyCta.style.display = !isCardVisible && window.scrollY > 300 ? 'block' : 'none';
+        }
+      });
     </script>
     
     <!-- Schema.org JSON-LD -->
@@ -274,6 +301,7 @@ export async function GET() {
     </script>
   `;
 
+  // JSON-Antwort mit HTML und Daten
   return NextResponse.json({
     success: true,
     data: packageData,
