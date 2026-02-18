@@ -298,6 +298,19 @@ export default function BookingForm() {
         </div>
       </header>
 
+      {/* Back to Package Button */}
+      <div className='bg-gradient-to-r from-orange-500 to-orange-600 shadow-md'>
+        <div className='container mx-auto px-4 py-3'>
+          <a 
+            href='https://faltintravel.com/super-bowl-2027-tickets/' 
+            className='inline-flex items-center gap-2 text-white font-semibold hover:gap-3 transition-all duration-200'
+          >
+            <ArrowLeft className='w-5 h-5' />
+            <span>Zurück zur Package-Übersicht</span>
+          </a>
+        </div>
+      </div>
+
       <div className='container mx-auto px-4 py-8 max-w-6xl'>
         <div className='grid lg:grid-cols-3 gap-8'>
           <div className='lg:col-span-2'>
@@ -608,6 +621,31 @@ export default function BookingForm() {
                 </a>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* FAQs Section */}
+        <div className='mt-12 max-w-4xl mx-auto'>
+          <h2 className='text-3xl font-bold text-gray-900 mb-8 text-center'>Häufig gestellte Fragen</h2>
+          <div className='space-y-4'>
+            {faqItems.map((faq, index) => (
+              <div key={index} className='bg-white rounded-lg shadow-md overflow-hidden'>
+                <button
+                  onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                  className='w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition'
+                >
+                  <span className='font-semibold text-gray-900'>{faq.question}</span>
+                  <ChevronDown 
+                    className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${openFaq === index ? 'transform rotate-180' : ''}`}
+                  />
+                </button>
+                {openFaq === index && (
+                  <div className='px-6 pb-4 text-gray-700 border-t border-gray-100 pt-4'>
+                    {faq.answer}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
