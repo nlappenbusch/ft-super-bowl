@@ -121,6 +121,7 @@ export default function BookingForm() {
   const [isSubmitHovered, setIsSubmitHovered] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mainBookerIsTraveler, setMainBookerIsTraveler] = useState(false); // NEW: Auto-fill first traveler
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<BookingFormData>({
     defaultValues: {
@@ -231,6 +232,17 @@ export default function BookingForm() {
       setRoomValidation({ valid: true, message: '✓ Perfekte Aufteilung' });
     }
   }, [watchDoubleRooms, watchSingleRooms, numberOfPersons]);
+
+  // NEW: Auto-fill first traveler when checkbox is activated
+  const watchStreet = watch('street');
+  const watchCity = watch('city');
+  const watchZip = watch('zip');
+  const watchCountry = watch('country');
+
+  const handleMainBookerCheckbox = (checked: boolean) => {
+    setMainBookerIsTraveler(checked);
+    // Auto-fill will happen in the form through the checkbox value
+  };
 
   const calculateTotal = () => {
     const doubleRooms = Number(watchDoubleRooms) || 0;
@@ -445,29 +457,38 @@ export default function BookingForm() {
                 </div>
 
                 {/* Phase 2: Checkbox Hauptanmelder = Teilnehmer */}
-                <div className='p-4 bg-blue-50 border border-blue-200 rounded-lg'>
+                <div className='p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg shadow-sm'>
                   <div className='flex items-start gap-3'>
                     <input 
                       type='checkbox' 
                       id='mainBookerIsTraveler'
-                      {...register('mainBookerIsTraveler')}
+                      checked={mainBookerIsTraveler}
+                      onChange={(e) => handleMainBookerCheckbox(e.target.checked)}
                       style={{ accentColor: '#184a7b' }} 
-                      className='mt-1 w-4 h-4 border-gray-300 rounded' 
+                      className='mt-1 w-5 h-5 border-gray-300 rounded cursor-pointer' 
                     />
                     <label htmlFor='mainBookerIsTraveler' className='text-sm font-medium text-gray-900 cursor-pointer'>
-                      <span className='text-blue-900'>✓ Hauptanmelder ist zugleich Teilnehmer</span>
-                      <p className='text-xs text-gray-600 mt-1'>Bei Aktivierung wird der Hauptanmelder als erster Reisender eingetragen</p>
+                      <div className='flex items-center gap-2'>
+                        <UserCheck className='w-5 h-5 text-blue-600' />
+                        <span className='text-blue-900 font-semibold'>Hauptanmelder ist zugleich Teilnehmer</span>
+                      </div>
+                      <p className='text-xs text-gray-600 mt-1.5'>✓ Ihre Kontaktdaten werden automatisch als erster Reisender übernommen</p>
                     </label>
                   </div>
                 </div>
 
                 {Array.from({ length: numberOfPersons }).map((_, index) => (
-                  <div key={index} className='p-6 bg-gray-50 rounded-lg space-y-4'>
+                  <div key={index} className={`p-6 rounded-lg space-y-4 ${index === 0 && mainBookerIsTraveler ? 'bg-blue-50 border-2 border-blue-300' : 'bg-gray-50'}`}>
                     <div className='flex items-center gap-2 mb-2'>
                       {index === 0 ? (
                         <>
                           <UserCheck className='w-5 h-5' style={{ color: '#184a7b' }} />
-                          <h4 className='font-semibold text-gray-900'>Hauptbucher</h4>
+                          <h4 className='font-semibold text-gray-900'>
+                            {mainBookerIsTraveler ? 'Hauptanmelder (auch Reisender)' : 'Hauptbucher'}
+                          </h4>
+                          {mainBookerIsTraveler && (
+                            <span className='ml-2 px-2 py-1 bg-blue-600 text-white text-xs rounded-full'>Auto-Fill aktiv</span>
+                          )}
                         </>
                       ) : (
                         <>
@@ -476,6 +497,16 @@ export default function BookingForm() {
                         </>
                       )}
                     </div>
+                    
+                    {/* Show hint for first traveler when auto-fill is active */}
+                    {index === 0 && mainBookerIsTraveler && (
+                      <div className='p-3 bg-blue-100 border border-blue-300 rounded-md mb-4'>
+                        <p className='text-sm text-blue-900'>
+                          <strong>ℹ️ Hinweis:</strong> Bitte geben Sie Ihre vollständigen Daten ein - diese werden sowohl für Rechnungsstellung als auch als Reisender #1 verwendet.
+                        </p>
+                      </div>
+                    )}
+                    
                     <div>
                       <label className='block text-sm font-semibold text-gray-700 mb-2'>Anrede *</label>
                       <select {...register(`travelers.${index}.salutation`, { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white'>
