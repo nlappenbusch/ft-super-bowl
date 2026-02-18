@@ -2,6 +2,8 @@
 
 Moderne Next.js App perfekt integriert in WordPress - **alles unter faltintravel.com**
 
+✅ **Auto-Deployment aktiv** - Push to main = Live Deployment!
+
 ## 🎯 Integration-Methoden
 
 ### **1. WordPress Shortcodes** ⭐ EMPFOHLEN
