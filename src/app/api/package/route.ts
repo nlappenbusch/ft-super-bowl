@@ -114,7 +114,7 @@ export async function GET() {
           
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px;">
             <!-- Doppelzimmer Option -->
-            <div class="room-option selected" id="room-double" onclick="selectRoom('double')" 
+            <div class="room-option selected" id="room-double" onclick="window.superbowlSelectRoom_${packageData.id}('double')" 
                  style="border: 2px solid #184a7b; border-radius: 8px; padding: 16px; background: #e8f4fd; cursor: pointer;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
@@ -128,7 +128,7 @@ export async function GET() {
             </div>
             
             <!-- Einzelzimmer Option -->
-            <div class="room-option" id="room-single" onclick="selectRoom('single')" 
+            <div class="room-option" id="room-single" onclick="window.superbowlSelectRoom_${packageData.id}('single')" 
                  style="border: 1px solid #d1d5db; border-radius: 8px; padding: 16px; background: white; cursor: pointer;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
@@ -167,7 +167,7 @@ export async function GET() {
               <div style="font-size: 14px; color: #666;">pro Person im <span id="room-label">Doppelzimmer</span></div>
             </div>
             
-            <a id="booking-cta" href="/booking?package=${packageData.id}&room=double&price=${packageData.price}&nights=${packageData.nights}" 
+            <a id="booking-cta" href="https://superbowl.faltintravel.com/booking?package=${packageData.id}&room=double&price=${packageData.price}&nights=${packageData.nights}" 
                style="display: inline-block; background: #f14624; color: white; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; transition: all 0.3s; box-shadow: 0 2px 4px rgba(241,70,36,0.2);"
                onmouseover="this.style.background='#d63d1f'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(241,70,36,0.3)';"
                onmouseout="this.style.background='#f14624'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(241,70,36,0.2)';">
@@ -196,7 +196,7 @@ export async function GET() {
     
     <!-- Sticky CTA (appears on scroll) -->
     <div id="sticky-cta" class="cta-sticky">
-      <a id="sticky-booking-link" href="/booking?package=${packageData.id}&room=double&price=${packageData.price}&nights=${packageData.nights}"
+      <a id="sticky-booking-link" href="https://superbowl.faltintravel.com/booking?package=${packageData.id}&room=double&price=${packageData.price}&nights=${packageData.nights}"
          style="display: block; background: #f14624; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); text-align: center;"
          onmouseover="this.style.background='#d63d1f'"
          onmouseout="this.style.background='#f14624'">
@@ -205,15 +205,13 @@ export async function GET() {
     </div>
     
     <script>
-      // Room Selection Logic
-      let selectedRoom = 'double';
-      const priceDouble = ${packageData.price};
-      const priceSingle = ${packageData.price + packageData.singleSupplement};
-      const packageId = '${packageData.id}';
-      const nights = ${packageData.nights};
-      
-      function selectRoom(roomType) {
-        selectedRoom = roomType;
+      // Room Selection Logic - als globale Funktion für WordPress-Kompatibilität
+      window.superbowlSelectRoom_${packageData.id} = function(roomType) {
+        const selectedRoom = roomType;
+        const priceDouble = ${packageData.price};
+        const priceSingle = ${packageData.price + packageData.singleSupplement};
+        const packageId = '${packageData.id}';
+        const nights = ${packageData.nights};
         
         // Update UI
         document.getElementById('room-double').classList.toggle('selected', roomType === 'double');
@@ -230,7 +228,7 @@ export async function GET() {
         document.getElementById('room-type-text').textContent = roomLabel;
         
         // Update CTA links with URL parameters
-        const bookingUrl = '/booking?package=' + packageId + '&room=' + roomType + '&price=' + price + '&nights=' + nights;
+        const bookingUrl = 'https://superbowl.faltintravel.com/booking?package=' + packageId + '&room=' + roomType + '&price=' + price + '&nights=' + nights;
         document.getElementById('booking-cta').href = bookingUrl;
         document.getElementById('sticky-booking-link').href = bookingUrl;
         document.getElementById('sticky-price').textContent = price.toLocaleString('de-CH') + ' €';
@@ -240,7 +238,7 @@ export async function GET() {
         setTimeout(() => {
           priceDisplay.style.transform = 'scale(1)';
         }, 200);
-      }
+      };
       
       // Sticky CTA on scroll
       window.addEventListener('scroll', function() {
