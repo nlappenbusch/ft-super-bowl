@@ -118,31 +118,23 @@ export async function GET() {
           </div>
         </div>
         
-        <!-- PHASE 1: Leistungsaufschlüsselung -->
-        <div style="background: #f8f9fa; border-left: 4px solid #184a7b; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
-          <div style="font-weight: 700; font-size: 17px; color: #184a7b; margin-bottom: 18px; display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 24px;">📦</span>
-            <span>Vollständige Leistungsaufschlüsselung</span>
-          </div>
+        <!-- PHASE 1: Package-Leistungen (Elegant & Clean) -->
+        <div style="margin-bottom: 32px;">
+          <h4 style="font-weight: 700; font-size: 20px; color: #184a7b; margin-bottom: 20px;">
+            Im Package enthalten:
+          </h4>
           
-          <div style="display: grid; gap: 14px;">
+          <div style="display: grid; gap: 20px;">
             ${packageData.includes.map(item => `
-              <div style="display: flex; align-items: start; gap: 14px; padding: 14px; background: white; border-radius: 8px; border: 1px solid #e5e7eb; transition: all 0.2s;" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
-                <div style="font-size: 28px; flex-shrink: 0; line-height: 1;">${item.icon}</div>
+              <div style="display: flex; align-items: start; gap: 16px;">
+                <div style="font-size: 32px; flex-shrink: 0; line-height: 1;">${item.icon}</div>
                 <div style="flex: 1;">
-                  <div style="font-weight: 600; color: #1f2937; font-size: 15px; margin-bottom: 4px;">${item.name}</div>
-                  <div style="font-size: 13px; color: #6b7280; margin-bottom: 2px;">${item.category}</div>
-                  <div style="font-size: 12px; color: #9ca3af; font-style: italic;">${item.description}</div>
+                  <div style="font-weight: 600; color: #1f2937; font-size: 16px; margin-bottom: 6px;">${item.name}</div>
+                  <div style="font-size: 14px; color: #6b7280; line-height: 1.5;">${item.description}</div>
                 </div>
-                <span style="background: ${item.status === 'OK' ? '#dcfce7' : '#fef3c7'}; color: ${item.status === 'OK' ? '#15803d' : '#92400e'}; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;">${item.status}</span>
+                <div style="color: #10b981; font-size: 24px; flex-shrink: 0; line-height: 1;">✓</div>
               </div>
             `).join('')}
-          </div>
-          
-          <div style="margin-top: 16px; padding: 14px; background: #fef3c7; border-radius: 6px; border-left: 3px solid #f59e0b;">
-            <div style="font-size: 12px; color: #92400e; font-weight: 600;">
-              📌 Status-Legende: <strong>OK</strong> = sofort verfügbar & buchbar | <strong>RQ</strong> = auf Anfrage
-            </div>
           </div>
         </div>
         
