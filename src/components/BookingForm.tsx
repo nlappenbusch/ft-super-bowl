@@ -22,7 +22,11 @@ interface BookingFormData {
   singleRooms: number;
   numberOfPersons: number;
   travelers: Traveler[];
-  // Phase 2: Hauptanmelder-Felder
+  // Phase 2: Hauptanmelder-Felder (erweitert)
+  mainBookerSalutation: string;
+  mainBookerFirstName: string;
+  mainBookerLastName: string;
+  mainBookerBirthDate: string;
   street: string;
   zip: string;
   city: string;
@@ -463,56 +467,172 @@ export default function BookingForm() {
                   </div>
                 </div>
 
-                {/* Phase 2: Checkbox Hauptanmelder = Teilnehmer */}
-                <div className='p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg shadow-sm'>
-                  <div className='flex items-start gap-3'>
-                    <input 
-                      type='checkbox' 
-                      id='mainBookerIsTraveler'
-                      checked={mainBookerIsTraveler}
-                      onChange={(e) => handleMainBookerCheckbox(e.target.checked)}
-                      style={{ accentColor: '#184a7b' }} 
-                      className='mt-1 w-5 h-5 border-gray-300 rounded cursor-pointer' 
-                    />
-                    <label htmlFor='mainBookerIsTraveler' className='text-sm font-medium text-gray-900 cursor-pointer'>
-                      <div className='flex items-center gap-2'>
-                        <UserCheck className='w-5 h-5 text-blue-600' />
-                        <span className='text-blue-900 font-semibold'>Hauptanmelder ist zugleich Teilnehmer</span>
+                {/* NEUE STRUKTUR: Hauptanmelder ZUERST */}
+                <div className='border-t-4 border-blue-500 pt-8'>
+                  <div className='flex items-center gap-3 mb-6'>
+                    <UserCheck className='w-7 h-7 text-blue-600' />
+                    <div>
+                      <h3 className='text-2xl font-bold text-gray-900'>Hauptanmelder / Rechnungsempfänger</h3>
+                      <p className='text-sm text-gray-600'>Ihre Kontakt- und Rechnungsdaten</p>
+                    </div>
+                  </div>
+
+                  <div className='space-y-4 p-6 bg-blue-50 rounded-xl border-2 border-blue-200'>
+                    {/* Persönliche Daten */}
+                    <div>
+                      <label className='block text-sm font-semibold text-gray-700 mb-2'>Anrede *</label>
+                      <select {...register('mainBookerSalutation', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500'>
+                        <option value=''>Bitte wählen</option>
+                        <option value='herr'>Herr</option>
+                        <option value='frau'>Frau</option>
+                        <option value='divers'>Divers</option>
+                      </select>
+                      {errors.mainBookerSalutation && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
+                    </div>
+
+                    <div className='grid md:grid-cols-2 gap-4'>
+                      <div>
+                        <label className='block text-sm font-semibold text-gray-700 mb-2'>Vorname *</label>
+                        <input type='text' {...register('mainBookerFirstName', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg' placeholder='Max' />
+                        {errors.mainBookerFirstName && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
                       </div>
-                      <p className='text-xs text-gray-600 mt-1.5'>✓ Ihre Kontaktdaten werden automatisch als erster Reisender übernommen</p>
-                    </label>
+                      <div>
+                        <label className='block text-sm font-semibold text-gray-700 mb-2'>Nachname *</label>
+                        <input type='text' {...register('mainBookerLastName', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg' placeholder='Mustermann' />
+                        {errors.mainBookerLastName && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
+                      </div>
+                    </div>
+
+                    <div className='grid md:grid-cols-2 gap-4'>
+                      <div>
+                        <label className='block text-sm font-semibold text-gray-700 mb-2'>Geburtsdatum *</label>
+                        <input type='date' {...register('mainBookerBirthDate', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white' />
+                        {errors.mainBookerBirthDate && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
+                      </div>
+                      <div>
+                        <label className='block text-sm font-semibold text-gray-700 mb-2'>E-Mail *</label>
+                        <div className='relative'>
+                          <Mail className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5' />
+                          <input type='email' {...register('email', { required: true, pattern: /^\S+@\S+$/i })} className='w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg' placeholder='max@example.com' />
+                        </div>
+                        {errors.email && <span className='text-red-500 text-sm'>Gültige E-Mail erforderlich</span>}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className='block text-sm font-semibold text-gray-700 mb-2'>Telefon *</label>
+                      <div className='relative'>
+                        <Phone className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5' />
+                        <input type='tel' {...register('phone', { required: true })} className='w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg' placeholder='+41 79 123 45 67' />
+                      </div>
+                      {errors.phone && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
+                    </div>
+
+                    {/* Adresse */}
+                    <div className='pt-4 border-t border-blue-300'>
+                      <h4 className='font-semibold text-gray-900 mb-4'>Rechnungsadresse</h4>
+                      
+                      <div className='space-y-4'>
+                        <div>
+                          <label className='block text-sm font-semibold text-gray-700 mb-2'>Straße & Hausnummer *</label>
+                          <input type='text' {...register('street', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg' placeholder='Musterstraße 123' />
+                          {errors.street && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
+                        </div>
+                        
+                        <div className='grid md:grid-cols-3 gap-4'>
+                          <div>
+                            <label className='block text-sm font-semibold text-gray-700 mb-2'>PLZ *</label>
+                            <input type='text' {...register('zip', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg' placeholder='8000' />
+                            {errors.zip && <span className='text-red-500 text-sm'>Pflicht</span>}
+                          </div>
+                          <div className='md:col-span-2'>
+                            <label className='block text-sm font-semibold text-gray-700 mb-2'>Ort *</label>
+                            <input type='text' {...register('city', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg' placeholder='Zürich' />
+                            {errors.city && <span className='text-red-500 text-sm'>Pflicht</span>}
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label className='block text-sm font-semibold text-gray-700 mb-2'>Land *</label>
+                          <select {...register('country', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500'>
+                            <option value=''>Bitte wählen...</option>
+                            <option value='CH'>🇨🇭 Schweiz</option>
+                            <option value='DE'>🇩🇪 Deutschland</option>
+                            <option value='AT'>🇦🇹 Österreich</option>
+                            <option value='LI'>🇱🇮 Liechtenstein</option>
+                            <option value='FR'>🇫🇷 Frankreich</option>
+                            <option value='IT'>🇮🇹 Italien</option>
+                            <option value='NL'>🇳🇱 Niederlande</option>
+                            <option value='BE'>🇧🇪 Belgien</option>
+                            <option value='LU'>🇱🇺 Luxemburg</option>
+                            <option value='other'>🌍 Anderes Land</option>
+                          </select>
+                          {errors.country && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Checkbox: Ich bin auch Reisender */}
+                    <div className='pt-4 border-t-2 border-blue-400'>
+                      <div className='flex items-start gap-3 p-4 bg-white rounded-lg border-2 border-blue-400'>
+                        <input 
+                          type='checkbox' 
+                          id='mainBookerIsTraveler'
+                          checked={mainBookerIsTraveler}
+                          onChange={(e) => handleMainBookerCheckbox(e.target.checked)}
+                          style={{ accentColor: '#184a7b' }} 
+                          className='mt-1 w-5 h-5 border-gray-300 rounded cursor-pointer' 
+                        />
+                        <label htmlFor='mainBookerIsTraveler' className='cursor-pointer'>
+                          <div className='font-semibold text-gray-900'>✓ Ich bin auch Reisender</div>
+                          <p className='text-xs text-gray-600 mt-1'>Ihre Daten werden automatisch als erster Reisender übernommen</p>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Nachricht (optional) */}
+                    <div className='pt-4'>
+                      <label className='block text-sm font-semibold text-gray-700 mb-2'>Nachricht (optional)</label>
+                      <textarea 
+                        {...register('message')} 
+                        rows={4} 
+                        className='w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent' 
+                        placeholder='Besondere Wünsche, Fragen oder Anmerkungen...' 
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {Array.from({ length: numberOfPersons }).map((_, index) => (
-                  <div key={index} className={`p-6 rounded-lg space-y-4 ${index === 0 && mainBookerIsTraveler ? 'bg-blue-50 border-2 border-blue-300' : 'bg-gray-50'}`}>
-                    <div className='flex items-center gap-2 mb-2'>
-                      {index === 0 ? (
-                        <>
-                          <UserCheck className='w-5 h-5' style={{ color: '#184a7b' }} />
-                          <h4 className='font-semibold text-gray-900'>
-                            {mainBookerIsTraveler ? 'Hauptanmelder (auch Reisender)' : 'Hauptbucher'}
-                          </h4>
-                          {mainBookerIsTraveler && (
-                            <span className='ml-2 px-2 py-1 bg-blue-600 text-white text-xs rounded-full'>Auto-Fill aktiv</span>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <UserCircle className='w-5 h-5 text-gray-600' />
-                          <h4 className='font-semibold text-gray-900'>Reisende {index + 1}</h4>
-                        </>
-                      )}
+                {/* Reisende-Section */}
+                <div className='border-t-4 border-green-500 pt-8'>
+                  <div className='flex items-center gap-3 mb-6'>
+                    <Users className='w-7 h-7 text-green-600' />
+                    <div>
+                      <h3 className='text-2xl font-bold text-gray-900'>
+                        {mainBookerIsTraveler ? 'Weitere Reisende' : 'Reisende'}
+                      </h3>
+                      <p className='text-sm text-gray-600'>
+                        {mainBookerIsTraveler 
+                          ? `Daten der weiteren ${numberOfPersons - 1} Reisenden` 
+                          : `Daten aller ${numberOfPersons} Reisenden`
+                        }
+                      </p>
                     </div>
-                    
-                    {/* Show hint for first traveler when auto-fill is active */}
-                    {index === 0 && mainBookerIsTraveler && (
-                      <div className='p-3 bg-blue-100 border border-blue-300 rounded-md mb-4'>
-                        <p className='text-sm text-blue-900'>
-                          <strong>ℹ️ Hinweis:</strong> Bitte geben Sie Ihre vollständigen Daten ein - diese werden sowohl für Rechnungsstellung als auch als Reisender #1 verwendet.
-                        </p>
-                      </div>
-                    )}
+                  </div>
+                </div>
+
+                {Array.from({ length: numberOfPersons }).map((_, index) => {
+                  // Skip first traveler if main booker is also traveler
+                  if (index === 0 && mainBookerIsTraveler) return null;
+                  
+                  const displayNumber = mainBookerIsTraveler ? index + 1 : index + 1;
+                  
+                  return (
+                  <div key={index} className='p-6 bg-gray-50 rounded-lg space-y-4'>
+                    <div className='flex items-center gap-2 mb-2'>
+                      <UserCircle className='w-5 h-5 text-gray-600' />
+                      <h4 className='font-semibold text-gray-900'>Reisende {displayNumber}</h4>
+                    </div>
                     
                     <div>
                       <label className='block text-sm font-semibold text-gray-700 mb-2'>Anrede *</label>
@@ -544,75 +664,11 @@ export default function BookingForm() {
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
 
-                <div className='border-t pt-6 space-y-4'>
-                  <div className='flex items-center gap-2 mb-4'>
-                    <UserCheck className='w-6 h-6 text-blue-600' />
-                    <h3 className='text-xl font-bold text-gray-900'>Hauptanmelder / Rechnungsempfänger</h3>
-                  </div>
-                  
-                  {/* Phase 2: Hauptanmelder-Felder */}
-                  <div className='grid md:grid-cols-2 gap-4'>
-                    <div>
-                      <label className='block text-sm font-semibold text-gray-700 mb-2'>Straße & Hausnummer *</label>
-                      <input type='text' {...register('street', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg' placeholder='Musterstraße 123' />
-                      {errors.street && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
-                    </div>
-                    <div className='grid grid-cols-2 gap-2'>
-                      <div>
-                        <label className='block text-sm font-semibold text-gray-700 mb-2'>PLZ *</label>
-                        <input type='text' {...register('zip', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg' placeholder='12345' />
-                        {errors.zip && <span className='text-red-500 text-sm'>Pflicht</span>}
-                      </div>
-                      <div>
-                        <label className='block text-sm font-semibold text-gray-700 mb-2'>Ort *</label>
-                        <input type='text' {...register('city', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg' placeholder='Zürich' />
-                        {errors.city && <span className='text-red-500 text-sm'>Pflicht</span>}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className='block text-sm font-semibold text-gray-700 mb-2'>Land *</label>
-                    <select {...register('country', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
-                      <option value=''>Bitte wählen...</option>
-                      <option value='CH'>Schweiz</option>
-                      <option value='DE'>Deutschland</option>
-                      <option value='AT'>Österreich</option>
-                      <option value='LI'>Liechtenstein</option>
-                      <option value='FR'>Frankreich</option>
-                      <option value='IT'>Italien</option>
-                      <option value='NL'>Niederlande</option>
-                      <option value='BE'>Belgien</option>
-                      <option value='LU'>Luxemburg</option>
-                      <option value='other'>Anderes Land</option>
-                    </select>
-                    {errors.country && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
-                  </div>
-                  
-                  <div>
-                    <label className='block text-sm font-semibold text-gray-700 mb-2'>E-Mail *</label>
-                    <div className='relative'>
-                      <Mail className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5' />
-                      <input type='email' {...register('email', { required: true, pattern: /^\S+@\S+$/i })} className='w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg' />
-                    </div>
-                    {errors.email && <span className='text-red-500 text-sm'>Gültige E-Mail erforderlich</span>}
-                  </div>
-                  <div>
-                    <label className='block text-sm font-semibold text-gray-700 mb-2'>Telefon *</label>
-                    <div className='relative'>
-                      <Phone className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5' />
-                      <input type='tel' {...register('phone', { required: true })} className='w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg' />
-                    </div>
-                    {errors.phone && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
-                  </div>
-                  <div>
-                    <label className='block text-sm font-semibold text-gray-700 mb-2'>Nachricht (optional)</label>
-                    <textarea {...register('message')} rows={4} className='w-full px-4 py-3 border border-gray-300 rounded-lg' placeholder='Besondere Wünsche...' />
-                  </div>
-                  
-                  <div className='space-y-3 pt-2'>
+                {/* AGB & Privacy */}
+                <div className='space-y-3 pt-6'>
                     <div className='flex items-start gap-3'>
                       <input type='checkbox' {...register('acceptTerms', { required: true })} style={{ accentColor: '#184a7b' }} className='mt-1 w-4 h-4 border-gray-300 rounded' />
                       <label className='text-sm text-gray-700'>
@@ -628,7 +684,6 @@ export default function BookingForm() {
                       </label>
                     </div>
                     {errors.acceptPrivacy && <span className='text-red-500 text-sm block ml-7'>Pflichtfeld</span>}
-                  </div>
                 </div>
 
                 <button 
