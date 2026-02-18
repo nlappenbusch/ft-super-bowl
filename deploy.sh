@@ -39,10 +39,10 @@ docker compose ps
 # Health Check
 echo ""
 echo "--- Health Check ---"
-if curl -f http://127.0.0.1:8082/ > /dev/null 2>&1; then
-    echo "✅ App is responding on port 8082"
+if curl -f http://127.0.0.1:8085/ > /dev/null 2>&1; then
+    echo "✅ App is responding on port 8085"
 else
-    echo "❌ App is NOT responding on port 8082"
+    echo "❌ App is NOT responding on port 8085"
     echo "Container logs:"
     docker compose logs --tail=50
     exit 1
