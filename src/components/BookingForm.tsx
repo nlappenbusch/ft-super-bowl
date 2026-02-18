@@ -22,6 +22,12 @@ interface BookingFormData {
   singleRooms: number;
   numberOfPersons: number;
   travelers: Traveler[];
+  // Phase 2: Hauptanmelder-Felder
+  street: string;
+  zip: string;
+  city: string;
+  country: string;
+  mainBookerIsTraveler?: boolean;
   email: string;
   phone: string;
   message: string;
@@ -323,12 +329,19 @@ export default function BookingForm() {
               </p>
 
               <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
-                <div className='bg-blue-50 p-4 rounded-lg'>
-                  <div className='flex items-center gap-2 text-blue-900'>
+                <div className='bg-blue-50 p-4 rounded-lg border border-blue-200'>
+                  <div className='flex items-center gap-2 text-blue-900 mb-2'>
                     <Calendar className='w-5 h-5' />
                     <div>
                       <div className='font-semibold'>Reisezeitraum (fix)</div>
                       <div className='text-sm'>Fr. 12. Februar - Di. 16. Februar 2027 (4 Nächte)</div>
+                    </div>
+                  </div>
+                  {/* Phase 2: Verlängerungsnächte-Hinweis */}
+                  <div className='mt-3 pt-3 border-t border-blue-200'>
+                    <div className='flex items-start gap-2 text-sm text-blue-800'>
+                      <span className='text-base'>ℹ️</span>
+                      <span><strong>Verlängerungsnächte</strong> auf Anfrage gegen Aufpreis buchbar</span>
                     </div>
                   </div>
                   <input type='hidden' {...register('startDate')} value='2027-02-12' />
@@ -431,6 +444,23 @@ export default function BookingForm() {
                   </div>
                 </div>
 
+                {/* Phase 2: Checkbox Hauptanmelder = Teilnehmer */}
+                <div className='p-4 bg-blue-50 border border-blue-200 rounded-lg'>
+                  <div className='flex items-start gap-3'>
+                    <input 
+                      type='checkbox' 
+                      id='mainBookerIsTraveler'
+                      {...register('mainBookerIsTraveler')}
+                      style={{ accentColor: '#184a7b' }} 
+                      className='mt-1 w-4 h-4 border-gray-300 rounded' 
+                    />
+                    <label htmlFor='mainBookerIsTraveler' className='text-sm font-medium text-gray-900 cursor-pointer'>
+                      <span className='text-blue-900'>✓ Hauptanmelder ist zugleich Teilnehmer</span>
+                      <p className='text-xs text-gray-600 mt-1'>Bei Aktivierung wird der Hauptanmelder als erster Reisender eingetragen</p>
+                    </label>
+                  </div>
+                </div>
+
                 {Array.from({ length: numberOfPersons }).map((_, index) => (
                   <div key={index} className='p-6 bg-gray-50 rounded-lg space-y-4'>
                     <div className='flex items-center gap-2 mb-2'>
@@ -479,7 +509,50 @@ export default function BookingForm() {
                 ))}
 
                 <div className='border-t pt-6 space-y-4'>
-                  <h3 className='text-xl font-bold text-gray-900'>Kontaktdaten</h3>
+                  <div className='flex items-center gap-2 mb-4'>
+                    <UserCheck className='w-6 h-6 text-blue-600' />
+                    <h3 className='text-xl font-bold text-gray-900'>Hauptanmelder / Rechnungsempfänger</h3>
+                  </div>
+                  
+                  {/* Phase 2: Hauptanmelder-Felder */}
+                  <div className='grid md:grid-cols-2 gap-4'>
+                    <div>
+                      <label className='block text-sm font-semibold text-gray-700 mb-2'>Straße & Hausnummer *</label>
+                      <input type='text' {...register('street', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg' placeholder='Musterstraße 123' />
+                      {errors.street && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
+                    </div>
+                    <div className='grid grid-cols-2 gap-2'>
+                      <div>
+                        <label className='block text-sm font-semibold text-gray-700 mb-2'>PLZ *</label>
+                        <input type='text' {...register('zip', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg' placeholder='12345' />
+                        {errors.zip && <span className='text-red-500 text-sm'>Pflicht</span>}
+                      </div>
+                      <div>
+                        <label className='block text-sm font-semibold text-gray-700 mb-2'>Ort *</label>
+                        <input type='text' {...register('city', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg' placeholder='Zürich' />
+                        {errors.city && <span className='text-red-500 text-sm'>Pflicht</span>}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className='block text-sm font-semibold text-gray-700 mb-2'>Land *</label>
+                    <select {...register('country', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
+                      <option value=''>Bitte wählen...</option>
+                      <option value='CH'>Schweiz</option>
+                      <option value='DE'>Deutschland</option>
+                      <option value='AT'>Österreich</option>
+                      <option value='LI'>Liechtenstein</option>
+                      <option value='FR'>Frankreich</option>
+                      <option value='IT'>Italien</option>
+                      <option value='NL'>Niederlande</option>
+                      <option value='BE'>Belgien</option>
+                      <option value='LU'>Luxemburg</option>
+                      <option value='other'>Anderes Land</option>
+                    </select>
+                    {errors.country && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
+                  </div>
+                  
                   <div>
                     <label className='block text-sm font-semibold text-gray-700 mb-2'>E-Mail *</label>
                     <div className='relative'>
@@ -505,7 +578,7 @@ export default function BookingForm() {
                     <div className='flex items-start gap-3'>
                       <input type='checkbox' {...register('acceptTerms', { required: true })} style={{ accentColor: '#184a7b' }} className='mt-1 w-4 h-4 border-gray-300 rounded' />
                       <label className='text-sm text-gray-700'>
-                        Ich habe die <Link href='/agb' style={{ color: '#184a7b' }} className='hover:underline font-semibold'>Allgemeinen Geschäftsbedingungen (AGB)</Link> gelesen und akzeptiere diese. *
+                        Ich habe die <a href='/agb' target='_blank' rel='noopener noreferrer' style={{ color: '#184a7b' }} className='hover:underline font-semibold'>Allgemeinen Geschäftsbedingungen (AGB)</a> gelesen und akzeptiere diese. *
                       </label>
                     </div>
                     {errors.acceptTerms && <span className='text-red-500 text-sm block ml-7'>Pflichtfeld</span>}
@@ -513,7 +586,7 @@ export default function BookingForm() {
                     <div className='flex items-start gap-3'>
                       <input type='checkbox' {...register('acceptPrivacy', { required: true })} style={{ accentColor: '#184a7b' }} className='mt-1 w-4 h-4 border-gray-300 rounded' />
                       <label className='text-sm text-gray-700'>
-                        Ich habe die <Link href='/datenschutz' style={{ color: '#184a7b' }} className='hover:underline font-semibold'>Datenschutzerklärung</Link> gelesen und akzeptiere diese. *
+                        Ich habe die <a href='/datenschutz' target='_blank' rel='noopener noreferrer' style={{ color: '#184a7b' }} className='hover:underline font-semibold'>Datenschutzerklärung</a> gelesen und akzeptiere diese. *
                       </label>
                     </div>
                     {errors.acceptPrivacy && <span className='text-red-500 text-sm block ml-7'>Pflichtfeld</span>}
@@ -532,8 +605,19 @@ export default function BookingForm() {
                   onMouseLeave={() => setIsSubmitHovered(false)}
                   className='w-full text-white font-bold py-4 px-6 rounded-lg text-lg shadow-lg'
                 >
-                  Unverbindliche Anfrage absenden
+                  Verbindliche Buchungsanfrage senden →
                 </button>
+                
+                {/* Phase 2: Verbindlichkeitshinweis */}
+                <div className='mt-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-md'>
+                  <div className='flex items-start gap-3'>
+                    <AlertCircle className='w-5 h-5 text-red-600 shrink-0 mt-0.5' />
+                    <div className='text-sm text-red-900'>
+                      <p className='font-semibold mb-1'>⚠️ Wichtiger Hinweis zur Verbindlichkeit:</p>
+                      <p className='text-red-800'>Die Buchungsanfrage ist <strong>verbindlich</strong>. Bei Verfügbarkeit wird die Buchung fest reserviert. Sollte die gewünschte Leistung nicht verfügbar sein, unterbreiten wir Ihnen umgehend eine gleichwertige Alternative.</p>
+                    </div>
+                  </div>
+                </div>
               </form>
             </div>
           </div>
