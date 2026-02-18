@@ -126,6 +126,7 @@ export default function BookingForm() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mainBookerIsTraveler, setMainBookerIsTraveler] = useState(false); // NEW: Auto-fill first traveler
+  const [phonePrefix, setPhonePrefix] = useState('+41'); // Phone country code
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<BookingFormData>({
     defaultValues: {
@@ -470,14 +471,17 @@ export default function BookingForm() {
                 {/* NEUE STRUKTUR: Hauptanmelder ZUERST */}
                 <div className='border-t-4 border-blue-500 pt-8'>
                   <div className='flex items-center gap-3 mb-6'>
-                    <UserCheck className='w-7 h-7 text-blue-600' />
+                    <UserCheck className='w-7 h-7' style={{ color: '#184a7b' }} />
                     <div>
                       <h3 className='text-2xl font-bold text-gray-900'>Hauptanmelder / Rechnungsempfänger</h3>
                       <p className='text-sm text-gray-600'>Ihre Kontakt- und Rechnungsdaten</p>
                     </div>
                   </div>
 
-                  <div className='space-y-4 p-6 bg-blue-50 rounded-xl border-2 border-blue-200'>
+                  <div className='space-y-4 p-6 rounded-xl border-2' style={{ 
+                    backgroundImage: 'linear-gradient(135deg, rgb(232, 242, 249) 0%, rgb(212, 232, 247) 100%)',
+                    borderColor: 'rgb(24, 74, 123)'
+                  }}>
                     {/* Persönliche Daten */}
                     <div>
                       <label className='block text-sm font-semibold text-gray-700 mb-2'>Anrede *</label>
@@ -521,15 +525,32 @@ export default function BookingForm() {
 
                     <div>
                       <label className='block text-sm font-semibold text-gray-700 mb-2'>Telefon *</label>
-                      <div className='relative'>
-                        <Phone className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5' />
-                        <input type='tel' {...register('phone', { required: true })} className='w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg' placeholder='+41 79 123 45 67' />
+                      <div className='grid grid-cols-3 gap-2'>
+                        <select 
+                          className='px-3 py-3 border border-gray-300 rounded-lg bg-white' 
+                          value={phonePrefix}
+                          onChange={(e) => setPhonePrefix(e.target.value)}
+                        >
+                          <option value='+41'>🇨🇭 +41</option>
+                          <option value='+49'>🇩🇪 +49</option>
+                          <option value='+43'>🇦🇹 +43</option>
+                          <option value='+423'>🇱🇮 +423</option>
+                          <option value='+33'>🇫🇷 +33</option>
+                          <option value='+39'>🇮🇹 +39</option>
+                          <option value='+31'>🇳🇱 +31</option>
+                          <option value='+32'>🇧🇪 +32</option>
+                          <option value='+352'>🇱🇺 +352</option>
+                        </select>
+                        <div className='col-span-2 relative'>
+                          <Phone className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5' />
+                          <input type='tel' {...register('phone', { required: true })} className='w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg' placeholder='79 123 45 67' />
+                        </div>
                       </div>
                       {errors.phone && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
                     </div>
 
                     {/* Adresse */}
-                    <div className='pt-4 border-t border-blue-300'>
+                    <div className='pt-4 border-t' style={{ borderColor: 'rgb(24, 74, 123)' }}>
                       <h4 className='font-semibold text-gray-900 mb-4'>Rechnungsadresse</h4>
                       
                       <div className='space-y-4'>
@@ -556,16 +577,16 @@ export default function BookingForm() {
                           <label className='block text-sm font-semibold text-gray-700 mb-2'>Land *</label>
                           <select {...register('country', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500'>
                             <option value=''>Bitte wählen...</option>
-                            <option value='CH'>🇨🇭 Schweiz</option>
-                            <option value='DE'>🇩🇪 Deutschland</option>
-                            <option value='AT'>🇦🇹 Österreich</option>
-                            <option value='LI'>🇱🇮 Liechtenstein</option>
-                            <option value='FR'>🇫🇷 Frankreich</option>
-                            <option value='IT'>🇮🇹 Italien</option>
-                            <option value='NL'>🇳🇱 Niederlande</option>
-                            <option value='BE'>🇧🇪 Belgien</option>
-                            <option value='LU'>🇱🇺 Luxemburg</option>
-                            <option value='other'>🌍 Anderes Land</option>
+                            <option value='CH'>Schweiz</option>
+                            <option value='DE'>Deutschland</option>
+                            <option value='AT'>Österreich</option>
+                            <option value='LI'>Liechtenstein</option>
+                            <option value='FR'>Frankreich</option>
+                            <option value='IT'>Italien</option>
+                            <option value='NL'>Niederlande</option>
+                            <option value='BE'>Belgien</option>
+                            <option value='LU'>Luxemburg</option>
+                            <option value='other'>Anderes Land</option>
                           </select>
                           {errors.country && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
                         </div>
@@ -573,8 +594,8 @@ export default function BookingForm() {
                     </div>
 
                     {/* Checkbox: Ich bin auch Reisender */}
-                    <div className='pt-4 border-t-2 border-blue-400'>
-                      <div className='flex items-start gap-3 p-4 bg-white rounded-lg border-2 border-blue-400'>
+                    <div className='pt-4 border-t-2' style={{ borderColor: 'rgb(24, 74, 123)' }}>
+                      <div className='flex items-start gap-3 p-4 bg-white rounded-lg border-2' style={{ borderColor: 'rgb(24, 74, 123)' }}>
                         <input 
                           type='checkbox' 
                           id='mainBookerIsTraveler'
