@@ -208,11 +208,17 @@ export async function GET() {
             </div>
             
             <a id="booking-cta" href="https://superbowl.faltintravel.com/booking?package=${packageData.id}&room=double&price=${packageData.price}&nights=${packageData.nights}" 
-               style="display: inline-block; background: #f14624; color: white; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; transition: all 0.3s; box-shadow: 0 2px 4px rgba(241,70,36,0.2);"
-               onmouseover="this.style.background='#d63d1f'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(241,70,36,0.3)';"
-               onmouseout="this.style.background='#f14624'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(241,70,36,0.2)';">
-              Jetzt unverbindlich anfragen →
+               style="display: inline-block; background: #f14624; color: white; padding: 18px 36px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 18px; transition: all 0.3s; box-shadow: 0 4px 12px rgba(241,70,36,0.25);"
+               onmouseover="this.style.background='#d63d1f'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(241,70,36,0.35)';"
+               onmouseout="this.style.background='#f14624'; this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(241,70,36,0.25)';">
+              Verbindliche Buchungsanfrage senden →
             </a>
+            
+            <!-- PHASE 1: Verbindlichkeitshinweis -->
+            <div style="margin-top: 14px; padding: 14px; background: #fef2f2; border-left: 3px solid #dc2626; border-radius: 6px; font-size: 12px; color: #7f1d1d; line-height: 1.6;">
+              <strong style="display: block; margin-bottom: 6px;">⚠️ Wichtiger Hinweis zur Verbindlichkeit:</strong>
+              Die Buchungsanfrage ist <strong>verbindlich</strong>. Bei Verfügbarkeit wird die Buchung fest reserviert. Sollte die gewünschte Leistung nicht verfügbar sein, unterbreiten wir Ihnen umgehend eine gleichwertige Alternative.
+            </div>
           </div>
         </div>
         
