@@ -19,6 +19,15 @@ Einzelne Komponenten flexibel in WordPress-Seiten einbetten:
 
 ---
 
+## 🧾 Changelog
+
+- Shortcode-HTML wird serverseitig gerendert (SEO-freundlicher), mit Client-Fallback.
+- Advanced Package Card: Auswahl-Styles (Orange), bessere Sichtbarkeit, ID-Kollisionen behoben.
+- CTA-Text angepasst und Hinweis klarer formuliert.
+- Shortcode-Testseite unter `/shortcode-test`.
+
+---
+
 ## 🚀 Quick Start
 
 ### Lokaler Test:

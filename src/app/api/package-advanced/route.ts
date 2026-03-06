@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { generateProductSchema } from '@/lib/schema';
 
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
-  const imageBase = baseUrl ? `${baseUrl}` : '';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://superbowl.faltintravel.com';
+  const imageBase = baseUrl.replace(/\/$/, '');
   const packageData = {
     id: 'dream_hollywood',
     packageName: 'Ticket- & Hotel-Package',
@@ -52,6 +52,12 @@ export async function GET() {
       
       .superbowl-package-card {
         animation: fadeIn 0.6s ease-out;
+        text-align: left;
+      }
+
+      .superbowl-package-card h3,
+      .superbowl-package-card h4 {
+        text-align: left;
       }
       
       .availability-badge {

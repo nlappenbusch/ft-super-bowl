@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { generateProductSchema } from '@/lib/schema';
 
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
-  const imageBase = baseUrl ? `${baseUrl}` : '';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://superbowl.faltintravel.com';
+  const imageBase = baseUrl.replace(/\/$/, '');
   const packageData = {
     id: 'dream_hollywood',
     stars: 4,
