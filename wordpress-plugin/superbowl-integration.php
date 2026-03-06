@@ -26,53 +26,76 @@ function superbowl_package_shortcode($atts) {
     
     // Eindeutige ID für diesen Shortcode
     $unique_id = 'superbowl-package-' . uniqid();
+
+    // Server-side render für SEO
+    $response = wp_remote_get($atts['api_url'], array(
+        'timeout' => 8,
+        'headers' => array(
+            'Accept' => 'application/json'
+        )
+    ));
+    $html = '';
+    if (!is_wp_error($response)) {
+        $status = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+        if ($status === 200 && !empty($body)) {
+            $data = json_decode($body, true);
+            if (is_array($data) && !empty($data['success']) && !empty($data['html'])) {
+                $html = $data['html'];
+            }
+        }
+    }
     
     ob_start();
-    ?>
-    <div id="<?php echo esc_attr($unique_id); ?>" class="superbowl-package-wrapper">
-        <div style="text-align: center; padding: 40px;">
-            <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #184a7b; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
-            <p style="margin-top: 16px; color: #666;">Wird geladen...</p>
+    if (!empty($html)) {
+        echo $html;
+    } else {
+        ?>
+        <div id="<?php echo esc_attr($unique_id); ?>" class="superbowl-package-wrapper">
+            <div style="text-align: center; padding: 40px;">
+                <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #184a7b; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+                <p style="margin-top: 16px; color: #666;">Wird geladen...</p>
+            </div>
         </div>
-    </div>
-    
-    <style>
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
-    
-    <script>
-    (function() {
-        fetch('<?php echo esc_js($atts['api_url']); ?>')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.html) {
-                    var container = document.getElementById('<?php echo esc_js($unique_id); ?>');
-                    container.innerHTML = data.html;
-                    
-                    // Script-Tags extrahieren und ausführen
-                    var scripts = container.querySelectorAll('script');
-                    scripts.forEach(function(script) {
-                        var newScript = document.createElement('script');
-                        if (script.src) {
-                            newScript.src = script.src;
-                        } else {
-                            newScript.textContent = script.textContent;
-                        }
-                        document.body.appendChild(newScript);
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Fehler beim Laden des Super Bowl Packages:', error);
-                document.getElementById('<?php echo esc_js($unique_id); ?>').innerHTML = 
-                    '<div style="padding: 20px; background: #fee; border: 1px solid #fcc; border-radius: 8px; color: #c00;">Fehler beim Laden. Bitte später erneut versuchen.</div>';
-            });
-    })();
-    </script>
-    <?php
+        
+        <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
+        
+        <script>
+        (function() {
+            fetch('<?php echo esc_js($atts['api_url']); ?>')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.html) {
+                        var container = document.getElementById('<?php echo esc_js($unique_id); ?>');
+                        container.innerHTML = data.html;
+                        
+                        // Script-Tags extrahieren und ausführen
+                        var scripts = container.querySelectorAll('script');
+                        scripts.forEach(function(script) {
+                            var newScript = document.createElement('script');
+                            if (script.src) {
+                                newScript.src = script.src;
+                            } else {
+                                newScript.textContent = script.textContent;
+                            }
+                            document.body.appendChild(newScript);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Fehler beim Laden des Super Bowl Packages:', error);
+                    document.getElementById('<?php echo esc_js($unique_id); ?>').innerHTML = 
+                        '<div style="padding: 20px; background: #fee; border: 1px solid #fcc; border-radius: 8px; color: #c00;">Fehler beim Laden. Bitte später erneut versuchen.</div>';
+                });
+        })();
+        </script>
+        <?php
+    }
     return ob_get_clean();
 }
 add_shortcode('superbowl_package', 'superbowl_package_shortcode');
@@ -87,53 +110,76 @@ function superbowl_package_advanced_shortcode($atts) {
     ), $atts);
     
     $unique_id = 'superbowl-package-advanced-' . uniqid();
+
+    // Server-side render für SEO
+    $response = wp_remote_get($atts['api_url'], array(
+        'timeout' => 8,
+        'headers' => array(
+            'Accept' => 'application/json'
+        )
+    ));
+    $html = '';
+    if (!is_wp_error($response)) {
+        $status = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+        if ($status === 200 && !empty($body)) {
+            $data = json_decode($body, true);
+            if (is_array($data) && !empty($data['success']) && !empty($data['html'])) {
+                $html = $data['html'];
+            }
+        }
+    }
     
     ob_start();
-    ?>
-    <div id="<?php echo esc_attr($unique_id); ?>" class="superbowl-package-advanced-wrapper">
-        <div style="text-align: center; padding: 40px;">
-            <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #184a7b; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
-            <p style="margin-top: 16px; color: #666;">Wird geladen...</p>
+    if (!empty($html)) {
+        echo $html;
+    } else {
+        ?>
+        <div id="<?php echo esc_attr($unique_id); ?>" class="superbowl-package-advanced-wrapper">
+            <div style="text-align: center; padding: 40px;">
+                <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #184a7b; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+                <p style="margin-top: 16px; color: #666;">Wird geladen...</p>
+            </div>
         </div>
-    </div>
-    
-    <style>
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
-    
-    <script>
-    (function() {
-        fetch('<?php echo esc_js($atts['api_url']); ?>')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.html) {
-                    var container = document.getElementById('<?php echo esc_js($unique_id); ?>');
-                    container.innerHTML = data.html;
-                    
-                    // Script-Tags extrahieren und ausführen
-                    var scripts = container.querySelectorAll('script');
-                    scripts.forEach(function(script) {
-                        var newScript = document.createElement('script');
-                        if (script.src) {
-                            newScript.src = script.src;
-                        } else {
-                            newScript.textContent = script.textContent;
-                        }
-                        document.body.appendChild(newScript);
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Fehler beim Laden des Advanced Packages:', error);
-                document.getElementById('<?php echo esc_js($unique_id); ?>').innerHTML = 
-                    '<div style="padding: 20px; background: #fee; border: 1px solid #fcc; border-radius: 8px; color: #c00;">Fehler beim Laden. Bitte später erneut versuchen.</div>';
-            });
-    })();
-    </script>
-    <?php
+        
+        <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
+        
+        <script>
+        (function() {
+            fetch('<?php echo esc_js($atts['api_url']); ?>')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.html) {
+                        var container = document.getElementById('<?php echo esc_js($unique_id); ?>');
+                        container.innerHTML = data.html;
+                        
+                        // Script-Tags extrahieren und ausführen
+                        var scripts = container.querySelectorAll('script');
+                        scripts.forEach(function(script) {
+                            var newScript = document.createElement('script');
+                            if (script.src) {
+                                newScript.src = script.src;
+                            } else {
+                                newScript.textContent = script.textContent;
+                            }
+                            document.body.appendChild(newScript);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Fehler beim Laden des Advanced Packages:', error);
+                    document.getElementById('<?php echo esc_js($unique_id); ?>').innerHTML = 
+                        '<div style="padding: 20px; background: #fee; border: 1px solid #fcc; border-radius: 8px; color: #c00;">Fehler beim Laden. Bitte später erneut versuchen.</div>';
+                });
+        })();
+        </script>
+        <?php
+    }
     return ob_get_clean();
 }
 add_shortcode('superbowl_package_advanced', 'superbowl_package_advanced_shortcode');
@@ -150,33 +196,56 @@ function superbowl_faqs_shortcode($atts) {
     ), $atts);
     
     $unique_id = 'superbowl-faqs-' . uniqid();
+
+    // Server-side render für SEO
+    $response = wp_remote_get($atts['api_url'], array(
+        'timeout' => 8,
+        'headers' => array(
+            'Accept' => 'application/json'
+        )
+    ));
+    $html = '';
+    if (!is_wp_error($response)) {
+        $status = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+        if ($status === 200 && !empty($body)) {
+            $data = json_decode($body, true);
+            if (is_array($data) && !empty($data['success']) && !empty($data['html'])) {
+                $html = $data['html'];
+            }
+        }
+    }
     
     ob_start();
-    ?>
-    <div id="<?php echo esc_attr($unique_id); ?>" class="superbowl-faqs-wrapper">
-        <div style="text-align: center; padding: 40px;">
-            <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #184a7b; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
-            <p style="margin-top: 16px; color: #666;">FAQs werden geladen...</p>
+    if (!empty($html)) {
+        echo $html;
+    } else {
+        ?>
+        <div id="<?php echo esc_attr($unique_id); ?>" class="superbowl-faqs-wrapper">
+            <div style="text-align: center; padding: 40px;">
+                <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #184a7b; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+                <p style="margin-top: 16px; color: #666;">FAQs werden geladen...</p>
+            </div>
         </div>
-    </div>
-    
-    <script>
-    (function() {
-        fetch('<?php echo esc_js($atts['api_url']); ?>')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.html) {
-                    document.getElementById('<?php echo esc_js($unique_id); ?>').innerHTML = data.html;
-                }
-            })
-            .catch(error => {
-                console.error('Fehler beim Laden der FAQs:', error);
-                document.getElementById('<?php echo esc_js($unique_id); ?>').innerHTML = 
-                    '<div style="padding: 20px; background: #fee; border: 1px solid #fcc; border-radius: 8px; color: #c00;">Fehler beim Laden der FAQs.</div>';
-            });
-    })();
-    </script>
-    <?php
+        
+        <script>
+        (function() {
+            fetch('<?php echo esc_js($atts['api_url']); ?>')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.html) {
+                        document.getElementById('<?php echo esc_js($unique_id); ?>').innerHTML = data.html;
+                    }
+                })
+                .catch(error => {
+                    console.error('Fehler beim Laden der FAQs:', error);
+                    document.getElementById('<?php echo esc_js($unique_id); ?>').innerHTML = 
+                        '<div style="padding: 20px; background: #fee; border: 1px solid #fcc; border-radius: 8px; color: #c00;">Fehler beim Laden der FAQs.</div>';
+                });
+        })();
+        </script>
+        <?php
+    }
     return ob_get_clean();
 }
 add_shortcode('superbowl_faqs', 'superbowl_faqs_shortcode');

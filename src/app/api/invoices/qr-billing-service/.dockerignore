@@ -1,0 +1,6 @@
+app/zoho/credentials.json
+app/logs/
+app/invoices/
+__pycache__
+*.pyc
+.git

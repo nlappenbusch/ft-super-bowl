@@ -1,0 +1,9 @@
+# Secrets — never commit
+k8s/01-secrets.yaml
+app/zoho/credentials.json
+
+# Runtime files
+app/logs/
+app/invoices/
+__pycache__/
+*.pyc

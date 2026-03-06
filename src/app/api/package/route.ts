@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { generateProductSchema } from '@/lib/schema';
 
 export async function GET() {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
+  const imageBase = baseUrl ? `${baseUrl}` : '';
   const packageData = {
     id: 'dream_hollywood',
     stars: 4,
@@ -11,6 +13,17 @@ export async function GET() {
     title: 'Dream Hollywood, by Hyatt',
     description: 'Boutique-Hotel im Herzen von Hollywood mit Rooftop-Pool und Blick auf das Hollywood Sign',
     hotel: 'Dream Hollywood, by Hyatt',
+    hotelImages: [
+      `${imageBase}/bilder-hotel/540997872.jpg`,
+      `${imageBase}/bilder-hotel/540998091.jpg`,
+      `${imageBase}/bilder-hotel/568783347.jpg`
+    ],
+    distances: {
+      airport: '40 Min. / ca. 30 km (LAX)',
+      stadium: '35 Min. / ca. 29 km (SoFi Stadium)',
+      downtown: '20 Min. / ca. 11 km'
+    },
+    roomCategories: ['Doppelzimmer', 'Einzelzimmer'],
     popular: true,
     availableSpots: 12, // Verfügbare Plätze (Social Proof)
     rating: 4.8,
@@ -55,9 +68,39 @@ export async function GET() {
       }
       
       .room-option.selected {
-        background: #e8f4fd !important;
-        border-color: #184a7b !important;
+        background: #dbeafe !important;
+        border-color: #1d4ed8 !important;
         border-width: 2px !important;
+        box-shadow: 0 10px 18px rgba(29,78,216,0.2);
+        position: relative;
+      }
+
+      .room-option.selected::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 6px;
+        background: #1d4ed8;
+        border-radius: 8px 0 0 8px;
+      }
+
+      .room-option .selected-badge {
+        display: none;
+        background: #184a7b;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 4px 8px;
+        border-radius: 999px;
+      }
+
+      .room-option.selected .selected-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        box-shadow: 0 2px 6px rgba(29,78,216,0.3);
       }
       
       .cta-sticky {
@@ -90,6 +133,53 @@ export async function GET() {
       </div>
       
       <div style="padding: 32px;">
+        <!-- Package Summary (First Step) -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; margin-bottom: 20px;">
+          <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; font-weight: 700;">Super Bowl 2027 Reisepaket</div>
+          <div style="margin-top: 6px; font-size: 14px; color: #1f2937; font-weight: 600;">
+            Ticket- &amp; Hotel-Package
+          </div>
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 16px; margin-top: 12px;">
+            <div>
+              <ul style="margin: 0; padding-left: 18px; color: #374151; font-size: 13px; line-height: 1.5;">
+                <li><strong>Event-Ticket:</strong> Kategorie 1 Sitzplatz im Unterrang</li>
+                <li><strong>Hotel:</strong> ${packageData.hotel} &middot; ${packageData.stars}-Sterne</li>
+                <li><strong>Transfers:</strong> Flughafen &amp; Stadion Transfers inklusive</li>
+                <li><strong>Zusatzleistungen:</strong> Hospitality-Services &amp; Betreuung vor Ort</li>
+              </ul>
+              <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; color: #475569;">
+                <span style="background: #e2e8f0; padding: 4px 8px; border-radius: 999px;">🚌 LAX: ${packageData.distances.airport}</span>
+                <span style="background: #e2e8f0; padding: 4px 8px; border-radius: 999px;">🏟️ Stadium: ${packageData.distances.stadium}</span>
+                <span style="background: #e2e8f0; padding: 4px 8px; border-radius: 999px;">🌆 Downtown: ${packageData.distances.downtown}</span>
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px;">Hotel Eindrücke</div>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                ${packageData.hotelImages.map((src) => `
+                  <img src="${src}" alt="${packageData.hotel}" style="width: 100%; height: 64px; object-fit: cover; border-radius: 6px;" />
+                `).join('')}
+              </div>
+            </div>
+          </div>
+          <div style="margin-top: 14px; padding: 10px 12px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+            <div style="font-size: 13px; color: #1f2937; font-weight: 600;">Personen wählen (Preissicht)</div>
+            <select id="person-count" onchange="window.superbowlSelectPersons_${packageData.id}(this.value)" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5f5; color: #1f2937; font-weight: 600;">
+              <option value="1">1 Person</option>
+              <option value="2" selected>2 Personen</option>
+              <option value="3">3 Personen</option>
+              <option value="4">4 Personen</option>
+              <option value="5">5 Personen</option>
+              <option value="6">6 Personen</option>
+              <option value="7">7 Personen</option>
+              <option value="8">8 Personen</option>
+              <option value="9">9 Personen</option>
+              <option value="10">10 Personen</option>
+            </select>
+            <div id="person-hint" style="font-size: 12px; color: #64748b;">Preis pro Person wird unten aktualisiert.</div>
+          </div>
+        </div>
+
         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
           <h3 style="font-size: 28px; font-weight: bold; color: #184a7b; margin: 0;">
             ${packageData.title}
@@ -111,18 +201,25 @@ export async function GET() {
           <div style="font-size: 16px; font-weight: 600; color: #333; margin-bottom: 16px;">
             Wählen Sie Ihre Zimmerkategorie:
           </div>
+
+          <div style="margin-bottom: 12px; font-size: 13px; color: #666;">
+            Aktuelle Auswahl: <span id="selected-room-label" style="font-weight: 700; color: #184a7b;">Doppelzimmer</span>
+          </div>
           
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px;">
             <!-- Doppelzimmer Option -->
             <div class="room-option selected" id="room-double" onclick="window.superbowlSelectRoom_${packageData.id}('double')" 
-                 style="border: 2px solid #184a7b; border-radius: 8px; padding: 16px; background: #e8f4fd; cursor: pointer;">
+        style="border: 2px solid #1d4ed8; border-radius: 8px; padding: 16px; background: #dbeafe; cursor: pointer;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                   <div style="font-weight: 600; color: #184a7b; font-size: 16px;">🛏️ Doppelzimmer</div>
                   <div style="font-size: 13px; color: #666; margin-top: 4px;">${packageData.nights} Nächte</div>
                 </div>
-                <div style="font-size: 20px; font-weight: bold; color: #184a7b;">
-                  ${packageData.price.toLocaleString('de-CH')} €
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+                  <span class="selected-badge">Ausgewählt</span>
+                  <div style="font-size: 20px; font-weight: bold; color: #184a7b;">
+                    ${packageData.price.toLocaleString('de-CH')} €
+                  </div>
                 </div>
               </div>
             </div>
@@ -135,8 +232,11 @@ export async function GET() {
                   <div style="font-weight: 600; color: #333; font-size: 16px;">🛏️ Einzelzimmer</div>
                   <div style="font-size: 13px; color: #666; margin-top: 4px;">${packageData.nights} Nächte</div>
                 </div>
-                <div style="font-size: 20px; font-weight: bold; color: #184a7b;">
-                  ${(packageData.price + packageData.singleSupplement).toLocaleString('de-CH')} €
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+                  <span class="selected-badge">Ausgewählt</span>
+                  <div style="font-size: 20px; font-weight: bold; color: #184a7b;">
+                    ${(packageData.price + packageData.singleSupplement).toLocaleString('de-CH')} €
+                  </div>
                 </div>
               </div>
             </div>
@@ -212,23 +312,36 @@ export async function GET() {
         const priceSingle = ${packageData.price + packageData.singleSupplement};
         const packageId = '${packageData.id}';
         const nights = ${packageData.nights};
+        const personCount = Number(document.getElementById('person-count')?.value || 2);
         
-        // Update UI
-        document.getElementById('room-double').classList.toggle('selected', roomType === 'double');
-        document.getElementById('room-single').classList.toggle('selected', roomType === 'single');
+  // Update UI
+  const roomDouble = document.getElementById('room-double');
+  const roomSingle = document.getElementById('room-single');
+  const isDouble = roomType === 'double';
+
+  roomDouble.classList.toggle('selected', isDouble);
+  roomSingle.classList.toggle('selected', !isDouble);
+
+  // Reset inline styles so only the selected option stays highlighted
+  roomDouble.style.borderColor = isDouble ? '#1d4ed8' : '#d1d5db';
+  roomDouble.style.background = isDouble ? '#dbeafe' : '#ffffff';
+  roomSingle.style.borderColor = isDouble ? '#d1d5db' : '#1d4ed8';
+  roomSingle.style.background = isDouble ? '#ffffff' : '#dbeafe';
         
-        // Update price display
-        const price = roomType === 'double' ? priceDouble : priceSingle;
+  // Update price display
+  const basePrice = roomType === 'double' ? priceDouble : priceSingle;
+  const price = basePrice;
         const priceDisplay = document.getElementById('price-display');
         priceDisplay.textContent = price.toLocaleString('de-CH') + ' €';
         
         // Update room label
         const roomLabel = roomType === 'double' ? 'Doppelzimmer' : 'Einzelzimmer';
-        document.getElementById('room-label').textContent = roomLabel;
-        document.getElementById('room-type-text').textContent = roomLabel;
+    document.getElementById('room-label').textContent = roomLabel;
+    document.getElementById('room-type-text').textContent = roomLabel;
+    document.getElementById('selected-room-label').textContent = roomLabel;
         
         // Update CTA links with URL parameters
-        const bookingUrl = 'https://superbowl.faltintravel.com/booking?package=' + packageId + '&room=' + roomType + '&price=' + price + '&nights=' + nights;
+  const bookingUrl = 'https://superbowl.faltintravel.com/booking?package=' + packageId + '&room=' + roomType + '&price=' + price + '&nights=' + nights + '&persons=' + personCount;
         document.getElementById('booking-cta').href = bookingUrl;
         document.getElementById('sticky-booking-link').href = bookingUrl;
         document.getElementById('sticky-price').textContent = price.toLocaleString('de-CH') + ' €';
@@ -238,6 +351,27 @@ export async function GET() {
         setTimeout(() => {
           priceDisplay.style.transform = 'scale(1)';
         }, 200);
+      };
+
+      window.superbowlSelectPersons_${packageData.id} = function(count) {
+        const roomType = document.getElementById('room-double').classList.contains('selected') ? 'double' : 'single';
+        const priceDouble = ${packageData.price};
+        const priceSingle = ${packageData.price + packageData.singleSupplement};
+        const packageId = '${packageData.id}';
+        const nights = ${packageData.nights};
+        const persons = Number(count);
+
+        const price = roomType === 'double' ? priceDouble : priceSingle;
+        document.getElementById('price-display').textContent = price.toLocaleString('de-CH') + ' €';
+
+        const bookingUrl = 'https://superbowl.faltintravel.com/booking?package=' + packageId + '&room=' + roomType + '&price=' + price + '&nights=' + nights + '&persons=' + persons;
+        document.getElementById('booking-cta').href = bookingUrl;
+        document.getElementById('sticky-booking-link').href = bookingUrl;
+
+        const hint = document.getElementById('person-hint');
+        if (hint) {
+          hint.textContent = persons + ' Personen ausgewählt';
+        }
       };
       
       // Sticky CTA on scroll

@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qr-billing-service-deployment
+  namespace: qr-billing-service
+  labels:
+    app: qr-billing-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qr-billing-service
+  template:
+    metadata:
+      labels:
+        app: qr-billing-service
+    spec:
+      containers:
+        - name: qr-billing-service
+          image: 10.0.151.53:30500/qr-billing-service
+          ports:
+            - containerPort: 8080
+          env:
+            - name: QR_SERVICE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: qr-billing-service-secrets
+                  key: api-key
+          volumeMounts:
+            - name: zoho-credentials
+              mountPath: /app/app/zoho/credentials.json
+              subPath: credentials.json
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 60
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 60
+      volumes:
+        - name: zoho-credentials
+          secret:
+            secretName: qr-billing-service-secrets
+            items:
+              - key: credentials.json
+                path: credentials.json

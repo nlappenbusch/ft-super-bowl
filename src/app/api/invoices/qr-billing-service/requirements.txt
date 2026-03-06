@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+qrcode
+requests
+cairosvg
+svgwrite
+python-stdnum
+iso3166

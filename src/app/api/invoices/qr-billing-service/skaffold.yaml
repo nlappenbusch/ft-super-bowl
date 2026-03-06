@@ -1,0 +1,22 @@
+apiVersion: skaffold/v2beta29
+kind: Config
+
+build:
+  # This section tells Skaffold to build the image inside your Kubernetes cluster
+  cluster:
+    # The build will run in the same namespace as your application
+    namespace: qr-billing-service
+    
+  artifacts:
+  - # The image name is updated for the new service
+    image: 10.0.151.53:30500/qr-billing-service
+    context: .
+    kaniko:
+      # We still need to tell Kaniko that your cluster's registry is insecure (HTTP)
+      insecureRegistry:
+        - 10.0.151.53:30500
+
+deploy:
+  kubectl:
+    manifests:
+      - k8s/*.yaml

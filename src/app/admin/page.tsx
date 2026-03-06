@@ -218,6 +218,72 @@ export default function AdminDashboard() {
     setInvoiceItems([...invoiceItems, { description: '', quantity: 1, unit_price: 0 }]);
   };
 
+  const addExtraNight = (position: 'before' | 'after') => {
+    const booking = bookings.find(b => b.id === invoiceBookingId);
+    const hotelName = booking ? `Hotel ${booking.package_title.includes('Beverly') ? 'Beverly Wilshire' : 'Loews Santa Monica'}` : 'Hotel';
+    
+    const timing = position === 'before' ? 'VORAB' : 'VERLÄNGERUNG';
+    
+    // Prüfen ob bereits eine Zusatznacht dieser Art existiert
+    const existingIndex = invoiceItems.findIndex(item => 
+      item.description.toLowerCase().includes('zusatznacht') &&
+      item.description.toLowerCase().includes(timing.toLowerCase())
+    );
+    
+    if (existingIndex !== -1) {
+      // Erhöhe die Quantity der existierenden Position
+      const updated = [...invoiceItems];
+      const newQuantity = updated[existingIndex].quantity + 1;
+      
+      // Update description mit neuer Datumsrange
+      const startDate = new Date('2027-02-09'); // Fr. 09.02.2027
+      let dateInfo = '';
+      
+      if (position === 'before') {
+        const firstNight = new Date(startDate);
+        firstNight.setDate(firstNight.getDate() - newQuantity);
+        const lastNight = new Date(startDate);
+        lastNight.setDate(lastNight.getDate() - 1);
+        
+        const formatShort = (d: Date) => {
+          const days = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+          return `${days[d.getDay()]}. ${d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' }).slice(0, 5)}`;
+        };
+        
+        dateInfo = `(${formatShort(firstNight)} - ${formatShort(lastNight)}.2027)`;
+      } else {
+        const firstNight = new Date('2027-02-11'); // Mo. 11.02.2027
+        const lastNight = new Date(firstNight);
+        lastNight.setDate(lastNight.getDate() + newQuantity);
+        
+        const formatShort = (d: Date) => {
+          const days = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+          return `${days[d.getDay()]}. ${d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' }).slice(0, 5)}`;
+        };
+        
+        dateInfo = `(${formatShort(firstNight)} - ${formatShort(lastNight)}.2027)`;
+      }
+      
+      updated[existingIndex] = { 
+        ...updated[existingIndex], 
+        quantity: newQuantity,
+        description: `Zusatznacht ${timing} ${hotelName} ${dateInfo}\nDoppelzimmer mit Frühstück`
+      };
+      setInvoiceItems(updated);
+    } else {
+      // Erstelle neue Position (1 Nacht)
+      const dateInfo = position === 'before' 
+        ? '(Do. 08.02. - Fr. 09.02.2027)' 
+        : '(Mo. 11.02. - Di. 12.02.2027)';
+      
+      setInvoiceItems([...invoiceItems, { 
+        description: `Zusatznacht ${timing} ${hotelName} ${dateInfo}\nDoppelzimmer mit Frühstück`, 
+        quantity: 1, 
+        unit_price: 500 
+      }]);
+    }
+  };
+
   const removeInvoiceItem = (index: number) => {
     setInvoiceItems(invoiceItems.filter((_, i) => i !== index));
   };
@@ -701,12 +767,26 @@ export default function AdminDashboard() {
                       </div>
                     ))}
                     
-                    <button
-                      onClick={addInvoiceItem}
-                      className="w-full px-4 py-2 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition"
-                    >
-                      + Position hinzufügen
-                    </button>
+                    <div className="grid grid-cols-3 gap-3">
+                      <button
+                        onClick={() => addExtraNight('before')}
+                        className="px-3 py-2 border-2 border-dashed border-purple-400 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition font-medium text-sm"
+                      >
+                        🏨 ← Nacht DAVOR
+                      </button>
+                      <button
+                        onClick={() => addExtraNight('after')}
+                        className="px-3 py-2 border-2 border-dashed border-green-400 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition font-medium text-sm"
+                      >
+                        🏨 Nacht DANACH →
+                      </button>
+                      <button
+                        onClick={addInvoiceItem}
+                        className="px-3 py-2 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition text-sm"
+                      >
+                        + Andere Position
+                      </button>
+                    </div>
                   </div>
 
                   {/* Due Date */}

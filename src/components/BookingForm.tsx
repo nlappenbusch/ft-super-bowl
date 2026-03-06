@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { Star, Hotel, Calendar, Users, ChevronDown, CheckCircle2, Phone, Mail, ArrowLeft, Bed, AlertCircle, UserCircle, UserCheck } from 'lucide-react';
 import Image from 'next/image';
+import 'flag-icons/css/flag-icons.min.css';
 
 interface Traveler {
   salutation: string;
@@ -127,6 +128,20 @@ export default function BookingForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mainBookerIsTraveler, setMainBookerIsTraveler] = useState(false); // NEW: Auto-fill first traveler
   const [phonePrefix, setPhonePrefix] = useState('+41'); // Phone country code
+  const [isPhoneDropdownOpen, setIsPhoneDropdownOpen] = useState(false); // Custom dropdown state
+  const [isMounted, setIsMounted] = useState(false); // Fix hydration error for dynamic widgets
+  
+  const phoneCountries = [
+    { code: 'ch', prefix: '+41', name: 'CH' },
+    { code: 'de', prefix: '+49', name: 'DE' },
+    { code: 'at', prefix: '+43', name: 'AT' },
+    { code: 'li', prefix: '+423', name: 'LI' },
+    { code: 'fr', prefix: '+33', name: 'FR' },
+    { code: 'it', prefix: '+39', name: 'IT' },
+    { code: 'nl', prefix: '+31', name: 'NL' },
+    { code: 'be', prefix: '+32', name: 'BE' },
+    { code: 'lu', prefix: '+352', name: 'LU' },
+  ];
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<BookingFormData>({
     defaultValues: {
@@ -249,6 +264,26 @@ export default function BookingForm() {
     // Auto-fill will happen in the form through the checkbox value
   };
 
+  // Close phone dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.phone-dropdown-container')) {
+        setIsPhoneDropdownOpen(false);
+      }
+    };
+
+    if (isPhoneDropdownOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [isPhoneDropdownOpen]);
+
+  // Fix hydration error by only rendering dynamic widgets on client
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const calculateTotal = () => {
     const doubleRooms = Number(watchDoubleRooms) || 0;
     const singleRooms = Number(watchSingleRooms) || 0;
@@ -346,17 +381,17 @@ export default function BookingForm() {
               </p>
 
               <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
-                <div className='bg-blue-50 p-4 rounded-lg border border-blue-200'>
-                  <div className='flex items-center gap-2 text-blue-900 mb-2'>
-                    <Calendar className='w-5 h-5' />
+                <div className='p-4 rounded-lg bg-gray-50 border border-gray-200'>
+                  <div className='flex items-center gap-2 mb-2 text-gray-900'>
+                    <Calendar className='w-5 h-5' style={{ color: '#184a7b' }} />
                     <div>
                       <div className='font-semibold'>Reisezeitraum (fix)</div>
                       <div className='text-sm'>Fr. 12. Februar - Di. 16. Februar 2027 (4 Nächte)</div>
                     </div>
                   </div>
                   {/* Phase 2: Verlängerungsnächte-Hinweis */}
-                  <div className='mt-3 pt-3 border-t border-blue-200'>
-                    <div className='flex items-start gap-2 text-sm text-blue-800'>
+                  <div className='mt-3 pt-3 border-t border-gray-300'>
+                    <div className='flex items-start gap-2 text-sm text-gray-700'>
                       <span className='text-base'>ℹ️</span>
                       <span><strong>Verlängerungsnächte</strong> auf Anfrage gegen Aufpreis buchbar</span>
                     </div>
@@ -379,7 +414,7 @@ export default function BookingForm() {
                   </div>
                 </div>
 
-                <div style={{ backgroundImage: 'linear-gradient(135deg, #e8f2f9 0%, #d4e8f7 100%)', borderColor: '#184a7b' }} className='p-6 rounded-xl border-2'>
+                <div className='p-6 rounded-xl bg-gray-50 border border-gray-200'>
                   <div className='flex items-center gap-2 mb-4'>
                     <Bed className='w-5 h-5' style={{ color: '#184a7b' }} />
                     <label className='text-lg font-bold text-gray-900'>Zimmeraufteilung *</label>
@@ -469,7 +504,7 @@ export default function BookingForm() {
                 </div>
 
                 {/* NEUE STRUKTUR: Hauptanmelder ZUERST */}
-                <div className='border-t-4 border-blue-500 pt-8'>
+                <div className='border-t-4 pt-8' style={{ borderColor: '#184a7b' }}>
                   <div className='flex items-center gap-3 mb-6'>
                     <UserCheck className='w-7 h-7' style={{ color: '#184a7b' }} />
                     <div>
@@ -478,10 +513,7 @@ export default function BookingForm() {
                     </div>
                   </div>
 
-                  <div className='space-y-4 p-6 rounded-xl border-2' style={{ 
-                    backgroundImage: 'linear-gradient(135deg, rgb(232, 242, 249) 0%, rgb(212, 232, 247) 100%)',
-                    borderColor: 'rgb(24, 74, 123)'
-                  }}>
+                  <div className='space-y-4 p-6 rounded-xl bg-gray-50 border border-gray-200'>
                     {/* Persönliche Daten */}
                     <div>
                       <label className='block text-sm font-semibold text-gray-700 mb-2'>Anrede *</label>
@@ -497,12 +529,12 @@ export default function BookingForm() {
                     <div className='grid md:grid-cols-2 gap-4'>
                       <div>
                         <label className='block text-sm font-semibold text-gray-700 mb-2'>Vorname *</label>
-                        <input type='text' {...register('mainBookerFirstName', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg' placeholder='Max' />
+                        <input type='text' {...register('mainBookerFirstName', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white' placeholder='Max' />
                         {errors.mainBookerFirstName && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
                       </div>
                       <div>
                         <label className='block text-sm font-semibold text-gray-700 mb-2'>Nachname *</label>
-                        <input type='text' {...register('mainBookerLastName', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg' placeholder='Mustermann' />
+                        <input type='text' {...register('mainBookerLastName', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white' placeholder='Mustermann' />
                         {errors.mainBookerLastName && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
                       </div>
                     </div>
@@ -517,7 +549,7 @@ export default function BookingForm() {
                         <label className='block text-sm font-semibold text-gray-700 mb-2'>E-Mail *</label>
                         <div className='relative'>
                           <Mail className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5' />
-                          <input type='email' {...register('email', { required: true, pattern: /^\S+@\S+$/i })} className='w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg' placeholder='max@example.com' />
+                          <input type='email' {...register('email', { required: true, pattern: /^\S+@\S+$/i })} className='w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg bg-white' placeholder='max@example.com' />
                         </div>
                         {errors.email && <span className='text-red-500 text-sm'>Gültige E-Mail erforderlich</span>}
                       </div>
@@ -526,49 +558,73 @@ export default function BookingForm() {
                     <div>
                       <label className='block text-sm font-semibold text-gray-700 mb-2'>Telefon *</label>
                       <div className='grid grid-cols-3 gap-2'>
-                        <select 
-                          className='px-3 py-3 border border-gray-300 rounded-lg bg-white' 
-                          value={phonePrefix}
-                          onChange={(e) => setPhonePrefix(e.target.value)}
-                        >
-                          <option value='+41'>🇨🇭 +41</option>
-                          <option value='+49'>🇩🇪 +49</option>
-                          <option value='+43'>🇦🇹 +43</option>
-                          <option value='+423'>🇱🇮 +423</option>
-                          <option value='+33'>🇫🇷 +33</option>
-                          <option value='+39'>🇮🇹 +39</option>
-                          <option value='+31'>🇳🇱 +31</option>
-                          <option value='+32'>🇧🇪 +32</option>
-                          <option value='+352'>🇱🇺 +352</option>
-                        </select>
+                        {/* Custom Dropdown für Flaggen */}
+                        <div className='relative phone-dropdown-container'>
+                          <button
+                            type='button'
+                            onClick={() => setIsPhoneDropdownOpen(!isPhoneDropdownOpen)}
+                            className='w-full px-3 py-3 border border-gray-300 rounded-lg bg-white text-left flex items-center gap-2'
+                          >
+                            <img 
+                              src={`https://flagcdn.com/w20/${phoneCountries.find(c => c.prefix === phonePrefix)?.code}.png`}
+                              alt=''
+                              className='w-5 h-auto'
+                            />
+                            <span className='text-sm'>{phonePrefix}</span>
+                          </button>
+                          
+                          {isPhoneDropdownOpen && (
+                            <div className='absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto'>
+                              {phoneCountries.map((country) => (
+                                <button
+                                  key={country.prefix}
+                                  type='button'
+                                  onClick={() => {
+                                    setPhonePrefix(country.prefix);
+                                    setIsPhoneDropdownOpen(false);
+                                  }}
+                                  className='w-full px-3 py-2 hover:bg-gray-100 flex items-center gap-2 text-left'
+                                >
+                                  <img 
+                                    src={`https://flagcdn.com/w20/${country.code}.png`}
+                                    alt={country.name}
+                                    className='w-5 h-auto'
+                                  />
+                                  <span className='text-sm'>{country.name} {country.prefix}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        
                         <div className='col-span-2 relative'>
                           <Phone className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5' />
-                          <input type='tel' {...register('phone', { required: true })} className='w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg' placeholder='79 123 45 67' />
+                          <input type='tel' {...register('phone', { required: true })} className='w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg bg-white' placeholder='79 123 45 67' />
                         </div>
                       </div>
                       {errors.phone && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
                     </div>
 
                     {/* Adresse */}
-                    <div className='pt-4 border-t' style={{ borderColor: 'rgb(24, 74, 123)' }}>
+                    <div className='pt-4 border-t border-gray-300'>
                       <h4 className='font-semibold text-gray-900 mb-4'>Rechnungsadresse</h4>
                       
                       <div className='space-y-4'>
                         <div>
                           <label className='block text-sm font-semibold text-gray-700 mb-2'>Straße & Hausnummer *</label>
-                          <input type='text' {...register('street', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg' placeholder='Musterstraße 123' />
+                          <input type='text' {...register('street', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white' placeholder='Musterstraße 123' />
                           {errors.street && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
                         </div>
                         
                         <div className='grid md:grid-cols-3 gap-4'>
                           <div>
                             <label className='block text-sm font-semibold text-gray-700 mb-2'>PLZ *</label>
-                            <input type='text' {...register('zip', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg' placeholder='8000' />
+                            <input type='text' {...register('zip', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white' placeholder='8000' />
                             {errors.zip && <span className='text-red-500 text-sm'>Pflicht</span>}
                           </div>
                           <div className='md:col-span-2'>
                             <label className='block text-sm font-semibold text-gray-700 mb-2'>Ort *</label>
-                            <input type='text' {...register('city', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg' placeholder='Zürich' />
+                            <input type='text' {...register('city', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white' placeholder='Zürich' />
                             {errors.city && <span className='text-red-500 text-sm'>Pflicht</span>}
                           </div>
                         </div>
@@ -594,8 +650,8 @@ export default function BookingForm() {
                     </div>
 
                     {/* Checkbox: Ich bin auch Reisender */}
-                    <div className='pt-4 border-t-2' style={{ borderColor: 'rgb(24, 74, 123)' }}>
-                      <div className='flex items-start gap-3 p-4 bg-white rounded-lg border-2' style={{ borderColor: 'rgb(24, 74, 123)' }}>
+                    <div className='pt-4 border-t border-gray-300'>
+                      <div className='flex items-start gap-3 p-4 bg-white rounded-lg border-2 border-gray-300'>
                         <input 
                           type='checkbox' 
                           id='mainBookerIsTraveler'
@@ -625,9 +681,9 @@ export default function BookingForm() {
                 </div>
 
                 {/* Reisende-Section */}
-                <div className='border-t-4 border-green-500 pt-8'>
+                <div className='border-t-4 pt-8' style={{ borderColor: '#f14624' }}>
                   <div className='flex items-center gap-3 mb-6'>
-                    <Users className='w-7 h-7 text-green-600' />
+                    <Users className='w-7 h-7' style={{ color: '#f14624' }} />
                     <div>
                       <h3 className='text-2xl font-bold text-gray-900'>
                         {mainBookerIsTraveler ? 'Weitere Reisende' : 'Reisende'}
@@ -690,20 +746,20 @@ export default function BookingForm() {
 
                 {/* AGB & Privacy */}
                 <div className='space-y-3 pt-6'>
-                    <div className='flex items-start gap-3'>
+                    <label className='flex items-start gap-3 cursor-pointer'>
                       <input type='checkbox' {...register('acceptTerms', { required: true })} style={{ accentColor: '#184a7b' }} className='mt-1 w-4 h-4 border-gray-300 rounded' />
-                      <label className='text-sm text-gray-700'>
-                        Ich habe die <a href='/agb' target='_blank' rel='noopener noreferrer' style={{ color: '#184a7b' }} className='hover:underline font-semibold'>Allgemeinen Geschäftsbedingungen (AGB)</a> gelesen und akzeptiere diese. *
-                      </label>
-                    </div>
+                      <span className='text-sm text-gray-700'>
+                        Ich habe die <a href='/agb' target='_blank' rel='noopener noreferrer' style={{ color: '#184a7b' }} className='hover:underline font-semibold' onClick={(e) => e.stopPropagation()}>Allgemeinen Geschäftsbedingungen (AGB)</a> gelesen und akzeptiere diese. *
+                      </span>
+                    </label>
                     {errors.acceptTerms && <span className='text-red-500 text-sm block ml-7'>Pflichtfeld</span>}
                     
-                    <div className='flex items-start gap-3'>
+                    <label className='flex items-start gap-3 cursor-pointer'>
                       <input type='checkbox' {...register('acceptPrivacy', { required: true })} style={{ accentColor: '#184a7b' }} className='mt-1 w-4 h-4 border-gray-300 rounded' />
-                      <label className='text-sm text-gray-700'>
-                        Ich habe die <a href='/datenschutz' target='_blank' rel='noopener noreferrer' style={{ color: '#184a7b' }} className='hover:underline font-semibold'>Datenschutzerklärung</a> gelesen und akzeptiere diese. *
-                      </label>
-                    </div>
+                      <span className='text-sm text-gray-700'>
+                        Ich habe die <a href='/datenschutz' target='_blank' rel='noopener noreferrer' style={{ color: '#184a7b' }} className='hover:underline font-semibold' onClick={(e) => e.stopPropagation()}>Datenschutzerklärung</a> gelesen und akzeptiere diese. *
+                      </span>
+                    </label>
                     {errors.acceptPrivacy && <span className='text-red-500 text-sm block ml-7'>Pflichtfeld</span>}
                 </div>
 
@@ -813,7 +869,9 @@ export default function BookingForm() {
               {/* eKomi Trust Badge */}
               <div className='mt-6 bg-white rounded-lg p-4 shadow-sm'>
                 <p className='text-xs text-gray-600 text-center mb-3 font-semibold'>Vertrauen Sie auf Faltin Travel</p>
-                <div id="widget-container" className="ekomi-widget-container ekomi-widget-sf11936169930865af963"></div>
+                {isMounted && (
+                  <div id="widget-container" className="ekomi-widget-container ekomi-widget-sf11936169930865af963"></div>
+                )}
                 <a href="https://www.ekomi.de/bewertungen-faltintravelcom.html" target="_blank" rel="noopener noreferrer">
                   <img alt="faltintravel.com Reviews with ekomi.de" src="https://smart-widget-assets.ekomiapps.de/resources/ekomi_logo.png" style={{ display: 'none' }}/>
                 </a>

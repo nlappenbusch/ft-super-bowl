@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getInvoiceById, getInvoiceItems, getBookingById } from '@/lib/database';
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import fs from 'fs';
+import path from 'path';
+import QRCode from 'qrcode';
 
 export async function GET(
   request: Request,
@@ -28,84 +30,163 @@ export async function GET(
       );
     }
 
+    // Zusatznächte aus invoice_items erkennen
+    const extraNightsBefore = items.filter(item => 
+      item.description.toLowerCase().includes('zusatznacht') &&
+      item.description.toLowerCase().includes('vorab')
+    );
+    const extraNightsAfter = items.filter(item => 
+      item.description.toLowerCase().includes('zusatznacht') &&
+      item.description.toLowerCase().includes('verlängerung')
+    );
+    
+    const nightsBefore = extraNightsBefore.reduce((sum, item) => sum + item.quantity, 0);
+    const nightsAfter = extraNightsAfter.reduce((sum, item) => sum + item.quantity, 0);
+    
+    // Basis-Reisetermine: Fr. 09.02. - Mo. 11.02.2027 (2 Nächte)
+    const baseCheckIn = new Date('2027-02-09');
+    const baseCheckOut = new Date('2027-02-11');
+    
+    // Angepasste Check-in/Check-out mit Zusatznächten
+    const adjustedCheckIn = new Date(baseCheckIn);
+    adjustedCheckIn.setDate(adjustedCheckIn.getDate() - nightsBefore);
+    
+    const adjustedCheckOut = new Date(baseCheckOut);
+    adjustedCheckOut.setDate(adjustedCheckOut.getDate() + nightsAfter);
+    
+    // Formatierung für Anzeige
+    const formatDate = (date: Date) => {
+      const days = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+      const day = days[date.getDay()];
+      const dateStr = date.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' });
+      return `${day}. ${dateStr}.`;
+    };
+    
+    const checkInFormatted = formatDate(adjustedCheckIn);
+    const checkOutFormatted = formatDate(adjustedCheckOut);
+    const totalNights = 2 + nightsBefore + nightsAfter; // Basis: 2 Nächte + Zusatznächte
+
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     
-    let currentY = 20;
+    let currentY = 12;
     const leftMargin = 20;
+    const rightMargin = 130; // Rechte Spalte für Firmenadresse
 
-    doc.setFontSize(14);
-    doc.setTextColor(24, 74, 123);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Faltin Travel AG', leftMargin, currentY);
-    currentY += 6;
+    // Logo laden für beide Seiten
+    let faltinLogoBase64 = '';
+    try {
+      const logoPath = path.join(process.cwd(), 'public', 'faltin_logo_black-1 (2).png');
+      if (fs.existsSync(logoPath)) {
+        const logoData = fs.readFileSync(logoPath);
+        faltinLogoBase64 = `data:image/png;base64,${logoData.toString('base64')}`;
+        doc.addImage(faltinLogoBase64, 'PNG', leftMargin, currentY, 60, 0);
+      } else {
+        // Fallback: Text-Logo
+        doc.setFontSize(16);
+        doc.setTextColor(24, 74, 123);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Faltin Travel AG', leftMargin, currentY);
+      }
+    } catch (error) {
+      // Fallback bei Fehler: Text-Logo
+      doc.setFontSize(16);
+      doc.setTextColor(24, 74, 123);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Faltin Travel AG', leftMargin, currentY);
+    }
     
-    doc.setFontSize(8);
+    // Firmenadresse und Reisegarantie auf gleicher Linie (rechts oben)
+    let firmY = 15; // Gleiche Höhe wie Logo-Start
+    doc.setFontSize(7);
     doc.setTextColor(0, 0, 0);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Limmatquai 3', leftMargin, currentY);
-    currentY += 3.5;
-    doc.text('8001 Zürich, Schweiz', leftMargin, currentY);
-    currentY += 3.5;
-    doc.text('Tel: +41 44 700 22 77', leftMargin, currentY);
-    currentY += 3.5;
-    doc.text('E-Mail: info@faltintravel.com', leftMargin, currentY);
-    currentY += 3.5;
-    doc.text('Web: www.faltintravel.com', leftMargin, currentY);
-
-    const detailsX = 130;
-    let detailsY = 20;
-    
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Rechnungsnummer:', detailsX, detailsY);
     doc.setFont('helvetica', 'bold');
-    doc.text(invoice.invoice_number, detailsX + 40, detailsY);
-    detailsY += 5;
-    
+    doc.text('Faltin Travel AG', rightMargin, firmY);
+    firmY += 3;
     doc.setFont('helvetica', 'normal');
-    doc.text('Rechnungsdatum:', detailsX, detailsY);
-    doc.text(new Date(invoice.invoice_date).toLocaleDateString('de-CH'), detailsX + 40, detailsY);
-    detailsY += 5;
-    
-    doc.text('Fälligkeitsdatum:', detailsX, detailsY);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(200, 0, 0);
-    doc.text(new Date(invoice.due_date).toLocaleDateString('de-CH'), detailsX + 40, detailsY);
-    doc.setTextColor(0, 0, 0);
-    
-    currentY = 48;
+    doc.text('Riedthofstrasse 172', rightMargin, firmY);
+    firmY += 3;
+    doc.text('8105 Regensdorf, Schweiz', rightMargin, firmY);
+    firmY += 3;
+    doc.text('TEL +41 44 700 22 77', rightMargin, firmY);
+    firmY += 3;
+    doc.text('FAX +41 44 740 33 27', rightMargin, firmY);
+    firmY += 3;
+    doc.text('info@faltintravel.com', rightMargin, firmY);
+    firmY += 3;
+    doc.text('faltintravel.com', rightMargin, firmY);
 
-    doc.setFontSize(18);
-    doc.setTextColor(24, 74, 123);
-    doc.setFont('helvetica', 'bold');
-    doc.text('RECHNUNG', leftMargin, currentY);
-    currentY += 10;
-
+    // Absenderzeile (klein und unterstrichen, wie auf professionellen Briefen)
+    currentY = 48; // Von 56 auf 48 - höher beginnen
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'normal');
+    const absenderText = 'Faltin Travel AG · Bahnstrasse 24 · 8105 Regensdorf';
+    doc.text(absenderText, leftMargin, currentY);
+    // Unterstreichung der Absenderzeile
+    const absenderWidth = doc.getTextWidth(absenderText);
+    doc.setLineWidth(0.1);
+    doc.line(leftMargin, currentY + 0.5, leftMargin + absenderWidth, currentY + 0.5);
+    
+    // Kundenadresse LINKS (unter der Absenderzeile)
+    currentY = 55; // Von 63 auf 55 - höher beginnen
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     const traveler = booking.travelers[0];
     doc.text(`${traveler.firstName} ${traveler.lastName}`, leftMargin, currentY);
     currentY += 4;
+    // Adressfelder noch nicht im System - können später ergänzt werden
     doc.text(booking.email, leftMargin, currentY);
     currentY += 4;
     doc.text(booking.phone, leftMargin, currentY);
-    currentY += 10;
+    currentY += 15; // Von 10 auf 15 - mehr Abstand vor "Bestätigung / Rechnung"
 
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.text('Bestätigung / Rechnung', leftMargin, currentY);
     currentY += 8;
 
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.5);
-    doc.rect(leftMargin, currentY - 2, 170, 8, 'S');
+    // Optimierte Rechnungsdetail-Box (alles in einer Zeile)
+    doc.setFillColor(245, 245, 245); // Hellgrau
+    doc.setDrawColor(200, 200, 200); // Grauer Rahmen
+    doc.setLineWidth(0.3);
+    doc.rect(leftMargin, currentY - 2, 170, 6, 'FD'); // Kleinere Box, nur 6mm hoch
     
-    doc.setFontSize(9);
+    doc.setFontSize(8);
+    const boxY = currentY + 1.5;
+    
+    // Rechnungsnummer
+    doc.setFont('helvetica', 'bold');
+    doc.text('Rechnungsnummer:', leftMargin + 2, boxY);
     doc.setFont('helvetica', 'normal');
-    const boxY = currentY + 2.5;
-    doc.text('Rechnungsnummer: ' + invoice.invoice_number, leftMargin + 3, boxY);
-    doc.text('Rechnungsdatum: ' + new Date(invoice.invoice_date).toLocaleDateString('de-CH'), leftMargin + 100, boxY);
-    currentY += 12;
+    doc.text(invoice.invoice_number, leftMargin + 30, boxY);
+    
+    // Rechnungsdatum
+    doc.setFont('helvetica', 'bold');
+    doc.text('Rechnungsdatum:', leftMargin + 60, boxY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(new Date(invoice.invoice_date).toLocaleDateString('de-CH'), leftMargin + 85, boxY);
+    
+    // Fälligkeitsdatum
+    doc.setFont('helvetica', 'bold');
+    doc.text('Fälligkeitsdatum:', leftMargin + 110, boxY);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(200, 0, 0); // Rot für Fälligkeit
+    doc.text(new Date(invoice.due_date).toLocaleDateString('de-CH'), leftMargin + 140, boxY);
+    doc.setTextColor(0, 0, 0); // Zurück zu Schwarz
+    
+    currentY += 10;
+    
+    // Reisegarantie-Logo rechts - auf gleicher X-Position wie Absenderadresse
+    try {
+      const reisegarantiePath = path.join(process.cwd(), 'public', 'reisegarantielogo-de-768x258.webp');
+      if (fs.existsSync(reisegarantiePath)) {
+        const reisegarantieData = fs.readFileSync(reisegarantiePath);
+        const reisegarantieBase64 = reisegarantieData.toString('base64');
+        // X=rightMargin (130mm) statt 155mm - gleiche Position wie "Faltin Travel AG"
+        doc.addImage(`data:image/webp;base64,${reisegarantieBase64}`, 'WEBP', rightMargin, 38, 45, 0); // Von 35 auf 45mm - größer
+      }
+    } catch (error) {
+      // Ignorieren wenn Logo nicht verfügbar
+    }
 
     const labelX = leftMargin;
     const valueX = leftMargin + 38;
@@ -120,7 +201,7 @@ export async function GET(
     doc.setFont('helvetica', 'bold');
     doc.text('Reisetermin:', labelX, currentY);
     doc.setFont('helvetica', 'normal');
-    doc.text('Fr. 09.02. - Mo. 11.02.2027', valueX, currentY);
+    doc.text(`${checkInFormatted} - ${checkOutFormatted}2027`, valueX, currentY);
     currentY += 4.2;
 
     doc.setFont('helvetica', 'bold');
@@ -145,7 +226,8 @@ export async function GET(
     doc.text('Unterbringung:', labelX, currentY);
     doc.setFont('helvetica', 'normal');
     const roomCount = Math.ceil(booking.travelers.length / 2);
-    doc.text(`${roomCount}x Übernachtung/Frühstück im Doppelzimmer von Fr. 09.02.2027 - Mo. 11.02.2027`, valueX, currentY);
+    const nightText = totalNights === 1 ? 'Übernachtung' : 'Übernachtungen';
+    doc.text(`${roomCount}x ${totalNights} ${nightText}/Frühstück im Doppelzimmer von ${checkInFormatted}2027 - ${checkOutFormatted}2027`, valueX, currentY);
     currentY += 4.2;
 
     doc.setFont('helvetica', 'bold');
@@ -180,98 +262,175 @@ export async function GET(
 
     doc.setFont('helvetica', 'bold');
     doc.text('Reiseteilnehmer:', labelX, currentY);
-    currentY += 4;
     
     doc.setFont('helvetica', 'normal');
-    booking.travelers.forEach((t: any) => {
+    booking.travelers.forEach((t: any, index: number) => {
       const salutation = t.salutation === 'Herr' ? 'Mr.' : 'Mrs.';
       doc.text(`${salutation}    ${t.firstName} ${t.lastName}`, valueX, currentY);
-      currentY += 3.8;
+      if (index < booking.travelers.length - 1) currentY += 3.8;
     });
     
     currentY += 6;
 
-    const tableData = items.map((item: any) => [
-      item.description,
-      item.quantity.toString(),
-      item.unit_price.toFixed(2),
-      item.total_price.toFixed(2)
-    ]);
-
-    autoTable(doc, {
-      startY: currentY,
-      head: [['Beschreibung', 'Menge', 'Preis (CHF)', 'Total (CHF)']],
-      body: tableData,
-      theme: 'grid',
-      headStyles: {
-        fillColor: [24, 74, 123],
-        textColor: [255, 255, 255],
-        fontSize: 9,
-        fontStyle: 'bold',
-        halign: 'center',
-        valign: 'middle',
-        cellPadding: 3
-      },
-      bodyStyles: {
-        fontSize: 8,
-        cellPadding: 3
-      },
-      columnStyles: {
-        0: { cellWidth: 90, halign: 'left', valign: 'top' },
-        1: { cellWidth: 20, halign: 'center', valign: 'middle' },
-        2: { cellWidth: 30, halign: 'right', valign: 'middle' },
-        3: { cellWidth: 30, halign: 'right', valign: 'middle' }
-      },
-      margin: { left: leftMargin, right: 20 },
-      tableLineColor: [200, 200, 200],
-      tableLineWidth: 0.1,
-      styles: {
-        overflow: 'linebreak',
-        cellWidth: 'wrap'
+    // Rechnungspositionen als Teil der Struktur
+    doc.setFont('helvetica', 'bold');
+    doc.text('Leistungen:', labelX, currentY);
+    doc.setFont('helvetica', 'normal');
+    
+    // Package Position
+    const packageItem = items.find((item: any) => 
+      item.description.toLowerCase().includes('package') || 
+      item.description.toLowerCase().includes('paket')
+    );
+    
+    if (packageItem) {
+      const packageLines = packageItem.description.split('\n');
+      doc.text(packageLines[0], valueX, currentY);
+      currentY += 3.8;
+      
+      // Zusatzzeilen (z.B. "2 Personen, 1 DZ, 0 EZ") - OHNE Preis
+      doc.setFont('helvetica', 'normal');
+      for (let i = 1; i < packageLines.length; i++) {
+        if (packageLines[i].trim()) {
+          doc.text(packageLines[i], valueX, currentY);
+          currentY += 3.5;
+        }
+      }
+    }
+    
+    // Zusatznächte VORAB - nur Beschreibung, kein Preis
+    const vorabItems = items.filter((item: any) => 
+      item.description.toLowerCase().includes('zusatznacht') &&
+      item.description.toLowerCase().includes('vorab')
+    );
+    
+    vorabItems.forEach((item: any) => {
+      const lines = item.description.split('\n');
+      doc.setFont('helvetica', 'normal');
+      doc.text(lines[0], valueX, currentY);
+      currentY += 3.5;
+      
+      for (let i = 1; i < lines.length; i++) {
+        if (lines[i].trim()) {
+          doc.text(lines[i], valueX, currentY);
+          currentY += 3.2;
+        }
       }
     });
+    
+    // Zusatznächte VERLÄNGERUNG - nur Beschreibung, kein Preis
+    const verlaengerungItems = items.filter((item: any) => 
+      item.description.toLowerCase().includes('zusatznacht') &&
+      item.description.toLowerCase().includes('verlängerung')
+    );
+    
+    verlaengerungItems.forEach((item: any) => {
+      const lines = item.description.split('\n');
+      doc.setFont('helvetica', 'normal');
+      doc.text(lines[0], valueX, currentY);
+      currentY += 3.5;
+      
+      for (let i = 1; i < lines.length; i++) {
+        if (lines[i].trim()) {
+          doc.text(lines[i], valueX, currentY);
+          currentY += 3.2;
+        }
+      }
+    });
+    
+    // Andere Positionen - nur Beschreibung, kein Preis
+    const otherItems = items.filter((item: any) => 
+      !item.description.toLowerCase().includes('package') &&
+      !item.description.toLowerCase().includes('paket') &&
+      !item.description.toLowerCase().includes('zusatznacht')
+    );
+    
+    otherItems.forEach((item: any) => {
+      const lines = item.description.split('\n');
+      doc.setFont('helvetica', 'normal');
+      doc.text(lines[0], valueX, currentY);
+      
+      const priceText = item.quantity > 1 
+        ? `${item.quantity}x CHF ${item.unit_price.toFixed(2).replace('.', ',')} = CHF ${item.total_price.toFixed(2).replace('.', ',')}`
+        : `CHF ${item.total_price.toFixed(2).replace('.', ',')}`;
+      doc.text(priceText, 190, currentY, { align: 'right' });
+      currentY += 3.5;
+      
+      for (let i = 1; i < lines.length; i++) {
+        if (lines[i].trim()) {
+          doc.text(lines[i], valueX, currentY);
+          currentY += 3.2;
+        }
+      }
+    });
+    
+    currentY += 6;
 
-    currentY = (doc as any).lastAutoTable.finalY + 8;
-
-    const priceTableX = 115;
-    const currencyX = 163;
-    const priceValueX = 185;
+    // Preis-Tabelle rechts ausgerichtet mit genug Platz
+    const priceLabelX = 105;   // Label ganz links
+    const currencyX = 162;     // "Euro" Spalte
+    const amountX = 190;       // Betrag rechtsbündig (ganz rechts)
     
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     
-    const pricePerPerson = booking.travelers.length > 0 ? invoice.total_amount / booking.travelers.length : 0;
-    doc.text('Reisepreis pro Person:', priceTableX, currentY);
+    // Berechne Package-Preis und Zusatznächte-Preis separat
+    const packagePrice = packageItem ? packageItem.total_price : 0;
+    const extraNightsPrice = [...vorabItems, ...verlaengerungItems].reduce((sum, item) => sum + item.total_price, 0);
+    const otherItemsPrice = otherItems.reduce((sum: number, item: any) => sum + item.total_price, 0);
+    
+    // Package-Preis
+    const pricePerPerson = booking.travelers.length > 0 ? packagePrice / booking.travelers.length : 0;
+    doc.text('Reisepreis pro Person:', priceLabelX, currentY);
     doc.text('Euro', currencyX, currentY);
-    doc.text(pricePerPerson.toFixed(2).replace('.', ','), priceValueX, currentY, { align: 'right' });
+    doc.text(pricePerPerson.toFixed(2).replace('.', ','), amountX, currentY, { align: 'right' });
     currentY += 5;
     
-    doc.text('Gesamtreisepreis:', priceTableX, currentY);
+    doc.text('Gesamtreisepreis:', priceLabelX, currentY);
     doc.text('Euro', currencyX, currentY);
-    doc.text(invoice.total_amount.toFixed(2).replace('.', ','), priceValueX, currentY, { align: 'right' });
+    doc.text(packagePrice.toFixed(2).replace('.', ','), amountX, currentY, { align: 'right' });
     currentY += 5;
     
-    doc.text('Versandkosten:', priceTableX, currentY);
+    // Zusatznächte (falls vorhanden)
+    if (extraNightsPrice > 0) {
+      const totalExtraNights = nightsBefore + nightsAfter;
+      doc.text(`Zusatznächte (${totalExtraNights}x):`, priceLabelX, currentY);
+      doc.text('Euro', currencyX, currentY);
+      doc.text(extraNightsPrice.toFixed(2).replace('.', ','), amountX, currentY, { align: 'right' });
+      currentY += 5;
+    }
+    
+    // Andere Positionen (falls vorhanden)
+    if (otherItemsPrice > 0) {
+      doc.text('Weitere Leistungen:', priceLabelX, currentY);
+      doc.text('Euro', currencyX, currentY);
+      doc.text(otherItemsPrice.toFixed(2).replace('.', ','), amountX, currentY, { align: 'right' });
+      currentY += 5;
+    }
+    
+    doc.text('Versandkosten:', priceLabelX, currentY);
     doc.text('Euro', currencyX, currentY);
-    doc.text('0,00', priceValueX, currentY, { align: 'right' });
+    doc.text('0,00', amountX, currentY, { align: 'right' });
     currentY += 5;
     
-    doc.text('Mehrwertsteuer 0%:', priceTableX, currentY);
+    doc.text('Mehrwertsteuer 0%:', priceLabelX, currentY);
     doc.text('Euro', currencyX, currentY);
-    doc.text('0,00', priceValueX, currentY, { align: 'right' });
+    doc.text('0,00', amountX, currentY, { align: 'right' });
     currentY += 6;
     
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.text('Rechnungsbetrag TOTAL:', priceTableX, currentY);
+    doc.text('Rechnungsbetrag TOTAL:', priceLabelX, currentY);
+    doc.setFont('helvetica', 'bold');
     doc.text('Euro', currencyX, currentY);
-    doc.text(invoice.total_amount.toFixed(2).replace('.', ','), priceValueX, currentY, { align: 'right' });
+    doc.text(invoice.total_amount.toFixed(2).replace('.', ','), amountX, currentY, { align: 'right' });
     
     doc.setLineWidth(0.5);
-    doc.line(priceValueX - 30, currentY + 1, priceValueX + 2, currentY + 1);
+    doc.line(amountX - 28, currentY + 1, amountX + 2, currentY + 1);
     
     currentY += 12;
 
+    // Zahlungsbedingungen und wichtige Hinweise
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
     
@@ -279,35 +438,448 @@ export async function GET(
     
     const splitText = doc.splitTextToSize(paymentText, 170);
     doc.text(splitText, leftMargin, currentY);
-    currentY += splitText.length * 3 + 5;
+    currentY += splitText.length * 3 + 8;
     
+    // Bankverbindung in übersichtlicher Box
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Bankverbindung:', leftMargin, currentY);
+    currentY += 4;
+    
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
-    doc.text('Bank:', leftMargin, currentY);
-    doc.text('Credit Suisse / SWIFT-Code: CRESCHZZ80A', leftMargin + 25, currentY);
-    currentY += 3.5;
+    doc.text('Bank: UBS Switzerland AG', leftMargin, currentY);
+    doc.text('SWIFT/BIC: UBSWCHZH80A', leftMargin + 70, currentY);
+    currentY += 4;
     
-    doc.text('IBAN-Nr. für CHF:', leftMargin, currentY);
-    doc.text('CH30 0483 5183 2342 2100 0', leftMargin + 25, currentY);
-    currentY += 3.5;
+    doc.setFont('helvetica', 'bold');
+    doc.text('IBAN: CH65 0029 1291 1135 1860 G', leftMargin, currentY);
+    doc.setFont('helvetica', 'normal');
+    currentY += 4;
     
-    doc.text('IBAN-Nr. für EUR:', leftMargin, currentY);
-    doc.text('CH63 0483 5183 2342 2200 0', leftMargin + 25, currentY);
+    // Verwendungszweck
+    doc.setFontSize(7);
+    doc.text(`Verwendungszweck: Rechnung Nr. ${invoice.invoice_number}`, leftMargin, currentY);
+    currentY += 8;
 
-    doc.setFontSize(6);
-    doc.setTextColor(100, 100, 100);
+    // Footer mit Firmendaten (besser lesbar)
+    doc.setFontSize(7);
+    doc.setTextColor(60, 60, 60);
     
     const footerY = 282;
+    const footerRightX = 125;
+    
     doc.text('Inhaberverwaltungsrat: Stefan Faltin', leftMargin, footerY);
-    doc.text('CHE-267.343.865 MWST', 115, footerY);
+    doc.text('UID: CHE-267.347.685 MWST', footerRightX, footerY);
     
-    doc.text('Geschäftsführer: Stefan Faltin', leftMargin, footerY + 3);
-    doc.text('HRD: CH-020.3.037.547-2', 115, footerY + 3);
+    doc.text('Geschäftsführer: Stefan Faltin', leftMargin, footerY + 3.5);
+    doc.text('HrID: CH-020.3.037.547-2', footerRightX, footerY + 3.5);
     
-    doc.text('Sitz der Gesellschaft und Gerichtsstand: Regensdorf', leftMargin, footerY + 6);
-    doc.text('Bank: Credit Suisse / SWIFT-Code: CRESCHZZ80A', 115, footerY + 6);
+    doc.text('Sitz der Gesellschaft und Gerichtsstand: Regensdorf', leftMargin, footerY + 7);
+
+    // ========== SEITE 2: Swiss QR-Rechnung ==========
+    doc.addPage();
     
-    doc.text('IBAN-Nr. für CHF: CH30 0483 5183 2342 2100 0', 115, footerY + 9);
-    doc.text('IBAN-Nr. für EUR: CH63 0483 5183 2342 2200 0', 115, footerY + 12);
+    // Header auf Seite 2 mit beiden Logos
+    if (faltinLogoBase64) {
+      doc.addImage(faltinLogoBase64, 'PNG', leftMargin, 10, 60, 0);
+    }
+    
+    // Reisegarantie Logo laden (für Titel und Info-Box) - WEBP statt SVG
+    let garantieLogoBase64Small = '';
+    try {
+      const garantieLogoPathSmall = path.join(process.cwd(), 'public', 'Schweizer-Reisegarantie-300x120-1.webp');
+      if (fs.existsSync(garantieLogoPathSmall)) {
+        const garantieLogoDataSmall = fs.readFileSync(garantieLogoPathSmall);
+        garantieLogoBase64Small = garantieLogoDataSmall.toString('base64');
+      }
+    } catch (error) {
+      console.log('Garantie Logo konnte nicht geladen werden');
+    }
+    
+    // Reisegarantie Logo rechts oben (Header)
+    try {
+      const garantieLogoPath = path.join(process.cwd(), 'public', 'reisegarantielogo-de-768x258.webp');
+      if (fs.existsSync(garantieLogoPath)) {
+        const garantieLogoData = fs.readFileSync(garantieLogoPath);
+        const garantieLogoBase64 = garantieLogoData.toString('base64');
+        doc.addImage(`data:image/webp;base64,${garantieLogoBase64}`, 'WEBP', 145, 12, 45, 0);
+      }
+    } catch (error) {
+      console.log('Garantie Logo konnte nicht geladen werden');
+    }
+    
+    // MEHR ABSTAND nach Logos
+    currentY = 45;
+    
+    // Titel mit Untertitel
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 51, 102);
+    doc.text('Zahlungsinformationen', leftMargin, currentY);
+    
+    currentY += 6;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Verwenden Sie den unten stehenden QR-Code für eine schnelle und sichere Zahlung.', leftMargin, currentY);
+    
+    // Swiss QR-Code Daten ZUERST definieren
+    const firstTraveler = booking.travelers[0];
+    const debtorName = `${firstTraveler.firstName} ${firstTraveler.lastName}`;
+    const qrAmount = invoice.total_amount.toFixed(2);
+    const creditorName = 'Faltin Travel AG';
+    const creditorAddress = 'Riedthofstrasse 172';
+    const creditorZip = '8105';
+    const creditorCity = 'Regensdorf';
+    const creditorCountry = 'CH';
+    const creditorIBAN = 'CH650029129111351860G';
+    const formattedIBAN = creditorIBAN.match(/.{1,4}/g)?.join(' ') || creditorIBAN;
+    
+    // BESSERE STRUKTUR: Saubere Detail-Box (druckfreundlich)
+    currentY += 12;
+    doc.setFillColor(248, 250, 252);  // Sehr helles Blau-Grau
+    doc.setDrawColor(203, 213, 225);  // Sanftes Blau-Grau
+    doc.setLineWidth(0.5);
+    doc.rect(leftMargin, currentY - 3, 170, 38, 'FD');
+    
+    // Linke Spalte
+    let detailY = currentY + 2;
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(71, 85, 105);  // Modernes Grau
+    doc.text('RECHNUNG', leftMargin + 5, detailY);
+    detailY += 4;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);  // Fast schwarz
+    doc.text(invoice.invoice_number, leftMargin + 5, detailY);
+    
+    detailY += 7;
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(71, 85, 105);
+    doc.text('RECHNUNGSDATUM', leftMargin + 5, detailY);
+    detailY += 4;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(15, 23, 42);
+    doc.text(new Date(invoice.invoice_date).toLocaleDateString('de-CH'), leftMargin + 5, detailY);
+    
+    detailY += 6;
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(71, 85, 105);
+    doc.text('FÄLLIG AM', leftMargin + 5, detailY);
+    detailY += 4;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(15, 23, 42);
+    doc.text(new Date(invoice.due_date).toLocaleDateString('de-CH'), leftMargin + 5, detailY);
+    
+    // Mittlere Spalte
+    detailY = currentY + 2;
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(71, 85, 105);
+    doc.text('REISETERMIN', leftMargin + 60, detailY);
+    detailY += 4;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`${adjustedCheckIn.toLocaleDateString('de-CH')} -`, leftMargin + 60, detailY);
+    detailY += 4;
+    doc.text(adjustedCheckOut.toLocaleDateString('de-CH'), leftMargin + 60, detailY);
+    
+    detailY += 6;
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(71, 85, 105);
+    doc.text('KUNDE', leftMargin + 60, detailY);
+    detailY += 4;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(15, 23, 42);
+    doc.text(debtorName, leftMargin + 60, detailY);
+    
+    // Rechte Spalte - Betrag Box
+    detailY = currentY + 2;
+    const amountBoxX = leftMargin + 120;
+    doc.setFillColor(0, 51, 102);  // Dunkles Blau
+    doc.rect(amountBoxX, detailY - 2, 45, 16, 'F');
+    
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('GESAMTBETRAG', amountBoxX + 3, detailY + 1);
+    detailY += 5;
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`EUR ${invoice.total_amount.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, amountBoxX + 3, detailY + 4);
+    
+    currentY += 38;
+    
+    // ZAHLUNGSSCHUTZ - Clean und druckfreundlich
+    currentY += 10;
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 51, 102);
+    doc.text('Zahlungsschutz & Wichtige Hinweise', leftMargin, currentY);
+    
+    currentY += 8;
+    
+    // Saubere Info-Box
+    const infoBoxY = currentY - 2;
+    
+    doc.setFillColor(248, 252, 255);
+    doc.setDrawColor(200, 220, 240);
+    doc.setLineWidth(0.3);
+    doc.rect(leftMargin, infoBoxY, 170, 26, 'FD');
+    
+    // Text
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    
+    let infoY = infoBoxY + 5;
+    doc.text('Ihre Anzahlung ist vollständig durch den Schweizer Reisegarantiefonds abgesichert.', leftMargin + 5, infoY);
+    infoY += 5;
+    doc.text('Im Insolvenzfall erhalten Sie Ihre Zahlung garantiert zurück.', leftMargin + 5, infoY);
+    infoY += 5;
+    doc.text('Diese Rechnung ist verbindlich und zahlbar bis zum oben genannten Fälligkeitsdatum.', leftMargin + 5, infoY);
+    infoY += 6;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(0, 51, 102);
+    doc.text('Mehr Informationen: www.garantiefonds.ch', leftMargin + 5, infoY);
+    
+    currentY += 30;
+    
+    // DANKESNACHRICHT - Elegant und professionell
+    currentY += 1;
+    
+    // Elegante Trennlinie
+    doc.setDrawColor(0, 51, 102);
+    doc.setLineWidth(0.8);
+    doc.line(leftMargin + 60, currentY, leftMargin + 110, currentY);
+    
+    currentY += 8;
+    
+    // Dankestext zentriert - mit richtigen Umlauten
+    doc.setTextColor(0, 51, 102);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Vielen Dank für Ihr Vertrauen!', leftMargin + 85, currentY, { align: 'center' });
+    
+    currentY += 8;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    doc.text('Wir wünschen Ihnen eine unvergessliche Reise zum Super Bowl LXI', leftMargin + 85, currentY, { align: 'center' });
+    currentY += 4;
+    doc.text('und freuen uns, Sie bei diesem einzigartigen Event zu begleiten.', leftMargin + 85, currentY, { align: 'center' });
+    
+    currentY += 10;
+    
+    // Faltin Logo zentriert am Ende
+    const footerLogoY = currentY;
+    
+    if (faltinLogoBase64) {
+      doc.addImage(faltinLogoBase64, 'PNG', leftMargin + 60, footerLogoY, 50, 0);
+    }
+    
+    currentY += 25;
+    
+    // Signatur-Text - weiter unten
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Ihr Team von Faltin Travel', leftMargin + 85, currentY, { align: 'center' });
+    
+    currentY += 4;
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(140, 140, 140);
+    doc.text('Riedthofstrasse 172 | 8105 Regensdorf | info@faltin-travel.ch', leftMargin + 85, currentY, { align: 'center' });
+    
+    currentY += 10;
+    
+    // Swiss QR-Code String (32 Felder gemäß ISO 20022)
+    const qrData = [
+      'SPC', '0200', '1', creditorIBAN, 'K',
+      creditorName, creditorAddress, `${creditorZip} ${creditorCity}`, '', '', creditorCountry,
+      '', '', '', '', '', '', '',
+      qrAmount, 'EUR', 'K',
+      debtorName, booking.email, booking.phone, '', '', 'CH',
+      'NON', '', `Rechnung ${invoice.invoice_number}`, 'EPD', ''
+    ].join('\r\n');
+    
+    // QR-Code generieren
+    const qrCodeDataURL = await QRCode.toDataURL(qrData, {
+      errorCorrectionLevel: 'M',
+      type: 'image/png',
+      width: 300,
+      margin: 0,
+      color: { dark: '#000000', light: '#FFFFFF' }
+    });
+    
+    // ===== SWISS QR LAYOUT zeichnen =====
+    const receiptWidth = 62;
+    const paymentLeft = receiptWidth + 5;
+    const topMargin = 220;  // Noch tiefer!
+    
+    // RESET FARBEN FÜR QR-CODE!
+    doc.setTextColor(0, 0, 0);  // SCHWARZ!
+    doc.setFillColor(255, 255, 255);  // Weiß für Hintergrund
+    
+    // Trennlinien (gestrichelt)
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.1);
+    // Horizontale Trennlinie oben
+    for (let x = 0; x < 210; x += 3) {
+      doc.line(x, topMargin, Math.min(x + 1.5, 210), topMargin);
+    }
+    // Vertikale Trennlinie zwischen Empfangsschein und Zahlteil
+    for (let y = topMargin; y < 297; y += 3) {
+      doc.line(receiptWidth, y, receiptWidth, Math.min(y + 1.5, 297));
+    }
+    
+    // ===== EMPFANGSSCHEIN (Links, 62mm breit) =====
+    let yPos = topMargin + 5;
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Empfangsschein', 5, yPos);
+    
+    yPos += 5;
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Konto / Zahlbar an', 5, yPos);
+    yPos += 3;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(formattedIBAN, 5, yPos);
+    yPos += 3;
+    doc.text(creditorName, 5, yPos);
+    yPos += 3;
+    doc.text(creditorAddress, 5, yPos);
+    yPos += 3;
+    doc.text(`${creditorCountry}-${creditorZip} ${creditorCity}`, 5, yPos);
+    
+    yPos += 6;
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Zahlbar durch', 5, yPos);
+    yPos += 3;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(debtorName, 5, yPos);
+    
+    // Währung und Betrag (Empfangsschein)
+    yPos = topMargin + 43;
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Währung', 5, yPos);
+    doc.text('Betrag', 18, yPos);
+    yPos += 4;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('EUR', 5, yPos);
+    doc.text(qrAmount.replace('.', ','), 18, yPos);
+    
+    // Annahmestelle (rechts unten im Empfangsschein)
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'bold');
+    const receiptRight = receiptWidth - 2;
+    doc.text('Annahmestelle', receiptRight, topMargin + 52, { align: 'right' });
+    
+    // ===== ZAHLTEIL (Rechts, 148mm breit) =====
+    yPos = topMargin + 5;
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Zahlteil', paymentLeft, yPos);
+    
+    // QR-Code platzieren (46x46mm) - HÖHER!
+    const qrSize = 46;
+    const qrX = paymentLeft;
+    const qrY = topMargin + 12;
+    doc.addImage(qrCodeDataURL, 'PNG', qrX, qrY, qrSize, qrSize);
+    
+    // Swiss Cross in der Mitte des QR-Codes (7x7mm)
+    const crossSize = 7;
+    const crossX = qrX + (qrSize / 2) - (crossSize / 2);
+    const crossY = qrY + (qrSize / 2) - (crossSize / 2);
+    
+    // Weißer Hintergrund für das Kreuz
+    doc.setFillColor(255, 255, 255);
+    doc.rect(crossX, crossY, crossSize, crossSize, 'F');
+    
+    // Schwarzer Rahmen
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.3);
+    doc.rect(crossX, crossY, crossSize, crossSize);
+    
+    // Schweizer Kreuz (Balken)
+    doc.setFillColor(0, 0, 0);
+    const crossCenter = crossSize / 2;
+    const barWidth = 1.4;
+    const barLength = 4.5;
+    // Vertikaler Balken
+    doc.rect(crossX + crossCenter - barWidth/2, crossY + crossCenter - barLength/2, barWidth, barLength, 'F');
+    // Horizontaler Balken
+    doc.rect(crossX + crossCenter - barLength/2, crossY + crossCenter - barWidth/2, barLength, barWidth, 'F');
+    
+    // Währung und Betrag (rechts neben QR-Code)
+    const infoX = qrX + qrSize + 5;
+    yPos = qrY + 2;
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Währung', infoX, yPos);
+    doc.text('Betrag', infoX + 15, yPos);
+    yPos += 4;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('EUR', infoX, yPos);
+    doc.text(qrAmount.replace('.', ','), infoX + 15, yPos);
+    
+    // Konto / Zahlbar an (rechts)
+    yPos += 7;
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Konto / Zahlbar an', infoX, yPos);
+    yPos += 3;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(formattedIBAN, infoX, yPos);
+    yPos += 3;
+    doc.text(creditorName, infoX, yPos);
+    yPos += 3;
+    doc.text(creditorAddress, infoX, yPos);
+    yPos += 3;
+    doc.text(`${creditorCountry}-${creditorZip} ${creditorCity}`, infoX, yPos);
+    
+    // Zahlbar durch (rechts)
+    yPos += 6;
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Zahlbar durch', infoX, yPos);
+    yPos += 3;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(debtorName, infoX, yPos);
+    
+    // Zusätzliche Informationen (rechts)
+    yPos += 6;
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Zusätzliche Informationen', infoX, yPos);
+    yPos += 3;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Rechnung ${invoice.invoice_number}`, infoX, yPos);
+    yPos += 3.5;
+    doc.text(`Fällig: ${new Date(invoice.due_date).toLocaleDateString('de-CH')}`, infoX, yPos);
 
     const pdfBuffer = doc.output('arraybuffer');
 
