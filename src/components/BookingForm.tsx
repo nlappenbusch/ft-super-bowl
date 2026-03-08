@@ -40,8 +40,8 @@ interface BookingFormData {
   acceptTerms: boolean;
 }
 
-const selectedPackage = { 
-  id: 'dream_hollywood', 
+const defaultPackage = { 
+  id: 'dream-hollywood', 
   stars: 4, 
   nights: 4, 
   price: 8950, 
@@ -119,6 +119,9 @@ const faqItems = [
 
 export default function BookingForm() {
   const searchParams = useSearchParams();
+  const [selectedPackage, setSelectedPackage] = useState(defaultPackage);
+  const [eventSlug, setEventSlug] = useState('super-bowl-2027');
+  const [packageSlug, setPackageSlug] = useState('dream-hollywood');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [numberOfPersons, setNumberOfPersons] = useState(2);
   const [roomValidation, setRoomValidation] = useState({ valid: true, message: '' });
@@ -145,7 +148,7 @@ export default function BookingForm() {
   
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<BookingFormData>({
     defaultValues: {
-      packageId: 'dream_hollywood',
+      packageId: defaultPackage.id,
       startDate: '2027-02-12',
       doubleRooms: 1,
       singleRooms: 0,
@@ -158,14 +161,48 @@ export default function BookingForm() {
   const watchSingleRooms = watch('singleRooms');
   const watchNumberOfPersons = watch('numberOfPersons');
 
+  useEffect(() => {
+    const eventParam = searchParams.get('event') || 'super-bowl-2027';
+    const packageParam = searchParams.get('package') || 'dream-hollywood';
+    setEventSlug(eventParam);
+    setPackageSlug(packageParam);
+
+    const loadPackage = async () => {
+      try {
+        const response = await fetch(`/api/package?event=${encodeURIComponent(eventParam)}&package=${encodeURIComponent(packageParam)}`);
+        const result = await response.json();
+        if (result?.success && result?.data) {
+          const pkg = result.data as {
+            id?: string;
+            stars?: number;
+            nights?: number;
+            price?: number;
+            title?: string;
+            singleSupplement?: number;
+          };
+          setSelectedPackage({
+            id: pkg.id || packageParam,
+            stars: pkg.stars || defaultPackage.stars,
+            nights: pkg.nights || defaultPackage.nights,
+            price: Number(pkg.price || defaultPackage.price),
+            title: pkg.title || defaultPackage.title,
+            singleSurcharge: Number(pkg.singleSupplement || defaultPackage.singleSurcharge)
+          });
+          setValue('packageId', packageParam);
+        }
+      } catch (error) {
+        console.error('Package load error:', error);
+      }
+    };
+
+    loadPackage();
+  }, [searchParams, setValue]);
+
   // Initialize form from URL parameters (from Package Card)
   useEffect(() => {
     if (isInitialized) return;
     
     const roomParam = searchParams.get('room'); // 'double' or 'single'
-    const priceParam = searchParams.get('price');
-    const nightsParam = searchParams.get('nights');
-    const packageParam = searchParams.get('package');
     const personsParam = searchParams.get('persons'); // NEW: number of persons
 
     if ((roomParam || personsParam) && !isInitialized) {
@@ -309,6 +346,8 @@ export default function BookingForm() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          eventSlug,
+          packageSlug,
           packageId: data.packageId,
           packageTitle: selectedPackage.title,
           startDate: data.startDate,
@@ -357,7 +396,7 @@ export default function BookingForm() {
       </header>
 
       {/* Back to Package Button */}
-      <div className='bg-gradient-to-r from-orange-500 to-orange-600 shadow-md'>
+      <div className='bg-linear-to-r from-orange-500 to-orange-600 shadow-md'>
         <div className='container mx-auto px-4 py-3'>
           <a 
             href='https://faltintravel.com/super-bowl-2027-tickets/' 
@@ -374,7 +413,7 @@ export default function BookingForm() {
           <div className='lg:col-span-2'>
             <div className='bg-white rounded-xl shadow-lg p-6 md:p-8'>
               <h1 className='text-3xl font-bold text-gray-900 mb-2'>
-                Super Bowl LXI Buchung
+                Buchung: {selectedPackage.title}
               </h1>
               <p className='text-gray-600 mb-8'>
                 Bitte Formular ausfüllen - wir melden uns in Kürze

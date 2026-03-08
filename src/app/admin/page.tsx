@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { BookingRequest } from '@/lib/supabase';
 import { Download, Search, Filter, ChevronDown, UserCircle, Mail, Phone, Calendar, Users, Bed, DollarSign, MessageSquare, Eye, FileText, Plus, Receipt } from 'lucide-react';
 
@@ -43,6 +44,7 @@ export default function AdminDashboard() {
   const [showCreateInvoiceForm, setShowCreateInvoiceForm] = useState(false);
   const [invoiceItems, setInvoiceItems] = useState<Array<{description: string; quantity: number; unit_price: number}>>([]);
   const [invoiceDueDays, setInvoiceDueDays] = useState(14);
+  const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'super-bowl-2027-admin';
 
   useEffect(() => {
     // Check if already authenticated
@@ -58,7 +60,7 @@ export default function AdminDashboard() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     // Simple password check (in production use proper auth)
-    if (password === 'super-bowl-2027-admin') {
+    if (password === adminPassword) {
       setIsAuthenticated(true);
       sessionStorage.setItem('admin_authenticated', 'true');
       fetchBookings();
@@ -135,7 +137,7 @@ export default function AdminDashboard() {
     if (booking) {
       setInvoiceItems([
         {
-          description: `Super Bowl LXI Package - ${booking.package_title}\n${booking.number_of_persons} Personen, ${booking.double_rooms} DZ, ${booking.single_rooms} EZ`,
+          description: `${booking.event_slug ? booking.event_slug + ' - ' : ''}${booking.package_title}\n${booking.number_of_persons} Personen, ${booking.double_rooms} DZ, ${booking.single_rooms} EZ`,
           quantity: 1,
           unit_price: booking.total_price
         }
@@ -457,6 +459,32 @@ export default function AdminDashboard() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Buchungsverwaltung</h1>
               <p className="text-gray-600 mt-1">Super Bowl LXI - {filteredBookings.length} Anfragen</p>
+              <div className="flex flex-wrap gap-2 mt-4">
+                <Link
+                  href="/admin"
+                  className="px-4 py-2 rounded-full text-sm font-semibold bg-blue-600 text-white"
+                >
+                  Buchungen
+                </Link>
+                <Link
+                  href="/admin/events"
+                  className="px-4 py-2 rounded-full text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200"
+                >
+                  Events
+                </Link>
+                <Link
+                  href="/admin/packages"
+                  className="px-4 py-2 rounded-full text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200"
+                >
+                  Packages
+                </Link>
+                <Link
+                  href="/admin/faqs"
+                  className="px-4 py-2 rounded-full text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200"
+                >
+                  FAQs
+                </Link>
+              </div>
             </div>
             <div className="flex gap-3">
               <button
@@ -619,6 +647,11 @@ export default function AdminDashboard() {
             </div>
             
             <div className="p-6 space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Event</h3>
+                <p className="text-gray-700">{selectedBooking.event_slug || 'n/a'}</p>
+                <p className="text-gray-700">{selectedBooking.package_title}</p>
+              </div>
               {/* Travelers */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">Reisende ({selectedBooking.number_of_persons})</h3>

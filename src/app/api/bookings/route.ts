@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { insertBooking, getAllBookings } from '@/lib/database';
+import { createBooking, listBookings } from '@/lib/bookingStore';
 
 export async function POST(request: Request) {
   try {
@@ -13,22 +13,21 @@ export async function POST(request: Request) {
       );
     }
 
-    // Insert booking into SQLite database
-    const booking = insertBooking({
-      package_id: body.packageId,
-      package_title: body.packageTitle,
-      start_date: body.startDate,
-      number_of_persons: body.numberOfPersons,
-      double_rooms: body.doubleRooms,
-      single_rooms: body.singleRooms,
-      travelers: JSON.stringify(body.travelers),
+    const booking = await createBooking({
+      eventSlug: body.eventSlug,
+      packageSlug: body.packageSlug,
+      packageId: body.packageId,
+      packageTitle: body.packageTitle,
+      startDate: body.startDate,
+      numberOfPersons: body.numberOfPersons,
+      doubleRooms: body.doubleRooms,
+      singleRooms: body.singleRooms,
+      travelers: body.travelers,
       email: body.email,
       phone: body.phone,
       message: body.message || '',
-      status: 'new',
-      total_price: body.totalPrice || 0,
-      notes: ''
-    } as any);
+      totalPrice: body.totalPrice || 0
+    });
 
     return NextResponse.json({
       success: true,
@@ -48,7 +47,7 @@ export async function POST(request: Request) {
 // GET endpoint to fetch all bookings (for admin dashboard)
 export async function GET() {
   try {
-    const bookings = getAllBookings();
+    const bookings = await listBookings();
 
     return NextResponse.json({
       success: true,

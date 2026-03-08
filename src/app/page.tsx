@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Calendar, MapPin, Users, CheckCircle2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import PackageCard from '@/components/PackageCard';
 import FAQ from '@/components/FAQ';
 import CTAButton from '@/components/CTAButton';
@@ -12,6 +12,37 @@ import { generateOrganizationSchema, generateEventSchema, generateProductSchema 
 
 export default function Home() {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [series, setSeries] = useState<
+    Array<{
+      id: string;
+      slug: string;
+      title: string;
+      description?: string | null;
+      category: string;
+      hero_image?: string | null;
+      status?: string | null;
+    }>
+  >([]);
+  const [seriesLoading, setSeriesLoading] = useState(false);
+
+  useEffect(() => {
+    const loadSeries = async () => {
+      setSeriesLoading(true);
+      try {
+        const response = await fetch('/api/series');
+        const result = await response.json();
+        if (result?.success) {
+          setSeries(result.data || []);
+        }
+      } catch (error) {
+        console.error('Series load error:', error);
+      } finally {
+        setSeriesLoading(false);
+      }
+    };
+
+    loadSeries();
+  }, []);
 
   const packages = [
     {
@@ -168,6 +199,85 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Series Overview */}
+      <section className="py-16 px-4 bg-gray-50 relative overflow-hidden">
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 15% 20%, rgba(24, 74, 123, 0.18), transparent 55%), radial-gradient(circle at 80% 10%, rgba(241, 70, 36, 0.15), transparent 50%)'
+          }}
+        />
+        <div className="container mx-auto relative">
+          <div className="text-center mb-10">
+            <div className="text-xs uppercase tracking-[0.3em] text-gray-500">Faltin Travel Serien</div>
+            <h2
+              className="text-4xl md:text-5xl font-bold mt-3 text-gray-900"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              Eventreisen nach Themen
+            </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto mt-3">
+              Entdecken Sie unsere Serien und springen Sie direkt zu den Events.
+            </p>
+          </div>
+
+          {seriesLoading && (
+            <p className="text-center text-gray-500">Serien werden geladen...</p>
+          )}
+
+          {!seriesLoading && series.length === 0 && (
+            <p className="text-center text-gray-500">Aktuell sind keine Serien hinterlegt.</p>
+          )}
+
+          <div className="grid gap-8 lg:grid-cols-3">
+            {Object.entries(
+              series
+                .filter((item) => item.status !== 'archived')
+                .reduce((groups: Record<string, typeof series>, item) => {
+                  const key = item.category || 'Sonstiges';
+                  if (!groups[key]) groups[key] = [];
+                  groups[key].push(item);
+                  return groups;
+                }, {})
+            ).map(([category, items]) => (
+              <div key={category} className="space-y-4">
+                <div className="text-sm font-semibold text-gray-700 uppercase tracking-[0.2em]">
+                  {category}
+                </div>
+                <div className="space-y-4">
+                  {items.map((item) => (
+                    <Link
+                      key={item.id}
+                      href={`/${item.slug}`}
+                      className="group relative block rounded-2xl overflow-hidden border border-white/50 bg-white/70 backdrop-blur-sm shadow-lg transition hover:-translate-y-1 hover:shadow-xl"
+                    >
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition" style={{ background: 'linear-gradient(135deg, rgba(24,74,123,0.2), rgba(241,70,36,0.15))' }} />
+                      <div className="relative p-6">
+                        <div className="flex items-center justify-between text-xs uppercase tracking-[0.2em] text-gray-500">
+                          <span>{item.slug}</span>
+                          <span className="text-orange-500">Series</span>
+                        </div>
+                        <h3 className="text-2xl font-semibold text-gray-900 mt-3" style={{ fontFamily: 'var(--font-display)' }}>
+                          {item.title}
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-2">
+                          {item.description || 'Exklusive Eventreisen mit Hotel, Tickets und VIP-Services.'}
+                        </p>
+                        <div className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-700">
+                          Zur Serie
+                          <span className="text-lg">→</span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Hero Section */}
       <section style={{ backgroundImage: 'linear-gradient(202deg, #184a7b 0%, #143047 100%)' }} className="relative text-white py-12 px-4">

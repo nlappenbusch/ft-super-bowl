@@ -25,7 +25,9 @@
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://DEIN-PROJEKT.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=dein-anon-key-hier
-ADMIN_PASSWORD=super-bowl-2027-admin
+NEXT_PUBLIC_ADMIN_PASSWORD=dein-admin-passwort
+DEFAULT_EVENT_SLUG=super-bowl-2027
+DEFAULT_PACKAGE_SLUG=dream-hollywood
 ```
 
 **Wichtig:** Die `.env.local` Datei sollte NIE ins Git committed werden (ist bereits in `.gitignore`)!
@@ -42,11 +44,16 @@ ADMIN_PASSWORD=super-bowl-2027-admin
 
 ### Was wurde erstellt?
 
-- ✅ Tabelle `booking_requests` mit allen Feldern
-- ✅ Indexes für schnelle Suche (created_at, status, email)
-- ✅ Auto-Update Trigger für `updated_at` Feld
+- ✅ Tabelle `events` mit Event-Metadaten
+- ✅ Tabelle `packages` pro Event
+- ✅ Tabelle `package_includes` (Leistungen)
+- ✅ Tabelle `event_faqs`
+- ✅ Tabelle `booking_requests` mit Event-Referenzen
+- ✅ Tabellen `invoices` und `invoice_items`
+- ✅ Indexes fuer schnelle Suche
+- ✅ Auto-Update Trigger fuer `updated_at` Feld
 - ✅ Row Level Security (RLS) Policies
-- ✅ Test-Daten (1 Beispiel-Buchung)
+- ✅ Seed-Daten fuer Super Bowl 2027
 
 ## Schritt 4: Verifizierung
 
@@ -78,7 +85,7 @@ npm run dev
 
 ### Test 2: Admin Dashboard
 1. Öffne [http://localhost:3000/admin](http://localhost:3000/admin)
-2. Passwort: `super-bowl-2027-admin`
+2. Passwort: dein Wert aus `NEXT_PUBLIC_ADMIN_PASSWORD`
 3. Du solltest alle Buchungen sehen können
 4. Teste Status-Änderungen
 5. Teste Notizen speichern
@@ -104,7 +111,7 @@ npm run dev
 
 Wenn du live gehst, solltest du:
 
-1. **Admin Passwort ändern**: Setze `ADMIN_PASSWORD` in `.env.local` auf einen sicheren Wert
+1. **Admin Passwort ändern**: Setze `NEXT_PUBLIC_ADMIN_PASSWORD` in `.env.local` auf einen sicheren Wert
 2. **RLS Policies verschärfen**: Die aktuellen Policies erlauben öffentlichen Zugriff (für Development ok)
 3. **Rate Limiting**: Füge Rate Limiting zur API Route hinzu
 4. **CORS**: Passe CORS in `next.config.ts` an (nur von WordPress Domain erlauben)

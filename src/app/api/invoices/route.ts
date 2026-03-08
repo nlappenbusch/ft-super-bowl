@@ -1,14 +1,6 @@
 import { NextResponse } from 'next/server';
-import {
-  createInvoice,
-  getAllInvoices,
-  getInvoiceById,
-  getInvoicesByBookingId,
-  getInvoiceItems,
-  updateInvoiceStatus,
-  recordPayment,
-  getBookingById
-} from '@/lib/database';
+import { createInvoiceRecord, listInvoices, getInvoiceItems } from '@/lib/invoiceStore';
+import { getBooking } from '@/lib/bookingStore';
 
 // Create invoice
 export async function POST(request: Request) {
@@ -24,7 +16,7 @@ export async function POST(request: Request) {
     }
 
     // Verify booking exists
-    const booking = getBookingById(bookingId);
+    const booking = await getBooking(bookingId);
     if (!booking) {
       return NextResponse.json(
         { success: false, error: 'Buchung nicht gefunden' },
@@ -32,13 +24,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const invoice = createInvoice(bookingId, items, dueInDays || 14);
+    const invoice = await createInvoiceRecord(bookingId, items, dueInDays || 14);
 
     return NextResponse.json({
       success: true,
       data: {
         invoice,
-        items: getInvoiceItems(invoice.id)
+        items: await getInvoiceItems(invoice.id)
       }
     });
 
@@ -57,18 +49,15 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const bookingId = searchParams.get('bookingId');
 
-    let invoices;
-    if (bookingId) {
-      invoices = getInvoicesByBookingId(bookingId);
-    } else {
-      invoices = getAllInvoices();
-    }
+    const invoices = await listInvoices(bookingId);
 
     // Add items to each invoice
-    const invoicesWithItems = invoices.map(invoice => ({
-      ...invoice,
-      items: getInvoiceItems(invoice.id)
-    }));
+    const invoicesWithItems = await Promise.all(
+      invoices.map(async (invoice) => ({
+        ...invoice,
+        items: await getInvoiceItems(invoice.id)
+      }))
+    );
 
     return NextResponse.json({
       success: true,

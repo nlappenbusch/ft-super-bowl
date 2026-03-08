@@ -122,6 +122,16 @@ In WordPress-Seite einfügen:
 [superbowl_package]
 ```
 
+**Event-spezifisch:**
+```
+[superbowl_package event="super-bowl-2027" package="dream-hollywood"]
+```
+
+**Advanced Package Card:**
+```
+[superbowl_package_advanced event="super-bowl-2027" package="dream-hollywood"]
+```
+
 **Ergebnis:**
 - ✅ Package Card mit Preis
 - ✅ "Jetzt anfragen" Button
@@ -153,6 +163,11 @@ Unser exklusives Package beinhaltet Hotel, Tickets und VIP-Services.</p>
 
 ```
 [superbowl_faqs]
+```
+
+**Event-spezifisch:**
+```
+[superbowl_faqs event="super-bowl-2027"]
 ```
 
 **Ergebnis:**
@@ -191,6 +206,9 @@ https://faltintravel.com/booking
 
 https://faltintravel.com/booking?package=dream_hollywood
 → Mit Package-Parameter
+
+https://faltintravel.com/booking?event=super-bowl-2027&package=dream-hollywood
+→ Mit Event- und Package-Parameter
 ```
 
 ### API Routes (für Shortcodes):
@@ -198,8 +216,14 @@ https://faltintravel.com/booking?package=dream_hollywood
 https://faltintravel.com/api/package
 → JSON + HTML für Package Card
 
+https://faltintravel.com/api/package?event=super-bowl-2027&package=dream-hollywood
+→ Event-spezifische Package Card
+
 https://faltintravel.com/api/faqs
 → JSON + HTML für FAQs
+
+https://faltintravel.com/api/faqs?event=super-bowl-2027
+→ Event-spezifische FAQs
 ```
 
 ---

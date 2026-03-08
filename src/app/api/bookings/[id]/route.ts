@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { updateBookingStatus, updateBookingNotes, getBookingById } from '@/lib/database';
+import { updateBooking } from '@/lib/bookingStore';
 
 export async function PATCH(
   request: Request,
@@ -9,27 +9,17 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
-    if (body.status) {
-      const success = updateBookingStatus(id, body.status);
-      if (!success) {
-        return NextResponse.json(
-          { success: false, error: 'Buchung nicht gefunden' },
-          { status: 404 }
-        );
-      }
-    }
+    const updatedBooking = await updateBooking(id, {
+      status: body.status,
+      notes: body.notes
+    });
 
-    if (body.notes !== undefined) {
-      const success = updateBookingNotes(id, body.notes);
-      if (!success) {
-        return NextResponse.json(
-          { success: false, error: 'Buchung nicht gefunden' },
-          { status: 404 }
-        );
-      }
+    if (!updatedBooking) {
+      return NextResponse.json(
+        { success: false, error: 'Buchung nicht gefunden' },
+        { status: 404 }
+      );
     }
-
-    const updatedBooking = getBookingById(id);
 
     return NextResponse.json({
       success: true,

@@ -2,7 +2,10 @@
 export interface BookingRequest {
   id: string;
   created_at: string;
+  event_id?: string | null;
+  event_slug?: string | null;
   package_id: string;
+  package_slug?: string | null;
   package_title: string;
   start_date: string;
   number_of_persons: number;

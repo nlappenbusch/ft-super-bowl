@@ -6,6 +6,7 @@ import { useState } from 'react';
 
 interface PackageCardProps {
   id: string;
+  eventSlug?: string;
   stars: number;
   nights: number;
   price: number;
@@ -20,6 +21,7 @@ interface PackageCardProps {
 
 export default function PackageCard({ 
   id, 
+  eventSlug,
   stars, 
   nights, 
   price, 
@@ -164,7 +166,7 @@ export default function PackageCard({
             </div>
 
             <Link
-              href={`/booking?package=${id}&persons=${numberOfPersons}`}
+              href={`/booking?${eventSlug ? `event=${encodeURIComponent(eventSlug)}&` : ''}package=${encodeURIComponent(id)}&persons=${numberOfPersons}`}
               className="block w-full text-white font-bold py-4 px-6 rounded-lg text-center transition-all duration-300 text-lg"
               style={{ 
                 backgroundColor: isHovered ? '#d63d1f' : '#f14624',

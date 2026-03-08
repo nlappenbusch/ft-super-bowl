@@ -1,11 +1,25 @@
 import { NextResponse } from 'next/server';
 import { generateProductSchema } from '@/lib/schema';
+import {
+  DEFAULT_EVENT_SLUG,
+  DEFAULT_PACKAGE_SLUG,
+  getEventBySlug,
+  getPackageBySlug,
+  toPackageCardData,
+  PackageCardData
+} from '@/lib/eventData';
 
-export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://superbowl.faltintravel.com';
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const eventSlug = searchParams.get('event') || DEFAULT_EVENT_SLUG;
+  const packageSlug = searchParams.get('package') || DEFAULT_PACKAGE_SLUG;
+  const event = await getEventBySlug(eventSlug);
+  const baseUrl = event?.base_url || process.env.NEXT_PUBLIC_SITE_URL || 'https://superbowl.faltintravel.com';
   const imageBase = baseUrl.replace(/\/$/, '');
-  const packageData = {
+
+  const staticPackageData: PackageCardData = {
     id: 'dream_hollywood',
+    packageName: 'Ticket- & Hotel-Package',
     stars: 4,
     nights: 4,
     price: 8950,
@@ -27,8 +41,24 @@ export async function GET() {
     popular: true,
     availableSpots: 12, // Verfügbare Plätze (Social Proof)
     rating: 4.8,
-    reviews: 156
+    reviews: 156,
+    includes: [],
+    extensionNights: 'Verlaengerungsnaechte auf Anfrage gegen Aufpreis buchbar',
+    badgeText: 'Offizielles Hospitality-Package'
   };
+
+  const packageRecord = await getPackageBySlug(eventSlug, packageSlug);
+  const packageData = packageRecord
+    ? toPackageCardData(packageRecord, imageBase)
+    : staticPackageData;
+  const bookingUrl = `${baseUrl}/booking?event=${encodeURIComponent(eventSlug)}&package=${encodeURIComponent(packageSlug)}`;
+  const productSchema = generateProductSchema({
+    name: `${event?.name || 'Event'} Package - ${packageData.title}`,
+    description: packageData.description,
+    price: packageData.price,
+    priceCurrency: packageRecord?.currency || 'EUR',
+    url: bookingUrl
+  });
 
   // HTML für die interaktive Package Card
   const html = `
@@ -123,7 +153,7 @@ export async function GET() {
     <div class="superbowl-package-card" style="max-width: 800px; margin: 0 auto; border: 2px solid #184a7b; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: white; position: relative;">
       ${packageData.popular ? `
         <div style="background: linear-gradient(135deg, #f14624 0%, #d63d1f 100%); color: white; padding: 8px 16px; text-align: center; font-weight: bold; font-size: 14px;">
-          ⭐ Offizielles Hospitality-Package
+          ⭐ ${packageData.badgeText || 'Offizielles Hospitality-Package'}
         </div>
       ` : ''}
       
@@ -135,7 +165,7 @@ export async function GET() {
       <div style="padding: 32px;">
         <!-- Package Summary (First Step) -->
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; margin-bottom: 20px;">
-          <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; font-weight: 700;">Super Bowl 2027 Reisepaket</div>
+          <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; font-weight: 700;">Event Reisepaket</div>
           <div style="margin-top: 6px; font-size: 14px; color: #1f2937; font-weight: 600;">
             Ticket- &amp; Hotel-Package
           </div>
@@ -267,7 +297,7 @@ export async function GET() {
               <div style="font-size: 14px; color: #666;">pro Person im <span id="room-label">Doppelzimmer</span></div>
             </div>
             
-            <a id="booking-cta" href="https://superbowl.faltintravel.com/booking?package=${packageData.id}&room=double&price=${packageData.price}&nights=${packageData.nights}" 
+            <a id="booking-cta" href="${bookingUrl}&room=double&price=${packageData.price}&nights=${packageData.nights}" 
                style="display: inline-block; background: #f14624; color: white; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; transition: all 0.3s; box-shadow: 0 2px 4px rgba(241,70,36,0.2);"
                onmouseover="this.style.background='#d63d1f'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(241,70,36,0.3)';"
                onmouseout="this.style.background='#f14624'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(241,70,36,0.2)';">
@@ -296,7 +326,7 @@ export async function GET() {
     
     <!-- Sticky CTA (appears on scroll) -->
     <div id="sticky-cta" class="cta-sticky">
-      <a id="sticky-booking-link" href="https://superbowl.faltintravel.com/booking?package=${packageData.id}&room=double&price=${packageData.price}&nights=${packageData.nights}"
+      <a id="sticky-booking-link" href="${bookingUrl}&room=double&price=${packageData.price}&nights=${packageData.nights}"
          style="display: block; background: #f14624; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); text-align: center;"
          onmouseover="this.style.background='#d63d1f'"
          onmouseout="this.style.background='#f14624'">
@@ -341,7 +371,7 @@ export async function GET() {
     document.getElementById('selected-room-label').textContent = roomLabel;
         
         // Update CTA links with URL parameters
-  const bookingUrl = 'https://superbowl.faltintravel.com/booking?package=' + packageId + '&room=' + roomType + '&price=' + price + '&nights=' + nights + '&persons=' + personCount;
+  const bookingUrl = '${bookingUrl}' + '&room=' + roomType + '&price=' + price + '&nights=' + nights + '&persons=' + personCount;
         document.getElementById('booking-cta').href = bookingUrl;
         document.getElementById('sticky-booking-link').href = bookingUrl;
         document.getElementById('sticky-price').textContent = price.toLocaleString('de-CH') + ' €';
@@ -364,7 +394,7 @@ export async function GET() {
         const price = roomType === 'double' ? priceDouble : priceSingle;
         document.getElementById('price-display').textContent = price.toLocaleString('de-CH') + ' €';
 
-        const bookingUrl = 'https://superbowl.faltintravel.com/booking?package=' + packageId + '&room=' + roomType + '&price=' + price + '&nights=' + nights + '&persons=' + persons;
+        const bookingUrl = '${bookingUrl}' + '&room=' + roomType + '&price=' + price + '&nights=' + nights + '&persons=' + persons;
         document.getElementById('booking-cta').href = bookingUrl;
         document.getElementById('sticky-booking-link').href = bookingUrl;
 
@@ -391,7 +421,7 @@ export async function GET() {
     
     <!-- Schema.org JSON-LD -->
     <script type="application/ld+json">
-      ${JSON.stringify(generateProductSchema())}
+      ${JSON.stringify(productSchema)}
     </script>
   `;
 
@@ -400,6 +430,6 @@ export async function GET() {
     success: true,
     data: packageData,
     html: html,
-    schema: generateProductSchema()
+    schema: productSchema
   });
 }

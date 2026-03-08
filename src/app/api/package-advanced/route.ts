@@ -1,10 +1,23 @@
 import { NextResponse } from 'next/server';
 import { generateProductSchema } from '@/lib/schema';
+import {
+  DEFAULT_EVENT_SLUG,
+  DEFAULT_PACKAGE_SLUG,
+  getEventBySlug,
+  getPackageBySlug,
+  toPackageCardData,
+  PackageCardData
+} from '@/lib/eventData';
 
-export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://superbowl.faltintravel.com';
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const eventSlug = searchParams.get('event') || DEFAULT_EVENT_SLUG;
+  const packageSlug = searchParams.get('package') || DEFAULT_PACKAGE_SLUG;
+  const event = await getEventBySlug(eventSlug);
+  const baseUrl = event?.base_url || process.env.NEXT_PUBLIC_SITE_URL || 'https://superbowl.faltintravel.com';
   const imageBase = baseUrl.replace(/\/$/, '');
-  const packageData = {
+
+  const staticPackageData: PackageCardData = {
     id: 'dream_hollywood',
     packageName: 'Ticket- & Hotel-Package',
     stars: 4,
@@ -24,6 +37,7 @@ export async function GET() {
       stadium: '35 Min. / ca. 29 km (SoFi Stadium)',
       downtown: '20 Min. / ca. 11 km'
     },
+    roomCategories: ['Doppelzimmer', 'Einzelzimmer'],
     popular: true,
     availableSpots: 12,
     rating: 4.8,
@@ -34,8 +48,22 @@ export async function GET() {
       { type: 'transfer', name: 'Flughafen-Hotel-Stadium Transfers', category: 'Hin- und Rückfahrt', status: 'OK', icon: '🚐', description: 'Komfortable Shuttles zu allen wichtigen Locations' },
       { type: 'hospitality', name: 'VIP Pregame-Party', category: 'Inkl. Catering & Getränke', status: 'OK', icon: '🍾', description: 'Exklusiver Zugang zur offiziellen Pregame-Party' }
     ],
-    extensionNights: 'Verlängerungsnächte auf Anfrage gegen Aufpreis buchbar'
+    extensionNights: 'Verlängerungsnächte auf Anfrage gegen Aufpreis buchbar',
+    badgeText: 'Offizielles Hospitality-Package'
   };
+
+  const packageRecord = await getPackageBySlug(eventSlug, packageSlug);
+  const packageData = packageRecord
+    ? toPackageCardData(packageRecord, imageBase)
+    : staticPackageData;
+  const bookingUrl = `${baseUrl}/booking?event=${encodeURIComponent(eventSlug)}&package=${encodeURIComponent(packageSlug)}`;
+  const productSchema = generateProductSchema({
+    name: `${event?.name || 'Event'} Package - ${packageData.title}`,
+    description: packageData.description,
+    price: packageData.price,
+    priceCurrency: packageRecord?.currency || 'EUR',
+    url: bookingUrl
+  });
 
   // HTML für die interaktive Package Card
   const html = `
@@ -311,7 +339,7 @@ export async function GET() {
               </select>
             </div>
             
-            <a id="booking-cta-${packageData.id}" href="https://superbowl.faltintravel.com/booking?package=${packageData.id}&room=double&price=${packageData.price}&nights=${packageData.nights}" 
+            <a id="booking-cta-${packageData.id}" href="${bookingUrl}&room=double&price=${packageData.price}&nights=${packageData.nights}" 
                style="display: inline-block; background: #f14624; color: white; padding: 18px 36px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 18px; transition: all 0.3s; box-shadow: 0 4px 12px rgba(241,70,36,0.25);"
                onmouseover="this.style.background='#d63d1f'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(241,70,36,0.35)';"
                onmouseout="this.style.background='#f14624'; this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(241,70,36,0.25)';">
@@ -346,7 +374,7 @@ export async function GET() {
     
     <!-- Sticky CTA (appears on scroll) -->
     <div id="sticky-cta-${packageData.id}" class="cta-sticky">
-      <a id="sticky-booking-link-${packageData.id}" href="https://superbowl.faltintravel.com/booking?package=${packageData.id}&room=double&price=${packageData.price}&nights=${packageData.nights}"
+      <a id="sticky-booking-link-${packageData.id}" href="${bookingUrl}&room=double&price=${packageData.price}&nights=${packageData.nights}"
          style="display: block; background: #f14624; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); text-align: center;"
          onmouseover="this.style.background='#d63d1f'"
          onmouseout="this.style.background='#f14624'">
@@ -400,7 +428,7 @@ export async function GET() {
         }
         
         // Update CTA links with URL parameters
-  const bookingUrl = 'https://superbowl.faltintravel.com/booking?package=' + packageId + '&room=' + roomType + '&price=' + price + '&nights=' + nights + '&persons=' + personCount;
+  const bookingUrl = '${bookingUrl}' + '&room=' + roomType + '&price=' + price + '&nights=' + nights + '&persons=' + personCount;
         document.getElementById('booking-cta-${packageData.id}').href = bookingUrl;
         document.getElementById('sticky-booking-link-${packageData.id}').href = bookingUrl;
         document.getElementById('sticky-price-${packageData.id}').textContent = price.toLocaleString('de-CH') + ' €';
@@ -428,7 +456,7 @@ export async function GET() {
           totalPrice.textContent = 'Gesamtpreis für ' + persons + ' Personen: ' + (price * persons).toLocaleString('de-CH') + ' €';
         }
 
-        const bookingUrl = 'https://superbowl.faltintravel.com/booking?package=' + packageId + '&room=' + roomType + '&price=' + price + '&nights=' + nights + '&persons=' + persons;
+        const bookingUrl = '${bookingUrl}' + '&room=' + roomType + '&price=' + price + '&nights=' + nights + '&persons=' + persons;
         document.getElementById('booking-cta-${packageData.id}').href = bookingUrl;
         document.getElementById('sticky-booking-link-${packageData.id}').href = bookingUrl;
       };
@@ -450,7 +478,7 @@ export async function GET() {
     
     <!-- Schema.org JSON-LD -->
     <script type="application/ld+json">
-      ${JSON.stringify(generateProductSchema())}
+      ${JSON.stringify(productSchema)}
     </script>
   `;
 
@@ -459,6 +487,6 @@ export async function GET() {
     success: true,
     data: packageData,
     html: html,
-    schema: generateProductSchema()
+    schema: productSchema
   });
 }

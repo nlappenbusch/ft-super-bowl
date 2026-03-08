@@ -21,14 +21,25 @@ function superbowl_package_shortcode($atts) {
     $atts = shortcode_atts(array(
         // WICHTIG: Next.js läuft auf separatem Server!
         'api_url' => 'https://superbowl.faltintravel.com/api/package', // Subdomain
+        'event' => '',
+        'package' => '',
         // ODER wenn auf Vercel: 'https://ihr-projekt.vercel.app/api/package'
     ), $atts);
+
+    $api_url = $atts['api_url'];
+    if (!empty($atts['event'])) {
+        $query_args = array('event' => $atts['event']);
+        if (!empty($atts['package'])) {
+            $query_args['package'] = $atts['package'];
+        }
+        $api_url = add_query_arg($query_args, $api_url);
+    }
     
     // Eindeutige ID für diesen Shortcode
     $unique_id = 'superbowl-package-' . uniqid();
 
     // Server-side render für SEO
-    $response = wp_remote_get($atts['api_url'], array(
+    $response = wp_remote_get($api_url, array(
         'timeout' => 8,
         'headers' => array(
             'Accept' => 'application/json'
@@ -67,7 +78,7 @@ function superbowl_package_shortcode($atts) {
         
         <script>
         (function() {
-            fetch('<?php echo esc_js($atts['api_url']); ?>')
+            fetch('<?php echo esc_js($api_url); ?>')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.html) {
@@ -107,12 +118,23 @@ add_shortcode('superbowl_package', 'superbowl_package_shortcode');
 function superbowl_package_advanced_shortcode($atts) {
     $atts = shortcode_atts(array(
         'api_url' => 'https://superbowl.faltintravel.com/api/package-advanced',
+        'event' => '',
+        'package' => '',
     ), $atts);
+
+    $api_url = $atts['api_url'];
+    if (!empty($atts['event'])) {
+        $query_args = array('event' => $atts['event']);
+        if (!empty($atts['package'])) {
+            $query_args['package'] = $atts['package'];
+        }
+        $api_url = add_query_arg($query_args, $api_url);
+    }
     
     $unique_id = 'superbowl-package-advanced-' . uniqid();
 
     // Server-side render für SEO
-    $response = wp_remote_get($atts['api_url'], array(
+    $response = wp_remote_get($api_url, array(
         'timeout' => 8,
         'headers' => array(
             'Accept' => 'application/json'
@@ -151,7 +173,7 @@ function superbowl_package_advanced_shortcode($atts) {
         
         <script>
         (function() {
-            fetch('<?php echo esc_js($atts['api_url']); ?>')
+            fetch('<?php echo esc_js($api_url); ?>')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.html) {
@@ -192,13 +214,19 @@ function superbowl_faqs_shortcode($atts) {
     $atts = shortcode_atts(array(
         // WICHTIG: Next.js läuft auf separatem Server!
         'api_url' => 'https://superbowl.faltintravel.com/api/faqs', // Subdomain
+        'event' => '',
         // ODER wenn auf Vercel: 'https://ihr-projekt.vercel.app/api/faqs'
     ), $atts);
+
+    $api_url = $atts['api_url'];
+    if (!empty($atts['event'])) {
+        $api_url = add_query_arg(array('event' => $atts['event']), $api_url);
+    }
     
     $unique_id = 'superbowl-faqs-' . uniqid();
 
     // Server-side render für SEO
-    $response = wp_remote_get($atts['api_url'], array(
+    $response = wp_remote_get($api_url, array(
         'timeout' => 8,
         'headers' => array(
             'Accept' => 'application/json'
@@ -230,7 +258,7 @@ function superbowl_faqs_shortcode($atts) {
         
         <script>
         (function() {
-            fetch('<?php echo esc_js($atts['api_url']); ?>')
+            fetch('<?php echo esc_js($api_url); ?>')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.html) {

@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
+import { DEFAULT_EVENT_SLUG, getEventFaqs } from '@/lib/eventData';
 
-export async function GET() {
-  const faqs = [
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const eventSlug = searchParams.get('event') || DEFAULT_EVENT_SLUG;
+
+  const staticFaqs = [
     {
       question: "Was ist im Hospitality-Package enthalten?",
       answer: "Das Hospitality-Package beinhaltet ein Premium-Ticket im 500er Level mit exklusivem Zugang zur Pregame-Party, VIP-Eingang zum Stadion, Premium-Catering, Getränke und Live-Entertainment im Hospitality-Bereich vor dem Spiel."
@@ -31,6 +35,11 @@ export async function GET() {
       answer: "Nach Ihrer Anfrage erhalten Sie von uns ein individuelles Angebot. Die Zahlung erfolgt per Banküberweisung in Raten: 25% Anzahlung bei Buchung, 50% bis 90 Tage vor Reisebeginn, Restbetrag 30 Tage vor Abreise. Alle Zahlungen sind durch die Schweizer Reisegarantie abgesichert."
     }
   ];
+
+  const eventFaqs = await getEventFaqs(eventSlug);
+  const faqs = eventFaqs.length > 0
+    ? eventFaqs.map((faq) => ({ question: faq.question, answer: faq.answer }))
+    : staticFaqs;
 
   // HTML für FAQs
   const html = `

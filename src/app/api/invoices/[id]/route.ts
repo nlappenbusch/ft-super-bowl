@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { updateInvoiceStatus, recordPayment, getInvoiceById, getInvoiceItems } from '@/lib/database';
+import { updateInvoiceStatus, recordPayment, getInvoiceById, getInvoiceItems } from '@/lib/invoiceStore';
 
 export async function PATCH(
   request: Request,
@@ -10,7 +10,7 @@ export async function PATCH(
     const body = await request.json();
 
     // Validate invoice exists
-    const invoice = getInvoiceById(id);
+    const invoice = await getInvoiceById(id);
     if (!invoice) {
       return NextResponse.json(
         { success: false, error: 'Rechnung nicht gefunden' },
@@ -26,8 +26,8 @@ export async function PATCH(
         );
       }
       
-      const success = updateInvoiceStatus(id, body.status);
-      if (!success) {
+      const updated = await updateInvoiceStatus(id, body.status);
+      if (!updated) {
         return NextResponse.json(
           { success: false, error: 'Status konnte nicht aktualisiert werden' },
           { status: 400 }
@@ -45,7 +45,7 @@ export async function PATCH(
         );
       }
 
-      const currentInvoice = getInvoiceById(id);
+      const currentInvoice = await getInvoiceById(id);
       if (!currentInvoice) {
         return NextResponse.json(
           { success: false, error: 'Rechnung nicht gefunden' },
@@ -65,7 +65,7 @@ export async function PATCH(
         );
       }
 
-      const success = recordPayment(id, paymentAmount);
+      const success = await recordPayment(id, paymentAmount);
       if (!success) {
         return NextResponse.json(
           { success: false, error: 'Zahlung konnte nicht verbucht werden' },
@@ -74,13 +74,13 @@ export async function PATCH(
       }
     }
 
-    const updatedInvoice = getInvoiceById(id);
+    const updatedInvoice = await getInvoiceById(id);
 
     return NextResponse.json({
       success: true,
       data: {
         ...updatedInvoice,
-        items: getInvoiceItems(id)
+        items: await getInvoiceItems(id)
       }
     });
 
@@ -101,7 +101,7 @@ export async function DELETE(
   try {
     const { id } = await params;
     
-    const invoice = getInvoiceById(id);
+    const invoice = await getInvoiceById(id);
     if (!invoice) {
       return NextResponse.json(
         { success: false, error: 'Rechnung nicht gefunden' },
@@ -116,7 +116,7 @@ export async function DELETE(
       );
     }
 
-    const success = updateInvoiceStatus(id, 'cancelled');
+    const success = await updateInvoiceStatus(id, 'cancelled');
     
     if (!success) {
       return NextResponse.json(
