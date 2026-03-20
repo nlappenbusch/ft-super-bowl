@@ -8,6 +8,8 @@ interface FAQItem {
   answer: string;
 }
 
+export type FAQEntry = FAQItem;
+
 const faqData: FAQItem[] = [
   {
     question: 'Was ist im Hospitality-Package enthalten?',
@@ -39,12 +41,17 @@ const faqData: FAQItem[] = [
   }
 ];
 
-export default function FAQ() {
+interface FAQProps {
+  items?: FAQEntry[];
+}
+
+export default function FAQ({ items }: FAQProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const entries = items && items.length > 0 ? items : faqData;
 
   return (
     <div className="space-y-4">
-      {faqData.map((item, index) => (
+      {entries.map((item, index) => (
         <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
           <button
             onClick={() => setOpenIndex(openIndex === index ? null : index)}

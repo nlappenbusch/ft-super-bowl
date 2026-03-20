@@ -10,7 +10,17 @@ export async function GET(
   try {
     const { id } = await params;
     
-    const invoice = getInvoiceById(id);
+    const invoice = getInvoiceById(id);    # Create a folder
+    $ mkdir actions-runner && cd actions-runner
+    
+    # Download the latest runner package
+    $ curl -o actions-runner-linux-x64-2.331.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.331.0/actions-runner-linux-x64-2.331.0.tar.gz
+    
+    # Optional: Validate the hash
+    $ echo "7980aa93ae9bd8b57e84c4bcb3391db4e686327c0c54bd8e8c7fb7f6c953d99c  actions-runner-linux-x64-2.331.0.tar.gz" | shasum -a 256 -c
+    
+    # Extract the installer
+    $ tar xzf ./actions-runner-linux-x64-2.331.0.tar.gz
     if (!invoice) {
       return NextResponse.json(
         { success: false, error: 'Rechnung nicht gefunden' },

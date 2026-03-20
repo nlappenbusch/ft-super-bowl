@@ -5,8 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { Star, Hotel, Calendar, Users, ChevronDown, CheckCircle2, Phone, Mail, ArrowLeft, Bed, AlertCircle, UserCircle, UserCheck } from 'lucide-react';
-import Image from 'next/image';
 import 'flag-icons/css/flag-icons.min.css';
+import EkomiWidget from '@/components/EkomiWidget';
 
 interface Traveler {
   salutation: string;
@@ -381,20 +381,6 @@ export default function BookingForm() {
 
   return (
     <div className='min-h-screen bg-gray-50'>
-      <header style={{ backgroundImage: 'linear-gradient(202deg, #184a7b 0%, #143047 100%)' }} className='text-white'>
-        <div className='container mx-auto px-4 py-4'>
-          <div className='flex items-center justify-between'>
-            <Link href='/' className='flex items-center gap-3 hover:opacity-80 transition'>
-              <Image src='/faltin-logo.svg' alt='Faltin Travel' width={120} height={40} />
-            </Link>
-            <div className='flex items-center gap-4'>
-              <Phone className='w-5 h-5' />
-              <span className='text-sm font-semibold'>+41 44 700 22 77</span>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Back to Package Button */}
       <div className='bg-linear-to-r from-orange-500 to-orange-600 shadow-md'>
         <div className='container mx-auto px-4 py-3'>
@@ -909,7 +895,7 @@ export default function BookingForm() {
               <div className='mt-6 bg-white rounded-lg p-4 shadow-sm'>
                 <p className='text-xs text-gray-600 text-center mb-3 font-semibold'>Vertrauen Sie auf Faltin Travel</p>
                 {isMounted && (
-                  <div id="widget-container" className="ekomi-widget-container ekomi-widget-sf11936169930865af963"></div>
+                  <EkomiWidget token="sf11936169930865af963" className='min-h-[66px]' />
                 )}
                 <a href="https://www.ekomi.de/bewertungen-faltintravelcom.html" target="_blank" rel="noopener noreferrer">
                   <img alt="faltintravel.com Reviews with ekomi.de" src="https://smart-widget-assets.ekomiapps.de/resources/ekomi_logo.png" style={{ display: 'none' }}/>

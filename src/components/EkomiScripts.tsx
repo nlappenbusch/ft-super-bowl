@@ -29,8 +29,8 @@ function registerWidget(w: Window, token: string) {
   w._ekomiWidgetsServerUrl = 'https://widgets.ekomi.com';
   w._customerId = 119361;
   
-  if (w._language == undefined) {
-    w._language = [];
+  if (w._language == undefined || typeof w._language !== 'object') {
+    w._language = {};
   }
   w._language[token] = 'auto';
   

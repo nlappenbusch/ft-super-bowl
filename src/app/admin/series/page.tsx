@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import AdminShell from '@/components/admin/AdminShell';
+import AdminImageField from '@/components/admin/AdminImageField';
 
 interface SeriesFormState {
   id?: string;
@@ -235,15 +236,13 @@ export default function AdminSeriesPage() {
             <section className="border border-gray-100 rounded-xl p-4 bg-white">
               <h3 className="text-sm font-semibold text-gray-700">Media & Status</h3>
               <div className="mt-3 grid gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Hero Bild URL</label>
-                  <input
-                    value={form.hero_image}
-                    onChange={(event) => updateField('hero_image', event.target.value)}
-                    placeholder="https://.../header.webp"
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
+                <AdminImageField
+                  label="Hero Bild"
+                  value={form.hero_image}
+                  onChange={(value) => updateField('hero_image', value)}
+                  placeholder="https://.../header.webp"
+                  previewLabel="Hero Bild Vorschau"
+                />
 
                 <div>
                   <label className="text-xs font-semibold text-gray-600">Status</label>

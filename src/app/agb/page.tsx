@@ -4,15 +4,6 @@ import { ArrowLeft } from 'lucide-react';
 export default function AGBPage() {
   return (
     <div className='min-h-screen bg-gray-50'>
-      <header className='bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white'>
-        <div className='container mx-auto px-4 py-4'>
-          <Link href='/' className='flex items-center gap-2 hover:text-blue-200 transition'>
-            <ArrowLeft className='w-5 h-5' />
-            <span className='text-xl font-bold'>Zurück zur Startseite</span>
-          </Link>
-        </div>
-      </header>
-
       <div className='container mx-auto px-4 py-12 max-w-4xl'>
         <div className='bg-white rounded-xl shadow-lg p-8 md:p-12'>
           <h1 className='text-4xl font-bold text-gray-900 mb-4'>

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Calendar, MapPin } from 'lucide-react';
 import { getEventsBySeriesSlug, getSeriesBySlug } from '@/lib/eventData';
+import { toCategorySlug } from '@/lib/category';
 
 interface SeriesPageProps {
   params: Promise<{ series: string }>;
@@ -58,15 +59,6 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      <header className="relative z-20">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center text-sm font-semibold text-white/80 hover:text-white">
-            Zurueck zur Uebersicht
-          </Link>
-          <span className="text-xs uppercase tracking-[0.3em] text-white/60">{seriesData.category}</span>
-        </div>
-      </header>
-
       <section className="relative px-4 pt-8 pb-16 overflow-hidden">
         <div
           className="absolute inset-0"

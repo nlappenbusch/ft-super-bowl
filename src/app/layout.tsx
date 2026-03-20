@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Serif_Display, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import NavBarWrapper from '@/components/NavBarWrapper';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -82,6 +83,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} antialiased`}
         suppressHydrationWarning
       >
+        <NavBarWrapper />
         {children}
       </body>
     </html>

@@ -11,10 +11,105 @@ interface EventPageProps {
   params: Promise<{ slug: string }>;
 }
 
+function parseFlexibleDate(value?: string | null): Date | null {
+  if (!value) return null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  // Supports admin-style input like 29.06.2026
+  const dotMatch = trimmed.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (dotMatch) {
+    const day = Number(dotMatch[1]);
+    const month = Number(dotMatch[2]);
+    const year = Number(dotMatch[3]);
+    const date = new Date(year, month - 1, day);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  // Fallback for ISO / RFC strings
+  const date = new Date(trimmed);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 function formatEventDate(value?: string | null) {
   if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
+  const date = parseFlexibleDate(value);
+  if (!date) return value;
+  return new Intl.DateTimeFormat('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+}
+
+function getEventDateRange(start?: string | null, end?: string | null) {
+  const from = formatEventDate(start);
+  const to = formatEventDate(end);
+
+  if (from && to) return `${from} - ${to}`;
+  if (from) return from;
+  return to;
+}
+
+function getEventLocationLine(event: {
+  venue?: string | null;
+  location_name?: string | null;
+  location_city?: string | null;
+  location_region?: string | null;
+  location_country?: string | null;
+}) {
+  return [
+    event.location_city,
+    event.location_name,
+    event.venue,
+    event.location_region,
+    event.location_country
+  ]
+    .filter(Boolean)
+    .join(', ');
+}
+
+function buildHeroIntro(event: { name?: string | null; title?: string | null; description?: string | null }) {
+  if (event.description) return event.description;
+
+  const baseName = event.name || event.title || 'dieses Event';
+  return `Tickets sind heiss begehrt und dementsprechend schwer erhaeltlich. Als mehrfach ausgezeichneter Sportreisen-Spezialist bieten wir unseren Kunden die Moeglichkeit, ${baseName} live zu erleben.`;
+}
+
+function buildHeroSubline(event: {
+  name?: string | null;
+  venue?: string | null;
+  location_name?: string | null;
+  location_city?: string | null;
+  location_region?: string | null;
+  location_country?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+}) {
+  const baseName = event.name || 'Event';
+  const location = getEventLocationLine(event);
+  const dateRange = getEventDateRange(event.start_date, event.end_date);
+
+  const parts = [baseName];
+  if (location) parts.push(`Ort: ${location}`);
+  if (dateRange) parts.push(`Termin: ${dateRange}`);
+
+  return parts.join(' | ');
+}
+
+function buildFirstParagraphHeading(event: { first_paragraph_heading?: string | null; name?: string | null; title?: string | null }) {
+  if (event.first_paragraph_heading) return event.first_paragraph_heading;
+  const eventName = event.name || event.title || 'unser Event';
+  return `Erleben Sie ${eventName} live!`;
+}
+
+function buildFirstParagraphText(event: { first_paragraph_text?: string | null; name?: string | null; title?: string | null }) {
+  if (event.first_paragraph_text) return event.first_paragraph_text;
+  const eventName = event.name || event.title || 'das Event';
+  return `Mit Faltin Travel erleben Sie ${eventName} mit sorgfaeltig zusammengestellten Tickets und passenden Reisebausteinen. Wir begleiten Sie von der Anfrage bis zur Rueckreise.`;
+}
+
+function formatEventDateForBadge(value?: string | null) {
+  if (!value) return '';
+  const date = parseFlexibleDate(value);
+  if (!date) return value;
   return new Intl.DateTimeFormat('de-CH', { day: '2-digit', month: 'long', year: 'numeric' }).format(date);
 }
 
@@ -68,10 +163,21 @@ export default async function EventPage({ params }: EventPageProps) {
     url: event.base_url ? `${event.base_url}/booking?event=${encodeURIComponent(event.slug)}` : undefined
   });
 
-  const displayDate = formatEventDate(event.start_date);
-  const displayLocation = [event.location_city, event.location_region, event.location_country]
-    .filter(Boolean)
-    .join(', ');
+  const displayDate = formatEventDateForBadge(event.start_date);
+  const displayLocation = getEventLocationLine(event);
+  const heroSubline = buildHeroSubline(event);
+  const heroIntro = buildHeroIntro(event);
+  const heroCtaLabel = `Jetzt \"${event.name || event.title || 'Event'}\" Tickets anfragen`;
+  const bookingHref = event.base_url
+    ? `${event.base_url.replace(/\/$/, '')}/booking?event=${encodeURIComponent(event.slug)}`
+    : `/booking?event=${encodeURIComponent(event.slug)}`;
+  const firstParagraphHeading = buildFirstParagraphHeading(event);
+  const firstParagraphText = buildFirstParagraphText(event);
+  const firstParagraphImages = [
+    event.first_paragraph_image_1,
+    event.first_paragraph_image_2,
+    event.first_paragraph_image_3
+  ].filter(Boolean) as string[];
 
   return (
     <div className="min-h-screen">
@@ -83,15 +189,6 @@ export default async function EventPage({ params }: EventPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
       />
-
-      <header style={{ backgroundImage: 'linear-gradient(202deg, #184a7b 0%, #143047 100%)' }} className="text-white sticky top-0 z-50 shadow-lg">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/" className="flex items-center text-sm font-semibold">Zurueck zur Event-Uebersicht</Link>
-          <Link href="/booking" className="px-4 py-2 rounded-lg transition font-bold" style={{ backgroundColor: '#f14624', color: 'white' }}>
-            Jetzt buchen
-          </Link>
-        </div>
-      </header>
 
       <section className="relative text-white py-14 px-4 overflow-hidden" style={{ backgroundImage: 'linear-gradient(202deg, #184a7b 0%, #143047 100%)' }}>
         {event.hero_image && (
@@ -106,9 +203,17 @@ export default async function EventPage({ params }: EventPageProps) {
             </Link>
           )}
           <h1 className="text-4xl md:text-5xl font-bold mb-3">{event.title || event.name}</h1>
-          {event.description && (
-            <p className="text-lg md:text-xl opacity-90 max-w-3xl mx-auto">{event.description}</p>
-          )}
+          <p className="text-base md:text-lg opacity-90 max-w-5xl mx-auto">{heroSubline}</p>
+          <p className="text-lg md:text-xl opacity-95 max-w-4xl mx-auto mt-5">{heroIntro}</p>
+          <div className="mt-8">
+            <Link
+              href={bookingHref}
+              className="inline-flex items-center rounded-full px-7 py-3 text-sm md:text-base font-semibold transition hover:opacity-90"
+              style={{ backgroundColor: '#f14624', color: 'white' }}
+            >
+              {heroCtaLabel}
+            </Link>
+          </div>
           <div className="flex flex-wrap justify-center gap-6 mt-6 text-sm">
             {displayDate && (
               <div className="flex items-center gap-2">
@@ -127,6 +232,28 @@ export default async function EventPage({ params }: EventPageProps) {
               <span>Exklusive Packages</span>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="py-12 px-4 bg-white">
+        <div className="container mx-auto max-w-6xl">
+          <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-900">{firstParagraphHeading}</h2>
+          <p className="mt-5 text-base md:text-lg leading-relaxed text-gray-700 text-center max-w-4xl mx-auto">{firstParagraphText}</p>
+
+          {firstParagraphImages.length > 0 && (
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+              {firstParagraphImages.map((imageUrl, index) => (
+                <div key={`${imageUrl}-${index}`} className="relative h-64 md:h-72 rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
+                  <Image
+                    src={imageUrl}
+                    alt={`${event.title || event.name || 'Event'} Bild ${index + 1}`}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

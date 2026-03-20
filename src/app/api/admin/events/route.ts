@@ -24,6 +24,11 @@ export async function POST(request: Request) {
       hero_image: body.hero_image || null,
       ticket_image: body.ticket_image || null,
       base_url: body.base_url || null,
+        first_paragraph_heading: body.first_paragraph_heading ?? null,
+        first_paragraph_text: body.first_paragraph_text ?? null,
+        first_paragraph_image_1: body.first_paragraph_image_1 ?? null,
+        first_paragraph_image_2: body.first_paragraph_image_2 ?? null,
+        first_paragraph_image_3: body.first_paragraph_image_3 ?? null,
       status: body.status || 'active'
     });
 

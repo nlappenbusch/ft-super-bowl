@@ -8,7 +8,8 @@ import {
   findPackageBySlug,
   findFaqsByEvent,
   findPackagesByEvent,
-  findEventsBySeriesId
+  findEventsBySeriesId,
+  getPackages
 } from './contentStore';
 
 export const DEFAULT_EVENT_SLUG = process.env.DEFAULT_EVENT_SLUG || 'super-bowl-2027';
@@ -31,6 +32,11 @@ export interface EventRecord {
   hero_image?: string | null;
   ticket_image?: string | null;
   base_url?: string | null;
+  first_paragraph_heading?: string | null;
+  first_paragraph_text?: string | null;
+  first_paragraph_image_1?: string | null;
+  first_paragraph_image_2?: string | null;
+  first_paragraph_image_3?: string | null;
 }
 
 export interface SeriesRecord {
@@ -198,6 +204,20 @@ export async function getPackagesByEventSlug(eventSlug: string): Promise<Package
     .from('packages')
     .select('*, package_includes(*)')
     .eq('event_id', event.id)
+    .order('title', { ascending: true });
+
+  if (error || !data) return [];
+  return data as PackageRecord[];
+}
+
+export async function getPackagesList(): Promise<PackageRecord[]> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return (getPackages() as PackageRecord[]) || [];
+  }
+
+  const { data, error } = await supabase
+    .from('packages')
+    .select('*')
     .order('title', { ascending: true });
 
   if (error || !data) return [];

@@ -210,10 +210,10 @@ export default function SuperBowlContent() {
               <div className="hidden sm:block w-px h-12 bg-gray-300"></div>
               <div className="text-center">
                 <Image 
-                  src="/reisegarantielogo-de-768x258.webp" 
+                  src="/Schweizer-Reisegarantie-300x120-1.webp" 
                   alt="Schweizer Reisegarantie" 
-                  width={80} 
-                  height={27}
+                  width={90} 
+                  height={36}
                   className="mx-auto"
                 />
                 <div className="text-sm text-gray-600 mt-1">Geschützt</div>

@@ -19,6 +19,11 @@ export interface ContentEventRecord {
   hero_image?: string | null;
   ticket_image?: string | null;
   base_url?: string | null;
+  first_paragraph_heading?: string | null;
+  first_paragraph_text?: string | null;
+  first_paragraph_image_1?: string | null;
+  first_paragraph_image_2?: string | null;
+  first_paragraph_image_3?: string | null;
   status?: 'active' | 'draft' | 'archived' | null;
 }
 
@@ -144,6 +149,12 @@ function seedEvents(): ContentEventRecord[] {
       hero_image: 'https://superbowl.faltintravel.com/header-neu1260-1.webp',
       ticket_image: 'https://superbowl.faltintravel.com/Super-Bowl-2027-Ticketkategorien-SoFi-Stadium.webp',
       base_url: 'https://superbowl.faltintravel.com',
+      first_paragraph_heading: 'Erleben Sie den Super Bowl LXI 2027 live!',
+      first_paragraph_text:
+        'Der Super Bowl ist das groesste Einzelsportevent der Welt. Mit Faltin Travel erleben Sie das Event in Los Angeles mit ausgewaehlten Tickets, Top-Hotel und exklusiven Services vor Ort.',
+      first_paragraph_image_1: 'https://superbowl.faltintravel.com/bilder-hotel/540997872.jpg',
+      first_paragraph_image_2: 'https://superbowl.faltintravel.com/bilder-hotel/540998091.jpg',
+      first_paragraph_image_3: 'https://superbowl.faltintravel.com/bilder-hotel/568783347.jpg',
       status: 'active'
     }
   ];

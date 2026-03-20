@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import AdminShell from '@/components/admin/AdminShell';
+import AdminGalleryField from '@/components/admin/AdminGalleryField';
 
 interface EventOption {
   id: string;
@@ -526,13 +527,11 @@ export default function AdminPackagesPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600">Hotel Bilder (Komma oder Zeilen)</label>
-                  <textarea
+                  <AdminGalleryField
+                    label="Hotel Bilder"
                     value={form.hotel_images}
-                    onChange={(event) => updateField('hotel_images', event.target.value)}
-                    rows={2}
+                    onChange={(value) => updateField('hotel_images', value)}
                     placeholder="https://.../bild1.jpg, https://.../bild2.jpg"
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
                 <div>

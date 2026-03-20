@@ -13,6 +13,14 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'superbowl.faltintravel.com'
+      },
+      {
+        protocol: 'https',
+        hostname: 'faltintravel.com'
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.faltintravel.com'
       }
     ]
   },
