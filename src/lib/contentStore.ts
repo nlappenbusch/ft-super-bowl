@@ -43,6 +43,7 @@ export interface ContentSeriesRecord {
   title: string;
   description?: string | null;
   category: string;
+  category_seo_text?: string | null;
   hero_image?: string | null;
   status?: 'active' | 'draft' | 'archived' | null;
 }
@@ -124,6 +125,8 @@ function seedSeries(): ContentSeriesRecord[] {
       title: 'Super Bowl',
       description: 'Die groesste Sportshow der Welt mit exklusiven Hospitality-Packages.',
       category: 'Sportevents',
+      category_seo_text:
+        'In der Kategorie Sportevents finden Sie ausgewaehlte Eventreisen mit verifizierten Tickets, passenden Hotels und planbarer Betreuung durch das Team von Faltin Travel.',
       hero_image: 'https://superbowl.faltintravel.com/header-neu1260-1.webp',
       status: 'active'
     }

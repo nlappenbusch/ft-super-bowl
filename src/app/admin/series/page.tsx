@@ -10,6 +10,7 @@ interface SeriesFormState {
   title: string;
   category: string;
   description: string;
+  category_seo_text: string;
   hero_image: string;
   status: 'active' | 'draft' | 'archived';
 }
@@ -19,6 +20,7 @@ const emptyForm: SeriesFormState = {
   title: '',
   category: '',
   description: '',
+  category_seo_text: '',
   hero_image: '',
   status: 'active'
 };
@@ -62,7 +64,7 @@ export default function AdminSeriesPage() {
 
   const handleSave = async () => {
     if (!form.slug.trim() || !form.title.trim() || !form.category.trim()) {
-      alert('Bitte Slug, Titel und Kategorie ausfuellen.');
+      alert('Bitte Slug, Titel und Kategorie ausfüllen.');
       return;
     }
 
@@ -74,6 +76,7 @@ export default function AdminSeriesPage() {
       title: form.title.trim(),
       category: form.category.trim(),
       description: form.description || null,
+      category_seo_text: form.category_seo_text || null,
       hero_image: form.hero_image || null,
       status: form.status
     };
@@ -97,13 +100,13 @@ export default function AdminSeriesPage() {
   };
 
   const handleDelete = async (seriesId: string) => {
-    if (!confirm('Serie wirklich loeschen? Die Events werden ohne Serie weitergefuehrt.')) return;
+    if (!confirm('Serie wirklich löschen? Die Events werden ohne Serie weitergeführt.')) return;
 
     const response = await fetch(`/api/admin/series/${seriesId}`, { method: 'DELETE' });
     const result = await response.json();
 
     if (!result.success) {
-      setError(result.error || 'Fehler beim Loeschen');
+      setError(result.error || 'Fehler beim Löschen');
       return;
     }
 
@@ -135,7 +138,7 @@ export default function AdminSeriesPage() {
             />
           </div>
 
-          {loading && <p className="text-gray-500">Laedt...</p>}
+          {loading && <p className="text-gray-500">Lädt...</p>}
           {error && <p className="text-red-600 text-sm">{error}</p>}
 
           <div className="space-y-3">
@@ -182,7 +185,7 @@ export default function AdminSeriesPage() {
                 onClick={() => handleDelete(form.id as string)}
                 className="text-sm text-red-600 hover:text-red-700"
               >
-                Loeschen
+                Löschen
               </button>
             )}
           </div>
@@ -230,6 +233,20 @@ export default function AdminSeriesPage() {
                     className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-600">SEO Text fuer Kategorie</label>
+                  <textarea
+                    value={form.category_seo_text}
+                    onChange={(event) => updateField('category_seo_text', event.target.value)}
+                    rows={5}
+                    placeholder="Einzigartiger SEO-Text fuer die Kategorie, z. B. Sportevents ..."
+                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Wird auf der Kategorie-Seite ausgegeben und fuer die Meta-Description genutzt.
+                  </p>
+                </div>
               </div>
             </section>
 
@@ -265,7 +282,7 @@ export default function AdminSeriesPage() {
               onClick={resetForm}
               className="px-4 py-2 text-sm rounded-lg border border-gray-200"
             >
-              Zuruecksetzen
+              Zurücksetzen
             </button>
             <button
               onClick={handleSave}

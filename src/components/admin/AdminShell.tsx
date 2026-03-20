@@ -12,6 +12,7 @@ interface AdminShellProps {
 const navItems = [
   { href: '/admin', label: 'Buchungen' },
   { href: '/admin/series', label: 'Serien' },
+  { href: '/admin/categories', label: 'Kategorien SEO' },
   { href: '/admin/events', label: 'Events' },
   { href: '/admin/packages', label: 'Packages' },
   { href: '/admin/faqs', label: 'FAQs' }

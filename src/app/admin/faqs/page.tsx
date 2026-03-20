@@ -97,7 +97,7 @@ export default function AdminFaqsPage() {
   const handleSave = async () => {
 
     if (!form.event_id || !form.question.trim() || !form.answer.trim()) {
-      alert('Bitte Frage und Antwort ausfuellen.');
+      alert('Bitte Frage und Antwort ausfüllen.');
       return;
     }
 
@@ -130,13 +130,13 @@ export default function AdminFaqsPage() {
   };
 
   const handleDelete = async (faqId: string) => {
-    if (!confirm('FAQ wirklich loeschen?')) return;
+    if (!confirm('FAQ wirklich löschen?')) return;
 
     const response = await fetch(`/api/admin/faqs/${faqId}`, { method: 'DELETE' });
     const result = await response.json();
 
     if (!result.success) {
-      setError(result.error || 'Fehler beim Loeschen');
+      setError(result.error || 'Fehler beim Löschen');
       return;
     }
 
@@ -150,7 +150,7 @@ export default function AdminFaqsPage() {
         <div className="bg-white rounded-xl shadow-sm border p-6">
           <div className="flex flex-col gap-4 mb-4">
             <div>
-              <label className="text-xs font-semibold text-gray-600">Event auswaehlen</label>
+              <label className="text-xs font-semibold text-gray-600">Event auswählen</label>
               <select
                 value={selectedEvent}
                 onChange={(event) => {
@@ -177,7 +177,7 @@ export default function AdminFaqsPage() {
             </div>
           </div>
 
-          {loading && <p className="text-gray-500">Laedt...</p>}
+          {loading && <p className="text-gray-500">Lädt...</p>}
           {error && <p className="text-red-600 text-sm">{error}</p>}
 
           <div className="space-y-3">
@@ -216,7 +216,7 @@ export default function AdminFaqsPage() {
                 onClick={() => handleDelete(form.id as string)}
                 className="text-sm text-red-600 hover:text-red-700"
               >
-                Loeschen
+                Löschen
               </button>
             )}
           </div>
@@ -300,7 +300,7 @@ export default function AdminFaqsPage() {
               onClick={resetForm}
               className="flex-1 bg-gray-100 py-2 rounded-lg hover:bg-gray-200"
             >
-              Zuruecksetzen
+              Zurücksetzen
             </button>
           </div>
         </div>

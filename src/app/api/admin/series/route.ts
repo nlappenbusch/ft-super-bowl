@@ -13,6 +13,7 @@ export async function POST(request: Request) {
       title: body.title,
       description: body.description || null,
       category: body.category || 'Sonstiges',
+      category_seo_text: body.category_seo_text || null,
       hero_image: body.hero_image || null,
       status: body.status || 'active'
     });

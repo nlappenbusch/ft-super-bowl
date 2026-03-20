@@ -45,6 +45,7 @@ export interface SeriesRecord {
   title: string;
   description?: string | null;
   category: string;
+  category_seo_text?: string | null;
   hero_image?: string | null;
   status?: 'active' | 'draft' | 'archived' | null;
 }

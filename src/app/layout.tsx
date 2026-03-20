@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Serif_Display, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import NavBarWrapper from '@/components/NavBarWrapper';
+import FooterWrapper from '@/components/FooterWrapper';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -85,6 +86,7 @@ export default function RootLayout({
       >
         <NavBarWrapper />
         {children}
+        <FooterWrapper />
       </body>
     </html>
   );

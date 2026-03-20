@@ -154,7 +154,7 @@ function buildPreviewHeroIntro(form: EventFormState) {
   if (form.description.trim()) return form.description.trim();
 
   const baseName = form.name || form.title || 'dieses Event';
-  return `Tickets sind heiss begehrt und dementsprechend schwer erhaeltlich. Als mehrfach ausgezeichneter Sportreisen-Spezialist bieten wir unseren Kunden die Moeglichkeit, ${baseName} live zu erleben.`;
+  return `Tickets sind heiß begehrt und dementsprechend schwer erhältlich. Als mehrfach ausgezeichneter Sportreisen-Spezialist bieten wir unseren Kunden die Möglichkeit, ${baseName} live zu erleben.`;
 }
 
 function buildPreviewFirstParagraphHeading(form: EventFormState) {
@@ -166,7 +166,7 @@ function buildPreviewFirstParagraphText(form: EventFormState) {
   if (form.first_paragraph_text.trim()) return form.first_paragraph_text.trim();
 
   const baseName = form.name || form.title || 'das Event';
-  return `Mit Faltin Travel erleben Sie ${baseName} mit sorgfaeltig zusammengestellten Tickets und passenden Reisebausteinen. Wir begleiten Sie von der Anfrage bis zur Rueckreise.`;
+  return `Mit Faltin Travel erleben Sie ${baseName} mit sorgfältig zusammengestellten Tickets und passenden Reisebausteinen. Wir begleiten Sie von der Anfrage bis zur Rückreise.`;
 }
 
 function StatCard({ label, value, hint }: { label: string; value: string; hint: string }) {
@@ -274,7 +274,7 @@ export default function AdminEventsPage() {
 
   const handleSave = async () => {
     if (!form.slug.trim() || !form.name.trim() || !form.title.trim()) {
-      alert('Bitte Slug, Name und Titel ausfuellen.');
+      alert('Bitte Slug, Name und Titel ausfüllen.');
       return;
     }
 
@@ -324,13 +324,13 @@ export default function AdminEventsPage() {
   };
 
   const handleDelete = async (eventId: string) => {
-    if (!confirm('Event wirklich loeschen?')) return;
+    if (!confirm('Event wirklich löschen?')) return;
 
     const response = await fetch(`/api/admin/events/${eventId}`, { method: 'DELETE' });
     const result = await response.json();
 
     if (!result.success) {
-      setError(result.error || 'Fehler beim Loeschen');
+      setError(result.error || 'Fehler beim Löschen');
       return;
     }
 
@@ -370,7 +370,7 @@ export default function AdminEventsPage() {
     <AdminShell title="Events verwalten">
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-3">
-          <StatCard label="Events" value={String(events.length)} hint="Alle vorhandenen Eintraege im Backend" />
+          <StatCard label="Events" value={String(events.length)} hint="Alle vorhandenen Einträge im Backend" />
           <StatCard
             label="Bearbeitungsmodus"
             value={form.id ? 'Bestehend' : 'Neu'}
@@ -389,7 +389,7 @@ export default function AdminEventsPage() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900">Event-Auswahl</h2>
-                  <p className="mt-1 text-sm text-gray-500">Vorhandene Eintraege durchsuchen oder direkt ein neues Event anlegen.</p>
+                  <p className="mt-1 text-sm text-gray-500">Vorhandene Einträge durchsuchen oder direkt ein neues Event anlegen.</p>
                 </div>
                 <button
                   onClick={resetForm}
@@ -416,7 +416,7 @@ export default function AdminEventsPage() {
             </div>
 
             <div className="max-h-[calc(100vh-22rem)] space-y-3 overflow-y-auto px-5 pb-5">
-              {loading && <p className="text-gray-500">Laedt...</p>}
+              {loading && <p className="text-gray-500">Lädt...</p>}
               {!loading && filteredEvents.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
                   Keine passenden Events gefunden.
@@ -483,7 +483,7 @@ export default function AdminEventsPage() {
                       onClick={() => handleDelete(form.id as string)}
                       className="rounded-xl border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
                     >
-                      Loeschen
+                      Löschen
                     </button>
                   )}
                 </div>
@@ -827,7 +827,7 @@ export default function AdminEventsPage() {
                   onClick={resetForm}
                   className="flex-1 rounded-xl bg-gray-100 py-3 text-sm font-semibold text-gray-800 transition hover:bg-gray-200"
                 >
-                  Formular zuruecksetzen
+                  Formular zurücksetzen
                 </button>
               </div>
             </div>

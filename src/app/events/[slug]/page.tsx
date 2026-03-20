@@ -70,7 +70,7 @@ function buildHeroIntro(event: { name?: string | null; title?: string | null; de
   if (event.description) return event.description;
 
   const baseName = event.name || event.title || 'dieses Event';
-  return `Tickets sind heiss begehrt und dementsprechend schwer erhaeltlich. Als mehrfach ausgezeichneter Sportreisen-Spezialist bieten wir unseren Kunden die Moeglichkeit, ${baseName} live zu erleben.`;
+  return `Tickets sind heiß begehrt und dementsprechend schwer erhältlich. Als mehrfach ausgezeichneter Sportreisen-Spezialist bieten wir unseren Kunden die Möglichkeit, ${baseName} live zu erleben.`;
 }
 
 function buildHeroSubline(event: {
@@ -103,7 +103,7 @@ function buildFirstParagraphHeading(event: { first_paragraph_heading?: string | 
 function buildFirstParagraphText(event: { first_paragraph_text?: string | null; name?: string | null; title?: string | null }) {
   if (event.first_paragraph_text) return event.first_paragraph_text;
   const eventName = event.name || event.title || 'das Event';
-  return `Mit Faltin Travel erleben Sie ${eventName} mit sorgfaeltig zusammengestellten Tickets und passenden Reisebausteinen. Wir begleiten Sie von der Anfrage bis zur Rueckreise.`;
+  return `Mit Faltin Travel erleben Sie ${eventName} mit sorgfältig zusammengestellten Tickets und passenden Reisebausteinen. Wir begleiten Sie von der Anfrage bis zur Rückreise.`;
 }
 
 function formatEventDateForBadge(value?: string | null) {
@@ -119,7 +119,7 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
   if (!event) return {};
 
   const title = event.title || event.name || 'Event';
-  const description = event.description || `Tickets & Packages fuer ${event.name || event.slug}`;
+  const description = event.description || `Tickets & Packages für ${event.name || event.slug}`;
 
   return {
     title,
@@ -260,8 +260,8 @@ export default async function EventPage({ params }: EventPageProps) {
       <section className="py-12 px-4 bg-gray-50" id="packages">
         <div className="container mx-auto">
           <div className="text-center mb-8">
-            <h2 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">Packages fuer {event.name || event.title}</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">Waehlen Sie Ihr perfektes Reise-Package.</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900">Packages für {event.name || event.title}</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">Wählen Sie Ihr perfektes Reise-Package.</p>
           </div>
           <div className="max-w-3xl mx-auto space-y-6">
             {packages.length === 0 && (

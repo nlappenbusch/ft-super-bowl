@@ -95,7 +95,7 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
               <h2 className="text-3xl md:text-4xl font-bold mt-3" style={{ fontFamily: 'var(--font-display)' }}>
                 Events in dieser Serie
               </h2>
-              <p className="text-gray-600 mt-2">Waehlen Sie ein Event aus und sehen Sie die Packages.</p>
+              <p className="text-gray-600 mt-2">Wählen Sie ein Event aus und sehen Sie die Packages.</p>
             </div>
             <div className="text-sm text-gray-500">{events.length} Events</div>
           </div>
