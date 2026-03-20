@@ -8,9 +8,12 @@ function isValidSupabaseUrl(url?: string): boolean {
   return /^https?:\/\//i.test(url);
 }
 
-export const supabase = isValidSupabaseUrl(supabaseUrl) && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+export const supabase =
+  typeof supabaseUrl === 'string' &&
+  isValidSupabaseUrl(supabaseUrl) &&
+  typeof supabaseAnonKey === 'string'
+    ? createClient(supabaseUrl, supabaseAnonKey)
+    : null;
 
 export function isSupabaseConfigured(): boolean {
   return Boolean(isValidSupabaseUrl(supabaseUrl) && supabaseAnonKey);
