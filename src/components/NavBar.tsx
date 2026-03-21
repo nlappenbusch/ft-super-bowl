@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -115,11 +116,21 @@ function innerColClass(count: number): string {
 
 /* ─── Component ──────────────────────────────────────────────── */
 export default function NavBar() {
+  const pathname = usePathname();
+  const isHome = pathname === '/';
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
+  const [scrolled, setScrolled] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -263,11 +274,13 @@ export default function NavBar() {
       {/* ── Main Header ── */}
       <header
         ref={headerRef}
-        className="sticky top-0 z-50"
+        className="sticky top-0 z-50 transition-all duration-300"
         style={{
-          background: 'linear-gradient(132deg, #112b44 0%, #163654 55%, #1f4c75 100%)',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.24)',
-          borderBottom: '1px solid rgba(255,255,255,0.12)',
+          background: (!isHome || scrolled)
+            ? 'linear-gradient(132deg, #112b44 0%, #163654 55%, #1f4c75 100%)'
+            : 'linear-gradient(132deg, rgba(17,43,68,0.85) 0%, rgba(22,54,84,0.80) 55%, rgba(31,76,117,0.75) 100%)',
+          boxShadow: (!isHome || scrolled) ? '0 8px 24px rgba(0, 0, 0, 0.24)' : 'none',
+          borderBottom: (!isHome || scrolled) ? '1px solid rgba(255,255,255,0.12)' : '1px solid transparent',
         }}
       >
         {/* Main nav bar */}

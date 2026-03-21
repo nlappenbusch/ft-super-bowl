@@ -174,7 +174,39 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(generateOrganizationSchema()) }}
       />
 
-      <section className="py-16 px-4 relative overflow-hidden" style={{ backgroundImage: 'linear-gradient(202deg, #184a7b 0%, #143047 100%)' }}>
+      {/* Hero Banner – hinter die Navbar gezogen */}
+      <section className="relative w-full overflow-hidden bg-[#0d1f33] -mt-[100px]">
+        <Image
+          src="/Faltin Travel Header.jpg"
+          alt="Faltin Travel – Sport- und Kulturevents"
+          width={1920}
+          height={600}
+          priority
+          className="w-full h-auto block"
+        />
+        {/* Gradient der nahtlos in die nächste Section übergeht */}
+        <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-[#143047] via-[#143047]/60 to-transparent pointer-events-none" />
+        {/* Scroll-Chevron */}
+        <button
+          type="button"
+          onClick={() => document.getElementById('kategorien')?.scrollIntoView({ behavior: 'smooth' })}
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 group cursor-pointer z-10"
+          aria-label="Zu den Kategorien scrollen"
+        >
+          <svg className="w-8 h-8 text-white/60 group-hover:text-white transition-colors duration-200 animate-[float_1.8s_ease-in-out_infinite]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      </section>
+
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50%      { transform: translateY(5px); }
+        }
+      `}</style>
+
+      <section id="kategorien" className="pt-8 pb-16 px-4 relative overflow-hidden -mt-32" style={{ backgroundImage: 'linear-gradient(180deg, transparent 0%, #143047 5%, #184a7b 100%)' }}>
         <div
           className="absolute inset-0"
           style={{
