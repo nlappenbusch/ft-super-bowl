@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { ChevronRight, Home, Layers } from 'lucide-react';
+import { ChevronRight, Home, Layers, ArrowRight, Check } from 'lucide-react';
 import EventDiscoverCard, { type EventDiscoverCardData } from '@/components/EventDiscoverCard';
 import { getEventsList, getPackagesList, getSeriesList } from '@/lib/eventData';
 import { getCategorySeoBySlug } from '@/lib/categorySeoStore';
@@ -125,7 +125,10 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     image: item.hero_image || '/header-neu1260-1.webp',
     description:
       item.description ||
-      'Alle Events dieser Serie mit Ticketoptionen, Hotelpaketen und Reisedetails.'
+      'Alle Events dieser Serie mit Ticketoptionen, Hotelpaketen und Reisedetails.',
+    intro: (item.intro_text || item.seo_text || '').trim(),
+    highlights: ((item.highlights as string[] | undefined) || []).filter(Boolean).slice(0, 3),
+    eventCount: events.filter((e) => e.series_id === item.id).length,
   }));
 
   return (
@@ -217,13 +220,40 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                     />
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/18 to-transparent opacity-70 group-hover:opacity-55 transition-opacity duration-300" />
                   </div>
-                  <div className="p-5 bg-[#3f6de0] min-h-[250px]">
-                    <h3 className="text-[1.95rem] leading-tight font-semibold" style={{ fontFamily: 'var(--font-display)' }}>
-                      {tile.title}
-                    </h3>
-                    <p className="text-[1.2rem] leading-[1.55] mt-3 text-white/95">
+                  <div className="flex flex-col p-5 bg-[#3f6de0] min-h-[280px]">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-[1.7rem] leading-tight font-semibold" style={{ fontFamily: 'var(--font-display)' }}>
+                        {tile.title}
+                      </h3>
+                      {tile.eventCount > 0 && (
+                        <span className="mt-1 shrink-0 rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold text-white">
+                          {tile.eventCount} {tile.eventCount === 1 ? 'Event' : 'Events'}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-2 text-[1.05rem] leading-snug font-medium text-white">
                       {tile.description}
                     </p>
+                    {tile.intro && (
+                      <p className="mt-2.5 text-sm leading-relaxed text-white/80 line-clamp-3">
+                        {tile.intro}
+                      </p>
+                    )}
+                    {tile.highlights.length > 0 && (
+                      <ul className="mt-3 space-y-1.5">
+                        {tile.highlights.map((h, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-white/90">
+                            <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: '#f5c842' }} />
+                            <span>{h}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <div className="mt-auto pt-4">
+                      <span className="inline-flex items-center gap-2 text-sm font-bold text-white transition-all group-hover:gap-3">
+                        Zur Serie <ArrowRight className="h-4 w-4" />
+                      </span>
+                    </div>
                   </div>
                 </Link>
               ))}
