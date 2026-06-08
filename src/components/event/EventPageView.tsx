@@ -3,7 +3,7 @@
 import React, { createElement, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MapPin, CalendarDays, ShieldCheck, Ticket, Award } from 'lucide-react';
+import { MapPin, CalendarDays, ShieldCheck, Ticket, Award, ChevronDown } from 'lucide-react';
 import PackageCard from '@/components/PackageCard';
 import EventContactForm from '@/components/EventContactForm';
 import LageplanMap from '@/components/LageplanMap';
@@ -468,7 +468,7 @@ export default function EventPageView({
 
       {/* ── STICKY ANCHOR NAV ────────────────────────────────────────────────── */}
       {anchors.length > 0 && (
-        <nav className="sticky z-40" style={{ top: 78 }}>
+        <nav className="sticky z-40" style={{ top: 84 }}>
           <div
             style={{
               background: 'linear-gradient(180deg, #18395a 0%, #102538 100%)',
@@ -478,7 +478,8 @@ export default function EventPageView({
               backfaceVisibility: 'hidden',
             }}
           >
-            <div className="mx-auto flex w-full max-w-6xl overflow-x-auto">
+            {/* Desktop: volle Leiste */}
+            <div className="mx-auto hidden w-full max-w-6xl md:flex">
               {anchors.map((anchor) => {
                 const isActive = activeHash === anchor.href;
                 return (
@@ -508,6 +509,30 @@ export default function EventPageView({
                   </a>
                 );
               })}
+            </div>
+
+            {/* Mobil: kompaktes Dropdown statt horizontalem Scrollen */}
+            <div className="px-4 py-2.5 md:hidden">
+              <div className="relative">
+                <label htmlFor="ft-section-nav" className="sr-only">Zum Abschnitt springen</label>
+                <select
+                  id="ft-section-nav"
+                  value={activeHash || anchors[0].href}
+                  onChange={(e) => {
+                    const target = document.getElementById(e.target.value.slice(1));
+                    if (target) target.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="w-full appearance-none rounded-lg border border-white/20 px-4 py-2.5 pr-10 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-[#d9531e]"
+                  style={{ background: 'rgba(255,255,255,0.06)' }}
+                >
+                  {anchors.map((anchor) => (
+                    <option key={anchor.href} value={anchor.href} style={{ background: '#102538', color: '#ffffff' }}>
+                      {anchor.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/70" aria-hidden />
+              </div>
             </div>
           </div>
         </nav>

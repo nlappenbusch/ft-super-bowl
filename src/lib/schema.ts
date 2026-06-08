@@ -1,3 +1,8 @@
+import { siteConfig } from '@/lib/siteConfig';
+
+// Domain-agnostisch: eigene URL aus NEXT_PUBLIC_SITE_URL (Fallback faltintravel.com)
+const SITE = siteConfig.url.replace(/\/+$/, '');
+
 export interface EventSchemaInput {
   name?: string;
   description?: string;
@@ -44,8 +49,8 @@ export function generateOrganizationSchema() {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'Faltin Travel',
-    url: 'https://faltintravel.com',
-    logo: 'https://faltintravel.com/faltin-logo.svg',
+    url: SITE,
+    logo: `${SITE}/faltin-logo.svg`,
     description: 'Spezialist für Sportreisen und Event-Packages weltweit',
     address: {
       '@type': 'PostalAddress',
@@ -80,7 +85,7 @@ export function generateEventSchema(input: EventSchemaInput = {}) {
     organizer: {
       '@type': 'Organization',
       name: input.organizerName || 'Veranstalter',
-      url: input.organizerUrl || 'https://faltintravel.com'
+      url: input.organizerUrl || SITE
     }
   }
 }
@@ -100,7 +105,7 @@ export function generateProductSchema(input: ProductSchemaInput = {}) {
       price: input.price || '0',
       priceCurrency: input.priceCurrency || 'EUR',
       availability: 'https://schema.org/InStock',
-      url: input.url || 'https://faltintravel.com',
+      url: input.url || SITE,
       seller: {
         '@type': 'Organization',
         name: 'Faltin Travel'

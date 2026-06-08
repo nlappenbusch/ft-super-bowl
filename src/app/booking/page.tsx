@@ -2,6 +2,9 @@ import { Suspense } from 'react';
 import BookingForm from '@/components/BookingForm';
 import EkomiScripts from '@/components/EkomiScripts';
 import type { Metadata } from 'next';
+import { siteConfig } from '@/lib/siteConfig';
+
+const SITE = siteConfig.url.replace(/\/+$/, '');
 
 export const metadata: Metadata = {
   title: 'Super Bowl LXI 2027 Buchung | Faltin Travel',
@@ -10,7 +13,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Super Bowl LXI 2027 Buchung | Faltin Travel',
     description: 'Exklusives Super Bowl Hospitality-Package buchen - Dream Hollywood + Premium Tickets',
-    url: 'https://superbowl.faltintravel.com/booking',
+    url: '/booking',
     siteName: 'Faltin Travel',
     images: [
       {
@@ -28,7 +31,7 @@ export const metadata: Metadata = {
     follow: true,
   },
   alternates: {
-    canonical: 'https://superbowl.faltintravel.com/booking'
+    canonical: '/booking'
   }
 };
 
@@ -59,7 +62,7 @@ export default function BookingPage() {
       "price": "8950",
       "availability": "https://schema.org/InStock",
       "validFrom": "2026-02-18",
-      "url": "https://superbowl.faltintravel.com/booking"
+      "url": `${SITE}/booking`
     }
   };
 

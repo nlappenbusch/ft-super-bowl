@@ -1,8 +1,10 @@
 import { MetadataRoute } from 'next';
 import { getSeriesList, getEventsList } from '@/lib/eventData';
 import { toCategorySlug } from '@/lib/category';
+import { siteConfig } from '@/lib/siteConfig';
 
-const BASE = 'https://faltintravel.com';
+// Domain-agnostisch: nutzt NEXT_PUBLIC_SITE_URL (siehe siteConfig), Fallback faltintravel.com
+const BASE = siteConfig.url.replace(/\/+$/, '');
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();

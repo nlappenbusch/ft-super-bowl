@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next'
- 
+import { siteConfig } from '@/lib/siteConfig'
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
@@ -7,6 +8,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/api/', '/admin/'],
     },
-    sitemap: 'https://faltintravel.com/sitemap.xml',
+    sitemap: `${siteConfig.url.replace(/\/+$/, '')}/sitemap.xml`,
   }
 }
