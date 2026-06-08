@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CalendarDays,
   ImageIcon,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import AdminShell from '@/components/admin/AdminShell';
 import AdminImageField from '@/components/admin/AdminImageField';
+import PinMapEditor from '@/components/admin/PinMapEditor';
 import {
   COLORS,
   SectionCard,
@@ -231,67 +232,32 @@ function formatPreviewDate(value?: string | null) {
   return new Intl.DateTimeFormat('de-CH', { day: '2-digit', month: 'long', year: 'numeric' }).format(date);
 }
 
-function buildPreviewLocation(form: EventFormState) {
-  return [
-    form.location_city,
-    form.location_name,
-    form.venue,
-    form.location_region,
-    form.location_country
-  ]
-    .filter(Boolean)
-    .join(', ');
-}
-
-function buildPreviewHeroSubline(form: EventFormState) {
-  const parts = [form.name || 'Event'];
-  const location = buildPreviewLocation(form);
-  const from = formatPreviewDate(form.start_date);
-  const to = formatPreviewDate(form.end_date);
-  const dateRange = from && to ? `${from} - ${to}` : from || to;
-
-  if (location) parts.push(`Ort: ${location}`);
-  if (dateRange) parts.push(`Termin: ${dateRange}`);
-
-  return parts.join(' | ');
-}
-
-function buildPreviewHeroIntro(form: EventFormState) {
-  if (form.description.trim()) return form.description.trim();
-
-  const baseName = form.name || form.title || 'dieses Event';
-  return `Tickets sind heiß begehrt und dementsprechend schwer erhältlich. Als mehrfach ausgezeichneter Sportreisen-Spezialist bieten wir unseren Kunden die Möglichkeit, ${baseName} live zu erleben.`;
-}
-
-function buildPreviewFirstParagraphHeading(form: EventFormState) {
-  if (form.first_paragraph_heading.trim()) return form.first_paragraph_heading.trim();
-  return `Erleben Sie ${form.name || form.title || 'Ihr Event'} live!`;
-}
-
-function buildPreviewFirstParagraphText(form: EventFormState) {
-  if (form.first_paragraph_text.trim()) return form.first_paragraph_text.trim();
-
-  const baseName = form.name || form.title || 'das Event';
-  return `Mit Faltin Travel erleben Sie ${baseName} mit sorgfältig zusammengestellten Tickets und passenden Reisebausteinen. Wir begleiten Sie von der Anfrage bis zur Rückreise.`;
-}
-
-function PreviewImage({ src, label }: { src: string; label: string }) {
-  if (!src.trim()) {
-    return (
-      <div className="flex h-28 items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 text-xs text-gray-400">
-        {label}
-      </div>
-    );
-  }
-
-  return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-      <div className="aspect-4/3 w-full bg-gray-100">
-        <img src={src} alt={label} className="h-full w-full object-cover" loading="lazy" />
-      </div>
-      <div className="border-t border-gray-100 px-3 py-2 text-xs text-gray-500">{label}</div>
-    </div>
-  );
+/** Baut die postMessage-Payload für die Live-Vorschau (Editor → iframe). */
+function buildEventDraft(form: EventFormState, series: SeriesOption[]) {
+  const s = series.find((item) => item.id === form.series_id);
+  return {
+    type: 'ft-event-draft' as const,
+    event: {
+      ...form,
+      id: form.id || 'preview',
+      lageplan_pins: form.lageplan_pins.map((p) => ({
+        id: p.id,
+        name: p.name,
+        lat: parseFloat(p.lat),
+        lng: parseFloat(p.lng),
+        icon_id: p.icon_id,
+        label: p.label,
+      })),
+    },
+    faqs: form.faqs.map((f, i) => ({
+      id: f.id || `faq-${i}`,
+      event_id: f.event_id || '',
+      question: f.question,
+      answer: f.answer,
+      sort_order: f.sort_order ?? i,
+    })),
+    series: s ? { slug: s.slug, title: s.title } : null,
+  };
 }
 
 export default function AdminEventsPage() {
@@ -484,13 +450,28 @@ export default function AdminEventsPage() {
     });
   }, [events, searchTerm]);
 
-  const previewTitle = form.title.trim() || 'Event Titel';
-  const previewHeroSubline = buildPreviewHeroSubline(form);
-  const previewHeroIntro = buildPreviewHeroIntro(form);
-  const previewFirstParagraphHeading = buildPreviewFirstParagraphHeading(form);
-  const previewFirstParagraphText = buildPreviewFirstParagraphText(form);
+  const previewRef = useRef<HTMLIFrameElement>(null);
+  const previewReadyRef = useRef(false);
+
+  // Live-Vorschau: Entwurf bei jeder Änderung ans iframe senden
+  useEffect(() => {
+    if (!previewReadyRef.current) return;
+    previewRef.current?.contentWindow?.postMessage(buildEventDraft(form, series), '*');
+  }, [form, series]);
+
+  // Auf "preview-ready" des iframes reagieren und initial senden
+  useEffect(() => {
+    function onMsg(e: MessageEvent) {
+      if ((e.data as { type?: string })?.type === 'ft-event-preview-ready') {
+        previewReadyRef.current = true;
+        previewRef.current?.contentWindow?.postMessage(buildEventDraft(form, series), '*');
+      }
+    }
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, [form, series]);
+
   const previewCtaLabel = `Jetzt \"${form.name.trim() || form.title.trim() || 'Event'}\" Tickets anfragen`;
-  const previewSeriesTitle = series.find((item) => item.id === form.series_id)?.title || 'Serie';
   const previewImages = [
     form.first_paragraph_image_1,
     form.first_paragraph_image_2,
@@ -1128,80 +1109,11 @@ export default function AdminEventsPage() {
                     </a>
                   </div>
 
-                  <div className="space-y-4">
-                    {form.lageplan_pins.length === 0 ? (
-                      <EmptyState
-                        icon={<MapPin className="h-6 w-6" />}
-                        title="Noch keine Pins vorhanden."
-                        description="Klicken Sie auf „Pin hinzufügen“."
-                      />
-                    ) : (
-                      form.lageplan_pins.map((pin, index) => {
-                        const updatePin = (field: string, value: string) => {
-                          const updated = [...form.lageplan_pins];
-                          updated[index] = { ...updated[index], [field]: value };
-                          updateField('lageplan_pins', updated);
-                        };
-                        const deletePin = () => updateField('lageplan_pins', form.lageplan_pins.filter((_, i) => i !== index));
-                        const movePin = (dir: 'up' | 'down') => {
-                          if (dir === 'up' && index === 0) return;
-                          if (dir === 'down' && index === form.lageplan_pins.length - 1) return;
-                          const updated = [...form.lageplan_pins];
-                          const swap = dir === 'up' ? index - 1 : index + 1;
-                          [updated[index], updated[swap]] = [updated[swap], updated[index]];
-                          updateField('lageplan_pins', updated);
-                        };
-
-                        return (
-                          <div key={pin.id} className="p-4 rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-gray-50 transition relative">
-                            <div className="absolute top-3 right-3 flex gap-1">
-                              <button type="button" onClick={() => movePin('up')} disabled={index === 0} className="p-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-30 transition"><ArrowUp className="h-3.5 w-3.5 text-gray-500" /></button>
-                              <button type="button" onClick={() => movePin('down')} disabled={index === form.lageplan_pins.length - 1} className="p-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-30 transition"><ArrowDown className="h-3.5 w-3.5 text-gray-500" /></button>
-                              <button type="button" onClick={deletePin} className="p-1.5 rounded-lg hover:bg-red-100 transition"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button>
-                            </div>
-
-                            <div className="grid gap-3 pr-24">
-                              <div className="grid grid-cols-2 gap-3">
-                                <InputField label="Bezeichnung" type="text" value={pin.name} onChange={(e) => updatePin('name', e.target.value)} placeholder="z.B. Stade Roland Garros" />
-                                <InputField label="Karten-Label" type="text" value={pin.label} onChange={(e) => updatePin('label', e.target.value)} placeholder="z.B. Roland Garros" />
-                              </div>
-                              <div className="grid grid-cols-2 gap-3">
-                                <InputField label="Breitengrad (Latitude)" type="number" step="any" value={pin.lat} onChange={(e) => updatePin('lat', e.target.value)} placeholder="z.B. 48.8471" className="font-mono" />
-                                <InputField label="Längengrad (Longitude)" type="number" step="any" value={pin.lng} onChange={(e) => updatePin('lng', e.target.value)} placeholder="z.B. 2.2492" className="font-mono" />
-                              </div>
-                              <Field label="Icon">
-                                {pinIcons.length === 0 ? (
-                                  <p className="text-xs italic" style={{ color: COLORS.textMuted }}>Keine Icons vorhanden – bitte zuerst in „Lageplan-Icons" hochladen.</p>
-                                ) : (
-                                  <div className="flex flex-wrap gap-2">
-                                    {pinIcons.map((ic) => (
-                                      <button key={ic.id} type="button" onClick={() => updatePin('icon_id', ic.id)}
-                                        className="flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition hover:opacity-90"
-                                        style={{
-                                          borderColor: pin.icon_id === ic.id ? COLORS.accent : COLORS.stroke,
-                                          background: pin.icon_id === ic.id ? '#fff1ea' : '#fff',
-                                          color: pin.icon_id === ic.id ? COLORS.accent : COLORS.navy
-                                        }}>
-                                        {ic.image ? <img src={ic.image} alt={ic.name} className="w-5 h-5 object-contain" /> : <span className="text-base">📍</span>}
-                                        {ic.name}
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
-                              </Field>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-
-                  <button type="button"
-                    onClick={() => updateField('lageplan_pins', [...form.lageplan_pins, { id: `pin-${Date.now()}`, name: '', lat: '', lng: '', icon_id: pinIcons[0]?.id || '', label: '' }])}
-                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm font-semibold transition hover:opacity-90"
-                    style={{ borderColor: COLORS.accent, background: '#fff7f3', color: COLORS.accent }}>
-                    <Plus className="h-4 w-4" /> Pin hinzufügen
-                  </button>
+                  <PinMapEditor
+                    pins={form.lageplan_pins}
+                    onChange={(pins) => updateField('lageplan_pins', pins)}
+                    pinIcons={pinIcons}
+                  />
                 </SectionCard>
               )}
 
@@ -1314,56 +1226,39 @@ export default function AdminEventsPage() {
                 </SectionCard>
               )}
 
-              <SectionCard className="border-dashed">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-xl shadow-sm" style={{ background: COLORS.surfaceMuted, color: COLORS.navy }}>
-                      <CalendarDays className="h-5 w-5" />
-                    </div>
-                    <h3 className="text-sm font-bold" style={{ color: COLORS.navy }}>Live Seitenvorschau</h3>
-                    <p className="mt-1 text-xs" style={{ color: COLORS.textMuted }}>Nahe an der echten Event-Seite, damit Sie Textfluss und Bildwirkung direkt sehen.</p>
+              <SectionCard
+                icon={<CalendarDays className="h-5 w-5" />}
+                title="Live-Vorschau"
+                description="Exakt die echte Event-Seite – aktualisiert sich sofort bei jeder Eingabe."
+                actions={
+                  <div className="flex items-center gap-2">
+                    <Badge tone="navy">{form.status || 'draft'}</Badge>
+                    {form.slug && (
+                      <a
+                        href={`/events/${form.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-semibold underline"
+                        style={{ color: COLORS.accent }}
+                      >
+                        Echte Seite ↗
+                      </a>
+                    )}
                   </div>
-                  <Badge tone="navy">{form.status || 'draft'}</Badge>
+                }
+              >
+                <div className="overflow-hidden rounded-2xl border" style={{ borderColor: COLORS.stroke }}>
+                  <iframe
+                    ref={previewRef}
+                    src="/admin/events/preview"
+                    title="Live-Vorschau der Event-Seite"
+                    className="w-full bg-white"
+                    style={{ height: 760, border: 'none' }}
+                  />
                 </div>
-
-                <div className="mt-4 overflow-hidden rounded-[28px] border bg-white shadow-sm" style={{ borderColor: COLORS.stroke }}>
-                  <div
-                    className="relative overflow-hidden px-5 py-10 text-white md:px-8 md:py-14"
-                    style={{
-                      backgroundImage: form.hero_image
-                        ? `linear-gradient(202deg, rgba(24, 74, 123, 0.88) 0%, rgba(20, 48, 71, 0.9) 100%), url(${form.hero_image})`
-                        : 'linear-gradient(202deg, #184a7b 0%, #143047 100%)',
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center'
-                    }}
-                  >
-                    <div className="mx-auto max-w-4xl text-center">
-                      <div className="inline-flex rounded-full bg-white/10 px-3 py-1 text-xs uppercase tracking-wide text-white/85">
-                        {previewSeriesTitle}
-                      </div>
-                      <div className="mt-5 text-3xl font-bold md:text-5xl">{previewTitle}</div>
-                      <div className="mx-auto mt-3 max-w-3xl text-sm opacity-90 md:text-base">{previewHeroSubline}</div>
-                      <div className="mx-auto mt-5 max-w-3xl text-base opacity-95 md:text-lg">{previewHeroIntro}</div>
-                      <div className="mt-7 inline-flex rounded-full bg-[#f14624] px-6 py-3 text-sm font-semibold text-white shadow-lg">
-                        {previewCtaLabel}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="px-5 py-8 md:px-8 md:py-10">
-                    <div className="mx-auto max-w-5xl">
-                      <div className="text-center text-3xl font-bold text-gray-900 md:text-4xl">{previewFirstParagraphHeading}</div>
-                      <div className="mx-auto mt-5 max-w-3xl whitespace-pre-line text-center text-base leading-7 text-gray-700 md:text-lg">
-                        {previewFirstParagraphText}
-                      </div>
-                      <div className="mt-8 grid gap-4 md:grid-cols-3">
-                        {previewImages.map((imageUrl, index) => (
-                          <PreviewImage key={`${index}-${imageUrl}`} src={imageUrl} label={`Modulbild ${index + 1}`} />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <p className="mt-2 text-xs" style={{ color: COLORS.textMuted }}>
+                  Hinweis: Packages werden aus den gespeicherten Daten geladen. Texte, Bilder, Spielplan, Lageplan, FAQ &amp; Module reagieren sofort.
+                </p>
               </SectionCard>
 
               <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-2xl border bg-white/95 p-4 shadow-lg backdrop-blur sm:flex-row" style={{ borderColor: COLORS.stroke }}>
