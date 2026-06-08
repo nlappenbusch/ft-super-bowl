@@ -240,6 +240,12 @@ export default function EventPageView({
   const venueLabel = event.venue || event.location_name || event.location_city || event.name || '';
   const hasLageplan = showLageplan && (eventPins.length > 0 || geocodeQuery.length > 0);
 
+  const showLeistungen = event.show_leistungen ?? false;
+  const leistungenTitle = event.leistungen_title || 'Unsere Leistungen';
+  const leistungenItems = (event.leistungen_items || []).filter(Boolean);
+  const leistungenImage = event.leistungen_image || '';
+  const hasLeistungen = showLeistungen && (leistungenItems.length > 0 || !!leistungenImage);
+
   const eventDateRange = getEventDateRange(event.start_date, event.end_date);
   const bookingHref = event.base_url
     ? `${event.base_url.replace(/\/$/, '')}/booking?event=${encodeURIComponent(event.slug)}`
@@ -253,6 +259,7 @@ export default function EventPageView({
 
   const anchors = [
     showAbout       && { label: 'Leistungen',    href: '#leistungen' },
+    hasLeistungen   && { label: 'Unsere Leistungen', href: '#unsere-leistungen' },
     showSpielplan   && spielplan.length > 0 && { label: 'Spielplan',   href: '#spielplan'  },
     showWissenswertes && { label: 'Wissenswertes', href: '#wissenswertes' },
     showStadionplan && { label: 'Stadionplan',   href: '#stadionplan' },
@@ -414,6 +421,61 @@ export default function EventPageView({
                       <Image src={imageUrl} alt={`${event.title || event.name || 'Event'} Bild ${index + 1}`} fill className="object-cover" />
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── UNSERE LEISTUNGEN ────────────────────────────────────────────────── */}
+      {hasLeistungen && (
+        <section className="py-14 px-4 scroll-mt-40" id="unsere-leistungen" style={{ background: '#143047' }}>
+          <div className="container mx-auto max-w-6xl">
+            <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2">
+              <div>
+                <InlineEditable
+                  editable={editable}
+                  field="leistungen_title"
+                  singleLine
+                  value={event.leistungen_title || ''}
+                  display={leistungenTitle}
+                  placeholder="Unsere Leistungen"
+                  as="h2"
+                  className="mb-6 text-3xl md:text-4xl font-extrabold leading-tight text-white"
+                />
+                {editable ? (
+                  <Editable editable target="leistungen_items" as="ul" className="space-y-2.5">
+                    {leistungenItems.map((it, i) => (
+                      <li key={i} className="flex items-start gap-2.5 text-white/90">
+                        <span className="mt-1 leading-none" style={{ color: '#d9531e' }}>●</span>
+                        <span>{it}</span>
+                      </li>
+                    ))}
+                  </Editable>
+                ) : (
+                  <ul className="space-y-2.5">
+                    {leistungenItems.map((it, i) => (
+                      <li key={i} className="flex items-start gap-2.5 text-white/90">
+                        <span className="mt-1 leading-none" style={{ color: '#d9531e' }}>●</span>
+                        <span>{it}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="mt-8">
+                  <Link
+                    href={bookingHref}
+                    className="inline-flex items-center rounded-sm px-7 py-3.5 text-base font-bold text-white shadow-lg transition-all hover:opacity-90 hover:scale-[1.02]"
+                    style={{ background: '#d9531e' }}
+                  >
+                    Jetzt unverbindlich anfragen.
+                  </Link>
+                </div>
+              </div>
+              {leistungenImage && (
+                <div className="relative h-72 overflow-hidden rounded-xl bg-white/5 md:h-96">
+                  <Image src={leistungenImage} alt={leistungenTitle} fill className="object-cover" />
                 </div>
               )}
             </div>

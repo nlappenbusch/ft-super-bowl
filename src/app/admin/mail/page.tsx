@@ -84,6 +84,8 @@ export default function MailAdminPage() {
     setTimeout(() => setToast(null), 5000);
   };
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const genSecret = () =>
+    set('inbound_poll_secret', (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, ''));
 
   const save = async () => {
     setSaving(true);
@@ -199,7 +201,20 @@ export default function MailAdminPage() {
                 <InputField label="Postfach (Mailbox)" value={form.mailbox} onChange={(e) => set('mailbox', e.target.value)} placeholder="request@faltintravel.com" />
                 <InputField label="Absendername" value={form.from_name} onChange={(e) => set('from_name', e.target.value)} placeholder="Faltin Travel" />
               </div>
-              <InputField label="Inbound-Poll-Secret" value={form.inbound_poll_secret} onChange={(e) => set('inbound_poll_secret', e.target.value)} placeholder="langes Zufalls-Token" hint="Schützt /api/inbound/poll (Cron)." />
+              <Field
+                label="Inbound-Poll-Secret"
+                hint="Frei wählbares Passwort – schützt NUR unseren Cron-Endpoint /api/inbound/poll. Hat nichts mit Azure/MS Graph zu tun. Einfach generieren lassen."
+              >
+                <div className="flex gap-2">
+                  <TextInput
+                    value={form.inbound_poll_secret}
+                    onChange={(e) => set('inbound_poll_secret', e.target.value)}
+                    placeholder="langes Zufalls-Token"
+                    className="flex-1"
+                  />
+                  <Button type="button" variant="secondary" onClick={genSecret}>Generieren</Button>
+                </div>
+              </Field>
               <InputField
                 label="Brevo API-Key (Listen)"
                 type="password"

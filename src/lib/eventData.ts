@@ -69,6 +69,10 @@ export interface EventRecord {
     label?: string | null;
   }> | null;
   brevo_list_id?: string | null;
+  show_leistungen?: boolean | null;
+  leistungen_title?: string | null;
+  leistungen_image?: string | null;
+  leistungen_items?: string[] | null;
 }
 
 export interface SeriesRecord {

@@ -48,7 +48,11 @@ export async function POST(request: Request) {
       stadionplan_image: eventPayload.stadionplan_image || null,
       stadionplan_description: eventPayload.stadionplan_description || null,
       show_lageplan: eventPayload.show_lageplan ?? false,
-      lageplan_pins: eventPayload.lageplan_pins || []
+      lageplan_pins: eventPayload.lageplan_pins || [],
+      show_leistungen: eventPayload.show_leistungen ?? false,
+      leistungen_title: eventPayload.leistungen_title || null,
+      leistungen_image: eventPayload.leistungen_image || null,
+      leistungen_items: eventPayload.leistungen_items || []
     });
 
     if (Array.isArray(faqs)) {

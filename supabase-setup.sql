@@ -381,6 +381,14 @@ INSERT INTO booking_requests (
 ON CONFLICT DO NOTHING;
 
 -- ============================================================================
+-- MIGRATION: "Unsere Leistungen"-Modul pro Event
+-- ============================================================================
+ALTER TABLE events ADD COLUMN IF NOT EXISTS show_leistungen BOOLEAN DEFAULT false;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS leistungen_title TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS leistungen_image TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS leistungen_items JSONB DEFAULT '[]'::jsonb;
+
+-- ============================================================================
 -- MIGRATION: RQ-Anfragenummern + CRM-Konversation (E-Mail-Thread)
 -- Idempotent – kann gefahrlos erneut ausgeführt werden.
 -- ============================================================================

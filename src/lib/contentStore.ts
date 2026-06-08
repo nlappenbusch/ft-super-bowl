@@ -54,6 +54,10 @@ export interface ContentEventRecord {
     icon_id: string;
     label?: string | null;
   }> | null;
+  show_leistungen?: boolean | null;
+  leistungen_title?: string | null;
+  leistungen_image?: string | null;
+  leistungen_items?: string[] | null;
 }
 
 export interface ContentPackageInclude {

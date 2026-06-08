@@ -93,6 +93,10 @@ interface EventFormState {
     sort_order?: number;
   }>;
   brevo_list_id: string;
+  show_leistungen: boolean;
+  leistungen_title: string;
+  leistungen_image: string;
+  leistungen_items: string[];
 }
 
 interface PinIconOption {
@@ -148,7 +152,11 @@ const emptyForm: EventFormState = {
   show_lageplan: false,
   lageplan_pins: [],
   faqs: [],
-  brevo_list_id: ''
+  brevo_list_id: '',
+  show_leistungen: false,
+  leistungen_title: '',
+  leistungen_image: '',
+  leistungen_items: []
 };
 
 function normalizeEventFormState(event?: Partial<EventFormState> | null): EventFormState {
@@ -202,7 +210,11 @@ function normalizeEventFormState(event?: Partial<EventFormState> | null): EventF
       label: p.label ?? '',
     })),
     faqs: event?.faqs ?? [],
-    brevo_list_id: (event as any)?.brevo_list_id ?? ''
+    brevo_list_id: (event as any)?.brevo_list_id ?? '',
+    show_leistungen: event?.show_leistungen ?? false,
+    leistungen_title: event?.leistungen_title ?? '',
+    leistungen_image: event?.leistungen_image ?? '',
+    leistungen_items: (event?.leistungen_items as string[] | undefined) ?? []
   };
 }
 
@@ -404,7 +416,11 @@ export default function AdminEventsPage() {
         label: p.label.trim() || null,
       })),
       faqs: form.faqs,
-      brevo_list_id: form.brevo_list_id || null
+      brevo_list_id: form.brevo_list_id || null,
+      show_leistungen: form.show_leistungen,
+      leistungen_title: form.leistungen_title || null,
+      leistungen_image: form.leistungen_image || null,
+      leistungen_items: form.leistungen_items.map((s) => s.trim()).filter(Boolean)
     };
 
     const response = await fetch(`/api/admin/events${form.id ? `/${form.id}` : ''}`, {
@@ -487,6 +503,9 @@ export default function AdminEventsPage() {
       stadionplan: 'ev-s-stadionplan',
       lageplan: 'ev-s-lageplan',
       faq: 'ev-s-faq',
+      leistungen: 'ev-s-leistungen',
+      leistungen_title: 'ev-f-leistungen_title',
+      leistungen_items: 'ev-f-leistungen_items',
     };
     function onEdit(e: MessageEvent) {
       const d = e.data as { type?: string; target?: string };
@@ -904,7 +923,8 @@ export default function AdminEventsPage() {
                     { key: 'show_spielplan', value: form.show_spielplan, title: 'Spielplan', desc: 'Match Schedule Tabelle' },
                     { key: 'show_wissenswertes', value: form.show_wissenswertes, title: 'Wissenswertes', desc: 'Fakten & Akkordeon' },
                     { key: 'show_stadionplan', value: form.show_stadionplan, title: 'Stadionplan', desc: 'Stadion- / Hallenplan' },
-                    { key: 'show_lageplan', value: form.show_lageplan, title: 'Lageplan', desc: 'Interaktive Karte (Pins)' }
+                    { key: 'show_lageplan', value: form.show_lageplan, title: 'Lageplan', desc: 'Interaktive Karte (Pins)' },
+                    { key: 'show_leistungen', value: form.show_leistungen, title: 'Unsere Leistungen', desc: 'Leistungs-Liste mit Bild & CTA' }
                   ] as const).map((mod) => (
                     <div
                       key={mod.key}
@@ -1176,6 +1196,40 @@ export default function AdminEventsPage() {
                     onChange={(pins) => updateField('lageplan_pins', pins)}
                     pinIcons={pinIcons}
                   />
+                </SectionCard>
+              )}
+
+              {form.show_leistungen && (
+                <SectionCard
+                  icon={<Layers className="h-5 w-5" />}
+                  id="ev-s-leistungen"
+                  title="Unsere Leistungen"
+                  description="Leistungs-/Inklusiv-Liste mit Bild und Anfrage-Button (dunkles Modul auf der Event-Seite)."
+                >
+                  <div className="grid gap-4">
+                    <InputField
+                      id="ev-f-leistungen_title"
+                      label="Titel"
+                      value={form.leistungen_title}
+                      onChange={(event) => updateField('leistungen_title', event.target.value)}
+                      placeholder="Unsere Leistungen"
+                    />
+                    <TextAreaField
+                      id="ev-f-leistungen_items"
+                      label="Leistungen (eine pro Zeile)"
+                      value={form.leistungen_items.join('\n')}
+                      onChange={(event) => updateField('leistungen_items', event.target.value.split('\n'))}
+                      rows={10}
+                      placeholder={'2x Hotelübernachtung in Paris\nFrühstücksbuffet\nKategorie 1 Ticket für den Centre Court'}
+                    />
+                    <AdminImageField
+                      label="Bild (rechts neben der Liste)"
+                      value={form.leistungen_image}
+                      onChange={(value) => updateField('leistungen_image', value)}
+                      placeholder="https://.../leistungen.jpg"
+                      previewLabel="Leistungen Bild Vorschau"
+                    />
+                  </div>
                 </SectionCard>
               )}
 
