@@ -402,10 +402,10 @@ export default function EventPageView({
         {event.hero_image ? (
           <div className="absolute inset-0">
             <Image src={event.hero_image} alt={event.hero_image_alt || event.title || event.name || 'Event'} title={event.hero_image_title || undefined} fill className="object-cover object-center" priority />
-            <div className="absolute inset-0" style={{ background: 'rgba(14,34,56,0.45)' }} />
+            <div className="absolute inset-0" style={{ background: 'radial-gradient(75% 95% at 50% 0%, rgba(58,124,190,0.32), transparent 55%), linear-gradient(180deg, rgba(11,24,40,0.42) 0%, rgba(16,43,68,0.60) 50%, rgba(11,24,40,0.90) 100%)' }} />
           </div>
         ) : (
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(160deg,#184a7b 0%,#143047 100%)' }} />
+          <div className="absolute inset-0" style={BLUE_GLOW} />
         )}
 
         {editable && (
@@ -444,7 +444,7 @@ export default function EventPageView({
 
           <div
             className="w-full max-w-4xl text-center rounded-sm px-8 py-10"
-            style={{ background: 'rgba(14,34,56,0.82)', border: '1px solid rgba(255,255,255,0.08)' }}
+            style={{ background: 'rgba(11,24,40,0.58)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(2px)' }}
           >
             <InlineEditable
               editable={editable}
@@ -454,8 +454,10 @@ export default function EventPageView({
               display={event.title || event.name}
               placeholder={event.name || 'Event-Titel'}
               as="h1"
-              className="text-3xl md:text-5xl font-extrabold text-white leading-tight mb-3"
+              className="text-4xl md:text-6xl font-extrabold text-white leading-[1.05] mb-4"
+              style={{ textShadow: '0 2px 18px rgba(0,0,0,0.35)' }}
             />
+            <div className="mx-auto mb-5 h-1 w-16 rounded-full" style={{ background: '#d9531e' }} />
             <Editable editable={editable} target="location" as="div" className="mb-6 flex flex-wrap items-center justify-center gap-2.5">
               {heroLocation && (
                 <span className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold text-white" style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}>
