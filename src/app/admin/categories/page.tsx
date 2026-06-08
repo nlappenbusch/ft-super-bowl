@@ -1,7 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { RefreshCw, FolderTree, Trash2, Save, RotateCcw } from 'lucide-react';
 import AdminShell from '@/components/admin/AdminShell';
+import {
+  COLORS,
+  cn,
+  SectionCard,
+  PageHeader,
+  Button,
+  InputField,
+  TextAreaField,
+  Field,
+  SelectInput,
+  Badge,
+  EmptyState,
+  Spinner,
+} from '@/components/admin/ui';
 
 interface CategorySeoFormState {
   slug: string;
@@ -17,6 +32,12 @@ const emptyForm: CategorySeoFormState = {
   intro_text: '',
   meta_description: '',
   status: 'active'
+};
+
+const STATUS_TONE: Record<string, 'ok' | 'warn' | 'muted'> = {
+  active: 'ok',
+  draft: 'warn',
+  archived: 'muted'
 };
 
 export default function AdminCategoriesPage() {
@@ -110,144 +131,155 @@ export default function AdminCategoriesPage() {
 
   return (
     <AdminShell title="Kategorien SEO verwalten">
-      <div className="grid lg:grid-cols-[1.05fr_1fr] gap-6">
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Kategorien</h2>
-            <button
-              onClick={loadEntries}
-              className="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200"
-            >
-              Aktualisieren
-            </button>
-          </div>
+      <PageHeader
+        title="Kategorien SEO verwalten"
+        description="SEO-Texte, Meta-Beschreibungen und Status der Kategorieseiten pflegen."
+        actions={
+          <Button variant="secondary" onClick={loadEntries} disabled={loading}>
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+            Aktualisieren
+          </Button>
+        }
+      />
 
-          {loading && <p className="text-gray-500">Lädt...</p>}
-          {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
-
-          <div className="space-y-3">
-            {entries.map((item) => (
-              <button
-                key={item.slug}
-                onClick={() => {
-                  setForm({
-                    slug: item.slug,
-                    title: item.title,
-                    intro_text: item.intro_text,
-                    meta_description: item.meta_description || '',
-                    status: item.status || 'active'
-                  });
-                  setOriginalSlug(item.slug);
-                }}
-                className={`w-full text-left p-4 border rounded-lg transition ${
-                  originalSlug === item.slug
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-blue-300'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-gray-900">{item.title}</p>
-                    <p className="text-xs text-gray-500 mt-1">/{item.slug}</p>
-                  </div>
-                  <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
-                    {item.status || 'active'}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600 mt-2 line-clamp-2">{item.intro_text}</p>
-              </button>
-            ))}
-          </div>
+      {error && (
+        <div
+          className="mb-6 rounded-xl px-4 py-3 text-sm font-medium"
+          style={{ color: COLORS.danger, background: '#fef2f2', border: '1px solid #fecaca' }}
+        >
+          {error}
         </div>
+      )}
 
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">
-              {originalSlug ? 'Kategorie bearbeiten' : 'Neue Kategorie'}
-            </h2>
-            {originalSlug && (
-              <button
-                onClick={() => handleDelete(originalSlug)}
-                className="text-sm text-red-600 hover:text-red-700"
-              >
+      <div className="grid gap-6 lg:grid-cols-[1.05fr_1fr]">
+        <SectionCard
+          title="Kategorien"
+          description="Eintrag zum Bearbeiten auswählen."
+          icon={<FolderTree className="h-5 w-5" />}
+        >
+          {loading ? (
+            <div className="flex items-center justify-center gap-3 py-10" style={{ color: COLORS.textMuted }}>
+              <Spinner />
+              <span className="text-sm">Lädt...</span>
+            </div>
+          ) : entries.length === 0 ? (
+            <EmptyState
+              icon={<FolderTree className="h-8 w-8" />}
+              title="Noch keine Kategorien"
+              description="Lege rechts einen neuen Kategorie-SEO-Eintrag an."
+            />
+          ) : (
+            <div className="space-y-3">
+              {entries.map((item) => {
+                const isActive = originalSlug === item.slug;
+                return (
+                  <button
+                    key={item.slug}
+                    onClick={() => {
+                      setForm({
+                        slug: item.slug,
+                        title: item.title,
+                        intro_text: item.intro_text,
+                        meta_description: item.meta_description || '',
+                        status: item.status || 'active'
+                      });
+                      setOriginalSlug(item.slug);
+                    }}
+                    className="w-full rounded-xl p-4 text-left transition"
+                    style={{
+                      border: `1.5px solid ${isActive ? COLORS.accent : COLORS.stroke}`,
+                      background: isActive ? '#fff7f3' : '#fff'
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-semibold" style={{ color: COLORS.navy }}>{item.title}</p>
+                        <p className="mt-1 text-xs" style={{ color: COLORS.textMuted }}>/{item.slug}</p>
+                      </div>
+                      <Badge tone={STATUS_TONE[item.status || 'active'] || 'muted'}>
+                        {item.status || 'active'}
+                      </Badge>
+                    </div>
+                    <p className="mt-2 line-clamp-2 text-sm" style={{ color: COLORS.textMuted }}>
+                      {item.intro_text}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard
+          title={originalSlug ? 'Kategorie bearbeiten' : 'Neue Kategorie'}
+          description={originalSlug ? `/${originalSlug}` : 'Neuen SEO-Eintrag erstellen.'}
+          actions={
+            originalSlug ? (
+              <Button variant="danger" size="sm" onClick={() => handleDelete(originalSlug)}>
+                <Trash2 className="h-4 w-4" />
                 Löschen
-              </button>
-            )}
-          </div>
-
+              </Button>
+            ) : undefined
+          }
+        >
           <div className="grid gap-4">
-            <div>
-              <label className="text-xs font-semibold text-gray-600">Slug</label>
-              <input
-                value={form.slug}
-                onChange={(event) => updateField('slug', event.target.value)}
-                placeholder="tennis"
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-              />
-            </div>
+            <InputField
+              label="Slug"
+              required
+              value={form.slug}
+              onChange={(event) => updateField('slug', event.target.value)}
+              placeholder="tennis"
+            />
 
-            <div>
-              <label className="text-xs font-semibold text-gray-600">Titel</label>
-              <input
-                value={form.title}
-                onChange={(event) => updateField('title', event.target.value)}
-                placeholder="Tennis"
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-              />
-            </div>
+            <InputField
+              label="Titel"
+              required
+              value={form.title}
+              onChange={(event) => updateField('title', event.target.value)}
+              placeholder="Tennis"
+            />
 
-            <div>
-              <label className="text-xs font-semibold text-gray-600">SEO Intro-Text</label>
-              <textarea
-                value={form.intro_text}
-                onChange={(event) => updateField('intro_text', event.target.value)}
-                rows={6}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                placeholder="Hier den laengeren Kategorietext fuer SEO eintragen..."
-              />
-            </div>
+            <TextAreaField
+              label="SEO Intro-Text"
+              required
+              value={form.intro_text}
+              onChange={(event) => updateField('intro_text', event.target.value)}
+              rows={6}
+              placeholder="Hier den laengeren Kategorietext fuer SEO eintragen..."
+            />
 
-            <div>
-              <label className="text-xs font-semibold text-gray-600">Meta Description (optional)</label>
-              <textarea
-                value={form.meta_description}
-                onChange={(event) => updateField('meta_description', event.target.value)}
-                rows={3}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                placeholder="Kurztext fuer Suchergebnisse (ca. 140-160 Zeichen)"
-              />
-            </div>
+            <TextAreaField
+              label="Meta Description (optional)"
+              hint="Kurztext für Suchergebnisse (ca. 140-160 Zeichen)."
+              value={form.meta_description}
+              onChange={(event) => updateField('meta_description', event.target.value)}
+              rows={3}
+              placeholder="Kurztext fuer Suchergebnisse (ca. 140-160 Zeichen)"
+            />
 
-            <div>
-              <label className="text-xs font-semibold text-gray-600">Status</label>
-              <select
+            <Field label="Status">
+              <SelectInput
                 value={form.status}
                 onChange={(event) => updateField('status', event.target.value)}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
               >
                 <option value="active">active</option>
                 <option value="draft">draft</option>
                 <option value="archived">archived</option>
-              </select>
-            </div>
+              </SelectInput>
+            </Field>
           </div>
 
           <div className="mt-6 flex justify-end gap-3">
-            <button
-              onClick={resetForm}
-              className="px-4 py-2 text-sm rounded-lg border border-gray-200"
-            >
+            <Button variant="secondary" onClick={resetForm}>
+              <RotateCcw className="h-4 w-4" />
               Zurücksetzen
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-5 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
-            >
+            </Button>
+            <Button variant="accent" onClick={handleSave} disabled={saving}>
+              {saving ? <Spinner className="h-4 w-4" /> : <Save className="h-4 w-4" />}
               {saving ? 'Speichern...' : 'Speichern'}
-            </button>
+            </Button>
           </div>
-        </div>
+        </SectionCard>
       </div>
     </AdminShell>
   );

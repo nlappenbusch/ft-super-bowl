@@ -1,8 +1,24 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Layers, RefreshCw, Search, Trash2, Plus } from 'lucide-react';
 import AdminShell from '@/components/admin/AdminShell';
 import AdminImageField from '@/components/admin/AdminImageField';
+import {
+  COLORS,
+  Card,
+  SectionCard,
+  PageHeader,
+  Button,
+  InputField,
+  TextAreaField,
+  Field,
+  TextInput,
+  SelectInput,
+  Badge,
+  EmptyState,
+  Spinner,
+} from '@/components/admin/ui';
 
 interface SeriesFormState {
   id?: string;
@@ -23,6 +39,12 @@ const emptyForm: SeriesFormState = {
   category_seo_text: '',
   hero_image: '',
   status: 'active'
+};
+
+const STATUS_TONE: Record<SeriesFormState['status'], 'ok' | 'warn' | 'muted'> = {
+  active: 'ok',
+  draft: 'warn',
+  archived: 'muted'
 };
 
 export default function AdminSeriesPage() {
@@ -114,145 +136,166 @@ export default function AdminSeriesPage() {
     resetForm();
   };
 
+  const filteredSeries = series.filter((item) => {
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase();
+    return [item.title, item.slug, item.category]
+      .filter(Boolean)
+      .some((value) => value.toLowerCase().includes(term));
+  });
+
   return (
     <AdminShell title="Serien verwalten">
-      <div className="grid lg:grid-cols-[1.2fr_1fr] gap-6">
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Serien</h2>
-            <button
-              onClick={loadSeries}
-              className="px-3 py-2 text-sm rounded-lg bg-gray-100 hover:bg-gray-200"
-            >
-              Aktualisieren
-            </button>
-          </div>
+      <PageHeader
+        title="Serien verwalten"
+        description="Serien anlegen, Kategorie-Texte pflegen und Status steuern."
+        actions={
+          <Button variant="secondary" size="md" onClick={resetForm}>
+            <Plus className="h-4 w-4" />
+            Neue Serie
+          </Button>
+        }
+      />
 
-          <div className="mb-4">
-            <label className="text-xs font-semibold text-gray-600">Suchen</label>
-            <input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Titel, Slug, Kategorie"
-              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-            />
-          </div>
-
-          {loading && <p className="text-gray-500">Lädt...</p>}
-          {error && <p className="text-red-600 text-sm">{error}</p>}
-
-          <div className="space-y-3">
-            {series
-              .filter((item) => {
-                if (!searchTerm.trim()) return true;
-                const term = searchTerm.toLowerCase();
-                return [item.title, item.slug, item.category]
-                  .filter(Boolean)
-                  .some((value) => value.toLowerCase().includes(term));
-              })
-              .map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setForm({ ...item })}
-                  className={`w-full text-left p-4 border rounded-lg transition ${
-                    form.id === item.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-300'
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-semibold text-gray-900">{item.title}</div>
-                      <div className="text-xs text-gray-500 mt-1">/{item.slug}</div>
-                    </div>
-                    <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
-                      {item.status}
-                    </span>
-                  </div>
-                  <div className="text-sm text-gray-600 mt-2">{item.category}</div>
-                </button>
-              ))}
-          </div>
+      {error && (
+        <div
+          className="mb-6 rounded-xl px-4 py-3 text-sm font-medium"
+          style={{ background: '#fef2f2', color: COLORS.danger, border: '1px solid #fecaca' }}
+        >
+          {error}
         </div>
+      )}
 
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">
-              {form.id ? 'Serie bearbeiten' : 'Neue Serie'}
-            </h2>
-            {form.id && (
-              <button
-                onClick={() => handleDelete(form.id as string)}
-                className="text-sm text-red-600 hover:text-red-700"
-              >
+      <div className="grid lg:grid-cols-[1.2fr_1fr] gap-6">
+        <SectionCard
+          title="Serien"
+          icon={<Layers className="h-5 w-5" />}
+          actions={
+            <Button variant="secondary" size="sm" onClick={loadSeries}>
+              <RefreshCw className="h-3.5 w-3.5" />
+              Aktualisieren
+            </Button>
+          }
+        >
+          <Field label="Suchen" className="mb-4">
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
+                style={{ color: COLORS.textMuted }}
+              />
+              <TextInput
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Titel, Slug, Kategorie"
+                className="pl-9"
+              />
+            </div>
+          </Field>
+
+          {loading ? (
+            <div className="flex items-center gap-2 py-8 text-sm" style={{ color: COLORS.textMuted }}>
+              <Spinner className="h-4 w-4" />
+              Lädt...
+            </div>
+          ) : filteredSeries.length === 0 ? (
+            <EmptyState
+              icon={<Layers className="h-8 w-8" />}
+              title={searchTerm.trim() ? 'Keine Treffer' : 'Noch keine Serien'}
+              description={
+                searchTerm.trim()
+                  ? 'Passe deine Suche an, um Serien zu finden.'
+                  : 'Lege deine erste Serie an, um Kategorien zu strukturieren.'
+              }
+            />
+          ) : (
+            <div className="space-y-3">
+              {filteredSeries.map((item) => {
+                const isActive = form.id === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setForm({ ...item })}
+                    className="w-full rounded-xl p-4 text-left transition"
+                    style={{
+                      border: `1.5px solid ${isActive ? COLORS.accent : COLORS.stroke}`,
+                      background: isActive ? '#fff7f3' : '#fff',
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-semibold" style={{ color: COLORS.navy }}>{item.title}</div>
+                        <div className="mt-1 text-xs" style={{ color: COLORS.textMuted }}>/{item.slug}</div>
+                      </div>
+                      <Badge tone={STATUS_TONE[item.status]}>{item.status}</Badge>
+                    </div>
+                    <div className="mt-2 text-sm" style={{ color: COLORS.textMuted }}>{item.category}</div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard
+          title={form.id ? 'Serie bearbeiten' : 'Neue Serie'}
+          actions={
+            form.id ? (
+              <Button variant="danger" size="sm" onClick={() => handleDelete(form.id as string)}>
+                <Trash2 className="h-3.5 w-3.5" />
                 Löschen
-              </button>
-            )}
-          </div>
-
+              </Button>
+            ) : undefined
+          }
+        >
           <div className="grid gap-6">
-            <section className="border border-gray-100 rounded-xl p-4 bg-gray-50/70">
-              <h3 className="text-sm font-semibold text-gray-700">Basis</h3>
-              <div className="mt-3 grid gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Slug</label>
-                  <input
-                    value={form.slug}
-                    onChange={(event) => updateField('slug', event.target.value)}
-                    placeholder="super-bowl"
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
+            <Card className="!bg-[#f5f7fa]" padded>
+              <h3 className="mb-3 text-sm font-bold" style={{ color: COLORS.navy }}>Basis</h3>
+              <div className="grid gap-3">
+                <InputField
+                  label="Slug"
+                  required
+                  value={form.slug}
+                  onChange={(event) => updateField('slug', event.target.value)}
+                  placeholder="super-bowl"
+                />
 
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Titel</label>
-                  <input
-                    value={form.title}
-                    onChange={(event) => updateField('title', event.target.value)}
-                    placeholder="Super Bowl"
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
+                <InputField
+                  label="Titel"
+                  required
+                  value={form.title}
+                  onChange={(event) => updateField('title', event.target.value)}
+                  placeholder="Super Bowl"
+                />
 
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Kategorie</label>
-                  <input
-                    value={form.category}
-                    onChange={(event) => updateField('category', event.target.value)}
-                    placeholder="Sportevents"
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
+                <InputField
+                  label="Kategorie"
+                  required
+                  value={form.category}
+                  onChange={(event) => updateField('category', event.target.value)}
+                  placeholder="Sportevents"
+                />
 
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Beschreibung</label>
-                  <textarea
-                    value={form.description}
-                    onChange={(event) => updateField('description', event.target.value)}
-                    rows={3}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
+                <TextAreaField
+                  label="Beschreibung"
+                  rows={3}
+                  value={form.description}
+                  onChange={(event) => updateField('description', event.target.value)}
+                />
 
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">SEO Text fuer Kategorie</label>
-                  <textarea
-                    value={form.category_seo_text}
-                    onChange={(event) => updateField('category_seo_text', event.target.value)}
-                    rows={5}
-                    placeholder="Einzigartiger SEO-Text fuer die Kategorie, z. B. Sportevents ..."
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Wird auf der Kategorie-Seite ausgegeben und fuer die Meta-Description genutzt.
-                  </p>
-                </div>
+                <TextAreaField
+                  label="SEO Text fuer Kategorie"
+                  rows={5}
+                  value={form.category_seo_text}
+                  onChange={(event) => updateField('category_seo_text', event.target.value)}
+                  placeholder="Einzigartiger SEO-Text fuer die Kategorie, z. B. Sportevents ..."
+                  hint="Wird auf der Kategorie-Seite ausgegeben und fuer die Meta-Description genutzt."
+                />
               </div>
-            </section>
+            </Card>
 
-            <section className="border border-gray-100 rounded-xl p-4 bg-white">
-              <h3 className="text-sm font-semibold text-gray-700">Media & Status</h3>
-              <div className="mt-3 grid gap-3">
+            <Card padded>
+              <h3 className="mb-3 text-sm font-bold" style={{ color: COLORS.navy }}>Media & Status</h3>
+              <div className="grid gap-3">
                 <AdminImageField
                   label="Hero Bild"
                   value={form.hero_image}
@@ -261,38 +304,36 @@ export default function AdminSeriesPage() {
                   previewLabel="Hero Bild Vorschau"
                 />
 
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Status</label>
-                  <select
+                <Field label="Status">
+                  <SelectInput
                     value={form.status}
                     onChange={(event) => updateField('status', event.target.value)}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                   >
                     <option value="active">active</option>
                     <option value="draft">draft</option>
                     <option value="archived">archived</option>
-                  </select>
-                </div>
+                  </SelectInput>
+                </Field>
               </div>
-            </section>
+            </Card>
           </div>
 
           <div className="mt-6 flex justify-end gap-3">
-            <button
-              onClick={resetForm}
-              className="px-4 py-2 text-sm rounded-lg border border-gray-200"
-            >
+            <Button variant="secondary" onClick={resetForm}>
               Zurücksetzen
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-5 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
-            >
-              {saving ? 'Speichern...' : 'Speichern'}
-            </button>
+            </Button>
+            <Button variant="accent" onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <>
+                  <Spinner className="h-4 w-4" />
+                  Speichern...
+                </>
+              ) : (
+                'Speichern'
+              )}
+            </Button>
           </div>
-        </div>
+        </SectionCard>
       </div>
     </AdminShell>
   );

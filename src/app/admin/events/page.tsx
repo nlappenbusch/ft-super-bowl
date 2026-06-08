@@ -1,6 +1,5 @@
 'use client';
 
-import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   CalendarDays,
@@ -17,6 +16,21 @@ import {
 } from 'lucide-react';
 import AdminShell from '@/components/admin/AdminShell';
 import AdminImageField from '@/components/admin/AdminImageField';
+import {
+  COLORS,
+  SectionCard,
+  Button,
+  Field,
+  TextInput,
+  TextArea,
+  SelectInput,
+  InputField,
+  TextAreaField,
+  Badge,
+  StatCard,
+  EmptyState,
+  Toggle
+} from '@/components/admin/ui';
 
 interface EventFormState {
   id?: string;
@@ -261,38 +275,6 @@ function buildPreviewFirstParagraphText(form: EventFormState) {
   return `Mit Faltin Travel erleben Sie ${baseName} mit sorgfältig zusammengestellten Tickets und passenden Reisebausteinen. Wir begleiten Sie von der Anfrage bis zur Rückreise.`;
 }
 
-function StatCard({ label, value, hint }: { label: string; value: string; hint: string }) {
-  return (
-    <div className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm backdrop-blur-sm">
-      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">{label}</div>
-      <div className="mt-2 text-2xl font-bold text-gray-900">{value}</div>
-      <div className="mt-1 text-sm text-gray-600">{hint}</div>
-    </div>
-  );
-}
-
-function SectionIntro({
-  icon,
-  title,
-  description
-}: {
-  icon: ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="mb-4 flex items-start gap-3">
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-        {icon}
-      </div>
-      <div>
-        <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
-        <p className="mt-1 text-xs leading-5 text-gray-500">{description}</p>
-      </div>
-    </div>
-  );
-}
-
 function PreviewImage({ src, label }: { src: string; label: string }) {
   if (!src.trim()) {
     return (
@@ -524,157 +506,148 @@ export default function AdminEventsPage() {
     <AdminShell title="Events verwalten">
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-3">
-          <StatCard label="Events" value={String(events.length)} hint="Alle vorhandenen Einträge im Backend" />
           <StatCard
-            label="Bearbeitungsmodus"
-            value={form.id ? 'Bestehend' : 'Neu'}
-            hint={form.id ? 'Sie bearbeiten gerade ein bestehendes Event' : 'Sie erstellen gerade ein neues Event'}
+            icon={<CalendarDays className="h-4 w-4" />}
+            label="Events"
+            value={String(events.length)}
+            sub="Alle vorhandenen Einträge im Backend"
           />
           <StatCard
+            icon={<PencilLine className="h-4 w-4" />}
+            label="Bearbeitungsmodus"
+            value={form.id ? 'Bestehend' : 'Neu'}
+            sub={form.id ? 'Sie bearbeiten gerade ein bestehendes Event' : 'Sie erstellen gerade ein neues Event'}
+            tone="accent"
+          />
+          <StatCard
+            icon={<Layers className="h-4 w-4" />}
             label="Content-Status"
             value={`${requiredFieldCount}/3 Pflichtfelder`}
-            hint={`${contentFieldCount}/3 Inhaltsfelder, ${mediaFieldCount}/3 Modulbilder gepflegt`}
+            sub={`${contentFieldCount}/3 Inhaltsfelder, ${mediaFieldCount}/3 Modulbilder gepflegt`}
+            tone="info"
           />
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
-          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div className="border-b border-gray-100 px-5 py-5">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Event-Auswahl</h2>
-                  <p className="mt-1 text-sm text-gray-500">Vorhandene Einträge durchsuchen oder direkt ein neues Event anlegen.</p>
-                </div>
-                <button
-                  onClick={resetForm}
-                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-                >
-                  <Plus className="h-4 w-4" />
-                  Neues Event
-                </button>
-              </div>
-            </div>
-
-            <div className="px-5 py-4">
-              <label className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Suchen</label>
-              <div className="relative mt-2">
+          <SectionCard
+            title="Event-Auswahl"
+            description="Vorhandene Einträge durchsuchen oder direkt ein neues Event anlegen."
+            actions={
+              <Button variant="accent" size="sm" onClick={resetForm}>
+                <Plus className="h-4 w-4" />
+                Neues Event
+              </Button>
+            }
+          >
+            <Field label="Suchen">
+              <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <input
+                <TextInput
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="Titel, Slug oder Venue"
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-3 text-sm text-gray-900 outline-none transition focus:border-blue-400 focus:bg-white"
+                  className="pl-9"
                 />
               </div>
-              <div className="mt-3 text-xs text-gray-500">{filteredEvents.length} Treffer</div>
-            </div>
+            </Field>
+            <div className="mt-2 mb-3 text-xs" style={{ color: COLORS.textMuted }}>{filteredEvents.length} Treffer</div>
 
-            <div className="max-h-[calc(100vh-22rem)] space-y-3 overflow-y-auto px-5 pb-5">
-              {loading && <p className="text-gray-500">Lädt...</p>}
+            <div className="max-h-[calc(100vh-24rem)] space-y-3 overflow-y-auto">
+              {loading && <p style={{ color: COLORS.textMuted }}>Lädt...</p>}
               {!loading && filteredEvents.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
-                  Keine passenden Events gefunden.
-                </div>
+                <EmptyState
+                  icon={<CalendarDays className="h-6 w-6" />}
+                  title="Keine passenden Events gefunden."
+                  description="Passen Sie die Suche an oder legen Sie ein neues Event an."
+                />
               )}
 
               {filteredEvents.map((event) => (
                 <button
                   key={event.id}
                   onClick={() => handleSelectEvent(event)}
-                  className={`w-full rounded-2xl border p-4 text-left transition ${
-                    form.id === event.id
-                      ? 'border-blue-500 bg-blue-50 shadow-sm'
-                      : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-gray-50'
-                  }`}
+                  className="w-full rounded-2xl border p-4 text-left transition hover:opacity-90"
+                  style={{
+                    borderColor: form.id === event.id ? COLORS.accent : COLORS.stroke,
+                    background: form.id === event.id ? '#fff1ea' : '#fff'
+                  }}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="truncate font-semibold text-gray-900">{event.title}</div>
-                      <div className="mt-1 text-xs text-gray-500">/{event.slug}</div>
+                      <div className="truncate font-semibold" style={{ color: COLORS.navy }}>{event.title}</div>
+                      <div className="mt-1 text-xs" style={{ color: COLORS.textMuted }}>/{event.slug}</div>
                     </div>
-                    <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
+                    <Badge tone={event.status === 'active' ? 'ok' : event.status === 'archived' ? 'muted' : 'warn'}>
                       {event.status}
-                    </span>
+                    </Badge>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-500">
-                    {event.venue && <span className="rounded-full bg-gray-100 px-2 py-1">{event.venue}</span>}
-                    {event.start_date && <span className="rounded-full bg-gray-100 px-2 py-1">{formatPreviewDate(event.start_date)}</span>}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {event.venue && <Badge tone="navy">{event.venue}</Badge>}
+                    {event.start_date && <Badge tone="info">{formatPreviewDate(event.start_date)}</Badge>}
                   </div>
                 </button>
               ))}
             </div>
-          </div>
+          </SectionCard>
 
-          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div className="border-b border-gray-100 px-6 py-5">
+          <div className="space-y-6">
+            <SectionCard>
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">Editor</div>
-                  <h2 className="mt-2 text-xl font-semibold text-gray-900">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: COLORS.accent }}>Editor</div>
+                  <h2 className="mt-2 text-xl font-bold" style={{ color: COLORS.navy }}>
                     {form.id ? 'Event bearbeiten' : 'Neues Event erstellen'}
                   </h2>
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-sm" style={{ color: COLORS.textMuted }}>
                     Inhalte sind in logische Module getrennt und die Vorschau unten reagiert sofort auf Ihre Eingaben.
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  {selectedSeries && (
-                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                      {selectedSeries.title}
-                    </span>
-                  )}
-                  <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
-                    {form.status || 'draft'}
-                  </span>
-                  <button
-                    onClick={loadEvents}
-                    className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-                  >
+                  {selectedSeries && <Badge tone="accent">{selectedSeries.title}</Badge>}
+                  <Badge tone="navy">{form.status || 'draft'}</Badge>
+                  <Button variant="secondary" size="sm" onClick={loadEvents}>
                     Aktualisieren
-                  </button>
+                  </Button>
                   {form.id && (
-                    <button
-                      onClick={() => handleDelete(form.id as string)}
-                      className="rounded-xl border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-                    >
+                    <Button variant="danger" size="sm" onClick={() => handleDelete(form.id as string)}>
+                      <Trash2 className="h-4 w-4" />
                       Löschen
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-xl bg-gray-50 px-4 py-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Pflichtfelder</div>
-                  <div className="mt-1 text-lg font-semibold text-gray-900">{requiredFieldCount}/3</div>
+                <div className="rounded-xl px-4 py-3" style={{ background: COLORS.surfaceMuted }}>
+                  <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: COLORS.textMuted }}>Pflichtfelder</div>
+                  <div className="mt-1 text-lg font-bold" style={{ color: COLORS.navy }}>{requiredFieldCount}/3</div>
                 </div>
-                <div className="rounded-xl bg-gray-50 px-4 py-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Content</div>
-                  <div className="mt-1 text-lg font-semibold text-gray-900">{contentFieldCount}/3</div>
+                <div className="rounded-xl px-4 py-3" style={{ background: COLORS.surfaceMuted }}>
+                  <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: COLORS.textMuted }}>Content</div>
+                  <div className="mt-1 text-lg font-bold" style={{ color: COLORS.navy }}>{contentFieldCount}/3</div>
                 </div>
-                <div className="rounded-xl bg-gray-50 px-4 py-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Bilder</div>
-                  <div className="mt-1 text-lg font-semibold text-gray-900">{mediaFieldCount}/3</div>
+                <div className="rounded-xl px-4 py-3" style={{ background: COLORS.surfaceMuted }}>
+                  <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: COLORS.textMuted }}>Bilder</div>
+                  <div className="mt-1 text-lg font-bold" style={{ color: COLORS.navy }}>{mediaFieldCount}/3</div>
                 </div>
               </div>
-            </div>
+            </SectionCard>
 
-            <div className="space-y-6 px-6 py-6">
-              {error && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+            <div className="space-y-6">
+              {error && (
+                <div className="rounded-xl border px-4 py-3 text-sm" style={{ borderColor: '#fecaca', background: '#fef2f2', color: COLORS.danger }}>{error}</div>
+              )}
 
-              <section className="rounded-xl border border-gray-100 bg-gray-50/70 p-4">
-                <SectionIntro
-                  icon={<PencilLine className="h-5 w-5" />}
-                  title="Basisdaten"
-                  description="Der Kern des Events: Zuordnung, Titel und Kurzbeschreibung fuer Listen und SEO."
-                />
-                <div className="grid gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Serie</label>
-                    <select
+              <SectionCard
+                icon={<PencilLine className="h-5 w-5" />}
+                title="Basisdaten"
+                description="Der Kern des Events: Zuordnung, Titel und Kurzbeschreibung fuer Listen und SEO."
+              >
+                <div className="grid gap-4">
+                  <Field label="Serie">
+                    <SelectInput
                       value={form.series_id}
                       onChange={(event) => updateField('series_id', event.target.value)}
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
                     >
                       <option value="">Keine Serie</option>
                       {series.map((item) => (
@@ -682,150 +655,116 @@ export default function AdminEventsPage() {
                           {item.title} ({item.category})
                         </option>
                       ))}
-                    </select>
-                  </div>
+                    </SelectInput>
+                  </Field>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-gray-600">Slug</label>
-                      <input
-                        value={form.slug}
-                        onChange={(event) => updateField('slug', event.target.value)}
-                        placeholder="super-bowl-2027"
-                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-gray-600">Status</label>
-                      <select
+                  <div className="grid grid-cols-2 gap-4">
+                    <InputField
+                      label="Slug"
+                      required
+                      value={form.slug}
+                      onChange={(event) => updateField('slug', event.target.value)}
+                      placeholder="super-bowl-2027"
+                    />
+                    <Field label="Status">
+                      <SelectInput
                         value={form.status}
                         onChange={(event) => updateField('status', event.target.value as 'active' | 'draft' | 'archived')}
-                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
                       >
                         <option value="active">active</option>
                         <option value="draft">draft</option>
                         <option value="archived">archived</option>
-                      </select>
-                    </div>
+                      </SelectInput>
+                    </Field>
                   </div>
 
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Name</label>
-                    <input
-                      value={form.name}
-                      onChange={(event) => updateField('name', event.target.value)}
-                      placeholder="Super Bowl LXI"
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                    />
-                  </div>
+                  <InputField
+                    label="Name"
+                    required
+                    value={form.name}
+                    onChange={(event) => updateField('name', event.target.value)}
+                    placeholder="Super Bowl LXI"
+                  />
 
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Titel</label>
-                    <input
-                      value={form.title}
-                      onChange={(event) => updateField('title', event.target.value)}
-                      placeholder="Super Bowl LXI 2027 Tickets & Packages"
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                    />
-                  </div>
+                  <InputField
+                    label="Titel"
+                    required
+                    value={form.title}
+                    onChange={(event) => updateField('title', event.target.value)}
+                    placeholder="Super Bowl LXI 2027 Tickets & Packages"
+                  />
 
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Beschreibung</label>
-                    <textarea
-                      value={form.description}
-                      onChange={(event) => updateField('description', event.target.value)}
-                      rows={4}
-                      placeholder="Kurzbeschreibung fuer SEO und Overview"
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                    />
-                  </div>
+                  <TextAreaField
+                    label="Beschreibung"
+                    value={form.description}
+                    onChange={(event) => updateField('description', event.target.value)}
+                    rows={4}
+                    placeholder="Kurzbeschreibung fuer SEO und Overview"
+                  />
                 </div>
-              </section>
+              </SectionCard>
 
-              <section className="rounded-xl border border-gray-100 bg-white p-4">
-                <SectionIntro
-                  icon={<MapPin className="h-5 w-5" />}
-                  title="Termin & Ort"
-                  description="Alle Daten, die spaeter in Hero, Listen und Reiseinfos angezeigt werden."
-                />
-                <div className="grid gap-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-gray-600">Startdatum</label>
-                      <input
-                        type="date"
-                        value={form.start_date}
-                        onChange={(event) => updateField('start_date', event.target.value)}
-                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-gray-600">Enddatum</label>
-                      <input
-                        type="date"
-                        value={form.end_date}
-                        onChange={(event) => updateField('end_date', event.target.value)}
-                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-gray-600">Venue</label>
-                      <input
-                        value={form.venue}
-                        onChange={(event) => updateField('venue', event.target.value)}
-                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-gray-600">Location Name</label>
-                      <input
-                        value={form.location_name}
-                        onChange={(event) => updateField('location_name', event.target.value)}
-                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-gray-600">Stadt</label>
-                      <input
-                        value={form.location_city}
-                        onChange={(event) => updateField('location_city', event.target.value)}
-                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-gray-600">Region</label>
-                      <input
-                        value={form.location_region}
-                        onChange={(event) => updateField('location_region', event.target.value)}
-                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Land</label>
-                    <input
-                      value={form.location_country}
-                      onChange={(event) => updateField('location_country', event.target.value)}
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              <SectionCard
+                icon={<MapPin className="h-5 w-5" />}
+                title="Termin & Ort"
+                description="Alle Daten, die spaeter in Hero, Listen und Reiseinfos angezeigt werden."
+              >
+                <div className="grid gap-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <InputField
+                      label="Startdatum"
+                      type="date"
+                      value={form.start_date}
+                      onChange={(event) => updateField('start_date', event.target.value)}
+                    />
+                    <InputField
+                      label="Enddatum"
+                      type="date"
+                      value={form.end_date}
+                      onChange={(event) => updateField('end_date', event.target.value)}
                     />
                   </div>
-                </div>
-              </section>
 
-              <section className="rounded-xl border border-gray-100 bg-white p-4">
-                <SectionIntro
-                  icon={<LayoutTemplate className="h-5 w-5" />}
-                  title="Hero Modul"
-                  description="Visueller Einstieg mit Titelbild und dem automatisch erzeugten Anfrage-CTA."
-                />
-                <div className="grid gap-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <InputField
+                      label="Venue"
+                      value={form.venue}
+                      onChange={(event) => updateField('venue', event.target.value)}
+                    />
+                    <InputField
+                      label="Location Name"
+                      value={form.location_name}
+                      onChange={(event) => updateField('location_name', event.target.value)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <InputField
+                      label="Stadt"
+                      value={form.location_city}
+                      onChange={(event) => updateField('location_city', event.target.value)}
+                    />
+                    <InputField
+                      label="Region"
+                      value={form.location_region}
+                      onChange={(event) => updateField('location_region', event.target.value)}
+                    />
+                  </div>
+
+                  <InputField
+                    label="Land"
+                    value={form.location_country}
+                    onChange={(event) => updateField('location_country', event.target.value)}
+                  />
+                </div>
+              </SectionCard>
+
+              <SectionCard
+                icon={<LayoutTemplate className="h-5 w-5" />}
+                title="Hero Modul"
+                description="Visueller Einstieg mit Titelbild und dem automatisch erzeugten Anfrage-CTA."
+              >
+                <div className="grid gap-4">
                   <AdminImageField
                     label="Hero Bild"
                     value={form.hero_image}
@@ -842,63 +781,50 @@ export default function AdminEventsPage() {
                     previewLabel="Ticket Bild Vorschau"
                   />
 
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Base URL</label>
-                    <input
-                      value={form.base_url}
-                      onChange={(event) => updateField('base_url', event.target.value)}
-                      placeholder="https://superbowl.faltintravel.com"
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                    />
-                  </div>
+                  <InputField
+                    label="Base URL"
+                    value={form.base_url}
+                    onChange={(event) => updateField('base_url', event.target.value)}
+                    placeholder="https://superbowl.faltintravel.com"
+                  />
 
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">🔗 Brevo Listen-ID</label>
-                    <input
-                      value={form.brevo_list_id}
-                      onChange={(event) => updateField('brevo_list_id', event.target.value)}
-                      placeholder="z.B. 12"
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                    />
-                    <p className="mt-1 text-xs text-gray-400">Neue Kontaktanfragen werden automatisch dieser Brevo-Liste zugewiesen. Numerische ID aus Brevo → Contacts → Listen.</p>
-                  </div>
+                  <InputField
+                    label="🔗 Brevo Listen-ID"
+                    value={form.brevo_list_id}
+                    onChange={(event) => updateField('brevo_list_id', event.target.value)}
+                    placeholder="z.B. 12"
+                    hint="Neue Kontaktanfragen werden automatisch dieser Brevo-Liste zugewiesen. Numerische ID aus Brevo → Contacts → Listen."
+                  />
 
-                  <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-3 text-sm text-blue-900">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-blue-700">CTA Vorschau</div>
-                    <div className="mt-2 inline-flex rounded-full bg-[#f14624] px-4 py-2 font-semibold text-white">
+                  <div className="rounded-xl border px-3 py-3 text-sm" style={{ borderColor: '#fff1ea', background: '#fff7f3' }}>
+                    <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: COLORS.accent }}>CTA Vorschau</div>
+                    <div className="mt-2 inline-flex rounded-full px-4 py-2 font-semibold text-white" style={{ background: COLORS.accent }}>
                       {previewCtaLabel}
                     </div>
                   </div>
                 </div>
-              </section>
+              </SectionCard>
 
-              <section className="rounded-xl border border-gray-100 bg-white p-4">
-                <SectionIntro
-                  icon={<ImageIcon className="h-5 w-5" />}
-                  title="Erster Absatz Modul"
-                  description="Headline, Einleitungstext und die dreispaltige Bildreihe direkt im finalen Inhaltsblock pflegen."
-                />
-                <div className="grid gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Erster Absatz H2</label>
-                    <input
-                      value={form.first_paragraph_heading}
-                      onChange={(event) => updateField('first_paragraph_heading', event.target.value)}
-                      placeholder="Erleben Sie dank unseren Wimbledon Karten ..."
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                    />
-                  </div>
+              <SectionCard
+                icon={<ImageIcon className="h-5 w-5" />}
+                title="Erster Absatz Modul"
+                description="Headline, Einleitungstext und die dreispaltige Bildreihe direkt im finalen Inhaltsblock pflegen."
+              >
+                <div className="grid gap-4">
+                  <InputField
+                    label="Erster Absatz H2"
+                    value={form.first_paragraph_heading}
+                    onChange={(event) => updateField('first_paragraph_heading', event.target.value)}
+                    placeholder="Erleben Sie dank unseren Wimbledon Karten ..."
+                  />
 
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Erster Absatz Text</label>
-                    <textarea
-                      value={form.first_paragraph_text}
-                      onChange={(event) => updateField('first_paragraph_text', event.target.value)}
-                      rows={6}
-                      placeholder="Das aelteste und prestigetraechtigste Tennisturnier ..."
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                    />
-                  </div>
+                  <TextAreaField
+                    label="Erster Absatz Text"
+                    value={form.first_paragraph_text}
+                    onChange={(event) => updateField('first_paragraph_text', event.target.value)}
+                    rows={6}
+                    placeholder="Das aelteste und prestigetraechtigste Tennisturnier ..."
+                  />
 
                   <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
                     <AdminImageField
@@ -924,117 +850,48 @@ export default function AdminEventsPage() {
                     />
                   </div>
                 </div>
-              </section>
+              </SectionCard>
 
-              <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
-                <SectionIntro
-                  icon={<Layers className="h-5 w-5" />}
-                  title="Aktivierte Module"
-                  description="Wählen Sie aus, welche Module auf der Event-Detailseite geladen und angezeigt werden sollen."
-                />
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mt-4">
-                  <label className="flex items-center gap-3 rounded-xl border p-4 cursor-pointer hover:bg-gray-50/50 transition">
-                    <input
-                      type="checkbox"
-                      checked={form.show_about}
-                      onChange={(e) => updateField('show_about', e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">Über das Event</div>
-                      <div className="text-xs text-gray-500">Erster Absatz / Intro</div>
+              <SectionCard
+                icon={<Layers className="h-5 w-5" />}
+                title="Aktivierte Module"
+                description="Wählen Sie aus, welche Module auf der Event-Detailseite geladen und angezeigt werden sollen."
+              >
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {([
+                    { key: 'show_about', value: form.show_about, title: 'Über das Event', desc: 'Erster Absatz / Intro' },
+                    { key: 'show_packages', value: form.show_packages, title: 'Packages', desc: 'Reisepakete & Hotel' },
+                    { key: 'show_faqs', value: form.show_faqs, title: 'FAQs', desc: 'Häufige Fragen' },
+                    { key: 'show_spielplan', value: form.show_spielplan, title: 'Spielplan', desc: 'Match Schedule Tabelle' },
+                    { key: 'show_wissenswertes', value: form.show_wissenswertes, title: 'Wissenswertes', desc: 'Fakten & Akkordeon' },
+                    { key: 'show_stadionplan', value: form.show_stadionplan, title: 'Stadionplan', desc: 'Stadion- / Hallenplan' },
+                    { key: 'show_lageplan', value: form.show_lageplan, title: 'Lageplan', desc: 'Interaktive Karte (Pins)' }
+                  ] as const).map((mod) => (
+                    <div
+                      key={mod.key}
+                      className="flex items-center justify-between gap-3 rounded-xl border p-4"
+                      style={{ borderColor: mod.value ? COLORS.navy : COLORS.stroke, background: mod.value ? '#f7fafc' : '#fff' }}
+                    >
+                      <div>
+                        <div className="text-sm font-semibold" style={{ color: COLORS.navy }}>{mod.title}</div>
+                        <div className="text-xs" style={{ color: COLORS.textMuted }}>{mod.desc}</div>
+                      </div>
+                      <Toggle
+                        checked={mod.value}
+                        onChange={(v) => updateField(mod.key, v)}
+                      />
                     </div>
-                  </label>
-
-                  <label className="flex items-center gap-3 rounded-xl border p-4 cursor-pointer hover:bg-gray-50/50 transition">
-                    <input
-                      type="checkbox"
-                      checked={form.show_packages}
-                      onChange={(e) => updateField('show_packages', e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">Packages</div>
-                      <div className="text-xs text-gray-500">Reisepakete & Hotel</div>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center gap-3 rounded-xl border p-4 cursor-pointer hover:bg-gray-50/50 transition">
-                    <input
-                      type="checkbox"
-                      checked={form.show_faqs}
-                      onChange={(e) => updateField('show_faqs', e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">FAQs</div>
-                      <div className="text-xs text-gray-500">Häufige Fragen</div>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center gap-3 rounded-xl border p-4 cursor-pointer hover:bg-gray-50/50 transition">
-                    <input
-                      type="checkbox"
-                      checked={form.show_spielplan}
-                      onChange={(e) => updateField('show_spielplan', e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">Spielplan</div>
-                      <div className="text-xs text-gray-500">Match Schedule Tabelle</div>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center gap-3 rounded-xl border p-4 cursor-pointer hover:bg-gray-50/50 transition">
-                    <input
-                      type="checkbox"
-                      checked={form.show_wissenswertes}
-                      onChange={(e) => updateField('show_wissenswertes', e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">Wissenswertes</div>
-                      <div className="text-xs text-gray-500">Fakten & Akkordeon</div>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center gap-3 rounded-xl border p-4 cursor-pointer hover:bg-gray-50/50 transition">
-                    <input
-                      type="checkbox"
-                      checked={form.show_stadionplan}
-                      onChange={(e) => updateField('show_stadionplan', e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">Stadionplan</div>
-                      <div className="text-xs text-gray-500">Stadion- / Hallenplan</div>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center gap-3 rounded-xl border p-4 cursor-pointer hover:bg-gray-50/50 transition">
-                    <input
-                      type="checkbox"
-                      checked={form.show_lageplan}
-                      onChange={(e) => updateField('show_lageplan', e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">Lageplan</div>
-                      <div className="text-xs text-gray-500">Interaktive Karte (Pins)</div>
-                    </div>
-                  </label>
+                  ))}
                 </div>
-              </section>
+              </SectionCard>
 
               {form.show_spielplan && (
-                <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
-                  <SectionIntro
-                    icon={<CalendarDays className="h-5 w-5" />}
-                    title="Spielplan Einträge"
-                    description="Verwalten Sie die Zeilen der Spielplan-Tabelle. Alle Änderungen werden erst beim Klick auf 'Event speichern' dauerhaft übernommen."
-                  />
-                  
-                  <div className="mt-4 overflow-x-auto rounded-lg border border-gray-150">
+                <SectionCard
+                  icon={<CalendarDays className="h-5 w-5" />}
+                  title="Spielplan Einträge"
+                  description="Verwalten Sie die Zeilen der Spielplan-Tabelle. Alle Änderungen werden erst beim Klick auf 'Event speichern' dauerhaft übernommen."
+                >
+                  <div className="overflow-x-auto rounded-lg border" style={{ borderColor: COLORS.stroke }}>
                     <table className="w-full border-collapse text-left text-xs text-gray-600">
                       <thead className="bg-gray-50 text-gray-700 font-semibold uppercase tracking-wider">
                         <tr>
@@ -1078,39 +935,39 @@ export default function AdminEventsPage() {
                             return (
                               <tr key={index} className="hover:bg-gray-50/50">
                                 <td className="p-2">
-                                  <input
+                                  <TextInput
                                     type="text"
                                     value={item.date}
                                     onChange={(e) => updateRow('date', e.target.value)}
                                     placeholder="z.B. So. 23. Mai 2027"
-                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-900 focus:border-blue-400 focus:bg-white focus:outline-none"
+                                    className="text-xs"
                                   />
                                 </td>
                                 <td className="p-2">
-                                  <input
+                                  <TextInput
                                     type="text"
                                     value={item.session}
                                     onChange={(e) => updateRow('session', e.target.value)}
                                     placeholder="z.B. Day (11:00 Uhr)"
-                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-900 focus:border-blue-400 focus:bg-white focus:outline-none"
+                                    className="text-xs"
                                   />
                                 </td>
                                 <td className="p-2">
-                                  <textarea
+                                  <TextArea
                                     value={item.matchup}
                                     onChange={(e) => updateRow('matchup', e.target.value)}
                                     placeholder="z.B. Herren- & Damen Einzel"
                                     rows={1}
-                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-900 focus:border-blue-400 focus:bg-white focus:outline-none resize-none min-h-[36px]"
+                                    className="text-xs min-h-[36px]"
                                   />
                                 </td>
                                 <td className="p-2">
-                                  <input
+                                  <TextInput
                                     type="text"
                                     value={item.round}
                                     onChange={(e) => updateRow('round', e.target.value)}
                                     placeholder="z.B. 1. Runde"
-                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-900 focus:border-blue-400 focus:bg-white focus:outline-none"
+                                    className="text-xs"
                                   />
                                 </td>
                                 <td className="p-2 text-right">
@@ -1151,112 +1008,92 @@ export default function AdminEventsPage() {
                     </table>
                   </div>
 
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="mt-4"
                     onClick={() => {
                       updateField('spielplan', [
                         ...form.spielplan,
                         { date: '', session: '', matchup: '', round: '' }
                       ]);
                     }}
-                    className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 active:scale-95 cursor-pointer shadow-xs"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     Eintrag hinzufügen
-                  </button>
-                </section>
+                  </Button>
+                </SectionCard>
               )}
 
               {form.show_wissenswertes && (
-                <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
-                  <SectionIntro
-                    icon={<Layers className="h-5 w-5" />}
-                    title="Wissenswertes Modul"
-                    description="Pflegen Sie hier die allgemeinen Fakten und den anklappbaren Textbereich (Akkordeon) für das Event."
-                  />
-                  
-                  <div className="grid gap-3 mt-4">
-                    <div>
-                      <label className="text-xs font-semibold text-gray-600">Überschrift</label>
-                      <input
-                        type="text"
-                        value={form.wissenswertes_title}
-                        onChange={(e) => updateField('wissenswertes_title', e.target.value)}
-                        placeholder="z.B. Wissenswertes zu den French Open"
-                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      />
+                <SectionCard
+                  icon={<Layers className="h-5 w-5" />}
+                  title="Wissenswertes Modul"
+                  description="Pflegen Sie hier die allgemeinen Fakten und den anklappbaren Textbereich (Akkordeon) für das Event."
+                >
+                  <div className="grid gap-4">
+                    <InputField
+                      label="Überschrift"
+                      type="text"
+                      value={form.wissenswertes_title}
+                      onChange={(e) => updateField('wissenswertes_title', e.target.value)}
+                      placeholder="z.B. Wissenswertes zu den French Open"
+                    />
+
+                    <TextAreaField
+                      label="Einleitungstext (Absatz)"
+                      value={form.wissenswertes_text}
+                      onChange={(e) => updateField('wissenswertes_text', e.target.value)}
+                      rows={4}
+                      placeholder="Einleitender Absatz zum Thema..."
+                    />
+
+                    <div className="border-t my-1 pt-3" style={{ borderColor: COLORS.stroke }}>
+                      <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: COLORS.accent }}>Akkordeon-Bereich</label>
                     </div>
 
-                    <div>
-                      <label className="text-xs font-semibold text-gray-600">Einleitungstext (Absatz)</label>
-                      <textarea
-                        value={form.wissenswertes_text}
-                        onChange={(e) => updateField('wissenswertes_text', e.target.value)}
-                        rows={4}
-                        placeholder="Einleitender Absatz zum Thema..."
-                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                    </div>
+                    <InputField
+                      label="Akkordeon Titel"
+                      type="text"
+                      value={form.wissenswertes_accordion_title}
+                      onChange={(e) => updateField('wissenswertes_accordion_title', e.target.value)}
+                      placeholder="z.B. Weitere Infos zu den French Open"
+                    />
 
-                    <div className="border-t border-gray-100 my-2 pt-2">
-                      <label className="text-xs font-semibold text-blue-650 uppercase tracking-wider">Akkordeon-Bereich</label>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-gray-600">Akkordeon Titel</label>
-                      <input
-                        type="text"
-                        value={form.wissenswertes_accordion_title}
-                        onChange={(e) => updateField('wissenswertes_accordion_title', e.target.value)}
-                        placeholder="z.B. Weitere Infos zu den French Open"
-                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-gray-600">Akkordeon Inhalt (Mehrere Absätze mit Leerzeile trennen)</label>
-                      <textarea
-                        value={form.wissenswertes_accordion_text}
-                        onChange={(e) => updateField('wissenswertes_accordion_text', e.target.value)}
-                        rows={8}
-                        placeholder="Ausführlicher Inhalt des Akkordeons..."
-                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                    </div>
+                    <TextAreaField
+                      label="Akkordeon Inhalt (Mehrere Absätze mit Leerzeile trennen)"
+                      value={form.wissenswertes_accordion_text}
+                      onChange={(e) => updateField('wissenswertes_accordion_text', e.target.value)}
+                      rows={8}
+                      placeholder="Ausführlicher Inhalt des Akkordeons..."
+                    />
                   </div>
-                </section>
+                </SectionCard>
               )}
 
               {form.show_stadionplan && (
-                <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
-                  <SectionIntro
-                    icon={<Layers className="h-5 w-5" />}
-                    title="Stadion-/Hallenplan Modul"
-                    description="Pflegen Sie hier die Überschriften, das Übersichts-Bild und die Beschreibung für den Stadion- oder Hallenplan."
-                  />
-                  
-                  <div className="grid gap-3 mt-4">
-                    <div>
-                      <label className="text-xs font-semibold text-gray-600">Überschrift des Moduls (z.B. Stadionplan / Hallenplan)</label>
-                      <input
-                        type="text"
-                        value={form.stadionplan_title}
-                        onChange={(e) => updateField('stadionplan_title', e.target.value)}
-                        placeholder="z.B. Stadionplan"
-                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                    </div>
+                <SectionCard
+                  icon={<Layers className="h-5 w-5" />}
+                  title="Stadion-/Hallenplan Modul"
+                  description="Pflegen Sie hier die Überschriften, das Übersichts-Bild und die Beschreibung für den Stadion- oder Hallenplan."
+                >
+                  <div className="grid gap-4">
+                    <InputField
+                      label="Überschrift des Moduls (z.B. Stadionplan / Hallenplan)"
+                      type="text"
+                      value={form.stadionplan_title}
+                      onChange={(e) => updateField('stadionplan_title', e.target.value)}
+                      placeholder="z.B. Stadionplan"
+                    />
 
-                    <div>
-                      <label className="text-xs font-semibold text-gray-600">Bereich / Name der Arena (z.B. Philippe Chatrier)</label>
-                      <input
-                        type="text"
-                        value={form.stadionplan_venue_name}
-                        onChange={(e) => updateField('stadionplan_venue_name', e.target.value)}
-                        placeholder="z.B. Philippe Chatrier"
-                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                    </div>
+                    <InputField
+                      label="Bereich / Name der Arena (z.B. Philippe Chatrier)"
+                      type="text"
+                      value={form.stadionplan_venue_name}
+                      onChange={(e) => updateField('stadionplan_venue_name', e.target.value)}
+                      placeholder="z.B. Philippe Chatrier"
+                    />
 
                     <AdminImageField
                       label="Stadionplan Bild URL"
@@ -1266,41 +1103,38 @@ export default function AdminEventsPage() {
                       previewLabel="Stadionplan Bild Vorschau"
                     />
 
-                    <div>
-                      <label className="text-xs font-semibold text-gray-600">Beschreibung (Mehrere Absätze mit Leerzeile trennen)</label>
-                      <textarea
-                        value={form.stadionplan_description}
-                        onChange={(e) => updateField('stadionplan_description', e.target.value)}
-                        rows={8}
-                        placeholder="Ausführliche Beschreibung des Stadions, der Tribünen oder der Sitzplatz-Kategorien..."
-                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      />
-                    </div>
+                    <TextAreaField
+                      label="Beschreibung (Mehrere Absätze mit Leerzeile trennen)"
+                      value={form.stadionplan_description}
+                      onChange={(e) => updateField('stadionplan_description', e.target.value)}
+                      rows={8}
+                      placeholder="Ausführliche Beschreibung des Stadions, der Tribünen oder der Sitzplatz-Kategorien..."
+                    />
                   </div>
-                </section>
+                </SectionCard>
               )}
 
               {form.show_lageplan && (
-                <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
-                  <SectionIntro
-                    icon={<MapPin className="h-5 w-5" />}
-                    title="Lageplan Pins"
-                    description="Verwalten Sie die Kartenmarkierungen direkt für dieses Event. Icons werden zentral in 'Lageplan-Icons' verwaltet."
-                  />
-
-                  <div className="mt-3 mb-4 flex items-center justify-between gap-3 bg-blue-50/50 rounded-xl p-3 border border-blue-100 text-xs text-blue-800">
+                <SectionCard
+                  icon={<MapPin className="h-5 w-5" />}
+                  title="Lageplan Pins"
+                  description="Verwalten Sie die Kartenmarkierungen direkt für dieses Event. Icons werden zentral in 'Lageplan-Icons' verwaltet."
+                >
+                  <div className="mb-4 flex items-center justify-between gap-3 rounded-xl p-3 border text-xs" style={{ background: '#fff7f3', borderColor: '#fff1ea', color: COLORS.navy }}>
                     <span>Icons (PNG) zentral verwalten:</span>
                     <a href="/admin/pins" target="_blank" rel="noopener noreferrer"
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition inline-flex items-center gap-1 shrink-0">
+                      className="px-3 py-1.5 text-white font-semibold rounded-lg transition inline-flex items-center gap-1 shrink-0 hover:opacity-90" style={{ background: COLORS.accent }}>
                       Lageplan-Icons verwalten ↗
                     </a>
                   </div>
 
                   <div className="space-y-4">
                     {form.lageplan_pins.length === 0 ? (
-                      <div className="px-4 py-8 text-center text-gray-400 bg-gray-50/30 rounded-xl border border-dashed border-gray-200 text-sm">
-                        Noch keine Pins vorhanden. Klicken Sie auf „Pin hinzufügen".
-                      </div>
+                      <EmptyState
+                        icon={<MapPin className="h-6 w-6" />}
+                        title="Noch keine Pins vorhanden."
+                        description="Klicken Sie auf „Pin hinzufügen“."
+                      />
                     ) : (
                       form.lageplan_pins.map((pin, index) => {
                         const updatePin = (field: string, value: string) => {
@@ -1328,41 +1162,33 @@ export default function AdminEventsPage() {
 
                             <div className="grid gap-3 pr-24">
                               <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                  <label className="text-xs font-semibold text-gray-600">Bezeichnung</label>
-                                  <input type="text" value={pin.name} onChange={(e) => updatePin('name', e.target.value)} placeholder="z.B. Stade Roland Garros" className="mt-1 w-full border rounded-lg px-3 py-2 text-sm" />
-                                </div>
-                                <div>
-                                  <label className="text-xs font-semibold text-gray-600">Karten-Label</label>
-                                  <input type="text" value={pin.label} onChange={(e) => updatePin('label', e.target.value)} placeholder="z.B. Roland Garros" className="mt-1 w-full border rounded-lg px-3 py-2 text-sm" />
-                                </div>
+                                <InputField label="Bezeichnung" type="text" value={pin.name} onChange={(e) => updatePin('name', e.target.value)} placeholder="z.B. Stade Roland Garros" />
+                                <InputField label="Karten-Label" type="text" value={pin.label} onChange={(e) => updatePin('label', e.target.value)} placeholder="z.B. Roland Garros" />
                               </div>
                               <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                  <label className="text-xs font-semibold text-gray-600">Breitengrad (Latitude)</label>
-                                  <input type="number" step="any" value={pin.lat} onChange={(e) => updatePin('lat', e.target.value)} placeholder="z.B. 48.8471" className="mt-1 w-full border rounded-lg px-3 py-2 text-sm font-mono" />
-                                </div>
-                                <div>
-                                  <label className="text-xs font-semibold text-gray-600">Längengrad (Longitude)</label>
-                                  <input type="number" step="any" value={pin.lng} onChange={(e) => updatePin('lng', e.target.value)} placeholder="z.B. 2.2492" className="mt-1 w-full border rounded-lg px-3 py-2 text-sm font-mono" />
-                                </div>
+                                <InputField label="Breitengrad (Latitude)" type="number" step="any" value={pin.lat} onChange={(e) => updatePin('lat', e.target.value)} placeholder="z.B. 48.8471" className="font-mono" />
+                                <InputField label="Längengrad (Longitude)" type="number" step="any" value={pin.lng} onChange={(e) => updatePin('lng', e.target.value)} placeholder="z.B. 2.2492" className="font-mono" />
                               </div>
-                              <div>
-                                <label className="text-xs font-semibold text-gray-600">Icon</label>
+                              <Field label="Icon">
                                 {pinIcons.length === 0 ? (
-                                  <p className="mt-1 text-xs text-gray-400 italic">Keine Icons vorhanden – bitte zuerst in „Lageplan-Icons" hochladen.</p>
+                                  <p className="text-xs italic" style={{ color: COLORS.textMuted }}>Keine Icons vorhanden – bitte zuerst in „Lageplan-Icons" hochladen.</p>
                                 ) : (
-                                  <div className="mt-2 flex flex-wrap gap-2">
+                                  <div className="flex flex-wrap gap-2">
                                     {pinIcons.map((ic) => (
                                       <button key={ic.id} type="button" onClick={() => updatePin('icon_id', ic.id)}
-                                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition ${pin.icon_id === ic.id ? 'border-blue-500 bg-blue-50 text-blue-800' : 'border-gray-200 hover:border-blue-300 text-gray-700'}`}>
+                                        className="flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition hover:opacity-90"
+                                        style={{
+                                          borderColor: pin.icon_id === ic.id ? COLORS.accent : COLORS.stroke,
+                                          background: pin.icon_id === ic.id ? '#fff1ea' : '#fff',
+                                          color: pin.icon_id === ic.id ? COLORS.accent : COLORS.navy
+                                        }}>
                                         {ic.image ? <img src={ic.image} alt={ic.name} className="w-5 h-5 object-contain" /> : <span className="text-base">📍</span>}
                                         {ic.name}
                                       </button>
                                     ))}
                                   </div>
                                 )}
-                              </div>
+                              </Field>
                             </div>
                           </div>
                         );
@@ -1372,25 +1198,26 @@ export default function AdminEventsPage() {
 
                   <button type="button"
                     onClick={() => updateField('lageplan_pins', [...form.lageplan_pins, { id: `pin-${Date.now()}`, name: '', lat: '', lng: '', icon_id: pinIcons[0]?.id || '', label: '' }])}
-                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-blue-300 bg-blue-50/30 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-50 transition">
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm font-semibold transition hover:opacity-90"
+                    style={{ borderColor: COLORS.accent, background: '#fff7f3', color: COLORS.accent }}>
                     <Plus className="h-4 w-4" /> Pin hinzufügen
                   </button>
-                </section>
+                </SectionCard>
               )}
 
               {form.show_faqs && (
-                <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
-                  <SectionIntro
-                    icon={<Layers className="h-5 w-5" />}
-                    title="FAQ Einträge"
-                    description="Verwalten Sie die häufigen Fragen (FAQs) für dieses Event direkt in-place. Alle Änderungen werden erst beim Klick auf 'Event speichern' dauerhaft übernommen."
-                  />
-                  
-                  <div className="space-y-4 mt-4">
+                <SectionCard
+                  icon={<Layers className="h-5 w-5" />}
+                  title="FAQ Einträge"
+                  description="Verwalten Sie die häufigen Fragen (FAQs) für dieses Event direkt in-place. Alle Änderungen werden erst beim Klick auf 'Event speichern' dauerhaft übernommen."
+                >
+                  <div className="space-y-4">
                     {form.faqs.length === 0 ? (
-                      <div className="px-4 py-8 text-center text-gray-400 bg-gray-50/30 rounded-xl border border-dashed border-gray-200">
-                        Keine FAQs vorhanden. Klicken Sie unten auf "FAQ hinzufügen".
-                      </div>
+                      <EmptyState
+                        icon={<Layers className="h-6 w-6" />}
+                        title="Keine FAQs vorhanden."
+                        description='Klicken Sie unten auf "FAQ hinzufügen".'
+                      />
                     ) : (
                       form.faqs.map((faq, index) => {
                         const updateRow = (field: 'question' | 'answer', value: string) => {
@@ -1446,26 +1273,22 @@ export default function AdminEventsPage() {
                             </div>
                             
                             <div className="grid gap-3 w-[calc(100%-80px)]">
-                              <div>
-                                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Frage #{index + 1}</label>
-                                <input
-                                  type="text"
-                                  value={faq.question}
-                                  onChange={(e) => updateRow('question', e.target.value)}
-                                  placeholder="z.B. Wie viel kosten die Tickets?"
-                                  className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-400 focus:bg-white focus:outline-none"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Antwort #{index + 1}</label>
-                                <textarea
-                                  value={faq.answer}
-                                  onChange={(e) => updateRow('answer', e.target.value)}
-                                  placeholder="Ausführliche Antwort..."
-                                  rows={2}
-                                  className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-400 focus:bg-white focus:outline-none resize-y"
-                                />
-                              </div>
+                              <InputField
+                                label={`Frage #${index + 1}`}
+                                type="text"
+                                value={faq.question}
+                                onChange={(e) => updateRow('question', e.target.value)}
+                                placeholder="z.B. Wie viel kosten die Tickets?"
+                                className="text-xs"
+                              />
+                              <TextAreaField
+                                label={`Antwort #${index + 1}`}
+                                value={faq.answer}
+                                onChange={(e) => updateRow('answer', e.target.value)}
+                                placeholder="Ausführliche Antwort..."
+                                rows={2}
+                                className="text-xs resize-y"
+                              />
                             </div>
                           </div>
                         );
@@ -1473,37 +1296,37 @@ export default function AdminEventsPage() {
                     )}
                   </div>
 
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="mt-4"
                     onClick={() => {
                       updateField('faqs', [
                         ...form.faqs,
                         { question: '', answer: '' }
                       ]);
                     }}
-                    className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 active:scale-95 cursor-pointer shadow-xs"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     FAQ hinzufügen
-                  </button>
-                </section>
+                  </Button>
+                </SectionCard>
               )}
 
-              <section className="rounded-xl border border-dashed border-blue-200 bg-blue-50 p-4">
+              <SectionCard className="border-dashed">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white text-blue-700 shadow-sm">
+                    <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-xl shadow-sm" style={{ background: COLORS.surfaceMuted, color: COLORS.navy }}>
                       <CalendarDays className="h-5 w-5" />
                     </div>
-                    <h3 className="text-sm font-semibold text-blue-700">Live Seitenvorschau</h3>
-                    <p className="mt-1 text-xs text-blue-700/80">Nahe an der echten Event-Seite, damit Sie Textfluss und Bildwirkung direkt sehen.</p>
+                    <h3 className="text-sm font-bold" style={{ color: COLORS.navy }}>Live Seitenvorschau</h3>
+                    <p className="mt-1 text-xs" style={{ color: COLORS.textMuted }}>Nahe an der echten Event-Seite, damit Sie Textfluss und Bildwirkung direkt sehen.</p>
                   </div>
-                  <div className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm">
-                    {form.status || 'draft'}
-                  </div>
+                  <Badge tone="navy">{form.status || 'draft'}</Badge>
                 </div>
 
-                <div className="mt-4 overflow-hidden rounded-[28px] border border-blue-100 bg-white shadow-sm">
+                <div className="mt-4 overflow-hidden rounded-[28px] border bg-white shadow-sm" style={{ borderColor: COLORS.stroke }}>
                   <div
                     className="relative overflow-hidden px-5 py-10 text-white md:px-8 md:py-14"
                     style={{
@@ -1541,22 +1364,24 @@ export default function AdminEventsPage() {
                     </div>
                   </div>
                 </div>
-              </section>
+              </SectionCard>
 
-              <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white/95 p-4 shadow-lg backdrop-blur sm:flex-row">
-                <button
+              <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-2xl border bg-white/95 p-4 shadow-lg backdrop-blur sm:flex-row" style={{ borderColor: COLORS.stroke }}>
+                <Button
+                  variant="accent"
                   onClick={handleSave}
                   disabled={saving}
-                  className="flex-1 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:bg-gray-400"
+                  className="flex-1 py-3"
                 >
                   {saving ? 'Speichern...' : 'Event speichern'}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="secondary"
                   onClick={resetForm}
-                  className="flex-1 rounded-xl bg-gray-100 py-3 text-sm font-semibold text-gray-800 transition hover:bg-gray-200"
+                  className="flex-1 py-3"
                 >
                   Formular zurücksetzen
-                </button>
+                </Button>
               </div>
             </div>
           </div>

@@ -3,6 +3,34 @@
 import { useEffect, useMemo, useState } from 'react';
 import AdminShell from '@/components/admin/AdminShell';
 import AdminGalleryField from '@/components/admin/AdminGalleryField';
+import {
+  COLORS,
+  cn,
+  SectionCard,
+  Button,
+  Field,
+  TextInput,
+  SelectInput,
+  InputField,
+  TextAreaField,
+  Badge,
+  EmptyState,
+  Toggle,
+  Spinner
+} from '@/components/admin/ui';
+import {
+  Package as PackageIcon,
+  Search,
+  Trash2,
+  Plus,
+  Save,
+  RotateCcw,
+  Tag,
+  BedDouble,
+  Euro,
+  MapPin,
+  Eye
+} from 'lucide-react';
 
 interface EventOption {
   id: string;
@@ -255,419 +283,394 @@ export default function AdminPackagesPage() {
 
   return (
     <AdminShell title="Packages verwalten">
-      <div className="grid lg:grid-cols-[1.2fr_1fr] gap-6">
-        <div className="bg-white rounded-xl shadow-sm border p-6">
+      <div className="grid lg:grid-cols-[1.2fr_1fr] gap-6 items-start">
+        {/* ─── Liste ─────────────────────────────────────────────── */}
+        <SectionCard
+          title="Packages"
+          description={activeEventLabel || undefined}
+          icon={<PackageIcon size={20} />}
+          actions={<Badge tone="navy">{packages.length} Packages</Badge>}
+        >
           <div className="flex flex-col gap-4 mb-4">
-            <div>
-              <label className="text-xs font-semibold text-gray-600">Event auswählen</label>
-              <select
+            <Field label="Event auswählen">
+              <SelectInput
                 value={selectedEvent}
                 onChange={(event) => {
                   setSelectedEvent(event.target.value);
                   setForm((prev) => ({ ...prev, event_id: event.target.value }));
                 }}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
               >
                 {events.map((event) => (
                   <option key={event.id} value={event.id}>
                     {event.title} ({event.slug})
                   </option>
                 ))}
-              </select>
-            </div>
-            <div className="flex items-center justify-between text-sm text-gray-500">
-              <span>{activeEventLabel}</span>
-              <span>{packages.length} Packages</span>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-600">Suchen</label>
-              <input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Titel, Slug, Package Name"
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-              />
-            </div>
+              </SelectInput>
+            </Field>
+            <Field label="Suchen">
+              <div className="relative">
+                <Search
+                  size={16}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+                  style={{ color: COLORS.textMuted }}
+                />
+                <TextInput
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Titel, Slug, Package Name"
+                  className="pl-9"
+                />
+              </div>
+            </Field>
           </div>
 
-          {loading && <p className="text-gray-500">Lädt...</p>}
-          {error && <p className="text-red-600 text-sm">{error}</p>}
+          {loading && (
+            <div className="flex items-center gap-2 py-4" style={{ color: COLORS.textMuted }}>
+              <Spinner className="h-4 w-4" /> <span className="text-sm">Lädt...</span>
+            </div>
+          )}
+          {error && (
+            <p className="text-sm" style={{ color: COLORS.danger }}>{error}</p>
+          )}
 
-          <div className="space-y-3">
-            {filteredPackages.map((pkg) => (
-              <button
-                key={pkg.id}
-                onClick={() => setForm({ ...pkg })}
-                className={`w-full text-left p-4 border rounded-lg transition ${
-                  form.id === pkg.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : pkg.active === false
-                    ? 'border-gray-100 bg-gray-50 opacity-60'
-                    : 'border-gray-200 hover:border-blue-300'
-                }`}
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1 min-w-0">
-                    <div className={`font-semibold ${pkg.active === false ? 'line-through text-gray-400' : 'text-gray-900'}`}>{pkg.title}</div>
-                    <div className="text-xs text-gray-500 mt-1">{pkg.slug}</div>
-                  </div>
-                  <div className="flex items-center gap-2 ml-2 shrink-0">
-                    {pkg.popular && (
-                      <span className="text-xs px-2 py-1 rounded-full bg-orange-100 text-orange-700">popular</span>
+          {!loading && filteredPackages.length === 0 ? (
+            <EmptyState
+              icon={<PackageIcon size={28} />}
+              title="Keine Packages"
+              description="Für dieses Event wurden noch keine Packages angelegt."
+            />
+          ) : (
+            <div className="space-y-3">
+              {filteredPackages.map((pkg) => {
+                const isSelected = form.id === pkg.id;
+                const isInactive = pkg.active === false;
+                return (
+                  <button
+                    key={pkg.id}
+                    onClick={() => setForm({ ...pkg })}
+                    className={cn(
+                      'w-full text-left rounded-xl border p-4 transition',
+                      isInactive && 'opacity-60'
                     )}
-                    <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        if (!pkg.id) return;
-                        const res = await fetch(`/api/admin/packages/${pkg.id}`, {
-                          method: 'PUT',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ active: pkg.active === false })
-                        });
-                        if (res.ok) await loadPackages(selectedEvent);
-                      }}
-                      title={pkg.active === false ? 'Aktivieren' : 'Deaktivieren'}
-                      className={`w-12 h-6 rounded-full transition-all duration-200 relative shrink-0 ${
-                        pkg.active === false ? 'bg-gray-300' : 'bg-green-500'
-                      }`}
-                    >
-                      <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${
-                        pkg.active === false ? 'left-1' : 'left-7'
-                      }`} />
-                    </button>
-                  </div>
-                </div>
-                <div className="text-sm text-gray-600 mt-2">Preis: {pkg.price || 'n/a'} {pkg.currency}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">
-              {form.id ? 'Package bearbeiten' : 'Neues Package'}
-            </h2>
-            {form.id && (
-              <button
-                onClick={() => handleDelete(form.id as string)}
-                className="text-sm text-red-600 hover:text-red-700"
-              >
-                Löschen
-              </button>
-            )}
-          </div>
-
-          <div className="grid gap-6">
-            <section className="border border-gray-100 rounded-xl p-4 bg-gray-50/70">
-              <h3 className="text-sm font-semibold text-gray-700">Basis</h3>
-              <div className="mt-3 grid gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Event</label>
-                  <select
-                    value={form.event_id}
-                    onChange={(event) => updateField('event_id', event.target.value)}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                    style={{
+                      borderColor: isSelected ? COLORS.accent : COLORS.stroke,
+                      background: isSelected ? '#fff1ea' : isInactive ? COLORS.surfaceMuted : '#fff'
+                    }}
                   >
-                    {events.map((event) => (
-                      <option key={event.id} value={event.id}>
-                        {event.title} ({event.slug})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div
+                          className={cn('font-semibold', isInactive && 'line-through')}
+                          style={{ color: isInactive ? '#9ca3af' : COLORS.navy }}
+                        >
+                          {pkg.title}
+                        </div>
+                        <div className="text-xs mt-1" style={{ color: COLORS.textMuted }}>{pkg.slug}</div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {pkg.popular && <Badge tone="accent">popular</Badge>}
+                        <Toggle
+                          checked={pkg.active !== false}
+                          onChange={async () => {
+                            if (!pkg.id) return;
+                            const res = await fetch(`/api/admin/packages/${pkg.id}`, {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ active: pkg.active === false })
+                            });
+                            if (res.ok) await loadPackages(selectedEvent);
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="text-sm mt-2 flex items-center gap-1" style={{ color: COLORS.textMuted }}>
+                      <Euro size={14} /> Preis: {pkg.price || 'n/a'} {pkg.currency}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </SectionCard>
 
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Slug</label>
-                  <input
+        {/* ─── Editor ────────────────────────────────────────────── */}
+        <div className="grid gap-6">
+          <SectionCard
+            title={form.id ? 'Package bearbeiten' : 'Neues Package'}
+            icon={form.id ? <PackageIcon size={20} /> : <Plus size={20} />}
+            actions={
+              form.id ? (
+                <Button variant="danger" size="sm" onClick={() => handleDelete(form.id as string)}>
+                  <Trash2 size={14} /> Löschen
+                </Button>
+              ) : undefined
+            }
+          >
+            <div className="grid gap-6">
+              {/* Stammdaten */}
+              <SectionCard title="Stammdaten" icon={<Tag size={18} />}>
+                <div className="grid gap-4">
+                  <Field label="Event">
+                    <SelectInput
+                      value={form.event_id}
+                      onChange={(event) => updateField('event_id', event.target.value)}
+                    >
+                      {events.map((event) => (
+                        <option key={event.id} value={event.id}>
+                          {event.title} ({event.slug})
+                        </option>
+                      ))}
+                    </SelectInput>
+                  </Field>
+                  <InputField
+                    label="Slug"
+                    required
                     value={form.slug}
                     onChange={(event) => updateField('slug', event.target.value)}
                     placeholder="dream-hollywood"
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                   />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Package Name</label>
-                  <input
+                  <InputField
+                    label="Package Name"
                     value={form.package_name}
                     onChange={(event) => updateField('package_name', event.target.value)}
                     placeholder="Ticket- & Hotel-Package"
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                   />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Titel</label>
-                  <input
+                  <InputField
+                    label="Titel"
+                    required
                     value={form.title}
                     onChange={(event) => updateField('title', event.target.value)}
                     placeholder="Dream Hollywood, by Hyatt"
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                   />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Kurzbeschreibung</label>
-                  <textarea
+                  <TextAreaField
+                    label="Kurzbeschreibung"
+                    rows={2}
                     value={form.short_description}
                     onChange={(event) => updateField('short_description', event.target.value)}
-                    rows={2}
                     placeholder="Kurzbeschreibung fuer Karten/Listen"
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                   />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Beschreibung</label>
-                  <textarea
+                  <TextAreaField
+                    label="Beschreibung"
+                    rows={3}
                     value={form.description}
                     onChange={(event) => updateField('description', event.target.value)}
-                    rows={3}
                     placeholder="Lange Beschreibung fuer Details"
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
-              </div>
-            </section>
+              </SectionCard>
 
-            <section className="border border-gray-100 rounded-xl p-4 bg-white">
-              <h3 className="text-sm font-semibold text-gray-700">Preis & Verfügbarkeit</h3>
-              <div className="mt-3 grid gap-3">
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Naechte</label>
-                    <input
+              {/* Preise */}
+              <SectionCard title="Preise & Verfügbarkeit" icon={<Euro size={18} />}>
+                <div className="grid gap-4">
+                  <div className="grid grid-cols-3 gap-3">
+                    <InputField
+                      label="Naechte"
+                      type="number"
+                      min="0"
                       value={form.nights}
                       onChange={(event) => updateField('nights', event.target.value)}
+                    />
+                    <InputField
+                      label="Preis"
                       type="number"
                       min="0"
-                      className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Preis</label>
-                    <input
+                      step="0.01"
                       value={form.price}
                       onChange={(event) => updateField('price', event.target.value)}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                     />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Waehrung</label>
-                    <input
+                    <InputField
+                      label="Waehrung"
                       value={form.currency}
                       onChange={(event) => updateField('currency', event.target.value)}
-                      className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                     />
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Einzelzimmer Zuschlag</label>
-                    <input
-                      value={form.single_supplement}
-                      onChange={(event) => updateField('single_supplement', event.target.value)}
+                  <div className="grid grid-cols-2 gap-3">
+                    <InputField
+                      label="Einzelzimmer Zuschlag"
                       type="number"
                       min="0"
                       step="0.01"
-                      className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                      value={form.single_supplement}
+                      onChange={(event) => updateField('single_supplement', event.target.value)}
                     />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Verfügbare Plätze</label>
-                    <input
-                      value={form.available_spots}
-                      onChange={(event) => updateField('available_spots', event.target.value)}
+                    <InputField
+                      label="Verfügbare Plätze"
                       type="number"
                       min="0"
-                      className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                      value={form.available_spots}
+                      onChange={(event) => updateField('available_spots', event.target.value)}
                     />
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Rating</label>
-                    <input
-                      value={form.rating}
-                      onChange={(event) => updateField('rating', event.target.value)}
+                  <div className="grid grid-cols-2 gap-3">
+                    <InputField
+                      label="Rating"
                       type="number"
                       min="0"
                       step="0.1"
-                      className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                      value={form.rating}
+                      onChange={(event) => updateField('rating', event.target.value)}
                     />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Reviews</label>
-                    <input
-                      value={form.reviews}
-                      onChange={(event) => updateField('reviews', event.target.value)}
+                    <InputField
+                      label="Reviews"
                       type="number"
                       min="0"
-                      className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                      value={form.reviews}
+                      onChange={(event) => updateField('reviews', event.target.value)}
                     />
                   </div>
-                </div>
-                <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                  <div>
-                    <div className="text-xs font-semibold text-gray-600">Popular</div>
-                    <div className="text-xs text-gray-500">Badge im Package</div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={form.popular}
-                    onChange={(event) => updateField('popular', event.target.checked)}
-                    className="h-4 w-4"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Badge Text</label>
-                  <input
+                  <InputField
+                    label="Badge Text"
                     value={form.badge_text}
                     onChange={(event) => updateField('badge_text', event.target.value)}
                     placeholder="Offizielles Hospitality-Package"
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
-              </div>
-            </section>
+              </SectionCard>
 
-            <section className="border border-gray-100 rounded-xl p-4 bg-white">
-              <h3 className="text-sm font-semibold text-gray-700">Hotel & Bilder</h3>
-              <div className="mt-3 grid gap-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Hotel</label>
-                    <input
+              {/* Hotel & Bilder */}
+              <SectionCard title="Hotel & Bilder" icon={<BedDouble size={18} />}>
+                <div className="grid gap-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <InputField
+                      label="Hotel"
                       value={form.hotel}
                       onChange={(event) => updateField('hotel', event.target.value)}
-                      className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                     />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Sterne</label>
-                    <input
-                      value={form.stars}
-                      onChange={(event) => updateField('stars', event.target.value)}
+                    <InputField
+                      label="Sterne"
                       type="number"
                       min="0"
-                      className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                      value={form.stars}
+                      onChange={(event) => updateField('stars', event.target.value)}
                     />
                   </div>
-                </div>
-                <div>
                   <AdminGalleryField
                     label="Hotel Bilder"
                     value={form.hotel_images}
                     onChange={(value) => updateField('hotel_images', value)}
                     placeholder="https://.../bild1.jpg, https://.../bild2.jpg"
                   />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Room Categories</label>
-                  <input
+                  <InputField
+                    label="Room Categories"
                     value={form.room_categories}
                     onChange={(event) => updateField('room_categories', event.target.value)}
                     placeholder="Doppelzimmer, Einzelzimmer"
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
-              </div>
-            </section>
+              </SectionCard>
 
-            <section className="border border-gray-100 rounded-xl p-4 bg-white">
-              <h3 className="text-sm font-semibold text-gray-700">Distanzen & Zusatz</h3>
-              <div className="mt-3 grid gap-3">
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Distanz Airport</label>
-                    <input
+              {/* Distanzen & Zusatz */}
+              <SectionCard title="Distanzen & Zusatz" icon={<MapPin size={18} />}>
+                <div className="grid gap-4">
+                  <div className="grid grid-cols-3 gap-3">
+                    <InputField
+                      label="Distanz Airport"
                       value={form.distance_airport}
                       onChange={(event) => updateField('distance_airport', event.target.value)}
-                      className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                     />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Distanz Stadion</label>
-                    <input
+                    <InputField
+                      label="Distanz Stadion"
                       value={form.distance_stadium}
                       onChange={(event) => updateField('distance_stadium', event.target.value)}
-                      className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                     />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600">Distanz Downtown</label>
-                    <input
+                    <InputField
+                      label="Distanz Downtown"
                       value={form.distance_downtown}
                       onChange={(event) => updateField('distance_downtown', event.target.value)}
-                      className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                     />
                   </div>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Verlaengerungsnaechte</label>
-                  <input
+                  <InputField
+                    label="Verlaengerungsnaechte"
                     value={form.extension_nights}
                     onChange={(event) => updateField('extension_nights', event.target.value)}
                     placeholder="Verlaengerung auf Anfrage"
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
-              </div>
-            </section>
+              </SectionCard>
 
-            <section className="border border-dashed border-orange-200 rounded-xl p-4 bg-orange-50">
-              <h3 className="text-sm font-semibold text-orange-700">Live Vorschau</h3>
-              <div className="mt-4 rounded-xl border bg-white overflow-hidden">
-                {form.badge_text || form.popular ? (
-                  <div className="bg-orange-500 text-white text-xs font-semibold px-4 py-2">
-                    {form.badge_text || 'Offizielles Hospitality-Package'}
-                  </div>
-                ) : null}
-                <div className="p-4">
-                  <div className="text-lg font-semibold text-gray-900">
-                    {form.title || 'Package Titel'}
-                  </div>
-                  <div className="text-sm text-gray-500 mt-1">
-                    {form.hotel || 'Hotelname'} • {form.nights || '0'} Naechte
-                  </div>
-                  <div className="mt-4 flex items-end justify-between">
+              {/* Flags */}
+              <SectionCard title="Flags" icon={<Tag size={18} />}>
+                <div className="grid gap-3">
+                  <div
+                    className="flex items-center justify-between rounded-xl px-4 py-3"
+                    style={{ background: COLORS.surfaceMuted }}
+                  >
                     <div>
-                      <div className="text-xs text-gray-500">ab</div>
-                      <div className="text-2xl font-bold text-gray-900">
-                        {form.price || '0'} {form.currency || 'EUR'}
-                      </div>
+                      <div className="text-sm font-semibold" style={{ color: COLORS.navy }}>Popular</div>
+                      <div className="text-xs" style={{ color: COLORS.textMuted }}>Badge im Package</div>
                     </div>
-                    <span className="text-xs text-gray-500">{form.available_spots || '0'} Plaetze</span>
+                    <Toggle
+                      checked={form.popular}
+                      onChange={(value) => updateField('popular', value)}
+                    />
+                  </div>
+                  <div
+                    className="flex items-center justify-between rounded-xl px-4 py-3"
+                    style={{ background: COLORS.surfaceMuted }}
+                  >
+                    <div>
+                      <div className="text-sm font-semibold" style={{ color: COLORS.navy }}>Aktiv</div>
+                      <div className="text-xs" style={{ color: COLORS.textMuted }}>Package ist sichtbar</div>
+                    </div>
+                    <Toggle
+                      checked={form.active}
+                      onChange={(value) => updateField('active', value)}
+                    />
                   </div>
                 </div>
-                {form.hotel_images && (
-                  <div className="grid grid-cols-3 gap-1 p-2 bg-gray-50">
-                    {form.hotel_images.split(/[,\n]/).filter(Boolean).slice(0, 3).map((img, idx) => (
-                      <div key={idx} className="text-[10px] text-gray-500 truncate">
-                        {img.trim()}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-          </div>
+              </SectionCard>
 
-          <div className="mt-6 flex gap-3">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
-            >
-              {saving ? 'Speichern...' : 'Speichern'}
-            </button>
-            <button
-              onClick={resetForm}
-              className="flex-1 bg-gray-100 py-2 rounded-lg hover:bg-gray-200"
-            >
-              Zurücksetzen
-            </button>
-          </div>
+              {/* Live Vorschau */}
+              <SectionCard title="Live Vorschau" icon={<Eye size={18} />}>
+                <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${COLORS.stroke}` }}>
+                  {form.badge_text || form.popular ? (
+                    <div
+                      className="text-white text-xs font-semibold px-4 py-2"
+                      style={{ background: COLORS.accent }}
+                    >
+                      {form.badge_text || 'Offizielles Hospitality-Package'}
+                    </div>
+                  ) : null}
+                  <div className="p-4">
+                    <div className="text-lg font-semibold" style={{ color: COLORS.navy }}>
+                      {form.title || 'Package Titel'}
+                    </div>
+                    <div className="text-sm mt-1" style={{ color: COLORS.textMuted }}>
+                      {form.hotel || 'Hotelname'} • {form.nights || '0'} Naechte
+                    </div>
+                    <div className="mt-4 flex items-end justify-between">
+                      <div>
+                        <div className="text-xs" style={{ color: COLORS.textMuted }}>ab</div>
+                        <div className="text-2xl font-bold" style={{ color: COLORS.navy }}>
+                          {form.price || '0'} {form.currency || 'EUR'}
+                        </div>
+                      </div>
+                      <span className="text-xs" style={{ color: COLORS.textMuted }}>{form.available_spots || '0'} Plaetze</span>
+                    </div>
+                  </div>
+                  {form.hotel_images && (
+                    <div className="grid grid-cols-3 gap-1 p-2" style={{ background: COLORS.surfaceMuted }}>
+                      {form.hotel_images.split(/[,\n]/).filter(Boolean).slice(0, 3).map((img, idx) => (
+                        <div key={idx} className="text-[10px] truncate" style={{ color: COLORS.textMuted }}>
+                          {img.trim()}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </SectionCard>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <Button variant="accent" className="flex-1" onClick={handleSave} disabled={saving}>
+                {saving ? <Spinner className="h-4 w-4" /> : <Save size={16} />}
+                {saving ? 'Speichern...' : 'Speichern'}
+              </Button>
+              <Button variant="secondary" className="flex-1" onClick={resetForm}>
+                <RotateCcw size={16} /> Zurücksetzen
+              </Button>
+            </div>
+          </SectionCard>
         </div>
       </div>
     </AdminShell>

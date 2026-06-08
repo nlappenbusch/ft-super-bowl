@@ -2,7 +2,28 @@
 
 import { useEffect, useRef, useState } from 'react';
 import AdminShell from '@/components/admin/AdminShell';
-import Image from 'next/image';
+import {
+  COLORS,
+  Card,
+  SectionCard,
+  PageHeader,
+  Button,
+  Field,
+  TextInput,
+  Badge,
+  EmptyState,
+  Spinner,
+} from '@/components/admin/ui';
+import {
+  MapPin,
+  Upload,
+  Trash2,
+  Image as ImageIcon,
+  Info,
+  CheckCircle2,
+  AlertTriangle,
+  Plus,
+} from 'lucide-react';
 
 interface PinIcon {
   id: string;
@@ -105,109 +126,118 @@ export default function AdminPinsPage() {
 
   return (
     <AdminShell title="Lageplan-Icons verwalten">
-      <div className="mb-6">
-        <p className="text-sm text-gray-500 max-w-xl">
-          Hier verwalten Sie die <strong>zentrale Icon-Bibliothek</strong> für Kartenmarkierungen. Laden Sie PNG-Icons hoch (z.B. Flugzeug, Hotel, Stadion) — diese können dann beim Erstellen von Lageplan-Pins in jedem Event ausgewählt werden.
-        </p>
-      </div>
+      <PageHeader
+        title="Lageplan-Icons verwalten"
+        description="Zentrale Icon-Bibliothek für Kartenmarkierungen. Laden Sie PNG-Icons hoch (z.B. Flugzeug, Hotel, Stadion) — diese können dann beim Erstellen von Lageplan-Pins in jedem Event ausgewählt werden."
+      />
+
+      {error && (
+        <div
+          className="mb-6 flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium"
+          style={{ color: COLORS.danger, background: '#fef2f2', border: '1px solid #fecaca' }}
+        >
+          <AlertTriangle size={16} /> {error}
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-[1.3fr_1fr] gap-6">
         {/* Icon list */}
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h2 className="text-base font-semibold text-gray-800 mb-4">Vorhandene Icons</h2>
-          {loading && <p className="text-gray-400 text-sm">Lädt...</p>}
-          {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+        <SectionCard
+          title="Vorhandene Icons"
+          icon={<MapPin size={18} />}
+          actions={loading ? <Spinner className="h-5 w-5" /> : undefined}
+        >
           <div className="space-y-3 max-h-[calc(100vh-20rem)] overflow-y-auto pr-1">
             {icons.length === 0 && !loading && (
-              <p className="text-gray-400 text-sm italic">Noch keine Icons vorhanden.</p>
+              <EmptyState
+                icon={<MapPin size={32} />}
+                title="Noch keine Icons vorhanden"
+                description="Erstellen Sie rechts ein neues Icon, um Ihre Icon-Bibliothek aufzubauen."
+              />
             )}
-            {icons.map((icon) => (
-              <button
-                key={icon.id}
-                onClick={() => setForm({ id: icon.id, name: icon.name, image: icon.image || null })}
-                className={`w-full text-left p-4 border rounded-xl transition flex items-center gap-4 ${
-                  form.id === icon.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-                }`}
-              >
-                <div className="w-14 h-14 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
-                  {icon.image ? (
-                    <img src={icon.image} alt={icon.name} className="w-10 h-10 object-contain" />
-                  ) : (
-                    <div className="text-2xl text-gray-300">📍</div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-gray-900 text-sm">{icon.name}</div>
-                  <div className="text-xs text-gray-400 mt-0.5 truncate font-mono">{icon.id}</div>
-                  {icon.image ? (
-                    <div className="text-xs text-green-600 mt-1">✓ Icon hochgeladen</div>
-                  ) : (
-                    <div className="text-xs text-amber-500 mt-1">⚠ Kein Icon-Bild</div>
-                  )}
-                </div>
-              </button>
-            ))}
+            {icons.map((icon) => {
+              const isActive = form.id === icon.id;
+              return (
+                <button
+                  key={icon.id}
+                  onClick={() => setForm({ id: icon.id, name: icon.name, image: icon.image || null })}
+                  className="w-full text-left p-4 rounded-xl transition flex items-center gap-4"
+                  style={{
+                    border: `1.5px solid ${isActive ? COLORS.navy : COLORS.stroke}`,
+                    background: isActive ? '#eef2f7' : '#fff',
+                  }}
+                >
+                  <div
+                    className="w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden shrink-0"
+                    style={{ border: `1px solid ${COLORS.stroke}`, background: COLORS.surfaceMuted }}
+                  >
+                    {icon.image ? (
+                      <img src={icon.image} alt={icon.name} className="w-10 h-10 object-contain" />
+                    ) : (
+                      <MapPin size={24} style={{ color: '#cbd5e1' }} />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm" style={{ color: COLORS.navy }}>{icon.name}</div>
+                    <div className="text-xs mt-0.5 truncate font-mono" style={{ color: '#9ca3af' }}>{icon.id}</div>
+                    <div className="mt-1.5">
+                      {icon.image ? (
+                        <Badge tone="ok"><CheckCircle2 size={12} /> Icon hochgeladen</Badge>
+                      ) : (
+                        <Badge tone="warn"><AlertTriangle size={12} /> Kein Icon-Bild</Badge>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        </div>
+        </SectionCard>
 
         {/* Icon editor */}
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-semibold">
-              {form.id ? 'Icon bearbeiten' : 'Neues Icon erstellen'}
-            </h2>
-            {form.id && (
-              <button
-                onClick={() => handleDelete(form.id!)}
-                className="text-sm text-red-500 hover:text-red-700 font-semibold"
-              >
-                Löschen
-              </button>
-            )}
-          </div>
-
+        <SectionCard
+          title={form.id ? 'Icon bearbeiten' : 'Neues Icon erstellen'}
+          icon={form.id ? <ImageIcon size={18} /> : <Plus size={18} />}
+          actions={
+            form.id ? (
+              <Button variant="danger" size="sm" onClick={() => handleDelete(form.id!)}>
+                <Trash2 size={14} /> Löschen
+              </Button>
+            ) : undefined
+          }
+        >
           <div className="space-y-4">
-            <div>
-              <label className="text-xs font-semibold text-gray-600 block mb-1">Icon-Name (Kategorie)</label>
-              <input
+            <Field label="Icon-Name (Kategorie)">
+              <TextInput
                 type="text"
                 value={form.name}
                 onChange={(e) => updateField('name', e.target.value)}
                 placeholder="z.B. Flughafen, Hotel, Stadion..."
-                className="w-full border rounded-lg px-3 py-2 text-sm"
               />
-            </div>
+            </Field>
 
             {/* Icon Upload */}
-            <div>
-              <label className="text-xs font-semibold text-gray-600 block mb-2">Icon-Bild (PNG empfohlen)</label>
-              
+            <Field label="Icon-Bild (PNG empfohlen)">
               {/* Preview */}
               <div className="mb-3 flex items-center gap-4">
-                <div className="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden">
+                <div
+                  className="w-20 h-20 rounded-xl flex items-center justify-center overflow-hidden"
+                  style={{ border: `2px dashed ${COLORS.stroke}`, background: COLORS.surfaceMuted }}
+                >
                   {form.image ? (
                     <img src={form.image} alt="Icon Vorschau" className="w-16 h-16 object-contain" />
                   ) : (
-                    <div className="text-gray-300 text-3xl">🖼</div>
+                    <ImageIcon size={28} style={{ color: '#cbd5e1' }} />
                   )}
                 </div>
                 <div className="flex flex-col gap-2">
-                  <button
-                    type="button"
-                    onClick={handleUploadClick}
-                    disabled={uploading}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition disabled:bg-gray-400"
-                  >
-                    {uploading ? 'Wird hochgeladen...' : '📁 PNG hochladen'}
-                  </button>
+                  <Button type="button" variant="accent" onClick={handleUploadClick} disabled={uploading}>
+                    {uploading ? <><Spinner className="h-4 w-4" /> Wird hochgeladen...</> : <><Upload size={16} /> PNG hochladen</>}
+                  </Button>
                   {form.image && (
-                    <button
-                      type="button"
-                      onClick={() => updateField('image', null)}
-                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition"
-                    >
+                    <Button type="button" variant="secondary" onClick={() => updateField('image', null)}>
                       Icon entfernen
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -221,42 +251,40 @@ export default function AdminPinsPage() {
               />
 
               {/* Or enter URL manually */}
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">Oder URL manuell eingeben:</label>
-                <input
+              <Field label="Oder URL manuell eingeben">
+                <TextInput
                   type="text"
                   value={form.image || ''}
                   onChange={(e) => updateField('image', e.target.value || null)}
                   placeholder="/uploads/pin-icons/airport.png"
-                  className="w-full border rounded-lg px-3 py-2 text-sm font-mono"
+                  className="font-mono"
                 />
-              </div>
-            </div>
+              </Field>
+            </Field>
 
             {/* Info box */}
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-xs text-blue-800 leading-relaxed">
-              <strong>💡 Hinweis:</strong> Icons erscheinen auf der Karte als weisses Symbol im blauen Kreis-Pin.
-              Empfehlung: <strong>transparente PNG-Icons</strong>, ca. 64×64 px oder grösser.
-              Wenn kein Icon hochgeladen wird, wird ein Platzhalter-Symbol verwendet.
+            <div
+              className="flex items-start gap-2 rounded-xl p-4 text-xs leading-relaxed"
+              style={{ color: COLORS.info, background: '#f0f7ff', border: '1px solid #dbeafe' }}
+            >
+              <Info size={16} className="mt-0.5 shrink-0" />
+              <span>
+                <strong>Hinweis:</strong> Icons erscheinen auf der Karte als weisses Symbol im blauen Kreis-Pin.
+                Empfehlung: <strong>transparente PNG-Icons</strong>, ca. 64×64 px oder grösser.
+                Wenn kein Icon hochgeladen wird, wird ein Platzhalter-Symbol verwendet.
+              </span>
             </div>
           </div>
 
           <div className="mt-6 flex gap-3">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 font-semibold text-sm transition"
-            >
-              {saving ? 'Speichern...' : form.id ? 'Änderungen speichern' : 'Icon erstellen'}
-            </button>
-            <button
-              onClick={resetForm}
-              className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-lg font-semibold text-sm transition"
-            >
+            <Button onClick={handleSave} disabled={saving} className="flex-1">
+              {saving ? <><Spinner className="h-4 w-4" /> Speichern...</> : form.id ? 'Änderungen speichern' : 'Icon erstellen'}
+            </Button>
+            <Button variant="secondary" onClick={resetForm}>
               Neu
-            </button>
+            </Button>
           </div>
-        </div>
+        </SectionCard>
       </div>
     </AdminShell>
   );
