@@ -327,6 +327,11 @@ export default function EventPageView({
   const firstParagraphHeading = buildFirstParagraphHeading(event);
   const firstParagraphText    = buildFirstParagraphText(event);
   const firstParagraphImages  = [event.first_paragraph_image_1, event.first_paragraph_image_2, event.first_paragraph_image_3].filter(Boolean) as string[];
+  // Fallback: wenn keine Absatz-Bilder gepflegt sind, ein vorhandenes Event-Bild nutzen (keine leere Spalte)
+  const aboutImages = (firstParagraphImages.length > 0
+    ? firstParagraphImages
+    : [event.ticket_image, event.hero_image].filter(Boolean) as string[]
+  ).slice(0, 2);
 
   const anchors = [
     hasLeistungen   && { label: 'Unsere Leistungen', href: '#unsere-leistungen' },
@@ -560,8 +565,11 @@ export default function EventPageView({
       {showAbout && (
         <section className="py-14 px-4 bg-white scroll-mt-40" id="leistungen">
           <div className="container mx-auto max-w-6xl">
-            <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-10 items-center">
-              <div>
+            <div className={`grid grid-cols-1 gap-10 md:items-center ${aboutImages.length > 0 ? 'md:grid-cols-[1.05fr_1fr]' : ''}`}>
+              <div className={aboutImages.length > 0 ? '' : 'mx-auto max-w-3xl text-center'}>
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-widest" style={{ background: '#eef3fb', color: '#18395a' }}>
+                  <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: '#d9531e' }} /> Überblick
+                </div>
                 <InlineEditable
                   editable={editable}
                   field="first_paragraph_heading"
@@ -583,11 +591,21 @@ export default function EventPageView({
                   className="text-base md:text-lg leading-relaxed text-gray-700"
                 />
               </div>
-              {firstParagraphImages.length > 0 && (
-                <div className="grid grid-cols-1 gap-3">
-                  {firstParagraphImages.slice(0, 2).map((imageUrl, index) => (
-                    <div key={`${imageUrl}-${index}`} className="relative h-52 rounded-xl overflow-hidden bg-gray-100">
-                      <Image src={imageUrl} alt={`${event.title || event.name || 'Event'} Bild ${index + 1}`} fill className="object-cover" />
+              {aboutImages.length > 0 && (
+                <div className={aboutImages.length > 1 ? 'grid grid-cols-1 gap-4' : ''}>
+                  {aboutImages.map((imageUrl, index) => (
+                    <div
+                      key={`${imageUrl}-${index}`}
+                      className={`group relative overflow-hidden rounded-2xl bg-gray-100 ${aboutImages.length > 1 ? 'h-56' : 'h-72 md:h-[420px]'}`}
+                      style={{ boxShadow: '0 18px 40px rgba(20,48,71,0.18)', border: '1px solid #e5e8ed' }}
+                    >
+                      <Image
+                        src={imageUrl}
+                        alt={`${event.title || event.name || 'Event'} Bild ${index + 1}`}
+                        fill
+                        className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                      <div className="pointer-events-none absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 60%, rgba(20,48,71,0.28))' }} />
                     </div>
                   ))}
                 </div>
