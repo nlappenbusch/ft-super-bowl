@@ -330,7 +330,7 @@ export default function EventPageView({
 
   const anchors = [
     hasLeistungen   && { label: 'Unsere Leistungen', href: '#unsere-leistungen' },
-    showAbout       && { label: 'Leistungen',    href: '#leistungen' },
+    showAbout       && { label: 'Überblick',     href: '#leistungen' },
     showSpielplan   && spielplan.length > 0 && { label: 'Spielplan',   href: '#spielplan'  },
     showWissenswertes && { label: 'Wissenswertes', href: '#wissenswertes' },
     showStadionplan && { label: 'Stadionplan',   href: '#stadionplan' },
@@ -505,7 +505,7 @@ export default function EventPageView({
 
       {/* ── UNSERE LEISTUNGEN ────────────────────────────────────────────────── */}
       {hasLeistungen && (
-        <section className="py-14 px-4 scroll-mt-40" id="unsere-leistungen" style={{ background: '#143047' }}>
+        <section className="py-14 px-4 scroll-mt-40" id="unsere-leistungen" style={BLUE_GLOW}>
           <div className="container mx-auto max-w-6xl">
             <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2">
               <div>
