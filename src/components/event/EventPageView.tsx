@@ -464,7 +464,6 @@ export default function EventPageView({
             style={{
               background: 'linear-gradient(180deg, #18395a 0%, #102538 100%)',
               boxShadow: '0 10px 28px rgba(8,20,33,0.35)',
-              backdropFilter: 'saturate(140%)',
             }}
           >
             <div className="mx-auto flex w-full max-w-6xl overflow-x-auto">
