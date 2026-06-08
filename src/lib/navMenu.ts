@@ -56,8 +56,8 @@ function isKultur(cat: string): boolean {
 export const FALLBACK_NAV: NavItem[] = [
   { type: 'link', label: 'Home', href: '/' },
   { type: 'link', label: 'Kalender', href: '/kalender' },
-  { type: 'link', label: 'Über uns', href: 'https://faltintravel.com/wir-ueber-uns/' },
-  { type: 'link', label: 'Kontakt', href: 'https://faltintravel.com/kontakt/' },
+  { type: 'link', label: 'Über uns', href: '/ueber-uns' },
+  { type: 'link', label: 'Kontakt', href: '/kontakt' },
 ];
 
 export async function buildNavMenu(): Promise<NavItem[]> {
@@ -127,8 +127,8 @@ export async function buildNavMenu(): Promise<NavItem[]> {
   if (sportCols.length) menu.push({ type: 'mega', label: 'Sportevents', key: 'sport', columns: sportCols });
   if (kulturCols.length) menu.push({ type: 'mega', label: 'Kulturevents', key: 'kultur', columns: kulturCols });
   menu.push({ type: 'link', label: 'Incentive', href: 'https://incentive-agentur.ch/', external: true });
-  menu.push({ type: 'link', label: 'Über uns', href: 'https://faltintravel.com/wir-ueber-uns/' });
-  menu.push({ type: 'link', label: 'Kontakt', href: 'https://faltintravel.com/kontakt/' });
+  menu.push({ type: 'link', label: 'Über uns', href: '/ueber-uns' });
+  menu.push({ type: 'link', label: 'Kontakt', href: '/kontakt' });
 
   // Featured-Event als Spotlight-Karte im passenden Mega-Menü (wie früher Super Bowl)
   const fe = events.find((e) => (e as { featured?: boolean }).featured);
