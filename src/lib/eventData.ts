@@ -73,6 +73,10 @@ export interface EventRecord {
   leistungen_title?: string | null;
   leistungen_image?: string | null;
   leistungen_items?: string[] | null;
+  show_ticket_categories?: boolean | null;
+  ticket_categories_title?: string | null;
+  ticket_categories_intro?: string | null;
+  ticket_categories?: Array<{ name: string; items: string[]; note?: string | null }> | null;
 }
 
 export interface SeriesRecord {

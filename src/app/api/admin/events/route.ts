@@ -52,7 +52,11 @@ export async function POST(request: Request) {
       show_leistungen: eventPayload.show_leistungen ?? false,
       leistungen_title: eventPayload.leistungen_title || null,
       leistungen_image: eventPayload.leistungen_image || null,
-      leistungen_items: eventPayload.leistungen_items || []
+      leistungen_items: eventPayload.leistungen_items || [],
+      show_ticket_categories: eventPayload.show_ticket_categories ?? false,
+      ticket_categories_title: eventPayload.ticket_categories_title || null,
+      ticket_categories_intro: eventPayload.ticket_categories_intro || null,
+      ticket_categories: eventPayload.ticket_categories || []
     });
 
     if (Array.isArray(faqs)) {

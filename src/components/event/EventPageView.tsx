@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createElement, useEffect, useRef } from 'react';
+import React, { createElement, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import PackageCard from '@/components/PackageCard';
@@ -108,6 +108,62 @@ function InlineEditable({
     },
   };
   return createElement(as, props, initial.current);
+}
+
+interface TicketCategory { name: string; items: string[]; note?: string | null }
+
+/** Tabs-Modul "Unsere Tickets" – Ticket-/Hospitality-Kategorien in Reitern. */
+function TicketCategories({
+  title, intro, categories, editable,
+}: { title: string; intro: string; categories: TicketCategory[]; editable: boolean }) {
+  const [active, setActive] = useState(0);
+  const idx = active < categories.length ? active : 0;
+  const cat = categories[idx];
+  return (
+    <div className="container mx-auto max-w-5xl">
+      <Editable editable={editable} target="ticket_categories" as="h2" className="mb-3 text-center text-3xl md:text-4xl font-extrabold leading-tight" style={{ color: '#143047' }}>
+        {title}
+      </Editable>
+      {intro && <p className="mx-auto mb-8 max-w-3xl text-center leading-relaxed text-gray-600">{intro}</p>}
+
+      {/* Tabs */}
+      <div className="mb-6 flex flex-wrap justify-center gap-2">
+        {categories.map((c, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => setActive(i)}
+            className="rounded-full px-4 py-2.5 text-sm font-bold transition-all"
+            style={{
+              background: i === idx ? '#143047' : '#eef2f7',
+              color: i === idx ? '#fff' : '#143047',
+              boxShadow: i === idx ? '0 6px 16px rgba(20,48,71,0.28)' : 'none',
+            }}
+          >
+            {c.name || `Kategorie ${i + 1}`}
+          </button>
+        ))}
+      </div>
+
+      {/* Panel */}
+      <div className="rounded-2xl bg-white p-6 md:p-8" style={{ border: '1px solid #e5e8ed', boxShadow: '0 12px 34px rgba(20,48,71,0.10)' }}>
+        <h3 className="mb-5 text-xl font-extrabold" style={{ color: '#143047' }}>{cat?.name}</h3>
+        <ul className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
+          {(cat?.items || []).map((it, i) => (
+            <li key={i} className="flex items-start gap-2.5 text-gray-700">
+              <svg className="mt-0.5 h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="#d9531e" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+              </svg>
+              <span>{it}</span>
+            </li>
+          ))}
+        </ul>
+        {cat?.note && (
+          <p className="mt-6 pt-5 text-sm leading-relaxed text-gray-600" style={{ borderTop: '1px solid #eef2f7' }}>{cat.note}</p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -246,6 +302,12 @@ export default function EventPageView({
   const leistungenImage = event.leistungen_image || '';
   const hasLeistungen = showLeistungen && (leistungenItems.length > 0 || !!leistungenImage);
 
+  const showTicketCats = event.show_ticket_categories ?? false;
+  const ticketCatsTitle = event.ticket_categories_title || 'Unsere Tickets';
+  const ticketCatsIntro = event.ticket_categories_intro || '';
+  const ticketCats = (event.ticket_categories || []).filter((c) => c && (c.name || (c.items || []).length));
+  const hasTicketCats = showTicketCats && ticketCats.length > 0;
+
   const eventDateRange = getEventDateRange(event.start_date, event.end_date);
   const bookingHref = event.base_url
     ? `${event.base_url.replace(/\/$/, '')}/booking?event=${encodeURIComponent(event.slug)}`
@@ -264,9 +326,29 @@ export default function EventPageView({
     showWissenswertes && { label: 'Wissenswertes', href: '#wissenswertes' },
     showStadionplan && { label: 'Stadionplan',   href: '#stadionplan' },
     hasLageplan     && { label: 'Lageplan',      href: '#lageplan'    },
+    hasTicketCats   && { label: 'Ticket-Kategorien', href: '#ticket-kategorien' },
     showPackages    && { label: 'Tickets',       href: '#tickets'     },
     showFaqs        && { label: 'FAQ',           href: '#faq'         },
   ].filter(Boolean) as { label: string; href: string }[];
+
+  // Scroll-Spy: aktiven Abschnitt in der Sticky-Nav hervorheben
+  const anchorKey = anchors.map((a) => a.href).join('|');
+  const [activeHash, setActiveHash] = useState('');
+  useEffect(() => {
+    const ids = anchorKey ? anchorKey.split('|').map((h) => h.slice(1)) : [];
+    const sections = ids.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
+    if (!sections.length) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const vis = entries.filter((e) => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (vis[0]) setActiveHash('#' + vis[0].target.id);
+      },
+      { rootMargin: '-150px 0px -55% 0px', threshold: [0, 0.25, 0.5, 1] }
+    );
+    sections.forEach((s) => obs.observe(s));
+    return () => obs.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anchorKey]);
 
   return (
     <div className="min-h-screen font-sans" style={{ fontFamily: "'Montserrat', 'Open Sans', system-ui, sans-serif" }}>
@@ -368,21 +450,46 @@ export default function EventPageView({
 
       {/* ── STICKY ANCHOR NAV ────────────────────────────────────────────────── */}
       {anchors.length > 0 && (
-        <nav
-          className="sticky z-40 overflow-x-auto"
-          style={{ top: 86, background: '#143047', borderBottom: '2px solid rgba(255,255,255,0.08)' }}
-        >
-          <div className="flex w-full max-w-6xl mx-auto">
-            {anchors.map((anchor, i) => (
-              <a
-                key={anchor.href}
-                href={anchor.href}
-                className="flex-1 text-center text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 px-4 py-5 transition-all whitespace-nowrap tracking-wide"
-                style={{ borderRight: i < anchors.length - 1 ? '1px solid rgba(255,255,255,0.12)' : 'none' }}
-              >
-                {anchor.label}
-              </a>
-            ))}
+        <nav className="sticky z-40" style={{ top: 86 }}>
+          <div
+            style={{
+              background: 'linear-gradient(180deg, #18395a 0%, #102538 100%)',
+              borderBottom: '1px solid rgba(255,255,255,0.10)',
+              boxShadow: '0 8px 24px rgba(8,20,33,0.28)',
+              backdropFilter: 'saturate(140%)',
+            }}
+          >
+            <div className="mx-auto flex w-full max-w-6xl overflow-x-auto">
+              {anchors.map((anchor) => {
+                const isActive = activeHash === anchor.href;
+                return (
+                  <a
+                    key={anchor.href}
+                    href={anchor.href}
+                    className={`group relative flex-1 whitespace-nowrap px-4 py-4 text-center text-sm font-semibold tracking-wide transition-colors ${
+                      isActive ? 'text-white' : 'text-white/65 hover:text-white'
+                    }`}
+                  >
+                    <span className="relative z-10">{anchor.label}</span>
+                    {/* Hover-Glow */}
+                    <span
+                      className="pointer-events-none absolute inset-1 rounded-lg bg-white/0 transition-all group-hover:bg-white/5"
+                      aria-hidden
+                    />
+                    {/* Aktiv-Unterstrich */}
+                    <span
+                      className="pointer-events-none absolute inset-x-3 bottom-1.5 h-[3px] rounded-full transition-all duration-300"
+                      style={{
+                        background: '#d9531e',
+                        opacity: isActive ? 1 : 0,
+                        transform: isActive ? 'scaleX(1)' : 'scaleX(0.4)',
+                      }}
+                      aria-hidden
+                    />
+                  </a>
+                );
+              })}
+            </div>
           </div>
         </nav>
       )}
@@ -621,6 +728,13 @@ export default function EventPageView({
               <LageplanMap pins={eventPins} pinIcons={pinIcons} geocodeQuery={geocodeQuery} venueLabel={venueLabel} />
             </div>
           </div>
+        </section>
+      )}
+
+      {/* ── UNSERE TICKETS (Kategorien-Tabs) ─────────────────────────────────── */}
+      {hasTicketCats && (
+        <section className="py-14 px-4 bg-white scroll-mt-40" id="ticket-kategorien">
+          <TicketCategories title={ticketCatsTitle} intro={ticketCatsIntro} categories={ticketCats} editable={editable} />
         </section>
       )}
 

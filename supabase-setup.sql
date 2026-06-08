@@ -388,6 +388,12 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS leistungen_title TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS leistungen_image TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS leistungen_items JSONB DEFAULT '[]'::jsonb;
 
+-- "Unsere Tickets" (Ticket-Kategorien in Reitern)
+ALTER TABLE events ADD COLUMN IF NOT EXISTS show_ticket_categories BOOLEAN DEFAULT false;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS ticket_categories_title TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS ticket_categories_intro TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS ticket_categories JSONB DEFAULT '[]'::jsonb;
+
 -- ============================================================================
 -- MIGRATION: RQ-Anfragenummern + CRM-Konversation (E-Mail-Thread)
 -- Idempotent – kann gefahrlos erneut ausgeführt werden.

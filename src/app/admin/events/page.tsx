@@ -97,6 +97,10 @@ interface EventFormState {
   leistungen_title: string;
   leistungen_image: string;
   leistungen_items: string[];
+  show_ticket_categories: boolean;
+  ticket_categories_title: string;
+  ticket_categories_intro: string;
+  ticket_categories: Array<{ name: string; items: string[]; note: string }>;
 }
 
 interface PinIconOption {
@@ -156,7 +160,11 @@ const emptyForm: EventFormState = {
   show_leistungen: false,
   leistungen_title: '',
   leistungen_image: '',
-  leistungen_items: []
+  leistungen_items: [],
+  show_ticket_categories: false,
+  ticket_categories_title: '',
+  ticket_categories_intro: '',
+  ticket_categories: []
 };
 
 function normalizeEventFormState(event?: Partial<EventFormState> | null): EventFormState {
@@ -214,7 +222,15 @@ function normalizeEventFormState(event?: Partial<EventFormState> | null): EventF
     show_leistungen: event?.show_leistungen ?? false,
     leistungen_title: event?.leistungen_title ?? '',
     leistungen_image: event?.leistungen_image ?? '',
-    leistungen_items: (event?.leistungen_items as string[] | undefined) ?? []
+    leistungen_items: (event?.leistungen_items as string[] | undefined) ?? [],
+    show_ticket_categories: event?.show_ticket_categories ?? false,
+    ticket_categories_title: event?.ticket_categories_title ?? '',
+    ticket_categories_intro: event?.ticket_categories_intro ?? '',
+    ticket_categories: ((event?.ticket_categories as any[] | undefined) ?? []).map((c: any) => ({
+      name: c?.name ?? '',
+      items: Array.isArray(c?.items) ? c.items : [],
+      note: c?.note ?? '',
+    }))
   };
 }
 
@@ -420,7 +436,13 @@ export default function AdminEventsPage() {
       show_leistungen: form.show_leistungen,
       leistungen_title: form.leistungen_title || null,
       leistungen_image: form.leistungen_image || null,
-      leistungen_items: form.leistungen_items.map((s) => s.trim()).filter(Boolean)
+      leistungen_items: form.leistungen_items.map((s) => s.trim()).filter(Boolean),
+      show_ticket_categories: form.show_ticket_categories,
+      ticket_categories_title: form.ticket_categories_title || null,
+      ticket_categories_intro: form.ticket_categories_intro || null,
+      ticket_categories: form.ticket_categories
+        .map((c) => ({ name: c.name.trim(), items: c.items.map((i) => i.trim()).filter(Boolean), note: c.note.trim() }))
+        .filter((c) => c.name || c.items.length)
     };
 
     const response = await fetch(`/api/admin/events${form.id ? `/${form.id}` : ''}`, {
@@ -506,6 +528,7 @@ export default function AdminEventsPage() {
       leistungen: 'ev-s-leistungen',
       leistungen_title: 'ev-f-leistungen_title',
       leistungen_items: 'ev-f-leistungen_items',
+      ticket_categories: 'ev-s-ticket-categories',
     };
     function onEdit(e: MessageEvent) {
       const d = e.data as { type?: string; target?: string };
@@ -924,7 +947,8 @@ export default function AdminEventsPage() {
                     { key: 'show_wissenswertes', value: form.show_wissenswertes, title: 'Wissenswertes', desc: 'Fakten & Akkordeon' },
                     { key: 'show_stadionplan', value: form.show_stadionplan, title: 'Stadionplan', desc: 'Stadion- / Hallenplan' },
                     { key: 'show_lageplan', value: form.show_lageplan, title: 'Lageplan', desc: 'Interaktive Karte (Pins)' },
-                    { key: 'show_leistungen', value: form.show_leistungen, title: 'Unsere Leistungen', desc: 'Leistungs-Liste mit Bild & CTA' }
+                    { key: 'show_leistungen', value: form.show_leistungen, title: 'Unsere Leistungen', desc: 'Leistungs-Liste mit Bild & CTA' },
+                    { key: 'show_ticket_categories', value: form.show_ticket_categories, title: 'Unsere Tickets', desc: 'Ticket-Kategorien in Reitern' }
                   ] as const).map((mod) => (
                     <div
                       key={mod.key}
@@ -1229,6 +1253,71 @@ export default function AdminEventsPage() {
                       placeholder="https://.../leistungen.jpg"
                       previewLabel="Leistungen Bild Vorschau"
                     />
+                  </div>
+                </SectionCard>
+              )}
+
+              {form.show_ticket_categories && (
+                <SectionCard
+                  icon={<Layers className="h-5 w-5" />}
+                  id="ev-s-ticket-categories"
+                  title="Unsere Tickets (Kategorien)"
+                  description="Ticket-/Hospitality-Kategorien als Reiter – jede mit Leistungs-Liste und optionalem Schlusstext."
+                >
+                  <div className="grid gap-4">
+                    <InputField
+                      label="Titel"
+                      value={form.ticket_categories_title}
+                      onChange={(event) => updateField('ticket_categories_title', event.target.value)}
+                      placeholder="Unsere Tickets"
+                    />
+                    <TextAreaField
+                      label="Einleitungstext (über den Reitern)"
+                      value={form.ticket_categories_intro}
+                      onChange={(event) => updateField('ticket_categories_intro', event.target.value)}
+                      rows={3}
+                      placeholder="Als Inhaber eines personalisierten Hospitality-Tickets ..."
+                    />
+
+                    <div className="space-y-4">
+                      {form.ticket_categories.length === 0 ? (
+                        <EmptyState icon={<Layers className="h-6 w-6" />} title="Noch keine Kategorien." description="Füge die erste Ticket-Kategorie hinzu." />
+                      ) : (
+                        form.ticket_categories.map((cat, index) => {
+                          const updateCat = (patch: Partial<{ name: string; items: string[]; note: string }>) => {
+                            const arr = [...form.ticket_categories];
+                            arr[index] = { ...arr[index], ...patch };
+                            updateField('ticket_categories', arr);
+                          };
+                          const removeCat = () => updateField('ticket_categories', form.ticket_categories.filter((_, i) => i !== index));
+                          const moveCat = (dir: 'up' | 'down') => {
+                            const j = dir === 'up' ? index - 1 : index + 1;
+                            if (j < 0 || j >= form.ticket_categories.length) return;
+                            const arr = [...form.ticket_categories];
+                            [arr[index], arr[j]] = [arr[j], arr[index]];
+                            updateField('ticket_categories', arr);
+                          };
+                          return (
+                            <div key={index} className="relative rounded-xl border p-4" style={{ borderColor: COLORS.stroke, background: '#fafbfc' }}>
+                              <div className="absolute right-3 top-3 flex gap-1">
+                                <button type="button" onClick={() => moveCat('up')} disabled={index === 0} className="rounded-lg p-1.5 hover:bg-gray-200 disabled:opacity-30"><ArrowUp className="h-3.5 w-3.5 text-gray-500" /></button>
+                                <button type="button" onClick={() => moveCat('down')} disabled={index === form.ticket_categories.length - 1} className="rounded-lg p-1.5 hover:bg-gray-200 disabled:opacity-30"><ArrowDown className="h-3.5 w-3.5 text-gray-500" /></button>
+                                <button type="button" onClick={removeCat} className="rounded-lg p-1.5 hover:bg-red-100"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button>
+                              </div>
+                              <div className="grid gap-3 pr-24">
+                                <InputField label={`Reiter-Name #${index + 1}`} value={cat.name} onChange={(e) => updateCat({ name: e.target.value })} placeholder={'z.B. «L’Orangerie»'} />
+                                <TextAreaField label="Leistungen (eine pro Zeile)" value={cat.items.join('\n')} onChange={(e) => updateCat({ items: e.target.value.split('\n') })} rows={7} placeholder={'Kategorie 1 Sitzplatz im Unterrang ...\nZutritt über einen separaten VIP-Eingang'} />
+                                <TextAreaField label="Schlusstext (optional)" value={cat.note} onChange={(e) => updateCat({ note: e.target.value })} rows={2} placeholder="Profitieren Sie von einem einmaligen Preis-/Leistungs-Verhältnis ..." />
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <Button type="button" variant="secondary" size="sm" onClick={() => updateField('ticket_categories', [...form.ticket_categories, { name: '', items: [], note: '' }])}>
+                      <Plus className="h-3.5 w-3.5" /> Kategorie hinzufügen
+                    </Button>
                   </div>
                 </SectionCard>
               )}
