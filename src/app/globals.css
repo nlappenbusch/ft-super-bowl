@@ -149,3 +149,8 @@ body {
   opacity: 0.5;
   font-style: italic;
 }
+
+/* eKomi-Bewertungswidget: Bewertungstext lesbar machen (war zu hellgrau) */
+.ekomi-widget-container .item_text {
+  color: #374151 !important;
+}
