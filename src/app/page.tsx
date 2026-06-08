@@ -6,7 +6,6 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, Compass, Handshake, ShieldCheck, Target } from 'lucide-react';
 import CategoryTile from '@/components/CategoryTile';
 import EventDiscoverCard, { type EventDiscoverCardData } from '@/components/EventDiscoverCard';
-import UspStrip from '@/components/UspStrip';
 import { generateOrganizationSchema } from '@/lib/schema';
 import { toCategorySlug } from '@/lib/category';
 import { getCategoryTileStyle } from '@/lib/categoryTileConfig';
@@ -176,7 +175,7 @@ export default function Home() {
       />
 
       {/* Hero Banner – hinter die Navbar gezogen */}
-      <section className="relative w-full overflow-hidden bg-[#0d1f33] -mt-[100px]">
+      <section className="relative w-full overflow-hidden bg-[#0d1f33]">
         <Image
           src="/Faltin Travel Header.jpg"
           alt="Faltin Travel – Sport- und Kulturevents"
@@ -207,7 +206,7 @@ export default function Home() {
         }
       `}</style>
 
-      <section id="kategorien" className="pt-8 pb-16 px-4 relative overflow-hidden -mt-32" style={{ backgroundImage: 'linear-gradient(180deg, transparent 0%, #143047 5%, #184a7b 100%)' }}>
+      <section id="kategorien" className="pt-12 pb-16 px-4 relative overflow-hidden" style={{ backgroundImage: 'linear-gradient(180deg, #143047 0%, #184a7b 100%)' }}>
         <div
           className="absolute inset-0"
           style={{
@@ -216,7 +215,6 @@ export default function Home() {
           }}
         />
         <div className="container mx-auto relative">
-          <UspStrip />
           <div className="text-center mb-10">
             <div className="text-xs uppercase tracking-[0.3em] text-blue-100/80">Faltin Travel</div>
             <h1
