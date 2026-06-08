@@ -384,6 +384,16 @@ export default function EventPageView({
     setDaysLeft(Math.ceil((d.getTime() - Date.now()) / 86400000));
   }, [event.start_date]);
 
+  // Lightbox für Content-Bilder (nur außerhalb des Edit-Modus)
+  const [lightbox, setLightbox] = useState<string | null>(null);
+  const openLightbox = editable ? undefined : (src: string) => () => setLightbox(src);
+
+  // Preis-Badge: günstigstes Package (falls vorhanden)
+  const pricedPackages = packages.filter((p) => typeof p.price === 'number' && (p.price as number) > 0);
+  const minPrice = pricedPackages.length ? Math.min(...pricedPackages.map((p) => p.price as number)) : null;
+  const priceCurrency = pricedPackages[0]?.currency || 'EUR';
+  const priceLabel = minPrice !== null ? `ab ${priceCurrency} ${minPrice.toLocaleString('de-CH')} p. P.` : null;
+
   return (
     <div className="flex min-h-screen flex-col font-sans" style={{ fontFamily: "'Montserrat', 'Open Sans', system-ui, sans-serif" }}>
       {/* ── HERO ─────────────────────────────────────────────────────────────── */}
@@ -473,7 +483,7 @@ export default function EventPageView({
             />
           </div>
 
-          <div className="mt-6">
+          <div className="mt-6 text-center">
             <a
               href={ctaHref}
               className="inline-flex items-center rounded-sm px-8 py-4 text-base md:text-lg font-bold text-white transition-all hover:opacity-90 hover:scale-[1.02] shadow-lg"
@@ -481,6 +491,9 @@ export default function EventPageView({
             >
               {heroCtaLabel}
             </a>
+            {priceLabel && (
+              <div className="mt-3 text-sm font-bold" style={{ color: '#f5c842' }}>{priceLabel}</div>
+            )}
           </div>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
@@ -620,7 +633,7 @@ export default function EventPageView({
               </div>
               {leistungenImage && (
                 <Editable editable={editable} target="leistungen_items" as="div" className="relative h-72 overflow-hidden rounded-xl bg-white/5 md:h-96">
-                  <Image src={leistungenImage} alt={event.leistungen_image_alt || leistungenTitle} title={event.leistungen_image_title || undefined} fill className="object-cover" />
+                  <Image src={leistungenImage} alt={event.leistungen_image_alt || leistungenTitle} title={event.leistungen_image_title || undefined} fill className={`object-cover ${editable ? '' : 'cursor-zoom-in'}`} onClick={openLightbox?.(leistungenImage)} />
                 </Editable>
               )}
             </div>
@@ -674,7 +687,8 @@ export default function EventPageView({
                         alt={img.alt || `${event.title || event.name || 'Event'} Bild ${index + 1}`}
                         title={img.title || undefined}
                         fill
-                        className="object-cover transition-transform duration-700 group-hover:scale-105"
+                        className={`object-cover transition-transform duration-700 group-hover:scale-105 ${editable ? '' : 'cursor-zoom-in'}`}
+                        onClick={openLightbox?.(img.url)}
                       />
                       <div className="pointer-events-none absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 60%, rgba(20,48,71,0.28))' }} />
                     </Editable>
@@ -782,7 +796,7 @@ export default function EventPageView({
               {stadionplanImage ? (
                 <Editable editable={editable} target="stadionplan" as="div" className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm flex justify-center items-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={stadionplanImage} alt={event.stadionplan_image_alt || stadionplanTitle} title={event.stadionplan_image_title || undefined} className="max-h-[500px] w-auto object-contain rounded-lg" />
+                  <img src={stadionplanImage} alt={event.stadionplan_image_alt || stadionplanTitle} title={event.stadionplan_image_title || undefined} className={`max-h-[500px] w-auto object-contain rounded-lg ${editable ? '' : 'cursor-zoom-in'}`} onClick={openLightbox?.(stadionplanImage)} />
                 </Editable>
               ) : (
                 <div className="flex aspect-video items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 text-gray-400 text-sm">Kein Plan-Bild hinterlegt</div>
@@ -953,13 +967,24 @@ export default function EventPageView({
         >
           <div className="flex items-center gap-3 px-4 py-2.5">
             <div className="min-w-0 flex-1">
-              {eventDateRange && <div className="truncate text-[11px] text-white/65">{eventDateRange}</div>}
+              {priceLabel
+                ? <div className="truncate text-[11px] font-semibold" style={{ color: '#f5c842' }}>{priceLabel}</div>
+                : eventDateRange && <div className="truncate text-[11px] text-white/65">{eventDateRange}</div>}
               <div className="truncate text-sm font-bold text-white">{event.name || event.title}</div>
             </div>
             <a href={ctaHref} className="shrink-0 rounded-lg px-4 py-2.5 text-sm font-bold text-white shadow-md" style={{ background: '#d9531e' }}>
               Jetzt anfragen
             </a>
           </div>
+        </div>
+      )}
+
+      {/* ── LIGHTBOX ──────────────────────────────────────────────────────────── */}
+      {lightbox && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/85 p-4" onClick={() => setLightbox(null)}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={lightbox} alt="" className="max-h-[92vh] max-w-[95vw] rounded-lg object-contain shadow-2xl" />
+          <button type="button" onClick={() => setLightbox(null)} className="absolute right-4 top-4 rounded-full bg-white/15 px-3 py-1.5 text-lg font-bold text-white hover:bg-white/25" aria-label="Schließen">✕</button>
         </div>
       )}
     </div>
