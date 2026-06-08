@@ -2,25 +2,17 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { Calendar, MapPin } from 'lucide-react';
+import { Calendar, MapPin, ArrowRight, Ticket } from 'lucide-react';
 import { getEventsBySeriesSlug, getSeriesBySlug } from '@/lib/eventData';
-import { toCategorySlug } from '@/lib/category';
 
 interface SeriesPageProps {
   params: Promise<{ series: string }>;
 }
 
 const reservedSlugs = new Set([
-  'admin',
-  'booking',
-  'events',
-  'embed',
-  'agb',
-  'shortcode-test',
-  'wordpress-preview',
-  'api',
-  'sitemap.xml',
-  'robots.txt'
+  'admin', 'booking', 'events', 'embed', 'agb',
+  'shortcode-test', 'wordpress-preview', 'api', 'kategorie',
+  'sitemap.xml', 'robots.txt', 'manifest.webmanifest',
 ]);
 
 function formatDate(value?: string | null) {
@@ -33,18 +25,16 @@ function formatDate(value?: string | null) {
 export async function generateMetadata({ params }: SeriesPageProps): Promise<Metadata> {
   const { series } = await params;
   if (reservedSlugs.has(series)) return {};
-
   const seriesData = await getSeriesBySlug(series);
   if (!seriesData) return {};
-
   return {
     title: seriesData.title,
-    description: seriesData.description || `Event-Serie ${seriesData.title}`,
+    description: seriesData.description || `Event-Serie ${seriesData.title} – Tickets, Hospitality & Reisepakete.`,
     openGraph: {
       title: seriesData.title,
       description: seriesData.description || undefined,
-      images: seriesData.hero_image ? [{ url: seriesData.hero_image }] : undefined
-    }
+      images: seriesData.hero_image ? [{ url: seriesData.hero_image }] : undefined,
+    },
   };
 }
 
@@ -56,83 +46,88 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
   if (!seriesData) return notFound();
 
   const events = await getEventsBySeriesSlug(series);
+  const upcoming = [...events].sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''));
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <section className="relative px-4 pt-8 pb-16 overflow-hidden">
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage:
-              'radial-gradient(circle at 20% 20%, rgba(241, 70, 36, 0.35), transparent 55%), radial-gradient(circle at 80% 10%, rgba(24, 74, 123, 0.6), transparent 50%)'
-          }}
-        />
-        {seriesData.hero_image && (
-          <div className="absolute inset-0 opacity-20">
-            <Image src={seriesData.hero_image} alt={seriesData.title} fill className="object-cover" />
+    <div className="min-h-screen" style={{ fontFamily: "'Montserrat','Open Sans',system-ui,sans-serif" }}>
+      {/* ── HERO ─────────────────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden" style={{ minHeight: 360 }}>
+        {seriesData.hero_image ? (
+          <div className="absolute inset-0">
+            <Image src={seriesData.hero_image} alt={seriesData.title} fill className="object-cover object-center" priority />
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(160deg, rgba(20,48,71,0.86), rgba(15,39,66,0.92))' }} />
           </div>
+        ) : (
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(160deg,#18395a 0%,#143047 100%)' }} />
         )}
-        <div className="container mx-auto relative z-10">
-          <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.3em] bg-white/10 px-4 py-2 rounded-full">
+
+        <div className="relative z-10 mx-auto max-w-6xl px-4 py-20">
+          <span
+            className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.25em] text-white"
+            style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.22)' }}
+          >
             {seriesData.category}
-          </div>
-          <h1 className="text-4xl md:text-6xl font-bold mt-6" style={{ fontFamily: 'var(--font-display)' }}>
-            {seriesData.title}
-          </h1>
+          </span>
+          <h1 className="mt-6 text-4xl md:text-6xl font-extrabold leading-tight text-white">{seriesData.title}</h1>
           {seriesData.description && (
-            <p className="text-lg md:text-xl text-white/80 max-w-3xl mt-4">
-              {seriesData.description}
-            </p>
+            <p className="mt-5 max-w-3xl text-lg md:text-xl leading-relaxed text-white/85">{seriesData.description}</p>
           )}
+          <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm font-semibold text-white/80">
+            <span className="inline-flex items-center gap-1.5"><Ticket className="h-4 w-4" style={{ color: '#f5c842' }} /> {events.length} {events.length === 1 ? 'Event' : 'Events'}</span>
+            <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4" style={{ color: '#f5c842' }} /> Hospitality & Reisepakete</span>
+          </div>
         </div>
       </section>
 
-      <section className="bg-white text-gray-900 py-14 px-4">
-        <div className="container mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
+      {/* ── EVENTS ───────────────────────────────────────────────────────── */}
+      <section className="bg-white px-4 py-16">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-10 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div className="text-xs uppercase tracking-[0.3em] text-gray-400">Eventauswahl</div>
-              <h2 className="text-3xl md:text-4xl font-bold mt-3" style={{ fontFamily: 'var(--font-display)' }}>
-                Events in dieser Serie
-              </h2>
-              <p className="text-gray-600 mt-2">Wählen Sie ein Event aus und sehen Sie die Packages.</p>
+              <h2 className="mt-2 text-3xl md:text-4xl font-extrabold" style={{ color: '#143047' }}>Events in dieser Serie</h2>
+              <p className="mt-2 text-gray-600">Wählen Sie ein Event und entdecken Sie Tickets, Hospitality-Kategorien und Packages.</p>
             </div>
-            <div className="text-sm text-gray-500">{events.length} Events</div>
           </div>
 
-          {events.length === 0 ? (
-            <p className="text-center text-gray-500">Noch keine Events hinterlegt.</p>
+          {upcoming.length === 0 ? (
+            <div className="rounded-2xl border border-dashed py-16 text-center text-gray-500" style={{ borderColor: '#e5e8ed' }}>
+              Aktuell sind keine Events hinterlegt – melden Sie sich für eine individuelle Anfrage.
+            </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {events.map((event) => {
+              {upcoming.map((event) => {
                 const dateLabel = formatDate(event.start_date);
-                const locationLabel = [event.location_city, event.location_region, event.location_country]
-                  .filter(Boolean)
-                  .join(', ');
-
+                const locationLabel = [event.location_city, event.location_region, event.location_country].filter(Boolean).join(', ');
+                const img = event.hero_image || event.ticket_image || seriesData.hero_image || '';
                 return (
                   <Link
                     key={event.id}
-                    href={`/events/${event.slug}`}
-                    className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-md transition hover:-translate-y-1 hover:shadow-xl"
+                    href={`/${series}/${event.slug}`}
+                    className="group flex flex-col overflow-hidden rounded-2xl bg-white transition-all hover:-translate-y-1 hover:shadow-xl"
+                    style={{ border: '1px solid #e5e8ed', boxShadow: '0 2px 10px rgba(20,48,71,0.06)' }}
                   >
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition" style={{ background: 'linear-gradient(135deg, rgba(24,74,123,0.08), rgba(241,70,36,0.08))' }} />
-                    <div className="relative p-6">
-                      <div className="text-xs uppercase tracking-[0.2em] text-gray-400">{event.slug}</div>
-                      <div className="text-xl font-semibold text-gray-900 mt-3">{event.title || event.name}</div>
-                      <div className="mt-4 space-y-2 text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-blue-600" />
-                          <span>{dateLabel || 'Datum folgt'}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4 text-orange-500" />
-                          <span>{locationLabel || 'Ort folgt'}</span>
-                        </div>
+                    <div className="relative h-44 w-full overflow-hidden bg-gray-100">
+                      {img ? (
+                        <Image src={img} alt={event.title || event.name || 'Event'} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                      ) : (
+                        <div className="h-full w-full" style={{ background: 'linear-gradient(135deg,#18395a,#143047)' }} />
+                      )}
+                      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 55%, rgba(20,48,71,0.55))' }} />
+                      {dateLabel && (
+                        <span className="absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-bold text-white" style={{ background: '#d9531e' }}>
+                          {dateLabel}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-1 flex-col p-5">
+                      <div className="text-lg font-extrabold leading-snug" style={{ color: '#143047' }}>{event.title || event.name}</div>
+                      <div className="mt-3 space-y-1.5 text-sm text-gray-600">
+                        <div className="flex items-center gap-2"><Calendar className="h-4 w-4" style={{ color: '#18395a' }} /> {dateLabel || 'Termin folgt'}</div>
+                        <div className="flex items-center gap-2"><MapPin className="h-4 w-4" style={{ color: '#d9531e' }} /> {locationLabel || 'Ort folgt'}</div>
                       </div>
-                      <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-700">
-                        Zum Event
-                        <span>→</span>
+                      <div className="mt-5 inline-flex items-center gap-2 text-sm font-bold" style={{ color: '#d9531e' }}>
+                        Zum Event <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                       </div>
                     </div>
                   </Link>
@@ -140,7 +135,27 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
               })}
             </div>
           )}
+
+          {/* SEO / Info text */}
+          {seriesData.description && (
+            <div className="mt-16 rounded-2xl p-8" style={{ background: '#f5f7fa', border: '1px solid #e5e8ed' }}>
+              <h3 className="text-xl font-extrabold" style={{ color: '#143047' }}>Über {seriesData.title}</h3>
+              <p className="mt-3 leading-relaxed text-gray-700">{seriesData.description}</p>
+            </div>
+          )}
         </div>
+      </section>
+
+      {/* ── CTA ──────────────────────────────────────────────────────────── */}
+      <section className="px-4 py-14 text-center" style={{ background: '#143047' }}>
+        <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-white/70">Kein passendes Event gefunden?</p>
+        <Link
+          href="/booking"
+          className="inline-flex items-center gap-2 rounded-sm px-8 py-4 text-base font-bold text-white shadow-lg transition-all hover:opacity-90 hover:scale-[1.02]"
+          style={{ background: '#d9531e' }}
+        >
+          Unverbindlich anfragen <ArrowRight className="h-5 w-5" />
+        </Link>
       </section>
     </div>
   );

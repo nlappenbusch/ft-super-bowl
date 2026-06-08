@@ -7,12 +7,12 @@ import {
 } from '@/lib/eventData';
 
 interface EventPageProps {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ series: string; event: string }>;
 }
 
 export async function generateMetadata({ params }: EventPageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const event = await getEventBySlug(slug);
+  const { event: eventSlug } = await params;
+  const event = await getEventBySlug(eventSlug);
   if (!event) return {};
   const title = event.title || event.name || 'Event';
   const description = event.description || `Tickets & Packages für ${event.name || event.slug}`;
@@ -23,23 +23,22 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
   };
 }
 
-/**
- * Alt-Route /events/<slug>. Leitet dauerhaft (308) auf den kanonischen
- * Pfad /<serie>/<event> um. Events ohne Serie werden hier weiterhin gerendert.
- */
-export default async function LegacyEventPage({ params }: EventPageProps) {
-  const { slug } = await params;
-  const event = await getEventBySlug(slug);
+export default async function EventUnderSeriesPage({ params }: EventPageProps) {
+  const { series: seriesSlug, event: eventSlug } = await params;
+  const event = await getEventBySlug(eventSlug);
   if (!event) return notFound();
 
   const series = event.series_id ? await getSeriesById(event.series_id) : null;
-  if (series?.slug) {
-    permanentRedirect(`/${series.slug}/${event.slug}`);
+
+  // Falls die URL-Serie nicht zur tatsächlichen Serie des Events passt → auf
+  // den kanonischen Pfad umleiten (bzw. /events/<slug>, wenn keine Serie).
+  if ((series?.slug || '') !== seriesSlug) {
+    permanentRedirect(series?.slug ? `/${series.slug}/${event.slug}` : `/events/${event.slug}`);
   }
 
-  // Fallback: Event ohne Serie -> hier rendern (kein kanonischer Serien-Pfad)
-  const packages = await getPackagesByEventSlug(slug);
-  const faqs = await getEventFaqs(slug);
+  const packages = await getPackagesByEventSlug(eventSlug);
+  const faqs = await getEventFaqs(eventSlug);
+
   const showLageplan = event.show_lageplan ?? false;
   const eventPins = (event.lageplan_pins || []) as Array<{ id: string; lat: number; lng: number }>;
   const pinIcons = showLageplan && eventPins.length > 0 ? await getPinIconsList() : [];

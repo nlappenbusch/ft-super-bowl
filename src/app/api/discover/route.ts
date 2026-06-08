@@ -54,7 +54,7 @@ export async function GET() {
         categorySlug: toCategorySlug(parentSeries.category || 'sonstiges'),
         dateLabel: formatMonthYear(event.start_date),
         location: [event.location_city, event.location_country].filter(Boolean).join(', ') || 'Ort folgt',
-        href: `/events/${event.slug}`,
+        href: parentSeries.slug ? `/${parentSeries.slug}/${event.slug}` : `/events/${event.slug}`,
         fromPrice,
         currency: 'CHF'
       };

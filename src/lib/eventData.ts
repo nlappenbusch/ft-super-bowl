@@ -17,6 +17,14 @@ import {
 export const DEFAULT_EVENT_SLUG = process.env.DEFAULT_EVENT_SLUG || '';
 export const DEFAULT_PACKAGE_SLUG = process.env.DEFAULT_PACKAGE_SLUG || '';
 
+/**
+ * Kanonischer Event-Pfad: /<serie>/<event>. Fällt auf /events/<slug> zurück,
+ * wenn keine Serie zugeordnet ist (diese URL leitet dann weiter/rendert).
+ */
+export function eventPath(eventSlug: string, seriesSlug?: string | null): string {
+  return seriesSlug ? `/${seriesSlug}/${eventSlug}` : `/events/${eventSlug}`;
+}
+
 export interface EventRecord {
   id: string;
   series_id?: string | null;
