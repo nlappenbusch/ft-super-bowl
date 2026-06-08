@@ -329,8 +329,8 @@ export default function EventPageView({
   const firstParagraphImages  = [event.first_paragraph_image_1, event.first_paragraph_image_2, event.first_paragraph_image_3].filter(Boolean) as string[];
 
   const anchors = [
-    showAbout       && { label: 'Leistungen',    href: '#leistungen' },
     hasLeistungen   && { label: 'Unsere Leistungen', href: '#unsere-leistungen' },
+    showAbout       && { label: 'Leistungen',    href: '#leistungen' },
     showSpielplan   && spielplan.length > 0 && { label: 'Spielplan',   href: '#spielplan'  },
     showWissenswertes && { label: 'Wissenswertes', href: '#wissenswertes' },
     showStadionplan && { label: 'Stadionplan',   href: '#stadionplan' },
@@ -503,47 +503,6 @@ export default function EventPageView({
         </nav>
       )}
 
-      {/* ── LEISTUNGEN / ABOUT ───────────────────────────────────────────────── */}
-      {showAbout && (
-        <section className="py-14 px-4 bg-white scroll-mt-40" id="leistungen">
-          <div className="container mx-auto max-w-6xl">
-            <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-10 items-center">
-              <div>
-                <InlineEditable
-                  editable={editable}
-                  field="first_paragraph_heading"
-                  singleLine
-                  value={event.first_paragraph_heading || ''}
-                  display={firstParagraphHeading}
-                  placeholder="Überschrift…"
-                  as="h2"
-                  className="text-3xl md:text-4xl font-extrabold mb-5 leading-tight"
-                  style={{ color: '#143047' }}
-                />
-                <InlineEditable
-                  editable={editable}
-                  field="first_paragraph_text"
-                  value={event.first_paragraph_text || ''}
-                  display={firstParagraphText}
-                  placeholder="Einleitungstext…"
-                  as="p"
-                  className="text-base md:text-lg leading-relaxed text-gray-700"
-                />
-              </div>
-              {firstParagraphImages.length > 0 && (
-                <div className="grid grid-cols-1 gap-3">
-                  {firstParagraphImages.slice(0, 2).map((imageUrl, index) => (
-                    <div key={`${imageUrl}-${index}`} className="relative h-52 rounded-xl overflow-hidden bg-gray-100">
-                      <Image src={imageUrl} alt={`${event.title || event.name || 'Event'} Bild ${index + 1}`} fill className="object-cover" />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* ── UNSERE LEISTUNGEN ────────────────────────────────────────────────── */}
       {hasLeistungen && (
         <section className="py-14 px-4 scroll-mt-40" id="unsere-leistungen" style={{ background: '#143047' }}>
@@ -592,6 +551,47 @@ export default function EventPageView({
               {leistungenImage && (
                 <div className="relative h-72 overflow-hidden rounded-xl bg-white/5 md:h-96">
                   <Image src={leistungenImage} alt={leistungenTitle} fill className="object-cover" />
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── LEISTUNGEN / ABOUT (Erster Absatz) ───────────────────────────────── */}
+      {showAbout && (
+        <section className="py-14 px-4 bg-white scroll-mt-40" id="leistungen">
+          <div className="container mx-auto max-w-6xl">
+            <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-10 items-center">
+              <div>
+                <InlineEditable
+                  editable={editable}
+                  field="first_paragraph_heading"
+                  singleLine
+                  value={event.first_paragraph_heading || ''}
+                  display={firstParagraphHeading}
+                  placeholder="Überschrift…"
+                  as="h2"
+                  className="text-3xl md:text-4xl font-extrabold mb-5 leading-tight"
+                  style={{ color: '#143047' }}
+                />
+                <InlineEditable
+                  editable={editable}
+                  field="first_paragraph_text"
+                  value={event.first_paragraph_text || ''}
+                  display={firstParagraphText}
+                  placeholder="Einleitungstext…"
+                  as="p"
+                  className="text-base md:text-lg leading-relaxed text-gray-700"
+                />
+              </div>
+              {firstParagraphImages.length > 0 && (
+                <div className="grid grid-cols-1 gap-3">
+                  {firstParagraphImages.slice(0, 2).map((imageUrl, index) => (
+                    <div key={`${imageUrl}-${index}`} className="relative h-52 rounded-xl overflow-hidden bg-gray-100">
+                      <Image src={imageUrl} alt={`${event.title || event.name || 'Event'} Bild ${index + 1}`} fill className="object-cover" />
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
