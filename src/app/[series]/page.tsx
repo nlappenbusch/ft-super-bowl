@@ -27,6 +27,21 @@ function formatDate(value?: string | null) {
   return new Intl.DateTimeFormat('de-CH', { day: '2-digit', month: 'long', year: 'numeric' }).format(date);
 }
 
+function formatDateRange(start?: string | null, end?: string | null) {
+  const s = start ? new Date(start) : null;
+  const e = end ? new Date(end) : null;
+  const ok = (d: Date | null) => !!d && !Number.isNaN(d.getTime());
+  if (ok(s) && ok(e)) {
+    const sameMonth = s!.getMonth() === e!.getMonth() && s!.getFullYear() === e!.getFullYear();
+    if (sameMonth) {
+      const my = new Intl.DateTimeFormat('de-CH', { month: 'long', year: 'numeric' }).format(s!);
+      return `${String(s!.getDate()).padStart(2, '0')}.–${String(e!.getDate()).padStart(2, '0')}. ${my}`;
+    }
+    return `${formatDate(start)} – ${formatDate(end)}`;
+  }
+  return formatDate(start || end);
+}
+
 export async function generateMetadata({ params }: SeriesPageProps): Promise<Metadata> {
   const { series } = await params;
   if (reservedSlugs.has(series)) return {};
@@ -169,19 +184,25 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
               Aktuell sind keine Events hinterlegt – melden Sie sich für eine individuelle Anfrage.
             </div>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className={`grid gap-7 ${upcoming.length === 1 ? 'max-w-xl sm:grid-cols-1' : upcoming.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
               {upcoming.map((event) => {
-                const dateLabel = formatDate(event.start_date);
+                const dateLabel = formatDateRange(event.start_date, event.end_date);
                 const locationLabel = [event.location_city, event.location_region, event.location_country].filter(Boolean).join(', ');
                 const img = event.hero_image || event.ticket_image || seriesData.hero_image || '';
+                const seg = event.url_segment || event.slug;
+                const grp = packageGroups.find((g) => g.eventSegment === seg);
+                const prices = grp ? grp.packages.map((p) => p.price).filter((p) => p > 0) : [];
+                const minPrice = prices.length ? Math.min(...prices) : 0;
+                const catCount = (event.ticket_categories || []).length;
+                const leistCount = (event.leistungen_items || []).length;
                 return (
                   <Link
                     key={event.id}
-                    href={`/${series}/${event.url_segment || event.slug}`}
+                    href={`/${series}/${seg}`}
                     className="group flex flex-col overflow-hidden rounded-2xl bg-white transition-all hover:-translate-y-1 hover:shadow-xl"
                     style={{ border: '1px solid #e5e8ed', boxShadow: '0 2px 10px rgba(20,48,71,0.06)' }}
                   >
-                    <div className="relative h-44 w-full overflow-hidden bg-gray-100">
+                    <div className="relative h-52 w-full overflow-hidden bg-gray-100">
                       {img ? (
                         <Image src={img} alt={event.title || event.name || 'Event'} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
                       ) : (
@@ -194,13 +215,29 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
                         </span>
                       )}
                     </div>
-                    <div className="flex flex-1 flex-col p-5">
-                      <div className="text-lg font-extrabold leading-snug" style={{ color: '#143047' }}>{event.title || event.name}</div>
-                      <div className="mt-3 space-y-1.5 text-sm text-gray-600">
-                        <div className="flex items-center gap-2"><Calendar className="h-4 w-4" style={{ color: '#18395a' }} /> {dateLabel || 'Termin folgt'}</div>
-                        <div className="flex items-center gap-2"><MapPin className="h-4 w-4" style={{ color: '#d9531e' }} /> {locationLabel || 'Ort folgt'}</div>
+                    <div className="flex flex-1 flex-col p-6">
+                      <div className="text-xl font-extrabold leading-snug" style={{ color: '#143047' }}>{event.title || event.name}</div>
+                      {event.description && (
+                        <p className="mt-2 text-sm leading-relaxed text-gray-600 line-clamp-2">{event.description}</p>
+                      )}
+                      <div className="mt-4 space-y-2 text-sm text-gray-600">
+                        <div className="flex items-center gap-2"><Calendar className="h-4 w-4 shrink-0" style={{ color: '#18395a' }} /> {dateLabel || 'Termin folgt'}</div>
+                        <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0" style={{ color: '#d9531e' }} /> {[event.venue, locationLabel].filter(Boolean).join(' · ') || 'Ort folgt'}</div>
                       </div>
-                      <div className="mt-5 inline-flex items-center gap-2 text-sm font-bold" style={{ color: '#d9531e' }}>
+                      {(minPrice > 0 || catCount > 0 || leistCount > 0) && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {minPrice > 0 && (
+                            <span className="rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: '#fff1ea', color: '#d9531e' }}>ab CHF {minPrice.toLocaleString('de-CH')}</span>
+                          )}
+                          {catCount > 0 && (
+                            <span className="rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: '#eef2f7', color: '#143047' }}>{catCount} Ticket-Kategorien</span>
+                          )}
+                          {leistCount > 0 && (
+                            <span className="rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: '#eef2f7', color: '#143047' }}>{leistCount} Leistungen</span>
+                          )}
+                        </div>
+                      )}
+                      <div className="mt-auto pt-5 inline-flex items-center gap-2 text-sm font-bold" style={{ color: '#d9531e' }}>
                         Zum Event <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                       </div>
                     </div>
