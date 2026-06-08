@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* WordPress Embedding Styles */
+.wordpress-embedded {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: white !important;
+}
+
+.wordpress-embed {
+  display: block;
+  width: 100%;
+}
+
+/* Faltin-like category columns */
+.ft-category-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 1024px) {
+  .ft-category-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.ft-category-column {
+  position: relative;
+  display: block;
+  border: none;
+  border-radius: 16px;
+  padding: 0;
+  box-shadow: none;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.ft-category-column::before {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 16px 16px 0 0;
+  background: var(--category-accent, #184a7b);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ft-category-column:hover {
+  transform: translateY(-6px);
+}
+
+.ft-category-column:hover::before {
+  opacity: 1;
+}

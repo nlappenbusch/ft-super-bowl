@@ -17,7 +17,8 @@ if (!defined('ABSPATH')) {
  * Shortcode: [superbowl_package]
  * Zeigt die Super Bowl Package Card mit Schema.org Daten
  */
-function superbowl_package_shortcode($atts) {
+function superbowl_package_shortcode($atts)
+{
     $atts = shortcode_atts(array(
         // WICHTIG: Next.js läuft auf separatem Server!
         'api_url' => 'https://superbowl.faltintravel.com/api/package', // Subdomain
@@ -34,7 +35,7 @@ function superbowl_package_shortcode($atts) {
         }
         $api_url = add_query_arg($query_args, $api_url);
     }
-    
+
     // Eindeutige ID für diesen Shortcode
     $unique_id = 'superbowl-package-' . uniqid();
 
@@ -56,12 +57,13 @@ function superbowl_package_shortcode($atts) {
             }
         }
     }
-    
+
     ob_start();
     if (!empty($html)) {
         echo $html;
-    } else {
-        ?>
+    }
+    else {
+?>
         <div id="<?php echo esc_attr($unique_id); ?>" class="superbowl-package-wrapper">
             <div style="text-align: center; padding: 40px;">
                 <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #184a7b; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
@@ -115,7 +117,8 @@ add_shortcode('superbowl_package', 'superbowl_package_shortcode');
  * Shortcode: [superbowl_package_advanced]
  * Zeigt die Advanced Package Card mit Personen-Auswahl
  */
-function superbowl_package_advanced_shortcode($atts) {
+function superbowl_package_advanced_shortcode($atts)
+{
     $atts = shortcode_atts(array(
         'api_url' => 'https://superbowl.faltintravel.com/api/package-advanced',
         'event' => '',
@@ -130,7 +133,7 @@ function superbowl_package_advanced_shortcode($atts) {
         }
         $api_url = add_query_arg($query_args, $api_url);
     }
-    
+
     $unique_id = 'superbowl-package-advanced-' . uniqid();
 
     // Server-side render für SEO
@@ -151,12 +154,13 @@ function superbowl_package_advanced_shortcode($atts) {
             }
         }
     }
-    
+
     ob_start();
     if (!empty($html)) {
         echo $html;
-    } else {
-        ?>
+    }
+    else {
+?>
         <div id="<?php echo esc_attr($unique_id); ?>" class="superbowl-package-advanced-wrapper">
             <div style="text-align: center; padding: 40px;">
                 <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #184a7b; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
@@ -210,7 +214,8 @@ add_shortcode('superbowl_package_advanced', 'superbowl_package_advanced_shortcod
  * Shortcode: [superbowl_faqs]
  * Zeigt die FAQs mit Schema.org Daten
  */
-function superbowl_faqs_shortcode($atts) {
+function superbowl_faqs_shortcode($atts)
+{
     $atts = shortcode_atts(array(
         // WICHTIG: Next.js läuft auf separatem Server!
         'api_url' => 'https://superbowl.faltintravel.com/api/faqs', // Subdomain
@@ -222,7 +227,7 @@ function superbowl_faqs_shortcode($atts) {
     if (!empty($atts['event'])) {
         $api_url = add_query_arg(array('event' => $atts['event']), $api_url);
     }
-    
+
     $unique_id = 'superbowl-faqs-' . uniqid();
 
     // Server-side render für SEO
@@ -243,12 +248,13 @@ function superbowl_faqs_shortcode($atts) {
             }
         }
     }
-    
+
     ob_start();
     if (!empty($html)) {
         echo $html;
-    } else {
-        ?>
+    }
+    else {
+?>
         <div id="<?php echo esc_attr($unique_id); ?>" class="superbowl-faqs-wrapper">
             <div style="text-align: center; padding: 40px;">
                 <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #184a7b; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
@@ -282,16 +288,17 @@ add_shortcode('superbowl_faqs', 'superbowl_faqs_shortcode');
  * Shortcode: [superbowl_embed]
  * Komplette Einbettung der /embed Route
  */
-function superbowl_embed_shortcode($atts) {
+function superbowl_embed_shortcode($atts)
+{
     $atts = shortcode_atts(array(
         // WICHTIG: Next.js läuft auf separatem Server!
         'url' => 'https://superbowl.faltintravel.com/embed', // Subdomain
         // ODER wenn auf Vercel: 'https://ihr-projekt.vercel.app/embed'
         'height' => '3000',
     ), $atts);
-    
+
     ob_start();
-    ?>
+?>
     <div class="superbowl-embed-container" style="width: 100%; overflow: hidden;">
         <iframe 
             src="<?php echo esc_url($atts['url']); ?>" 
@@ -321,18 +328,86 @@ function superbowl_embed_shortcode($atts) {
 add_shortcode('superbowl_embed', 'superbowl_embed_shortcode');
 
 /**
+ * Shortcode: [superbowl_anfrage]
+ * Bettet das "Unverbindlich anfragen"-Formular als iFrame ein.
+ *
+ * Beispiele:
+ *   [superbowl_anfrage]
+ *   [superbowl_anfrage event="super-bowl-2027" name="Super Bowl LXI 2027"]
+ *   [superbowl_anfrage url="https://superbowl.faltintravel.com/embed/anfrage" height="900"]
+ */
+function superbowl_anfrage_shortcode($atts)
+{
+    $atts = shortcode_atts(array(
+        // WICHTIG: Next.js läuft auf separatem Server!
+        'url' => 'https://superbowl.faltintravel.com/embed/anfrage', // Subdomain
+        // ODER wenn auf Vercel: 'https://ihr-projekt.vercel.app/embed/anfrage'
+        'event' => '',
+        'name' => '',
+        'height' => '880',
+    ), $atts);
+
+    // Event/Name als Query-Parameter anhängen
+    $url = $atts['url'];
+    $query_args = array();
+    if (!empty($atts['event'])) {
+        $query_args['event'] = $atts['event'];
+    }
+    if (!empty($atts['name'])) {
+        $query_args['name'] = $atts['name'];
+    }
+    if (!empty($query_args)) {
+        $url = add_query_arg($query_args, $url);
+    }
+
+    $unique_id = 'superbowl-anfrage-' . uniqid();
+
+    ob_start();
+?>
+    <div class="superbowl-anfrage-container" style="width: 100%; overflow: hidden;">
+        <iframe
+            src="<?php echo esc_url($url); ?>"
+            id="<?php echo esc_attr($unique_id); ?>"
+            title="Unverbindlich anfragen"
+            style="width: 100%; border: none; min-height: <?php echo esc_attr($atts['height']); ?>px; display: block; margin: 0; padding: 0;"
+            scrolling="no"
+            frameborder="0"
+        ></iframe>
+    </div>
+
+    <script>
+    (function() {
+        var iframeId = '<?php echo esc_js($unique_id); ?>';
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.frameHeight) {
+                var iframe = document.getElementById(iframeId);
+                if (iframe) {
+                    iframe.style.height = event.data.frameHeight + 'px';
+                }
+            }
+        });
+    })();
+    </script>
+    <?php
+    return ob_get_clean();
+}
+add_shortcode('superbowl_anfrage', 'superbowl_anfrage_shortcode');
+
+/**
  * Admin-Hinweise für einfache Verwendung
  */
-function superbowl_admin_notice() {
+function superbowl_admin_notice()
+{
     $screen = get_current_screen();
     if ($screen->base === 'post' || $screen->base === 'page') {
-        ?>
+?>
         <div class="notice notice-info is-dismissible">
             <p><strong>Super Bowl Shortcodes verfügbar:</strong></p>
             <ul style="list-style: disc; margin-left: 20px;">
                 <li><code>[superbowl_package]</code> - Package Card (Einfach)</li>
                 <li><code>[superbowl_package_advanced]</code> - Package Card mit Personen-Auswahl ⭐</li>
                 <li><code>[superbowl_faqs]</code> - Zeigt die FAQs</li>
+                <li><code>[superbowl_anfrage]</code> - Anfrage-Formular einbetten ✉️</li>
                 <li><code>[superbowl_embed]</code> - Komplette Seite einbetten</li>
             </ul>
         </div>

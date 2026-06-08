@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { deleteEvent, updateEvent } from '@/lib/contentStore';
+import { deleteEvent, updateEvent, getFaqs, saveFaqs } from '@/lib/contentStore';
+import { randomUUID } from 'crypto';
 
 export async function PUT(
   request: Request,
@@ -9,12 +10,27 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    const updated = updateEvent(id, body);
+    const { faqs, ...eventPayload } = body;
+
+    const updated = updateEvent(id, eventPayload);
     if (!updated) {
       return NextResponse.json(
         { success: false, error: 'Event nicht gefunden' },
         { status: 404 }
       );
+    }
+
+    if (Array.isArray(faqs)) {
+      const allFaqs = getFaqs();
+      const otherFaqs = allFaqs.filter((faq) => faq.event_id !== id);
+      const updatedFaqs = faqs.map((faq, idx) => ({
+        id: faq.id || randomUUID(),
+        event_id: id,
+        question: faq.question || '',
+        answer: faq.answer || '',
+        sort_order: idx + 1
+      }));
+      saveFaqs([...otherFaqs, ...updatedFaqs]);
     }
 
     return NextResponse.json({ success: true, data: updated });

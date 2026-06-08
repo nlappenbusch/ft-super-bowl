@@ -11,11 +11,15 @@ interface AdminShellProps {
 
 const navItems = [
   { href: '/admin', label: 'Buchungen' },
+  { href: '/admin/crm', label: '🗂 CRM' },
+  { href: '/admin/finanzen', label: '💶 Finanzen' },
   { href: '/admin/series', label: 'Serien' },
   { href: '/admin/categories', label: 'Kategorien SEO' },
   { href: '/admin/events', label: 'Events' },
   { href: '/admin/packages', label: 'Packages' },
-  { href: '/admin/faqs', label: 'FAQs' }
+  { href: '/admin/faqs', label: 'FAQs' },
+  { href: '/admin/pins', label: 'Lageplan-Icons' },
+  { href: '/admin/settings', label: '⚙️ Einstellungen' },
 ];
 
 export default function AdminShell({ title, children }: AdminShellProps) {

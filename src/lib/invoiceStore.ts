@@ -45,10 +45,11 @@ async function generateInvoiceNumberSupabase() {
 export async function createInvoiceRecord(
   bookingId: string,
   items: InvoiceItemInput[],
-  dueInDays: number = 14
+  dueInDays: number = 14,
+  notes: string = ''
 ) {
   if (!isSupabaseConfigured() || !supabase) {
-    return createInvoiceSqlite(bookingId, items, dueInDays);
+    return createInvoiceSqlite(bookingId, items, dueInDays, notes);
   }
 
   const invoiceNumber = await generateInvoiceNumberSupabase();
@@ -67,7 +68,7 @@ export async function createInvoiceRecord(
       total_amount: totalAmount,
       paid_amount: 0,
       status: 'open',
-      notes: ''
+      notes: notes || ''
     })
     .select('*')
     .single();

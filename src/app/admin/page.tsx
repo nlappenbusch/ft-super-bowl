@@ -44,6 +44,17 @@ export default function AdminDashboard() {
   const [showCreateInvoiceForm, setShowCreateInvoiceForm] = useState(false);
   const [invoiceItems, setInvoiceItems] = useState<Array<{description: string; quantity: number; unit_price: number}>>([]);
   const [invoiceDueDays, setInvoiceDueDays] = useState(14);
+  const [invoicePdfMeta, setInvoicePdfMeta] = useState({
+    event_name: '',
+    destination: '',
+    hotel_description: '',
+    ticket_details: [
+      'Inkl. Zutritt zum VIP-Bereich mit Catering & Getr\u00e4nken',
+      'Inkl. Faltin Travel Lanyard',
+      'Inkl. detaillierte Reiseinformation & Schweizer Reisegarantie',
+    ].join('\n'),
+    thank_you_text: '',
+  });
   const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'super-bowl-2027-admin';
 
   useEffect(() => {
@@ -142,6 +153,12 @@ export default function AdminDashboard() {
           unit_price: booking.total_price
         }
       ]);
+      // Pre-fill PDF meta from booking data
+      setInvoicePdfMeta(prev => ({
+        ...prev,
+        event_name: booking.event_slug || '',
+        hotel_description: booking.package_title || '',
+      }));
     }
     
     // Fetch existing invoices
@@ -190,6 +207,15 @@ export default function AdminDashboard() {
       total_price: item.quantity * item.unit_price
     }));
 
+    // Build notes JSON with PDF meta fields
+    const notesJson = JSON.stringify({
+      event_name: invoicePdfMeta.event_name,
+      destination: invoicePdfMeta.destination,
+      hotel_description: invoicePdfMeta.hotel_description,
+      ticket_details: invoicePdfMeta.ticket_details,
+      thank_you_text: invoicePdfMeta.thank_you_text,
+    });
+
     try {
       const response = await fetch('/api/invoices', {
         method: 'POST',
@@ -197,7 +223,8 @@ export default function AdminDashboard() {
         body: JSON.stringify({
           bookingId: invoiceBookingId,
           items,
-          dueInDays: invoiceDueDays
+          dueInDays: invoiceDueDays,
+          notes: notesJson,
         })
       });
 
@@ -221,67 +248,23 @@ export default function AdminDashboard() {
   };
 
   const addExtraNight = (position: 'before' | 'after') => {
-    const booking = bookings.find(b => b.id === invoiceBookingId);
-    const hotelName = booking ? `Hotel ${booking.package_title.includes('Beverly') ? 'Beverly Wilshire' : 'Loews Santa Monica'}` : 'Hotel';
-    
     const timing = position === 'before' ? 'VORAB' : 'VERLÄNGERUNG';
-    
-    // Prüfen ob bereits eine Zusatznacht dieser Art existiert
-    const existingIndex = invoiceItems.findIndex(item => 
+    const existingIndex = invoiceItems.findIndex(item =>
       item.description.toLowerCase().includes('zusatznacht') &&
       item.description.toLowerCase().includes(timing.toLowerCase())
     );
-    
     if (existingIndex !== -1) {
-      // Erhöhe die Quantity der existierenden Position
       const updated = [...invoiceItems];
-      const newQuantity = updated[existingIndex].quantity + 1;
-      
-      // Update description mit neuer Datumsrange
-      const startDate = new Date('2027-02-09'); // Fr. 09.02.2027
-      let dateInfo = '';
-      
-      if (position === 'before') {
-        const firstNight = new Date(startDate);
-        firstNight.setDate(firstNight.getDate() - newQuantity);
-        const lastNight = new Date(startDate);
-        lastNight.setDate(lastNight.getDate() - 1);
-        
-        const formatShort = (d: Date) => {
-          const days = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
-          return `${days[d.getDay()]}. ${d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' }).slice(0, 5)}`;
-        };
-        
-        dateInfo = `(${formatShort(firstNight)} - ${formatShort(lastNight)}.2027)`;
-      } else {
-        const firstNight = new Date('2027-02-11'); // Mo. 11.02.2027
-        const lastNight = new Date(firstNight);
-        lastNight.setDate(lastNight.getDate() + newQuantity);
-        
-        const formatShort = (d: Date) => {
-          const days = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
-          return `${days[d.getDay()]}. ${d.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' }).slice(0, 5)}`;
-        };
-        
-        dateInfo = `(${formatShort(firstNight)} - ${formatShort(lastNight)}.2027)`;
-      }
-      
-      updated[existingIndex] = { 
-        ...updated[existingIndex], 
-        quantity: newQuantity,
-        description: `Zusatznacht ${timing} ${hotelName} ${dateInfo}\nDoppelzimmer mit Frühstück`
+      updated[existingIndex] = {
+        ...updated[existingIndex],
+        quantity: updated[existingIndex].quantity + 1,
       };
       setInvoiceItems(updated);
     } else {
-      // Erstelle neue Position (1 Nacht)
-      const dateInfo = position === 'before' 
-        ? '(Do. 08.02. - Fr. 09.02.2027)' 
-        : '(Mo. 11.02. - Di. 12.02.2027)';
-      
-      setInvoiceItems([...invoiceItems, { 
-        description: `Zusatznacht ${timing} ${hotelName} ${dateInfo}\nDoppelzimmer mit Frühstück`, 
-        quantity: 1, 
-        unit_price: 500 
+      setInvoiceItems([...invoiceItems, {
+        description: `Zusatznacht ${timing}\nDoppelzimmer mit Frühstück`,
+        quantity: 1,
+        unit_price: 0
       }]);
     }
   };
@@ -412,7 +395,7 @@ export default function AdminDashboard() {
               <UserCircle className="w-12 h-12 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
-            <p className="text-gray-600">Super Bowl LXI Buchungsverwaltung</p>
+            <p className="text-gray-600">Buchungsverwaltung</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
@@ -458,7 +441,7 @@ export default function AdminDashboard() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Buchungsverwaltung</h1>
-              <p className="text-gray-600 mt-1">Super Bowl LXI - {filteredBookings.length} Anfragen</p>
+              <p className="text-gray-600 mt-1">{filteredBookings.length} Anfragen</p>
               <div className="flex flex-wrap gap-2 mt-4">
                 <Link
                   href="/admin"
@@ -758,7 +741,7 @@ export default function AdminDashboard() {
                           <textarea
                             value={item.description}
                             onChange={(e) => updateInvoiceItem(index, 'description', e.target.value)}
-                            placeholder="Beschreibung (z.B. Super Bowl Package)"
+                    placeholder="Beschreibung (z.B. Eventticket Package)"
                             className="w-full px-3 py-2 border rounded-lg text-sm"
                             rows={2}
                           />
@@ -838,6 +821,66 @@ export default function AdminDashboard() {
                       <option value="30">30 Tage</option>
                     </select>
                   </div>
+
+                  {/* PDF Meta Fields */}
+                  <details className="mb-4 rounded-xl border border-indigo-200 bg-indigo-50 overflow-hidden">
+                    <summary className="px-4 py-3 cursor-pointer font-semibold text-indigo-800 text-sm flex items-center gap-2 select-none">
+                      📄 PDF-Felder bearbeiten <span className="text-indigo-500 font-normal">(Veranstaltung, Destination, Details…)</span>
+                    </summary>
+                    <div className="px-4 pb-4 space-y-3 border-t border-indigo-200 pt-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-indigo-700 mb-1">Veranstaltung</label>
+                          <input
+                            value={invoicePdfMeta.event_name}
+                            onChange={e => setInvoicePdfMeta(p => ({ ...p, event_name: e.target.value }))}
+                            placeholder="z.B. French Open 2027"
+                            className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-indigo-700 mb-1">Destination</label>
+                          <input
+                            value={invoicePdfMeta.destination}
+                            onChange={e => setInvoicePdfMeta(p => ({ ...p, destination: e.target.value }))}
+                            placeholder="z.B. Frankreich – Paris"
+                            className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm bg-white"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-indigo-700 mb-1">Hotel / Package-Beschreibung</label>
+                        <input
+                          value={invoicePdfMeta.hotel_description}
+                          onChange={e => setInvoicePdfMeta(p => ({ ...p, hotel_description: e.target.value }))}
+                          placeholder="z.B. 5* Hotel Roland Garros"
+                          className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-indigo-700 mb-1">
+                          Leistungen / Inklusivleistungen <span className="font-normal text-indigo-500">(eine pro Zeile)</span>
+                        </label>
+                        <textarea
+                          value={invoicePdfMeta.ticket_details}
+                          onChange={e => setInvoicePdfMeta(p => ({ ...p, ticket_details: e.target.value }))}
+                          rows={5}
+                          placeholder="Inkl. VIP-Zugang&#10;Inkl. Catering & Getränke&#10;Inkl. Reiseinformation"
+                          className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm bg-white resize-none font-mono"
+                        />
+                        <p className="text-xs text-indigo-500 mt-1">Diese Punkte erscheinen als Liste auf der Rechnung</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-indigo-700 mb-1">Dankes-Text (Seite 2)</label>
+                        <input
+                          value={invoicePdfMeta.thank_you_text}
+                          onChange={e => setInvoicePdfMeta(p => ({ ...p, thank_you_text: e.target.value }))}
+                          placeholder="Leer = Standard-Text aus Einstellungen"
+                          className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm bg-white"
+                        />
+                      </div>
+                    </div>
+                  </details>
 
                   {/* Total Preview */}
                   <div className="bg-white p-4 rounded-lg border-2 border-blue-300 mb-4">

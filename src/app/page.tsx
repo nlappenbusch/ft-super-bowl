@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, Compass, Handshake, ShieldCheck, Target } from 'lucide-react';
 import CategoryTile from '@/components/CategoryTile';
 import EventDiscoverCard, { type EventDiscoverCardData } from '@/components/EventDiscoverCard';
+import UspStrip from '@/components/UspStrip';
 import { generateOrganizationSchema } from '@/lib/schema';
 import { toCategorySlug } from '@/lib/category';
 import { getCategoryTileStyle } from '@/lib/categoryTileConfig';
@@ -215,6 +216,7 @@ export default function Home() {
           }}
         />
         <div className="container mx-auto relative">
+          <UspStrip />
           <div className="text-center mb-10">
             <div className="text-xs uppercase tracking-[0.3em] text-blue-100/80">Faltin Travel</div>
             <h1

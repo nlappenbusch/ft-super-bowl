@@ -1,20 +1,20 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import type { BookingRequest, Traveler } from './supabase';
+import type { BookingRequest, BookingMessage, Traveler } from './supabase';
 
-// Database row type (travelers is JSON string in SQLite)
 interface BookingRow {
   id: string;
   created_at: string;
   updated_at: string;
+  request_number: string | null;
   package_id: string;
   package_title: string;
   start_date: string;
   number_of_persons: number;
   double_rooms: number;
   single_rooms: number;
-  travelers: string; // JSON string
+  travelers: string;
   email: string;
   phone: string;
   message: string;
@@ -23,7 +23,6 @@ interface BookingRow {
   notes: string;
 }
 
-// Ensure data directory exists
 const dataDir = path.join(process.cwd(), 'data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
@@ -32,16 +31,15 @@ if (!fs.existsSync(dataDir)) {
 const dbPath = path.join(dataDir, 'bookings.db');
 const db = new Database(dbPath);
 
-// Enable WAL mode for better performance
 db.pragma('journal_mode = WAL');
 
-// Initialize database schema
 export function initDatabase() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS booking_requests (
       id TEXT PRIMARY KEY,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      request_number TEXT,
       package_id TEXT NOT NULL,
       package_title TEXT NOT NULL,
       start_date TEXT NOT NULL,
@@ -81,12 +79,28 @@ export function initDatabase() {
       FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS expenses (
+      id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      expense_date TEXT NOT NULL,
+      event_slug TEXT DEFAULT '',
+      booking_id TEXT DEFAULT '',
+      category TEXT NOT NULL DEFAULT 'sonstiges',
+      description TEXT NOT NULL,
+      vendor TEXT DEFAULT '',
+      amount REAL NOT NULL DEFAULT 0,
+      notes TEXT DEFAULT ''
+    );
+
     CREATE INDEX IF NOT EXISTS idx_booking_requests_created_at ON booking_requests(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_booking_requests_status ON booking_requests(status);
     CREATE INDEX IF NOT EXISTS idx_booking_requests_email ON booking_requests(email);
     CREATE INDEX IF NOT EXISTS idx_invoices_booking_id ON invoices(booking_id);
     CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
     CREATE INDEX IF NOT EXISTS idx_invoices_invoice_number ON invoices(invoice_number);
+    CREATE INDEX IF NOT EXISTS idx_expenses_event_slug ON expenses(event_slug);
+    CREATE INDEX IF NOT EXISTS idx_expenses_booking_id ON expenses(booking_id);
+    CREATE INDEX IF NOT EXISTS idx_expenses_expense_date ON expenses(expense_date DESC);
 
     CREATE TRIGGER IF NOT EXISTS update_booking_requests_updated_at
     AFTER UPDATE ON booking_requests
@@ -94,34 +108,81 @@ export function initDatabase() {
     BEGIN
       UPDATE booking_requests SET updated_at = datetime('now') WHERE id = OLD.id;
     END;
+
+    -- Fortlaufende Zähler (z.B. RQ-Anfragenummer)
+    CREATE TABLE IF NOT EXISTS counters (
+      name TEXT PRIMARY KEY,
+      value INTEGER NOT NULL
+    );
+
+    -- E-Mail-Konversation pro Anfrage (CRM)
+    CREATE TABLE IF NOT EXISTS booking_messages (
+      id TEXT PRIMARY KEY,
+      booking_id TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      direction TEXT NOT NULL CHECK(direction IN ('out','in')),
+      from_email TEXT NOT NULL DEFAULT '',
+      to_email TEXT NOT NULL DEFAULT '',
+      subject TEXT NOT NULL DEFAULT '',
+      body TEXT NOT NULL DEFAULT '',
+      graph_message_id TEXT,
+      FOREIGN KEY (booking_id) REFERENCES booking_requests(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_booking_messages_booking_id ON booking_messages(booking_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_booking_messages_graph_id ON booking_messages(graph_message_id) WHERE graph_message_id IS NOT NULL;
   `);
+
+  // --- Migrationen für bestehende Installationen ---------------------------
+  // request_number nachträglich ergänzen (SQLite kennt kein "ADD COLUMN IF NOT EXISTS")
+  const cols = db.prepare(`PRAGMA table_info(booking_requests)`).all() as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === 'request_number')) {
+    db.exec(`ALTER TABLE booking_requests ADD COLUMN request_number TEXT`);
+  }
+
+  // RQ-Zähler initialisieren (Start bei 10000 → erste Nummer RQ-10001)
+  db.prepare(`INSERT OR IGNORE INTO counters (name, value) VALUES ('request_number', 10000)`).run();
 }
 
-// Initialize on import
 initDatabase();
 
-// Insert new booking
+/**
+ * Liefert die nächste fortlaufende Anfragenummer im Format "RQ-12345".
+ * Atomar via Transaktion (better-sqlite3 ist synchron/serialisiert).
+ */
+export function getNextRequestNumber(): string {
+  const tx = db.transaction(() => {
+    db.prepare(`UPDATE counters SET value = value + 1 WHERE name = 'request_number'`).run();
+    const row = db.prepare(`SELECT value FROM counters WHERE name = 'request_number'`).get() as { value: number };
+    return row.value;
+  });
+  const value = tx();
+  return `RQ-${value}`;
+}
+
 export function insertBooking(booking: Omit<BookingRequest, 'id' | 'created_at' | 'updated_at'>) {
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
-  
+
+  const requestNumber = (booking as { request_number?: string }).request_number || getNextRequestNumber();
+
   const stmt = db.prepare(`
     INSERT INTO booking_requests (
-      id, created_at, updated_at, package_id, package_title, start_date,
+      id, created_at, updated_at, request_number, package_id, package_title, start_date,
       number_of_persons, double_rooms, single_rooms, travelers,
       email, phone, message, status, total_price, notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   stmt.run(
-    id, now, now,
+    id, now, now, requestNumber,
     booking.package_id,
     booking.package_title,
     booking.start_date,
     booking.number_of_persons,
     booking.double_rooms,
     booking.single_rooms,
-    booking.travelers, // Already JSON string
+    booking.travelers,
     booking.email,
     booking.phone,
     booking.message,
@@ -130,49 +191,92 @@ export function insertBooking(booking: Omit<BookingRequest, 'id' | 'created_at' 
     booking.notes
   );
 
-  return { id, created_at: now, updated_at: now, ...booking };
+  return { id, created_at: now, updated_at: now, request_number: requestNumber, ...booking };
 }
 
-// Get all bookings
+// ==================== MESSAGE (CRM-Konversation) FUNCTIONS ====================
+
+interface MessageRow {
+  id: string;
+  booking_id: string;
+  created_at: string;
+  direction: 'out' | 'in';
+  from_email: string;
+  to_email: string;
+  subject: string;
+  body: string;
+  graph_message_id: string | null;
+}
+
+export function insertMessage(
+  msg: Omit<BookingMessage, 'id' | 'created_at'>
+): BookingMessage {
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  db.prepare(`
+    INSERT INTO booking_messages (id, booking_id, created_at, direction, from_email, to_email, subject, body, graph_message_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id, msg.booking_id, now, msg.direction,
+    msg.from_email, msg.to_email, msg.subject, msg.body,
+    msg.graph_message_id || null
+  );
+  return { id, created_at: now, ...msg };
+}
+
+export function getMessagesByBooking(bookingId: string): BookingMessage[] {
+  const rows = db
+    .prepare(`SELECT * FROM booking_messages WHERE booking_id = ? ORDER BY created_at ASC`)
+    .all(bookingId) as MessageRow[];
+  return rows as BookingMessage[];
+}
+
+export function findBookingByRequestNumber(requestNumber: string): BookingRequest | undefined {
+  const row = db
+    .prepare(`SELECT * FROM booking_requests WHERE request_number = ?`)
+    .get(requestNumber) as BookingRow | undefined;
+  if (!row) return undefined;
+  return { ...row, travelers: JSON.parse(row.travelers) as Traveler[] };
+}
+
+export function messageExistsByGraphId(graphId: string): boolean {
+  const row = db
+    .prepare(`SELECT 1 FROM booking_messages WHERE graph_message_id = ? LIMIT 1`)
+    .get(graphId);
+  return !!row;
+}
+
 export function getAllBookings(): BookingRequest[] {
   const stmt = db.prepare('SELECT * FROM booking_requests ORDER BY created_at DESC');
   const rows = stmt.all() as BookingRow[];
-  
-  // Parse travelers JSON for each booking
   return rows.map(row => ({
     ...row,
     travelers: JSON.parse(row.travelers) as Traveler[]
   }));
 }
 
-// Get booking by ID
 export function getBookingById(id: string): BookingRequest | undefined {
   const stmt = db.prepare('SELECT * FROM booking_requests WHERE id = ?');
   const row = stmt.get(id) as BookingRow | undefined;
-  
   if (!row) return undefined;
-  
   return {
     ...row,
     travelers: JSON.parse(row.travelers) as Traveler[]
   };
 }
 
-// Update booking status
 export function updateBookingStatus(id: string, status: BookingRequest['status']) {
   const stmt = db.prepare('UPDATE booking_requests SET status = ? WHERE id = ?');
   const result = stmt.run(status, id);
   return result.changes > 0;
 }
 
-// Update booking notes
 export function updateBookingNotes(id: string, notes: string) {
   const stmt = db.prepare('UPDATE booking_requests SET notes = ? WHERE id = ?');
   const result = stmt.run(notes, id);
   return result.changes > 0;
 }
 
-// Delete booking (optional)
 export function deleteBooking(id: string) {
   const stmt = db.prepare('DELETE FROM booking_requests WHERE id = ?');
   const result = stmt.run(id);
@@ -203,31 +307,28 @@ export interface InvoiceItem {
   total_price: number;
 }
 
-// Generate invoice number (format: RE-2027-0001)
 export function generateInvoiceNumber(): string {
   const year = new Date().getFullYear();
   const stmt = db.prepare(`
-    SELECT invoice_number FROM invoices 
-    WHERE invoice_number LIKE ? 
-    ORDER BY invoice_number DESC 
+    SELECT invoice_number FROM invoices
+    WHERE invoice_number LIKE ?
+    ORDER BY invoice_number DESC
     LIMIT 1
   `);
   const lastInvoice = stmt.get(`RE-${year}-%`) as { invoice_number: string } | undefined;
-  
   if (!lastInvoice) {
     return `RE-${year}-0001`;
   }
-  
   const lastNumber = parseInt(lastInvoice.invoice_number.split('-')[2]);
   const newNumber = (lastNumber + 1).toString().padStart(4, '0');
   return `RE-${year}-${newNumber}`;
 }
 
-// Create invoice
 export function createInvoice(
   bookingId: string,
   items: Omit<InvoiceItem, 'id' | 'invoice_id'>[],
-  dueInDays: number = 14
+  dueInDays: number = 14,
+  notes: string = ''
 ): Invoice {
   const invoiceId = crypto.randomUUID();
   const invoiceNumber = generateInvoiceNumber();
@@ -236,20 +337,18 @@ export function createInvoice(
   const dueDate = new Date(Date.now() + dueInDays * 24 * 60 * 60 * 1000).toISOString();
   const totalAmount = items.reduce((sum, item) => sum + item.total_price, 0);
 
-  // Insert invoice
   const invoiceStmt = db.prepare(`
     INSERT INTO invoices (
       id, invoice_number, booking_id, created_at, invoice_date, due_date,
       total_amount, paid_amount, status, notes
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  
+
   invoiceStmt.run(
     invoiceId, invoiceNumber, bookingId, now, invoiceDate, dueDate,
-    totalAmount, 0, 'open', ''
+    totalAmount, 0, 'open', notes || ''
   );
 
-  // Insert invoice items
   const itemStmt = db.prepare(`
     INSERT INTO invoice_items (id, invoice_id, description, quantity, unit_price, total_price)
     VALUES (?, ?, ?, ?, ?, ?)
@@ -276,45 +375,39 @@ export function createInvoice(
   };
 }
 
-// Get all invoices
 export function getAllInvoices(): Invoice[] {
   const stmt = db.prepare('SELECT * FROM invoices ORDER BY created_at DESC');
   return stmt.all() as Invoice[];
 }
 
-// Get invoice by ID
 export function getInvoiceById(id: string): Invoice | undefined {
   const stmt = db.prepare('SELECT * FROM invoices WHERE id = ?');
   return stmt.get(id) as Invoice | undefined;
 }
 
-// Get invoices by booking ID
 export function getInvoicesByBookingId(bookingId: string): Invoice[] {
   const stmt = db.prepare('SELECT * FROM invoices WHERE booking_id = ? ORDER BY created_at DESC');
   return stmt.all(bookingId) as Invoice[];
 }
 
-// Get invoice items
 export function getInvoiceItems(invoiceId: string): InvoiceItem[] {
   const stmt = db.prepare('SELECT * FROM invoice_items WHERE invoice_id = ?');
   return stmt.all(invoiceId) as InvoiceItem[];
 }
 
-// Update invoice status
 export function updateInvoiceStatus(id: string, status: Invoice['status']) {
   const stmt = db.prepare('UPDATE invoices SET status = ? WHERE id = ?');
   const result = stmt.run(status, id);
   return result.changes > 0;
 }
 
-// Record payment
 export function recordPayment(invoiceId: string, amount: number) {
   const invoice = getInvoiceById(invoiceId);
   if (!invoice) return false;
 
   const newPaidAmount = invoice.paid_amount + amount;
   let newStatus: Invoice['status'] = 'open';
-  
+
   if (newPaidAmount >= invoice.total_amount) {
     newStatus = 'paid';
   } else if (newPaidAmount > 0) {
@@ -323,6 +416,102 @@ export function recordPayment(invoiceId: string, amount: number) {
 
   const stmt = db.prepare('UPDATE invoices SET paid_amount = ?, status = ? WHERE id = ?');
   const result = stmt.run(newPaidAmount, newStatus, invoiceId);
+  return result.changes > 0;
+}
+
+// ==================== EXPENSE FUNCTIONS ====================
+
+export type ExpenseCategory =
+  | 'hotel'
+  | 'tickets'
+  | 'transfer'
+  | 'flug'
+  | 'catering'
+  | 'personal'
+  | 'marketing'
+  | 'gebuehren'
+  | 'sonstiges';
+
+export interface Expense {
+  id: string;
+  created_at: string;
+  expense_date: string;
+  event_slug: string;
+  booking_id: string;
+  category: ExpenseCategory | string;
+  description: string;
+  vendor: string;
+  amount: number;
+  notes: string;
+}
+
+export type ExpenseInput = Omit<Expense, 'id' | 'created_at'>;
+
+export function createExpense(input: Partial<ExpenseInput>): Expense {
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  const row: Expense = {
+    id,
+    created_at: now,
+    expense_date: input.expense_date || now,
+    event_slug: input.event_slug || '',
+    booking_id: input.booking_id || '',
+    category: input.category || 'sonstiges',
+    description: input.description || '',
+    vendor: input.vendor || '',
+    amount: Number(input.amount) || 0,
+    notes: input.notes || '',
+  };
+
+  const stmt = db.prepare(`
+    INSERT INTO expenses (
+      id, created_at, expense_date, event_slug, booking_id,
+      category, description, vendor, amount, notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  stmt.run(
+    row.id, row.created_at, row.expense_date, row.event_slug, row.booking_id,
+    row.category, row.description, row.vendor, row.amount, row.notes
+  );
+
+  return row;
+}
+
+export function getAllExpenses(filter?: { eventSlug?: string; bookingId?: string }): Expense[] {
+  if (filter?.bookingId) {
+    return db.prepare('SELECT * FROM expenses WHERE booking_id = ? ORDER BY expense_date DESC').all(filter.bookingId) as Expense[];
+  }
+  if (filter?.eventSlug) {
+    return db.prepare('SELECT * FROM expenses WHERE event_slug = ? ORDER BY expense_date DESC').all(filter.eventSlug) as Expense[];
+  }
+  return db.prepare('SELECT * FROM expenses ORDER BY expense_date DESC').all() as Expense[];
+}
+
+export function getExpenseById(id: string): Expense | undefined {
+  return db.prepare('SELECT * FROM expenses WHERE id = ?').get(id) as Expense | undefined;
+}
+
+export function updateExpense(id: string, updates: Partial<ExpenseInput>): boolean {
+  const existing = getExpenseById(id);
+  if (!existing) return false;
+  const merged = { ...existing, ...updates };
+  const stmt = db.prepare(`
+    UPDATE expenses SET
+      expense_date = ?, event_slug = ?, booking_id = ?,
+      category = ?, description = ?, vendor = ?, amount = ?, notes = ?
+    WHERE id = ?
+  `);
+  const result = stmt.run(
+    merged.expense_date, merged.event_slug, merged.booking_id,
+    merged.category, merged.description, merged.vendor, Number(merged.amount) || 0, merged.notes,
+    id
+  );
+  return result.changes > 0;
+}
+
+export function deleteExpense(id: string): boolean {
+  const result = db.prepare('DELETE FROM expenses WHERE id = ?').run(id);
   return result.changes > 0;
 }
 

@@ -1,10 +1,11 @@
 import { MetadataRoute } from 'next'
+import { siteConfig } from '@/lib/siteConfig'
  
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Faltin Travel - Super Bowl LXI 2027 Packages',
+    name: `Faltin Travel – ${siteConfig.name}`,
     short_name: 'Faltin Travel',
-    description: 'Offizielle Super Bowl LXI 2027 Packages inkl. Tickets, Hotel & VIP-Hospitality',
+    description: siteConfig.description,
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',

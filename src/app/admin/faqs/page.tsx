@@ -65,16 +65,24 @@ export default function AdminFaqsPage() {
       return;
     }
 
-    const mapped = (result.data || []).map((row: any) => ({
-      id: row.id,
-      event_id: row.event_id,
-      question: row.question || '',
-      answer: row.answer || '',
-      sort_order: row.sort_order?.toString() || '0'
-    }));
+    const sorted = (result.data || [])
+      .map((row: any) => ({
+        id: row.id,
+        event_id: row.event_id,
+        question: row.question || '',
+        answer: row.answer || '',
+        sort_order: row.sort_order?.toString() || '0'
+      }))
+      .sort((a: any, b: any) => Number(a.sort_order) - Number(b.sort_order));
 
-    setFaqs(mapped);
+    setFaqs(sorted);
     setLoading(false);
+
+    const maxOrder = sorted.reduce((max: number, faq: any) => {
+      const order = Number(faq.sort_order) || 0;
+      return order > max ? order : max;
+    }, -1);
+    setForm({ ...emptyForm, event_id: eventId, sort_order: String(maxOrder + 1) });
   };
 
   useEffect(() => {
@@ -91,11 +99,14 @@ export default function AdminFaqsPage() {
   };
 
   const resetForm = () => {
-    setForm({ ...emptyForm, event_id: selectedEvent || '' });
+    const maxOrder = faqs.reduce((max, faq) => {
+      const order = Number(faq.sort_order) || 0;
+      return order > max ? order : max;
+    }, -1);
+    setForm({ ...emptyForm, event_id: selectedEvent || '', sort_order: String(maxOrder + 1) });
   };
 
   const handleSave = async () => {
-
     if (!form.event_id || !form.question.trim() || !form.answer.trim()) {
       alert('Bitte Frage und Antwort ausfüllen.');
       return;
@@ -125,7 +136,6 @@ export default function AdminFaqsPage() {
     }
 
     await loadFaqs(form.event_id);
-    resetForm();
     setSaving(false);
   };
 
@@ -141,8 +151,48 @@ export default function AdminFaqsPage() {
     }
 
     await loadFaqs(selectedEvent);
-    resetForm();
   };
+
+  const handleMove = async (index: number, direction: number) => {
+    const newFaqs = [...faqs];
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= newFaqs.length) return;
+
+    const temp = newFaqs[index];
+    newFaqs[index] = newFaqs[targetIndex];
+    newFaqs[targetIndex] = temp;
+
+    const updatedFaqs = newFaqs.map((faq, idx) => ({
+      ...faq,
+      sort_order: String(idx)
+    }));
+
+    setFaqs(updatedFaqs);
+
+    try {
+      const response = await fetch('/api/admin/faqs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          faqs: updatedFaqs.map((faq) => ({
+            id: faq.id,
+            sort_order: Number(faq.sort_order)
+          }))
+        })
+      });
+      const result = await response.json();
+      if (!result.success) {
+        alert('Fehler beim Speichern der neuen Reihenfolge: ' + result.error);
+        loadFaqs(selectedEvent);
+      }
+    } catch (err) {
+      console.error('Fehler beim Sortieren:', err);
+      alert('Fehler beim Speichern der neuen Reihenfolge.');
+      loadFaqs(selectedEvent);
+    }
+  };
+
+  const isFiltered = Boolean(searchTerm.trim());
 
   return (
     <AdminShell title="FAQs verwalten">
@@ -157,7 +207,7 @@ export default function AdminFaqsPage() {
                   setSelectedEvent(event.target.value);
                   setForm((prev) => ({ ...prev, event_id: event.target.value }));
                 }}
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400"
               >
                 {events.map((event) => (
                   <option key={event.id} value={event.id}>
@@ -172,7 +222,7 @@ export default function AdminFaqsPage() {
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Frage oder Antwort"
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400"
               />
             </div>
           </div>
@@ -189,22 +239,55 @@ export default function AdminFaqsPage() {
                   .filter(Boolean)
                   .some((value) => value.toLowerCase().includes(term));
               })
-              .map((faq) => (
-              <button
-                key={faq.id}
-                onClick={() => setForm({ ...faq })}
-                className={`w-full text-left p-4 border rounded-lg transition ${
-                  form.id === faq.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-blue-300'
-                }`}
-              >
-                <div className="font-semibold text-gray-900">{faq.question}</div>
-                <div className="text-xs text-gray-500 mt-1">Sortierung: {faq.sort_order}</div>
-              </button>
-            ))}
+              .map((faq, index) => {
+                const isFirst = index === 0;
+                const isLast = index === faqs.length - 1;
+                return (
+                  <div
+                    key={faq.id}
+                    className={`flex border rounded-lg overflow-hidden transition ${
+                      form.id === faq.id
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-blue-300'
+                    }`}
+                  >
+                    <button
+                      onClick={() => setForm({ ...faq })}
+                      className="flex-1 text-left p-4 focus:outline-none"
+                    >
+                      <div className="font-semibold text-gray-900">{faq.question}</div>
+                      <div className="text-xs text-gray-500 mt-1">Sortierung: {faq.sort_order}</div>
+                    </button>
+                    <div className="flex flex-col border-l divide-y divide-gray-200 w-12 bg-gray-50">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMove(index, -1);
+                        }}
+                        disabled={isFirst || isFiltered}
+                        className="flex-1 flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                        title={isFiltered ? "Sortierung nur ohne Suchfilter möglich" : "Nach oben"}
+                      >
+                        ▲
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMove(index, 1);
+                        }}
+                        disabled={isLast || isFiltered}
+                        className="flex-1 flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                        title={isFiltered ? "Sortierung nur ohne Suchfilter möglich" : "Nach unten"}
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         </div>
+
 
         <div className="bg-white rounded-xl shadow-sm border p-6">
           <div className="flex items-center justify-between mb-4">
@@ -230,7 +313,7 @@ export default function AdminFaqsPage() {
                   <select
                     value={form.event_id}
                     onChange={(event) => updateField('event_id', event.target.value)}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400"
                   >
                     {events.map((event) => (
                       <option key={event.id} value={event.id}>
@@ -247,7 +330,7 @@ export default function AdminFaqsPage() {
                     onChange={(event) => updateField('question', event.target.value)}
                     rows={2}
                     placeholder="Wie kann ich bezahlen?"
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400"
                   />
                 </div>
 
@@ -258,7 +341,7 @@ export default function AdminFaqsPage() {
                     onChange={(event) => updateField('answer', event.target.value)}
                     rows={4}
                     placeholder="Antworttext fuer das Frontend"
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400"
                   />
                 </div>
 
@@ -268,7 +351,7 @@ export default function AdminFaqsPage() {
                     type="number"
                     value={form.sort_order}
                     onChange={(event) => updateField('sort_order', event.target.value)}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400"
                   />
                 </div>
               </div>

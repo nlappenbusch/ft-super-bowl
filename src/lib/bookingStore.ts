@@ -1,7 +1,32 @@
-import { insertBooking, getAllBookings, updateBookingStatus, updateBookingNotes, getBookingById } from './database';
-import type { Traveler } from './supabase';
+import {
+  insertBooking,
+  getAllBookings,
+  updateBookingStatus,
+  updateBookingNotes,
+  getBookingById,
+  getNextRequestNumber,
+  insertMessage,
+  getMessagesByBooking,
+  findBookingByRequestNumber as findBookingByRequestNumberSqlite,
+  messageExistsByGraphId,
+} from './database';
+import type { Traveler, BookingMessage } from './supabase';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { getEventBySlug, getPackageBySlug } from './eventData';
+
+/** Nächste fortlaufende Anfragenummer "RQ-12345" (DB-agnostisch). */
+async function nextRequestNumber(): Promise<string> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return getNextRequestNumber();
+  }
+  // Postgres-Sequenz via RPC (siehe supabase-setup.sql: next_request_number())
+  const { data, error } = await supabase.rpc('next_request_number');
+  if (error || !data) {
+    console.warn('[RQ] RPC next_request_number fehlgeschlagen, nutze Fallback:', error?.message);
+    return `RQ-${Date.now().toString().slice(-7)}`;
+  }
+  return String(data);
+}
 
 export interface BookingInput {
   eventSlug?: string | null;
@@ -44,6 +69,7 @@ export async function createBooking(input: BookingInput) {
     : null;
 
   const payload = {
+    request_number: await nextRequestNumber(),
     event_id: event?.id || null,
     event_slug: input.eventSlug || null,
     package_id: packageRecord?.id || null,
@@ -136,4 +162,61 @@ export async function getBooking(id: string) {
   }
 
   return data;
+}
+
+/* ─── CRM-Konversation (E-Mail-Verlauf pro Anfrage) ───────────────────── */
+
+export async function addMessage(
+  msg: Omit<BookingMessage, 'id' | 'created_at'>
+): Promise<BookingMessage> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return insertMessage(msg);
+  }
+  const { data, error } = await supabase
+    .from('booking_messages')
+    .insert(msg)
+    .select('*')
+    .single();
+  if (error) throw new Error(error.message);
+  return data as BookingMessage;
+}
+
+export async function listMessages(bookingId: string): Promise<BookingMessage[]> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return getMessagesByBooking(bookingId);
+  }
+  const { data, error } = await supabase
+    .from('booking_messages')
+    .select('*')
+    .eq('booking_id', bookingId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data || []) as BookingMessage[];
+}
+
+export async function findBookingByRequestNumber(requestNumber: string) {
+  if (!isSupabaseConfigured() || !supabase) {
+    return findBookingByRequestNumberSqlite(requestNumber);
+  }
+  const { data, error } = await supabase
+    .from('booking_requests')
+    .select('*')
+    .eq('request_number', requestNumber)
+    .limit(1)
+    .maybeSingle();
+  if (error) return undefined;
+  return data || undefined;
+}
+
+export async function graphMessageExists(graphId: string): Promise<boolean> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return messageExistsByGraphId(graphId);
+  }
+  const { data } = await supabase
+    .from('booking_messages')
+    .select('id')
+    .eq('graph_message_id', graphId)
+    .limit(1)
+    .maybeSingle();
+  return !!data;
 }

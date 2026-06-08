@@ -25,6 +25,35 @@ export interface ContentEventRecord {
   first_paragraph_image_2?: string | null;
   first_paragraph_image_3?: string | null;
   status?: 'active' | 'draft' | 'archived' | null;
+  show_about?: boolean | null;
+  show_packages?: boolean | null;
+  show_faqs?: boolean | null;
+  show_spielplan?: boolean | null;
+  spielplan?: Array<{
+    date: string;
+    session: string;
+    matchup: string;
+    round: string;
+  }> | null;
+  show_wissenswertes?: boolean | null;
+  wissenswertes_title?: string | null;
+  wissenswertes_text?: string | null;
+  wissenswertes_accordion_title?: string | null;
+  wissenswertes_accordion_text?: string | null;
+  show_stadionplan?: boolean | null;
+  stadionplan_title?: string | null;
+  stadionplan_venue_name?: string | null;
+  stadionplan_image?: string | null;
+  stadionplan_description?: string | null;
+  show_lageplan?: boolean | null;
+  lageplan_pins?: Array<{
+    id: string;
+    name: string;
+    lat: number;
+    lng: number;
+    icon_id: string;
+    label?: string | null;
+  }> | null;
 }
 
 export interface ContentPackageInclude {
@@ -72,6 +101,7 @@ export interface ContentPackageRecord {
   extension_nights?: string | null;
   badge_text?: string | null;
   includes?: ContentPackageInclude[] | null;
+  active?: boolean | null;
 }
 
 export interface ContentFaqRecord {
@@ -82,11 +112,28 @@ export interface ContentFaqRecord {
   sort_order?: number | null;
 }
 
+export interface ContentPinRecord {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  type: 'airport' | 'hotel' | 'stadium' | 'other';
+  label?: string | null;
+}
+
+export interface ContentPinIconRecord {
+  id: string;
+  name: string;
+  image?: string | null;
+}
+
 const dataDir = path.join(process.cwd(), 'data');
 const eventsPath = path.join(dataDir, 'events.json');
 const seriesPath = path.join(dataDir, 'series.json');
 const packagesPath = path.join(dataDir, 'packages.json');
 const faqsPath = path.join(dataDir, 'faqs.json');
+const pinsPath = path.join(dataDir, 'pins.json');
+const pinIconsPath = path.join(dataDir, 'pin-icons.json');
 
 function ensureDataDir() {
   if (!fs.existsSync(dataDir)) {
@@ -322,9 +369,9 @@ export function findPackageBySlug(eventId: string, slug: string): ContentPackage
   return getPackages().find((pkg) => pkg.event_id === eventId && pkg.slug === slug) || null;
 }
 
-export function findPackagesByEvent(eventId: string): ContentPackageRecord[] {
+export function findPackagesByEvent(eventId: string, activeOnly = true): ContentPackageRecord[] {
   return getPackages()
-    .filter((pkg) => pkg.event_id === eventId)
+    .filter((pkg) => pkg.event_id === eventId && (!activeOnly || pkg.active !== false))
     .sort((a, b) => (a.title || '').localeCompare(b.title || ''));
 }
 
@@ -446,5 +493,100 @@ export function deleteFaq(id: string): boolean {
   const filtered = faqs.filter((faq) => faq.id !== id);
   if (filtered.length === faqs.length) return false;
   saveFaqs(filtered);
+  return true;
+}
+
+export function reorderFaqs(updates: { id: string; sort_order: number }[]): boolean {
+  const faqs = getFaqs();
+  let changed = false;
+  updates.forEach((u) => {
+    const faq = faqs.find((f) => f.id === u.id);
+    if (faq) {
+      faq.sort_order = u.sort_order;
+      changed = true;
+    }
+  });
+  if (changed) {
+    saveFaqs(faqs);
+  }
+  return changed;
+}
+
+export function getPins(): ContentPinRecord[] {
+  return readJsonFile<ContentPinRecord[]>(pinsPath, []);
+}
+
+export function savePins(pins: ContentPinRecord[]) {
+  writeJsonFile(pinsPath, pins);
+}
+
+export function createPin(payload: Omit<ContentPinRecord, 'id'>): ContentPinRecord {
+  const pins = getPins();
+  const record: ContentPinRecord = { id: randomUUID(), ...payload };
+  pins.push(record);
+  savePins(pins);
+  return record;
+}
+
+export function updatePin(id: string, updates: Partial<ContentPinRecord>): ContentPinRecord | null {
+  const pins = getPins();
+  const index = pins.findIndex((p) => p.id === id);
+  if (index === -1) return null;
+  const updated = { ...pins[index], ...updates };
+  pins[index] = updated;
+  savePins(pins);
+  return updated;
+}
+
+export function deletePin(id: string): boolean {
+  const pins = getPins();
+  const filtered = pins.filter((p) => p.id !== id);
+  if (filtered.length === pins.length) return false;
+  savePins(filtered);
+  return true;
+}
+
+// ── Pin Icons (central icon library) ─────────────────────────────
+
+function seedPinIcons(): ContentPinIconRecord[] {
+  return [
+    { id: 'icon-airport', name: 'Flughafen', image: null },
+    { id: 'icon-hotel', name: 'Hotel', image: null },
+    { id: 'icon-stadium', name: 'Stadion / Spielort', image: null },
+    { id: 'icon-other', name: 'Sonstiges', image: null },
+  ];
+}
+
+export function getPinIcons(): ContentPinIconRecord[] {
+  return readJsonFile<ContentPinIconRecord[]>(pinIconsPath, seedPinIcons());
+}
+
+export function savePinIcons(icons: ContentPinIconRecord[]) {
+  writeJsonFile(pinIconsPath, icons);
+}
+
+export function createPinIcon(payload: Omit<ContentPinIconRecord, 'id'>): ContentPinIconRecord {
+  const icons = getPinIcons();
+  const record: ContentPinIconRecord = { id: randomUUID(), ...payload };
+  icons.push(record);
+  savePinIcons(icons);
+  return record;
+}
+
+export function updatePinIcon(id: string, updates: Partial<ContentPinIconRecord>): ContentPinIconRecord | null {
+  const icons = getPinIcons();
+  const index = icons.findIndex((ic) => ic.id === id);
+  if (index === -1) return null;
+  const updated = { ...icons[index], ...updates };
+  icons[index] = updated;
+  savePinIcons(icons);
+  return updated;
+}
+
+export function deletePinIcon(id: string): boolean {
+  const icons = getPinIcons();
+  const filtered = icons.filter((ic) => ic.id !== id);
+  if (filtered.length === icons.length) return false;
+  savePinIcons(filtered);
   return true;
 }

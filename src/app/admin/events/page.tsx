@@ -9,7 +9,11 @@ import {
   MapPin,
   PencilLine,
   Plus,
-  Search
+  Search,
+  Layers,
+  Trash2,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import AdminShell from '@/components/admin/AdminShell';
 import AdminImageField from '@/components/admin/AdminImageField';
@@ -37,6 +41,49 @@ interface EventFormState {
   first_paragraph_image_2: string;
   first_paragraph_image_3: string;
   status: 'active' | 'draft' | 'archived';
+  show_about: boolean;
+  show_packages: boolean;
+  show_faqs: boolean;
+  show_spielplan: boolean;
+  spielplan: Array<{
+    date: string;
+    session: string;
+    matchup: string;
+    round: string;
+  }>;
+  show_wissenswertes: boolean;
+  wissenswertes_title: string;
+  wissenswertes_text: string;
+  wissenswertes_accordion_title: string;
+  wissenswertes_accordion_text: string;
+  show_stadionplan: boolean;
+  stadionplan_title: string;
+  stadionplan_venue_name: string;
+  stadionplan_image: string;
+  stadionplan_description: string;
+  show_lageplan: boolean;
+  lageplan_pins: Array<{
+    id: string;
+    name: string;
+    lat: string;
+    lng: string;
+    icon_id: string;
+    label: string;
+  }>;
+  faqs: Array<{
+    id?: string;
+    event_id?: string;
+    question: string;
+    answer: string;
+    sort_order?: number;
+  }>;
+  brevo_list_id: string;
+}
+
+interface PinIconOption {
+  id: string;
+  name: string;
+  image?: string | null;
 }
 
 interface SeriesOption {
@@ -67,7 +114,26 @@ const emptyForm: EventFormState = {
   first_paragraph_image_1: '',
   first_paragraph_image_2: '',
   first_paragraph_image_3: '',
-  status: 'active'
+  status: 'active',
+  show_about: true,
+  show_packages: true,
+  show_faqs: true,
+  show_spielplan: false,
+  spielplan: [],
+  show_wissenswertes: false,
+  wissenswertes_title: '',
+  wissenswertes_text: '',
+  wissenswertes_accordion_title: '',
+  wissenswertes_accordion_text: '',
+  show_stadionplan: false,
+  stadionplan_title: '',
+  stadionplan_venue_name: '',
+  stadionplan_image: '',
+  stadionplan_description: '',
+  show_lageplan: false,
+  lageplan_pins: [],
+  faqs: [],
+  brevo_list_id: ''
 };
 
 function normalizeEventFormState(event?: Partial<EventFormState> | null): EventFormState {
@@ -95,7 +161,33 @@ function normalizeEventFormState(event?: Partial<EventFormState> | null): EventF
     first_paragraph_image_1: event?.first_paragraph_image_1 ?? '',
     first_paragraph_image_2: event?.first_paragraph_image_2 ?? '',
     first_paragraph_image_3: event?.first_paragraph_image_3 ?? '',
-    status: event?.status ?? 'active'
+    status: event?.status ?? 'active',
+    show_about: event?.show_about ?? true,
+    show_packages: event?.show_packages ?? true,
+    show_faqs: event?.show_faqs ?? true,
+    show_spielplan: event?.show_spielplan ?? false,
+    spielplan: event?.spielplan ?? [],
+    show_wissenswertes: event?.show_wissenswertes ?? false,
+    wissenswertes_title: event?.wissenswertes_title ?? '',
+    wissenswertes_text: event?.wissenswertes_text ?? '',
+    wissenswertes_accordion_title: event?.wissenswertes_accordion_title ?? '',
+    wissenswertes_accordion_text: event?.wissenswertes_accordion_text ?? '',
+    show_stadionplan: event?.show_stadionplan ?? false,
+    stadionplan_title: event?.stadionplan_title ?? '',
+    stadionplan_venue_name: event?.stadionplan_venue_name ?? '',
+    stadionplan_image: event?.stadionplan_image ?? '',
+    stadionplan_description: event?.stadionplan_description ?? '',
+    show_lageplan: event?.show_lageplan ?? false,
+    lageplan_pins: (event?.lageplan_pins as any[] ?? []).map((p: any) => ({
+      id: p.id ?? crypto.randomUUID?.() ?? String(Date.now()),
+      name: p.name ?? '',
+      lat: String(p.lat ?? ''),
+      lng: String(p.lng ?? ''),
+      icon_id: p.icon_id ?? '',
+      label: p.label ?? '',
+    })),
+    faqs: event?.faqs ?? [],
+    brevo_list_id: (event as any)?.brevo_list_id ?? ''
   };
 }
 
@@ -228,6 +320,19 @@ export default function AdminEventsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [pinIcons, setPinIcons] = useState<PinIconOption[]>([]);
+
+  const loadPinIcons = async () => {
+    try {
+      const response = await fetch('/api/admin/pin-icons');
+      const result = await response.json();
+      if (result.success) {
+        setPinIcons(result.data || []);
+      }
+    } catch (err) {
+      console.error('Fehler beim Laden der Pin-Icons:', err);
+    }
+  };
 
   const loadEvents = async () => {
     setLoading(true);
@@ -261,15 +366,38 @@ export default function AdminEventsPage() {
   useEffect(() => {
     loadEvents();
     loadSeries();
+    loadPinIcons();
   }, []);
 
-  const updateField = (field: keyof EventFormState, value: string) => {
+  const updateField = <K extends keyof EventFormState>(field: K, value: EventFormState[K]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const resetForm = () => {
     setForm(normalizeEventFormState());
     setError(null);
+  };
+
+  const handleSelectEvent = async (event: EventFormState) => {
+    setForm(normalizeEventFormState(event));
+    if (event.id) {
+      try {
+        const response = await fetch(`/api/admin/faqs?eventId=${event.id}`);
+        const result = await response.json();
+        if (result.success) {
+          setForm((prev) => {
+            // Check if we are still editing the same event
+            if (prev.id !== event.id) return prev;
+            return {
+              ...prev,
+              faqs: result.data || []
+            };
+          });
+        }
+      } catch (err) {
+        console.error('Fehler beim Laden der FAQs:', err);
+      }
+    }
   };
 
   const handleSave = async () => {
@@ -302,7 +430,33 @@ export default function AdminEventsPage() {
       first_paragraph_image_1: form.first_paragraph_image_1 || null,
       first_paragraph_image_2: form.first_paragraph_image_2 || null,
       first_paragraph_image_3: form.first_paragraph_image_3 || null,
-      status: form.status
+      status: form.status,
+      show_about: form.show_about,
+      show_packages: form.show_packages,
+      show_faqs: form.show_faqs,
+      show_spielplan: form.show_spielplan,
+      spielplan: form.spielplan,
+      show_wissenswertes: form.show_wissenswertes,
+      wissenswertes_title: form.wissenswertes_title || null,
+      wissenswertes_text: form.wissenswertes_text || null,
+      wissenswertes_accordion_title: form.wissenswertes_accordion_title || null,
+      wissenswertes_accordion_text: form.wissenswertes_accordion_text || null,
+      show_stadionplan: form.show_stadionplan,
+      stadionplan_title: form.stadionplan_title || null,
+      stadionplan_venue_name: form.stadionplan_venue_name || null,
+      stadionplan_image: form.stadionplan_image || null,
+      stadionplan_description: form.stadionplan_description || null,
+      show_lageplan: form.show_lageplan,
+      lageplan_pins: form.lageplan_pins.map((p) => ({
+        id: p.id,
+        name: p.name.trim(),
+        lat: Number(p.lat),
+        lng: Number(p.lng),
+        icon_id: p.icon_id,
+        label: p.label.trim() || null,
+      })),
+      faqs: form.faqs,
+      brevo_list_id: form.brevo_list_id || null
     };
 
     const response = await fetch(`/api/admin/events${form.id ? `/${form.id}` : ''}`, {
@@ -426,7 +580,7 @@ export default function AdminEventsPage() {
               {filteredEvents.map((event) => (
                 <button
                   key={event.id}
-                  onClick={() => setForm(normalizeEventFormState(event))}
+                  onClick={() => handleSelectEvent(event)}
                   className={`w-full rounded-2xl border p-4 text-left transition ${
                     form.id === event.id
                       ? 'border-blue-500 bg-blue-50 shadow-sm'
@@ -545,7 +699,7 @@ export default function AdminEventsPage() {
                       <label className="text-xs font-semibold text-gray-600">Status</label>
                       <select
                         value={form.status}
-                        onChange={(event) => updateField('status', event.target.value)}
+                        onChange={(event) => updateField('status', event.target.value as 'active' | 'draft' | 'archived')}
                         className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
                       >
                         <option value="active">active</option>
@@ -698,6 +852,17 @@ export default function AdminEventsPage() {
                     />
                   </div>
 
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600">🔗 Brevo Listen-ID</label>
+                    <input
+                      value={form.brevo_list_id}
+                      onChange={(event) => updateField('brevo_list_id', event.target.value)}
+                      placeholder="z.B. 12"
+                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                    />
+                    <p className="mt-1 text-xs text-gray-400">Neue Kontaktanfragen werden automatisch dieser Brevo-Liste zugewiesen. Numerische ID aus Brevo → Contacts → Listen.</p>
+                  </div>
+
                   <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-3 text-sm text-blue-900">
                     <div className="text-xs font-semibold uppercase tracking-wide text-blue-700">CTA Vorschau</div>
                     <div className="mt-2 inline-flex rounded-full bg-[#f14624] px-4 py-2 font-semibold text-white">
@@ -760,6 +925,569 @@ export default function AdminEventsPage() {
                   </div>
                 </div>
               </section>
+
+              <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
+                <SectionIntro
+                  icon={<Layers className="h-5 w-5" />}
+                  title="Aktivierte Module"
+                  description="Wählen Sie aus, welche Module auf der Event-Detailseite geladen und angezeigt werden sollen."
+                />
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mt-4">
+                  <label className="flex items-center gap-3 rounded-xl border p-4 cursor-pointer hover:bg-gray-50/50 transition">
+                    <input
+                      type="checkbox"
+                      checked={form.show_about}
+                      onChange={(e) => updateField('show_about', e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">Über das Event</div>
+                      <div className="text-xs text-gray-500">Erster Absatz / Intro</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 rounded-xl border p-4 cursor-pointer hover:bg-gray-50/50 transition">
+                    <input
+                      type="checkbox"
+                      checked={form.show_packages}
+                      onChange={(e) => updateField('show_packages', e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">Packages</div>
+                      <div className="text-xs text-gray-500">Reisepakete & Hotel</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 rounded-xl border p-4 cursor-pointer hover:bg-gray-50/50 transition">
+                    <input
+                      type="checkbox"
+                      checked={form.show_faqs}
+                      onChange={(e) => updateField('show_faqs', e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">FAQs</div>
+                      <div className="text-xs text-gray-500">Häufige Fragen</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 rounded-xl border p-4 cursor-pointer hover:bg-gray-50/50 transition">
+                    <input
+                      type="checkbox"
+                      checked={form.show_spielplan}
+                      onChange={(e) => updateField('show_spielplan', e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">Spielplan</div>
+                      <div className="text-xs text-gray-500">Match Schedule Tabelle</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 rounded-xl border p-4 cursor-pointer hover:bg-gray-50/50 transition">
+                    <input
+                      type="checkbox"
+                      checked={form.show_wissenswertes}
+                      onChange={(e) => updateField('show_wissenswertes', e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">Wissenswertes</div>
+                      <div className="text-xs text-gray-500">Fakten & Akkordeon</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 rounded-xl border p-4 cursor-pointer hover:bg-gray-50/50 transition">
+                    <input
+                      type="checkbox"
+                      checked={form.show_stadionplan}
+                      onChange={(e) => updateField('show_stadionplan', e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">Stadionplan</div>
+                      <div className="text-xs text-gray-500">Stadion- / Hallenplan</div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 rounded-xl border p-4 cursor-pointer hover:bg-gray-50/50 transition">
+                    <input
+                      type="checkbox"
+                      checked={form.show_lageplan}
+                      onChange={(e) => updateField('show_lageplan', e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">Lageplan</div>
+                      <div className="text-xs text-gray-500">Interaktive Karte (Pins)</div>
+                    </div>
+                  </label>
+                </div>
+              </section>
+
+              {form.show_spielplan && (
+                <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
+                  <SectionIntro
+                    icon={<CalendarDays className="h-5 w-5" />}
+                    title="Spielplan Einträge"
+                    description="Verwalten Sie die Zeilen der Spielplan-Tabelle. Alle Änderungen werden erst beim Klick auf 'Event speichern' dauerhaft übernommen."
+                  />
+                  
+                  <div className="mt-4 overflow-x-auto rounded-lg border border-gray-150">
+                    <table className="w-full border-collapse text-left text-xs text-gray-600">
+                      <thead className="bg-gray-50 text-gray-700 font-semibold uppercase tracking-wider">
+                        <tr>
+                          <th className="px-3 py-3 w-1/4">Datum</th>
+                          <th className="px-3 py-3 w-1/4">Session</th>
+                          <th className="px-3 py-3 w-1/3">Spielpaarung / Details</th>
+                          <th className="px-3 py-3 w-1/6">Runde</th>
+                          <th className="px-3 py-3 w-28 text-right">Aktionen</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 bg-white">
+                        {form.spielplan.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="px-4 py-8 text-center text-gray-400 bg-gray-50/30">
+                              Keine Spielplaneinträge vorhanden. Klicken Sie unten auf "Eintrag hinzufügen".
+                            </td>
+                          </tr>
+                        ) : (
+                          form.spielplan.map((item, index) => {
+                            const updateRow = (field: 'date' | 'session' | 'matchup' | 'round', value: string) => {
+                              const updated = [...form.spielplan];
+                              updated[index] = { ...updated[index], [field]: value };
+                              updateField('spielplan', updated);
+                            };
+
+                            const deleteRow = () => {
+                              updateField('spielplan', form.spielplan.filter((_, i) => i !== index));
+                            };
+
+                            const moveRow = (direction: 'up' | 'down') => {
+                              if (direction === 'up' && index === 0) return;
+                              if (direction === 'down' && index === form.spielplan.length - 1) return;
+                              const updated = [...form.spielplan];
+                              const swapWith = direction === 'up' ? index - 1 : index + 1;
+                              const temp = updated[index];
+                              updated[index] = updated[swapWith];
+                              updated[swapWith] = temp;
+                              updateField('spielplan', updated);
+                            };
+
+                            return (
+                              <tr key={index} className="hover:bg-gray-50/50">
+                                <td className="p-2">
+                                  <input
+                                    type="text"
+                                    value={item.date}
+                                    onChange={(e) => updateRow('date', e.target.value)}
+                                    placeholder="z.B. So. 23. Mai 2027"
+                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-900 focus:border-blue-400 focus:bg-white focus:outline-none"
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <input
+                                    type="text"
+                                    value={item.session}
+                                    onChange={(e) => updateRow('session', e.target.value)}
+                                    placeholder="z.B. Day (11:00 Uhr)"
+                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-900 focus:border-blue-400 focus:bg-white focus:outline-none"
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <textarea
+                                    value={item.matchup}
+                                    onChange={(e) => updateRow('matchup', e.target.value)}
+                                    placeholder="z.B. Herren- & Damen Einzel"
+                                    rows={1}
+                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-900 focus:border-blue-400 focus:bg-white focus:outline-none resize-none min-h-[36px]"
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <input
+                                    type="text"
+                                    value={item.round}
+                                    onChange={(e) => updateRow('round', e.target.value)}
+                                    placeholder="z.B. 1. Runde"
+                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-900 focus:border-blue-400 focus:bg-white focus:outline-none"
+                                  />
+                                </td>
+                                <td className="p-2 text-right">
+                                  <div className="inline-flex gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => moveRow('up')}
+                                      disabled={index === 0}
+                                      title="Nach oben verschieben"
+                                      className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-20 transition"
+                                    >
+                                      <ArrowUp className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => moveRow('down')}
+                                      disabled={index === form.spielplan.length - 1}
+                                      title="Nach unten verschieben"
+                                      className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-20 transition"
+                                    >
+                                      <ArrowDown className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={deleteRow}
+                                      title="Zeile löschen"
+                                      className="rounded-lg p-1.5 text-red-400 hover:bg-red-50 hover:text-red-600 transition"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateField('spielplan', [
+                        ...form.spielplan,
+                        { date: '', session: '', matchup: '', round: '' }
+                      ]);
+                    }}
+                    className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 active:scale-95 cursor-pointer shadow-xs"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Eintrag hinzufügen
+                  </button>
+                </section>
+              )}
+
+              {form.show_wissenswertes && (
+                <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
+                  <SectionIntro
+                    icon={<Layers className="h-5 w-5" />}
+                    title="Wissenswertes Modul"
+                    description="Pflegen Sie hier die allgemeinen Fakten und den anklappbaren Textbereich (Akkordeon) für das Event."
+                  />
+                  
+                  <div className="grid gap-3 mt-4">
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600">Überschrift</label>
+                      <input
+                        type="text"
+                        value={form.wissenswertes_title}
+                        onChange={(e) => updateField('wissenswertes_title', e.target.value)}
+                        placeholder="z.B. Wissenswertes zu den French Open"
+                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600">Einleitungstext (Absatz)</label>
+                      <textarea
+                        value={form.wissenswertes_text}
+                        onChange={(e) => updateField('wissenswertes_text', e.target.value)}
+                        rows={4}
+                        placeholder="Einleitender Absatz zum Thema..."
+                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div className="border-t border-gray-100 my-2 pt-2">
+                      <label className="text-xs font-semibold text-blue-650 uppercase tracking-wider">Akkordeon-Bereich</label>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600">Akkordeon Titel</label>
+                      <input
+                        type="text"
+                        value={form.wissenswertes_accordion_title}
+                        onChange={(e) => updateField('wissenswertes_accordion_title', e.target.value)}
+                        placeholder="z.B. Weitere Infos zu den French Open"
+                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600">Akkordeon Inhalt (Mehrere Absätze mit Leerzeile trennen)</label>
+                      <textarea
+                        value={form.wissenswertes_accordion_text}
+                        onChange={(e) => updateField('wissenswertes_accordion_text', e.target.value)}
+                        rows={8}
+                        placeholder="Ausführlicher Inhalt des Akkordeons..."
+                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {form.show_stadionplan && (
+                <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
+                  <SectionIntro
+                    icon={<Layers className="h-5 w-5" />}
+                    title="Stadion-/Hallenplan Modul"
+                    description="Pflegen Sie hier die Überschriften, das Übersichts-Bild und die Beschreibung für den Stadion- oder Hallenplan."
+                  />
+                  
+                  <div className="grid gap-3 mt-4">
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600">Überschrift des Moduls (z.B. Stadionplan / Hallenplan)</label>
+                      <input
+                        type="text"
+                        value={form.stadionplan_title}
+                        onChange={(e) => updateField('stadionplan_title', e.target.value)}
+                        placeholder="z.B. Stadionplan"
+                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600">Bereich / Name der Arena (z.B. Philippe Chatrier)</label>
+                      <input
+                        type="text"
+                        value={form.stadionplan_venue_name}
+                        onChange={(e) => updateField('stadionplan_venue_name', e.target.value)}
+                        placeholder="z.B. Philippe Chatrier"
+                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <AdminImageField
+                      label="Stadionplan Bild URL"
+                      value={form.stadionplan_image}
+                      onChange={(value) => updateField('stadionplan_image', value)}
+                      placeholder="/uploads/media/stadium-plan.png"
+                      previewLabel="Stadionplan Bild Vorschau"
+                    />
+
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600">Beschreibung (Mehrere Absätze mit Leerzeile trennen)</label>
+                      <textarea
+                        value={form.stadionplan_description}
+                        onChange={(e) => updateField('stadionplan_description', e.target.value)}
+                        rows={8}
+                        placeholder="Ausführliche Beschreibung des Stadions, der Tribünen oder der Sitzplatz-Kategorien..."
+                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {form.show_lageplan && (
+                <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
+                  <SectionIntro
+                    icon={<MapPin className="h-5 w-5" />}
+                    title="Lageplan Pins"
+                    description="Verwalten Sie die Kartenmarkierungen direkt für dieses Event. Icons werden zentral in 'Lageplan-Icons' verwaltet."
+                  />
+
+                  <div className="mt-3 mb-4 flex items-center justify-between gap-3 bg-blue-50/50 rounded-xl p-3 border border-blue-100 text-xs text-blue-800">
+                    <span>Icons (PNG) zentral verwalten:</span>
+                    <a href="/admin/pins" target="_blank" rel="noopener noreferrer"
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition inline-flex items-center gap-1 shrink-0">
+                      Lageplan-Icons verwalten ↗
+                    </a>
+                  </div>
+
+                  <div className="space-y-4">
+                    {form.lageplan_pins.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-gray-400 bg-gray-50/30 rounded-xl border border-dashed border-gray-200 text-sm">
+                        Noch keine Pins vorhanden. Klicken Sie auf „Pin hinzufügen".
+                      </div>
+                    ) : (
+                      form.lageplan_pins.map((pin, index) => {
+                        const updatePin = (field: string, value: string) => {
+                          const updated = [...form.lageplan_pins];
+                          updated[index] = { ...updated[index], [field]: value };
+                          updateField('lageplan_pins', updated);
+                        };
+                        const deletePin = () => updateField('lageplan_pins', form.lageplan_pins.filter((_, i) => i !== index));
+                        const movePin = (dir: 'up' | 'down') => {
+                          if (dir === 'up' && index === 0) return;
+                          if (dir === 'down' && index === form.lageplan_pins.length - 1) return;
+                          const updated = [...form.lageplan_pins];
+                          const swap = dir === 'up' ? index - 1 : index + 1;
+                          [updated[index], updated[swap]] = [updated[swap], updated[index]];
+                          updateField('lageplan_pins', updated);
+                        };
+
+                        return (
+                          <div key={pin.id} className="p-4 rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-gray-50 transition relative">
+                            <div className="absolute top-3 right-3 flex gap-1">
+                              <button type="button" onClick={() => movePin('up')} disabled={index === 0} className="p-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-30 transition"><ArrowUp className="h-3.5 w-3.5 text-gray-500" /></button>
+                              <button type="button" onClick={() => movePin('down')} disabled={index === form.lageplan_pins.length - 1} className="p-1.5 rounded-lg hover:bg-gray-200 disabled:opacity-30 transition"><ArrowDown className="h-3.5 w-3.5 text-gray-500" /></button>
+                              <button type="button" onClick={deletePin} className="p-1.5 rounded-lg hover:bg-red-100 transition"><Trash2 className="h-3.5 w-3.5 text-red-500" /></button>
+                            </div>
+
+                            <div className="grid gap-3 pr-24">
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-xs font-semibold text-gray-600">Bezeichnung</label>
+                                  <input type="text" value={pin.name} onChange={(e) => updatePin('name', e.target.value)} placeholder="z.B. Stade Roland Garros" className="mt-1 w-full border rounded-lg px-3 py-2 text-sm" />
+                                </div>
+                                <div>
+                                  <label className="text-xs font-semibold text-gray-600">Karten-Label</label>
+                                  <input type="text" value={pin.label} onChange={(e) => updatePin('label', e.target.value)} placeholder="z.B. Roland Garros" className="mt-1 w-full border rounded-lg px-3 py-2 text-sm" />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-xs font-semibold text-gray-600">Breitengrad (Latitude)</label>
+                                  <input type="number" step="any" value={pin.lat} onChange={(e) => updatePin('lat', e.target.value)} placeholder="z.B. 48.8471" className="mt-1 w-full border rounded-lg px-3 py-2 text-sm font-mono" />
+                                </div>
+                                <div>
+                                  <label className="text-xs font-semibold text-gray-600">Längengrad (Longitude)</label>
+                                  <input type="number" step="any" value={pin.lng} onChange={(e) => updatePin('lng', e.target.value)} placeholder="z.B. 2.2492" className="mt-1 w-full border rounded-lg px-3 py-2 text-sm font-mono" />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-xs font-semibold text-gray-600">Icon</label>
+                                {pinIcons.length === 0 ? (
+                                  <p className="mt-1 text-xs text-gray-400 italic">Keine Icons vorhanden – bitte zuerst in „Lageplan-Icons" hochladen.</p>
+                                ) : (
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    {pinIcons.map((ic) => (
+                                      <button key={ic.id} type="button" onClick={() => updatePin('icon_id', ic.id)}
+                                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition ${pin.icon_id === ic.id ? 'border-blue-500 bg-blue-50 text-blue-800' : 'border-gray-200 hover:border-blue-300 text-gray-700'}`}>
+                                        {ic.image ? <img src={ic.image} alt={ic.name} className="w-5 h-5 object-contain" /> : <span className="text-base">📍</span>}
+                                        {ic.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  <button type="button"
+                    onClick={() => updateField('lageplan_pins', [...form.lageplan_pins, { id: `pin-${Date.now()}`, name: '', lat: '', lng: '', icon_id: pinIcons[0]?.id || '', label: '' }])}
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-blue-300 bg-blue-50/30 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-50 transition">
+                    <Plus className="h-4 w-4" /> Pin hinzufügen
+                  </button>
+                </section>
+              )}
+
+              {form.show_faqs && (
+                <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
+                  <SectionIntro
+                    icon={<Layers className="h-5 w-5" />}
+                    title="FAQ Einträge"
+                    description="Verwalten Sie die häufigen Fragen (FAQs) für dieses Event direkt in-place. Alle Änderungen werden erst beim Klick auf 'Event speichern' dauerhaft übernommen."
+                  />
+                  
+                  <div className="space-y-4 mt-4">
+                    {form.faqs.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-gray-400 bg-gray-50/30 rounded-xl border border-dashed border-gray-200">
+                        Keine FAQs vorhanden. Klicken Sie unten auf "FAQ hinzufügen".
+                      </div>
+                    ) : (
+                      form.faqs.map((faq, index) => {
+                        const updateRow = (field: 'question' | 'answer', value: string) => {
+                          const updated = [...form.faqs];
+                          updated[index] = { ...updated[index], [field]: value };
+                          updateField('faqs', updated);
+                        };
+
+                        const deleteRow = () => {
+                          updateField('faqs', form.faqs.filter((_, i) => i !== index));
+                        };
+
+                        const moveRow = (direction: 'up' | 'down') => {
+                          if (direction === 'up' && index === 0) return;
+                          if (direction === 'down' && index === form.faqs.length - 1) return;
+                          const updated = [...form.faqs];
+                          const swapWith = direction === 'up' ? index - 1 : index + 1;
+                          const temp = updated[index];
+                          updated[index] = updated[swapWith];
+                          updated[swapWith] = temp;
+                          updateField('faqs', updated);
+                        };
+
+                        return (
+                          <div key={index} className="p-4 rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-gray-50 transition relative">
+                            <div className="absolute top-4 right-4 flex gap-1">
+                              <button
+                                type="button"
+                                onClick={() => moveRow('up')}
+                                disabled={index === 0}
+                                title="Nach oben verschieben"
+                                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-20 transition"
+                              >
+                                <ArrowUp className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveRow('down')}
+                                disabled={index === form.faqs.length - 1}
+                                title="Nach unten verschieben"
+                                className="rounded-lg p-1 text-gray-400 hover:bg-gray-150 hover:text-gray-700 disabled:opacity-20 transition"
+                              >
+                                <ArrowDown className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={deleteRow}
+                                title="FAQ löschen"
+                                className="rounded-lg p-1 text-red-400 hover:bg-red-50 hover:text-red-600 transition"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                            
+                            <div className="grid gap-3 w-[calc(100%-80px)]">
+                              <div>
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Frage #{index + 1}</label>
+                                <input
+                                  type="text"
+                                  value={faq.question}
+                                  onChange={(e) => updateRow('question', e.target.value)}
+                                  placeholder="z.B. Wie viel kosten die Tickets?"
+                                  className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-400 focus:bg-white focus:outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Antwort #{index + 1}</label>
+                                <textarea
+                                  value={faq.answer}
+                                  onChange={(e) => updateRow('answer', e.target.value)}
+                                  placeholder="Ausführliche Antwort..."
+                                  rows={2}
+                                  className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-400 focus:bg-white focus:outline-none resize-y"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateField('faqs', [
+                        ...form.faqs,
+                        { question: '', answer: '' }
+                      ]);
+                    }}
+                    className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 active:scale-95 cursor-pointer shadow-xs"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    FAQ hinzufügen
+                  </button>
+                </section>
+              )}
 
               <section className="rounded-xl border border-dashed border-blue-200 bg-blue-50 p-4">
                 <div className="flex items-center justify-between gap-3">

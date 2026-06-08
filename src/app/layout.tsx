@@ -3,6 +3,7 @@ import { DM_Serif_Display, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import NavBarWrapper from '@/components/NavBarWrapper';
 import FooterWrapper from '@/components/FooterWrapper';
+import { siteConfig } from '@/lib/siteConfig';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,37 +22,37 @@ const displayFont = DM_Serif_Display({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://faltintravel.com'),
+  metadataBase: new URL(siteConfig.url),
   title: {
-    default: 'Super Bowl LXI 2027 Tickets & Packages | Faltin Travel',
+    default: siteConfig.title,
     template: '%s | Faltin Travel'
   },
-  description: 'Offizielle Super Bowl LXI 2027 Packages inkl. Tickets, Hotel & VIP-Hospitality. 4 Nächte im Dream Hollywood Hotel + Premium Tickets. Jetzt buchen!',
-  keywords: ['Super Bowl 2027', 'Super Bowl LXI', 'Super Bowl Tickets', 'Super Bowl Packages', 'Los Angeles', 'SoFi Stadium', 'NFL Tickets', 'Sportreisen USA'],
-  authors: [{ name: 'Faltin Travel' }],
-  creator: 'Faltin Travel',
-  publisher: 'Faltin Travel',
+  description: siteConfig.description,
+  keywords: siteConfig.keywords.split(',').map(k => k.trim()),
+  authors: [{ name: siteConfig.company }],
+  creator: siteConfig.company,
+  publisher: siteConfig.company,
   openGraph: {
     type: 'website',
     locale: 'de_CH',
-    url: 'https://faltintravel.com',
+    url: siteConfig.url,
     siteName: 'Faltin Travel',
-    title: 'Super Bowl LXI 2027 Tickets & Packages | Faltin Travel',
-    description: 'Offizielle Super Bowl LXI 2027 Packages inkl. Tickets, Hotel & VIP-Hospitality. 4 Nächte im Dream Hollywood Hotel + Premium Tickets.',
+    title: siteConfig.title,
+    description: siteConfig.description,
     images: [
       {
-        url: '/Super-Bowl-LXI-Tickets-Packages.webp',
+        url: siteConfig.ogImage,
         width: 1200,
         height: 630,
-        alt: 'Super Bowl LXI 2027 Tickets & Packages'
+        alt: siteConfig.title
       }
     ]
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Super Bowl LXI 2027 Tickets & Packages',
-    description: 'Offizielle Super Bowl LXI 2027 Packages inkl. Tickets, Hotel & VIP-Hospitality.',
-    images: ['/Super-Bowl-LXI-Tickets-Packages.webp']
+    title: siteConfig.title,
+    description: siteConfig.description,
+    images: [siteConfig.ogImage]
   },
   robots: {
     index: true,
@@ -65,7 +66,7 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: 'your-google-verification-code', // TODO: Google Search Console Code einfügen
+    google: 'your-google-verification-code',
   }
 };
 

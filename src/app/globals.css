@@ -18,12 +18,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* Hinweis: Diese Seite hat ausschließlich ein helles Design (alle Flächen sind
+   fest hell). Ein prefers-color-scheme:dark Override würde nur die Textfarbe auf
+   fast-weiß setzen → heller Text auf hellen Feldern ("grau auf grau"). Daher
+   bewusst KEIN Dark-Mode-Override. */
 
 body {
   background: linear-gradient(180deg, #f9f8f7 0%, var(--background) 100%);

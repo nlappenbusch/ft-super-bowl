@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -120,8 +120,8 @@ const faqItems = [
 export default function BookingForm() {
   const searchParams = useSearchParams();
   const [selectedPackage, setSelectedPackage] = useState(defaultPackage);
-  const [eventSlug, setEventSlug] = useState('super-bowl-2027');
-  const [packageSlug, setPackageSlug] = useState('dream-hollywood');
+  const [eventSlug, setEventSlug] = useState('');
+  const [packageSlug, setPackageSlug] = useState('');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [numberOfPersons, setNumberOfPersons] = useState(2);
   const [roomValidation, setRoomValidation] = useState({ valid: true, message: '' });
@@ -149,7 +149,7 @@ export default function BookingForm() {
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<BookingFormData>({
     defaultValues: {
       packageId: defaultPackage.id,
-      startDate: '2027-02-12',
+      startDate: '',
       doubleRooms: 1,
       singleRooms: 0,
       numberOfPersons: 2,
@@ -162,8 +162,8 @@ export default function BookingForm() {
   const watchNumberOfPersons = watch('numberOfPersons');
 
   useEffect(() => {
-    const eventParam = searchParams.get('event') || 'super-bowl-2027';
-    const packageParam = searchParams.get('package') || 'dream-hollywood';
+    const eventParam = searchParams.get('event') || '';
+    const packageParam = searchParams.get('package') || '';
     setEventSlug(eventParam);
     setPackageSlug(packageParam);
 
@@ -385,7 +385,7 @@ export default function BookingForm() {
       <div className='bg-linear-to-r from-orange-500 to-orange-600 shadow-md'>
         <div className='container mx-auto px-4 py-3'>
           <a 
-            href='https://faltintravel.com/super-bowl-2027-tickets/' 
+          href={eventSlug ? `/events/${eventSlug}` : '/'}
             className='inline-flex items-center gap-2 text-white font-semibold hover:gap-3 transition-all duration-200'
           >
             <ArrowLeft className='w-5 h-5' />
@@ -410,8 +410,8 @@ export default function BookingForm() {
                   <div className='flex items-center gap-2 mb-2 text-gray-900'>
                     <Calendar className='w-5 h-5' style={{ color: '#184a7b' }} />
                     <div>
-                      <div className='font-semibold'>Reisezeitraum (fix)</div>
-                      <div className='text-sm'>Fr. 12. Februar - Di. 16. Februar 2027 (4 Nächte)</div>
+                      <div className='font-semibold'>Reisezeitraum</div>
+                      <div className='text-sm text-gray-500'>Gemäß gewähltem Package</div>
                     </div>
                   </div>
                   {/* Phase 2: Verlängerungsnächte-Hinweis */}
@@ -421,8 +421,8 @@ export default function BookingForm() {
                       <span><strong>Verlängerungsnächte</strong> auf Anfrage gegen Aufpreis buchbar</span>
                     </div>
                   </div>
-                  <input type='hidden' {...register('startDate')} value='2027-02-12' />
-                  <input type='hidden' {...register('packageId')} value='dream_hollywood' />
+                  <input type='hidden' {...register('startDate')} />
+                  <input type='hidden' {...register('packageId')} />
                 </div>
 
                 <div>

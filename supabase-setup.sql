@@ -380,4 +380,51 @@ INSERT INTO booking_requests (
 )
 ON CONFLICT DO NOTHING;
 
+-- ============================================================================
+-- MIGRATION: RQ-Anfragenummern + CRM-Konversation (E-Mail-Thread)
+-- Idempotent – kann gefahrlos erneut ausgeführt werden.
+-- ============================================================================
+
+-- 1) Fortlaufende Anfragenummer auf booking_requests
+ALTER TABLE booking_requests ADD COLUMN IF NOT EXISTS request_number TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_booking_requests_request_number
+  ON booking_requests(request_number) WHERE request_number IS NOT NULL;
+
+-- 2) Sequenz + Funktion, die "RQ-12345" liefert (Start bei 10001)
+CREATE SEQUENCE IF NOT EXISTS request_number_seq START WITH 10001 INCREMENT BY 1;
+
+CREATE OR REPLACE FUNCTION next_request_number()
+RETURNS TEXT
+LANGUAGE sql
+AS $$
+  SELECT 'RQ-' || nextval('request_number_seq')::text;
+$$;
+
+-- RPC für anon/service-Rolle aufrufbar machen
+GRANT EXECUTE ON FUNCTION next_request_number() TO anon, authenticated, service_role;
+GRANT USAGE, SELECT ON SEQUENCE request_number_seq TO anon, authenticated, service_role;
+
+-- 3) Konversations-Nachrichten (ein-/ausgehende E-Mails pro Anfrage)
+CREATE TABLE IF NOT EXISTS booking_messages (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  booking_id UUID NOT NULL REFERENCES booking_requests(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  direction TEXT NOT NULL CHECK (direction IN ('out','in')),
+  from_email TEXT NOT NULL DEFAULT '',
+  to_email TEXT NOT NULL DEFAULT '',
+  subject TEXT NOT NULL DEFAULT '',
+  body TEXT NOT NULL DEFAULT '',
+  graph_message_id TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_booking_messages_booking_id ON booking_messages(booking_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_booking_messages_graph_id
+  ON booking_messages(graph_message_id) WHERE graph_message_id IS NOT NULL;
+
+ALTER TABLE booking_messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable read access for messages" ON booking_messages;
+DROP POLICY IF EXISTS "Enable insert for messages" ON booking_messages;
+CREATE POLICY "Enable read access for messages" ON booking_messages FOR SELECT USING (true);
+CREATE POLICY "Enable insert for messages" ON booking_messages FOR INSERT WITH CHECK (true);
+
 SELECT 'Supabase Multi-Event Setup erfolgreich erstellt!' as message;

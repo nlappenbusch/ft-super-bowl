@@ -2,6 +2,7 @@
 export interface BookingRequest {
   id: string;
   created_at: string;
+  request_number?: string | null;
   event_id?: string | null;
   event_slug?: string | null;
   package_id: string;
@@ -26,4 +27,17 @@ export interface Traveler {
   lastName: string;
   birthDate: string;
   passportNumber?: string;
+}
+
+/** Conversation message linked to a booking request (CRM email thread) */
+export interface BookingMessage {
+  id: string;
+  booking_id: string;
+  created_at: string;
+  direction: 'out' | 'in';
+  from_email: string;
+  to_email: string;
+  subject: string;
+  body: string;
+  graph_message_id?: string | null;
 }

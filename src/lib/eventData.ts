@@ -9,11 +9,13 @@ import {
   findFaqsByEvent,
   findPackagesByEvent,
   findEventsBySeriesId,
-  getPackages
+  getPackages,
+  getPins,
+  getPinIcons
 } from './contentStore';
 
-export const DEFAULT_EVENT_SLUG = process.env.DEFAULT_EVENT_SLUG || 'super-bowl-2027';
-export const DEFAULT_PACKAGE_SLUG = process.env.DEFAULT_PACKAGE_SLUG || 'dream-hollywood';
+export const DEFAULT_EVENT_SLUG = process.env.DEFAULT_EVENT_SLUG || '';
+export const DEFAULT_PACKAGE_SLUG = process.env.DEFAULT_PACKAGE_SLUG || '';
 
 export interface EventRecord {
   id: string;
@@ -37,6 +39,36 @@ export interface EventRecord {
   first_paragraph_image_1?: string | null;
   first_paragraph_image_2?: string | null;
   first_paragraph_image_3?: string | null;
+  show_about?: boolean | null;
+  show_packages?: boolean | null;
+  show_faqs?: boolean | null;
+  show_spielplan?: boolean | null;
+  spielplan?: Array<{
+    date: string;
+    session: string;
+    matchup: string;
+    round: string;
+  }> | null;
+  show_wissenswertes?: boolean | null;
+  wissenswertes_title?: string | null;
+  wissenswertes_text?: string | null;
+  wissenswertes_accordion_title?: string | null;
+  wissenswertes_accordion_text?: string | null;
+  show_stadionplan?: boolean | null;
+  stadionplan_title?: string | null;
+  stadionplan_venue_name?: string | null;
+  stadionplan_image?: string | null;
+  stadionplan_description?: string | null;
+  show_lageplan?: boolean | null;
+  lageplan_pins?: Array<{
+    id: string;
+    name: string;
+    lat: number;
+    lng: number;
+    icon_id: string;
+    label?: string | null;
+  }> | null;
+  brevo_list_id?: string | null;
 }
 
 export interface SeriesRecord {
@@ -85,6 +117,7 @@ export interface PackageRecord {
   extension_nights?: string | null;
   badge_text?: string | null;
   package_includes?: PackageIncludeRecord[] | null;
+  active?: boolean | null;
 }
 
 export interface EventFaqRecord {
@@ -243,6 +276,36 @@ export async function getEventFaqs(eventSlug: string): Promise<EventFaqRecord[]>
 
   if (error || !data) return [];
   return data as EventFaqRecord[];
+}
+
+export interface EventPinRecord {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  icon_id: string;
+  label?: string | null;
+}
+
+export interface EventPinIconRecord {
+  id: string;
+  name: string;
+  image?: string | null;
+}
+
+export async function getPinsList(): Promise<EventPinRecord[]> {
+  return (getPins() as any[]).map((p) => ({
+    id: p.id,
+    name: p.name,
+    lat: p.lat,
+    lng: p.lng,
+    icon_id: p.type ? `icon-${p.type}` : 'icon-other',
+    label: p.label,
+  })) || [];
+}
+
+export async function getPinIconsList(): Promise<EventPinIconRecord[]> {
+  return (getPinIcons() as EventPinIconRecord[]) || [];
 }
 
 function resolveImageUrl(baseUrl: string, src: string): string {

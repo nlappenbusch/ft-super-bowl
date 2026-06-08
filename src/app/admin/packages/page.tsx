@@ -35,6 +35,7 @@ interface PackageFormState {
   distance_downtown: string;
   extension_nights: string;
   badge_text: string;
+  active: boolean;
 }
 
 const emptyForm: PackageFormState = {
@@ -60,7 +61,8 @@ const emptyForm: PackageFormState = {
   distance_stadium: '',
   distance_downtown: '',
   extension_nights: '',
-  badge_text: ''
+  badge_text: '',
+  active: true
 };
 
 function parseList(value: string) {
@@ -139,7 +141,8 @@ export default function AdminPackagesPage() {
       distance_stadium: row.distances?.stadium || '',
       distance_downtown: row.distances?.downtown || '',
       extension_nights: row.extension_nights || '',
-      badge_text: row.badge_text || ''
+      badge_text: row.badge_text || '',
+      active: row.active !== false
     }));
 
     setPackages(mapped);
@@ -198,7 +201,8 @@ export default function AdminPackagesPage() {
         downtown: form.distance_downtown || ''
       },
       extension_nights: form.extension_nights || null,
-      badge_text: form.badge_text || null
+      badge_text: form.badge_text || null,
+      active: form.active
     };
 
     const response = await fetch(`/api/admin/packages${form.id ? `/${form.id}` : ''}`, {
@@ -297,17 +301,41 @@ export default function AdminPackagesPage() {
                 className={`w-full text-left p-4 border rounded-lg transition ${
                   form.id === pkg.id
                     ? 'border-blue-500 bg-blue-50'
+                    : pkg.active === false
+                    ? 'border-gray-100 bg-gray-50 opacity-60'
                     : 'border-gray-200 hover:border-blue-300'
                 }`}
               >
                 <div className="flex justify-between items-start">
-                  <div>
-                    <div className="font-semibold text-gray-900">{pkg.title}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className={`font-semibold ${pkg.active === false ? 'line-through text-gray-400' : 'text-gray-900'}`}>{pkg.title}</div>
                     <div className="text-xs text-gray-500 mt-1">{pkg.slug}</div>
                   </div>
-                  {pkg.popular && (
-                    <span className="text-xs px-2 py-1 rounded-full bg-orange-100 text-orange-700">popular</span>
-                  )}
+                  <div className="flex items-center gap-2 ml-2 shrink-0">
+                    {pkg.popular && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-orange-100 text-orange-700">popular</span>
+                    )}
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (!pkg.id) return;
+                        const res = await fetch(`/api/admin/packages/${pkg.id}`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ active: pkg.active === false })
+                        });
+                        if (res.ok) await loadPackages(selectedEvent);
+                      }}
+                      title={pkg.active === false ? 'Aktivieren' : 'Deaktivieren'}
+                      className={`w-12 h-6 rounded-full transition-all duration-200 relative shrink-0 ${
+                        pkg.active === false ? 'bg-gray-300' : 'bg-green-500'
+                      }`}
+                    >
+                      <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${
+                        pkg.active === false ? 'left-1' : 'left-7'
+                      }`} />
+                    </button>
+                  </div>
                 </div>
                 <div className="text-sm text-gray-600 mt-2">Preis: {pkg.price || 'n/a'} {pkg.currency}</div>
               </button>

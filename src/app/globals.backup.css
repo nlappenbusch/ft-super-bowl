@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f3f2f1;
+  --foreground: #1f2937;
+  --surface-1: #ffffff;
+  --surface-2: #faf9f8;
+  --surface-stroke: rgba(0, 0, 0, 0.08);
+  --surface-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --surface-shadow-2: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --accent-brand: #0f6cbd;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: linear-gradient(180deg, #f9f8f7 0%, var(--background) 100%);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+  min-height: 100vh;
+}
+
+.fluent-surface {
+  background: var(--surface-1);
+  border: 1px solid var(--surface-stroke);
+  box-shadow: var(--surface-shadow-1);
+}
+
+.fluent-surface-elevated {
+  background: var(--surface-1);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: var(--surface-shadow-2);
+}
+
+.fluent-hover {
+  transition: none;
+}
+
+.fluent-hover:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* WordPress Embedding Styles */
+.wordpress-embedded {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: white !important;
+}
+
+.wordpress-embed {
+  display: block;
+  width: 100%;
+}
+
+/* Faltin-like category columns */
+.ft-category-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 1024px) {
+  .ft-category-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.ft-category-column {
+  position: relative;
+  display: block;
+  overflow: visible;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  transition: none;
+}
+
+.ft-category-column::before {
+  content: none;
+  position: static;
+  top: auto;
+  left: auto;
+  right: auto;
+  height: 0;
+  border-radius: 0;
+  background: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: none;
+}
+
+.ft-category-column:hover {
+  transform: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.ft-category-column:hover::before {
+  opacity: 0;
+}

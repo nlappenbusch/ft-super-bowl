@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { siteConfig } from '@/lib/siteConfig';
 
 interface AdminGateProps {
   title: string;
@@ -11,7 +12,7 @@ export default function AdminGate({ title, children }: AdminGateProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(true);
-  const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'super-bowl-2027-admin';
+  const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || siteConfig.adminPassword;
 
   useEffect(() => {
     const auth = sessionStorage.getItem('admin_authenticated');

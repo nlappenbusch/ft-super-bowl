@@ -6,7 +6,7 @@ import { getBooking } from '@/lib/bookingStore';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { bookingId, items, dueInDays } = body;
+    const { bookingId, items, dueInDays, notes } = body;
 
     if (!bookingId || !items || items.length === 0) {
       return NextResponse.json(
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const invoice = await createInvoiceRecord(bookingId, items, dueInDays || 14);
+    const invoice = await createInvoiceRecord(bookingId, items, dueInDays || 14, notes || '');
 
     return NextResponse.json({
       success: true,

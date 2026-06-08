@@ -45,26 +45,26 @@ export function generateEventSchema(input: EventSchemaInput = {}) {
   return {
     '@context': 'https://schema.org',
     '@type': 'SportsEvent',
-    name: input.name || 'Super Bowl LXI',
-    description: input.description || 'NFL Super Bowl LXI 2027 in Los Angeles',
-    startDate: input.startDate || '2027-02-07',
-    endDate: input.endDate || '2027-02-07',
+    name: input.name || 'Sport-Event',
+    description: input.description || 'Exklusives Sport-Event Erlebnis mit Faltin Travel',
+    startDate: input.startDate || new Date().toISOString().split('T')[0],
+    endDate: input.endDate || new Date().toISOString().split('T')[0],
     location: {
       '@type': 'Place',
-      name: input.venue || 'SoFi Stadium',
+      name: input.venue || 'Venue',
       address: {
         '@type': 'PostalAddress',
-        streetAddress: input.address?.streetAddress || '1001 Stadium Dr',
-        addressLocality: input.address?.addressLocality || 'Inglewood',
-        addressRegion: input.address?.addressRegion || 'CA',
-        postalCode: input.address?.postalCode || '90301',
-        addressCountry: input.address?.addressCountry || 'US'
+        streetAddress: input.address?.streetAddress || '',
+        addressLocality: input.address?.addressLocality || '',
+        addressRegion: input.address?.addressRegion || '',
+        postalCode: input.address?.postalCode || '',
+        addressCountry: input.address?.addressCountry || ''
       }
     },
     organizer: {
       '@type': 'Organization',
-      name: input.organizerName || 'NFL',
-      url: input.organizerUrl || 'https://www.nfl.com'
+      name: input.organizerName || 'Veranstalter',
+      url: input.organizerUrl || 'https://faltintravel.com'
     }
   }
 }
@@ -73,18 +73,18 @@ export function generateProductSchema(input: ProductSchemaInput = {}) {
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
-    name: input.name || 'Super Bowl LXI 2027 Package - Dream Hollywood',
-    description: input.description || '4 Nächte im Dream Hollywood Hotel + Super Bowl LXI Hospitality-Ticket + VIP-Services',
+    name: input.name || 'Faltin Travel Sport-Package',
+    description: input.description || 'Exklusives Reisepaket inkl. Tickets, Hotel & VIP-Services',
     brand: {
       '@type': 'Brand',
       name: 'Faltin Travel'
     },
     offers: {
       '@type': 'Offer',
-      price: input.price || '8950',
-      priceCurrency: input.priceCurrency || 'CHF',
+      price: input.price || '0',
+      priceCurrency: input.priceCurrency || 'EUR',
       availability: 'https://schema.org/InStock',
-      url: input.url || 'https://faltintravel.com/booking',
+      url: input.url || 'https://faltintravel.com',
       seller: {
         '@type': 'Organization',
         name: 'Faltin Travel'

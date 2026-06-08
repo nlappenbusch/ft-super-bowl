@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getInvoiceById, getInvoiceItems, getBookingById } from '@/lib/database';
+import { findEventBySlug, findPackagesByEvent } from '@/lib/contentStore';
+import { getSettings } from '@/lib/settingsStore';
 import { jsPDF } from 'jspdf';
 import fs from 'fs';
 import path from 'path';
@@ -30,7 +32,61 @@ export async function GET(
       );
     }
 
-    // Zusatznächte aus invoice_items erkennen
+    // ─── Load settings & event data dynamically ───────────────────────────
+    const settings = getSettings();
+    const company = settings.company;
+    const bank = settings.bank;
+    const inv = settings.invoice;
+
+    // Parse PDF meta from invoice.notes (set by admin when creating invoice)
+    let noteMeta: {
+      event_name?: string;
+      destination?: string;
+      hotel_description?: string;
+      ticket_details?: string;
+      thank_you_text?: string;
+    } = {};
+    try {
+      if (invoice.notes) {
+        noteMeta = JSON.parse(invoice.notes);
+      }
+    } catch { /* ignore parse errors */ }
+
+    // Try to find the real event from booking's event_slug
+    const eventRecord = booking.event_slug ? findEventBySlug(booking.event_slug) : null;
+    const eventPackages = eventRecord ? findPackagesByEvent(eventRecord.id) : [];
+    const bookedPackage = eventPackages.find((p: any) => p.slug === booking.package_slug || p.title === booking.package_title);
+
+    // Build event display strings — noteMeta (admin edits) wins over auto-lookup
+    const eventName = noteMeta.event_name ||
+      eventRecord?.name || eventRecord?.title || booking.event_slug || 'Sport-Event';
+    const destination = noteMeta.destination || [
+      eventRecord?.location_name || eventRecord?.venue,
+      eventRecord?.location_city,
+      eventRecord?.location_country
+    ].filter(Boolean).join(', ') || 'auf Anfrage';
+    const hotelDescription = noteMeta.hotel_description ||
+      bookedPackage?.title || booking.package_title || 'Unterbringung gemäß Package';
+
+    // Ticket detail bullet points — from noteMeta or default list
+    const ticketDetailLines: string[] = noteMeta.ticket_details
+      ? noteMeta.ticket_details.split('\n').map((l: string) => l.trim()).filter(Boolean)
+      : [
+          'Kategorie 1 Sitzplatz im Unterrang',
+          'Inkl. Zutritt zum VIP-Bereich mit Catering & Getränken',
+          'Inkl. Faltin Travel Lanyard',
+          'Inkl. detaillierte Reiseinformation & Schweizer Reisegarantie',
+        ];
+
+    // Dates: use event's start/end or booking's start_date
+    const baseCheckIn = eventRecord?.start_date
+      ? new Date(eventRecord.start_date)
+      : booking.start_date ? new Date(booking.start_date) : new Date();
+    const baseCheckOut = eventRecord?.end_date
+      ? new Date(eventRecord.end_date)
+      : baseCheckIn;
+
+    // ─── Extra nights calculation (generic) ──────────────────────────────────
     const extraNightsBefore = items.filter(item => 
       item.description.toLowerCase().includes('zusatznacht') &&
       item.description.toLowerCase().includes('vorab')
@@ -42,10 +98,6 @@ export async function GET(
     
     const nightsBefore = extraNightsBefore.reduce((sum, item) => sum + item.quantity, 0);
     const nightsAfter = extraNightsAfter.reduce((sum, item) => sum + item.quantity, 0);
-    
-    // Basis-Reisetermine: Fr. 09.02. - Mo. 11.02.2027 (2 Nächte)
-    const baseCheckIn = new Date('2027-02-09');
-    const baseCheckOut = new Date('2027-02-11');
     
     // Angepasste Check-in/Check-out mit Zusatznächten
     const adjustedCheckIn = new Date(baseCheckIn);
@@ -64,7 +116,9 @@ export async function GET(
     
     const checkInFormatted = formatDate(adjustedCheckIn);
     const checkOutFormatted = formatDate(adjustedCheckOut);
-    const totalNights = 2 + nightsBefore + nightsAfter; // Basis: 2 Nächte + Zusatznächte
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const baseNights = Math.max(1, Math.round((baseCheckOut.getTime() - baseCheckIn.getTime()) / msPerDay));
+    const totalNights = baseNights + nightsBefore + nightsAfter;
 
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     
@@ -72,54 +126,48 @@ export async function GET(
     const leftMargin = 20;
     const rightMargin = 130; // Rechte Spalte für Firmenadresse
 
-    // Logo laden für beide Seiten
     let faltinLogoBase64 = '';
+    const logoFile = company.logo_path?.replace(/^\//, '') || 'faltin_logo_black-1 (2).png';
     try {
-      const logoPath = path.join(process.cwd(), 'public', 'faltin_logo_black-1 (2).png');
+      const logoPath = path.join(process.cwd(), 'public', logoFile);
       if (fs.existsSync(logoPath)) {
         const logoData = fs.readFileSync(logoPath);
         faltinLogoBase64 = `data:image/png;base64,${logoData.toString('base64')}`;
         doc.addImage(faltinLogoBase64, 'PNG', leftMargin, currentY, 60, 0);
       } else {
-        // Fallback: Text-Logo
         doc.setFontSize(16);
         doc.setTextColor(24, 74, 123);
         doc.setFont('helvetica', 'bold');
-        doc.text('Faltin Travel AG', leftMargin, currentY);
+        doc.text(company.name, leftMargin, currentY);
       }
-    } catch (error) {
-      // Fallback bei Fehler: Text-Logo
+    } catch {
       doc.setFontSize(16);
       doc.setTextColor(24, 74, 123);
       doc.setFont('helvetica', 'bold');
-      doc.text('Faltin Travel AG', leftMargin, currentY);
+      doc.text(company.name, leftMargin, currentY);
     }
     
-    // Firmenadresse und Reisegarantie auf gleicher Linie (rechts oben)
-    let firmY = 15; // Gleiche Höhe wie Logo-Start
+    // Firmenadresse rechts oben
+    let firmY = 15;
     doc.setFontSize(7);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
-    doc.text('Faltin Travel AG', rightMargin, firmY);
+    doc.text(`${company.name}${company.legal_form ? ' ' + company.legal_form : ''}`, rightMargin, firmY);
     firmY += 3;
     doc.setFont('helvetica', 'normal');
-    doc.text('Riedthofstrasse 172', rightMargin, firmY);
+    doc.text(company.street, rightMargin, firmY);
     firmY += 3;
-    doc.text('8105 Regensdorf, Schweiz', rightMargin, firmY);
+    doc.text(`${company.zip} ${company.city}, ${company.country}`, rightMargin, firmY);
     firmY += 3;
-    doc.text('TEL +41 44 700 22 77', rightMargin, firmY);
-    firmY += 3;
-    doc.text('FAX +41 44 740 33 27', rightMargin, firmY);
-    firmY += 3;
-    doc.text('info@faltintravel.com', rightMargin, firmY);
-    firmY += 3;
-    doc.text('faltintravel.com', rightMargin, firmY);
+    if (company.phone) { doc.text(`TEL ${company.phone}`, rightMargin, firmY); firmY += 3; }
+    if (company.fax)   { doc.text(`FAX ${company.fax}`, rightMargin, firmY);   firmY += 3; }
+    if (company.email) { doc.text(company.email, rightMargin, firmY); firmY += 3; }
+    if (company.website) { doc.text(company.website, rightMargin, firmY); }
 
-    // Absenderzeile (klein und unterstrichen, wie auf professionellen Briefen)
-    currentY = 48; // Von 56 auf 48 - höher beginnen
+    currentY = 48;
     doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
-    const absenderText = 'Faltin Travel AG · Bahnstrasse 24 · 8105 Regensdorf';
+    const absenderText = `${company.name} · ${company.street} · ${company.zip} ${company.city}`;
     doc.text(absenderText, leftMargin, currentY);
     // Unterstreichung der Absenderzeile
     const absenderWidth = doc.getTextWidth(absenderText);
@@ -213,13 +261,13 @@ export async function GET(
     doc.setFont('helvetica', 'bold');
     doc.text('Destination:', labelX, currentY);
     doc.setFont('helvetica', 'normal');
-    doc.text('USA – Los Angeles', valueX, currentY);
+    doc.text(destination, valueX, currentY);
     currentY += 4.2;
 
     doc.setFont('helvetica', 'bold');
     doc.text('Hotel:', labelX, currentY);
     doc.setFont('helvetica', 'normal');
-    doc.text('5* Luxushotel in Santa Monica', valueX, currentY);
+    doc.text(hotelDescription, valueX, currentY);
     currentY += 4.2;
 
     doc.setFont('helvetica', 'bold');
@@ -227,17 +275,22 @@ export async function GET(
     doc.setFont('helvetica', 'normal');
     const roomCount = Math.ceil(booking.travelers.length / 2);
     const nightText = totalNights === 1 ? 'Übernachtung' : 'Übernachtungen';
-    doc.text(`${roomCount}x ${totalNights} ${nightText}/Frühstück im Doppelzimmer von ${checkInFormatted}2027 - ${checkOutFormatted}2027`, valueX, currentY);
+    doc.text(`${roomCount}x ${totalNights} ${nightText}/Frühstück im Doppelzimmer von ${checkInFormatted}${adjustedCheckIn.getFullYear()} - ${checkOutFormatted}${adjustedCheckOut.getFullYear()}`, valueX, currentY);
     currentY += 4.2;
 
     doc.setFont('helvetica', 'bold');
     doc.text('Veranstaltung:', labelX, currentY);
     doc.setFont('helvetica', 'normal');
-    doc.text('Super Bowl LXI 2027', valueX, currentY);
+    doc.text(eventName, valueX, currentY);
     currentY += 5.5;
 
-    doc.text('So. 11.02.2027 – Super Bowl LXI – SoFi Stadium', valueX, currentY);
-    currentY += 5.5;
+    // Event date line
+    if (eventRecord?.start_date) {
+      const evDate = new Date(eventRecord.start_date);
+      const evDateStr = evDate.toLocaleDateString('de-CH', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+      doc.text(`${evDateStr} – ${eventName}${eventRecord?.venue ? ' – ' + eventRecord.venue : ''}`, valueX, currentY);
+      currentY += 5.5;
+    }
 
     doc.setFont('helvetica', 'bold');
     doc.text('Ticketkategorie:', labelX, currentY);
@@ -245,16 +298,9 @@ export async function GET(
     doc.text(`${booking.travelers.length}x ${booking.package_title}`, valueX, currentY);
     currentY += 5;
 
-    const ticketDetails = [
-      'Kategorie 1 Sitzplatz im Unterrang',
-      'Inkl. Zutritt zum VIP-Bereich mit Catering & Getränken',
-      'Inkl. Super Bowl Program & Merchandise',
-      'Inkl. Faltin Travel Lanyard',
-      'Inkl. detaillierte Reiseinformation & Schweizer Reisegarantie'
-    ];
-    
-    ticketDetails.forEach(line => {
+    ticketDetailLines.forEach((line: string) => {
       doc.text(line, valueX, currentY);
+
       currentY += 3.8;
     });
     
@@ -434,7 +480,7 @@ export async function GET(
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
     
-    const paymentText = `Der Rechnungsbetrag ist zahlbar bis ${new Date(invoice.due_date).toLocaleDateString('de-CH')} auf unten genanntes Euro-Konto bei der Credit Suisse. Unter Angabe der IBAN-Nummer sowie SWIFT/BIC Code fallen keine Gebühren an. Mit der Buchung akzeptieren Sie unsere AGB (www.faltintravel.com/AGB). Tickets sind nicht stornierbar. Wir empfehlen den Abschluss einer Reiserücktrittskostenversicherung. Vielen Dank, dass Sie sich für Faltin Travel entschieden haben.`;
+    const paymentText = `Der Rechnungsbetrag ist zahlbar bis ${new Date(invoice.due_date).toLocaleDateString('de-CH')} auf unten genanntes ${bank.currency}-Konto. ${inv.payment_note}`;
     
     const splitText = doc.splitTextToSize(paymentText, 170);
     doc.text(splitText, leftMargin, currentY);
@@ -448,16 +494,17 @@ export async function GET(
     
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
-    doc.text('Bank: UBS Switzerland AG', leftMargin, currentY);
-    doc.text('SWIFT/BIC: UBSWCHZH80A', leftMargin + 70, currentY);
+    doc.text(`Bank: ${bank.bank_name}`, leftMargin, currentY);
+    doc.text(`SWIFT/BIC: ${bank.bic_swift}`, leftMargin + 70, currentY);
     currentY += 4;
     
     doc.setFont('helvetica', 'bold');
-    doc.text('IBAN: CH65 0029 1291 1135 1860 G', leftMargin, currentY);
+    // Format IBAN in groups of 4
+    const formattedIbanFooter = bank.iban.replace(/(.{4})/g, '$1 ').trim();
+    doc.text(`IBAN: ${formattedIbanFooter}`, leftMargin, currentY);
     doc.setFont('helvetica', 'normal');
     currentY += 4;
     
-    // Verwendungszweck
     doc.setFontSize(7);
     doc.text(`Verwendungszweck: Rechnung Nr. ${invoice.invoice_number}`, leftMargin, currentY);
     currentY += 8;
@@ -469,13 +516,13 @@ export async function GET(
     const footerY = 282;
     const footerRightX = 125;
     
-    doc.text('Inhaberverwaltungsrat: Stefan Faltin', leftMargin, footerY);
-    doc.text('UID: CHE-267.347.685 MWST', footerRightX, footerY);
-    
-    doc.text('Geschäftsführer: Stefan Faltin', leftMargin, footerY + 3.5);
-    doc.text('HrID: CH-020.3.037.547-2', footerRightX, footerY + 3.5);
-    
-    doc.text('Sitz der Gesellschaft und Gerichtsstand: Regensdorf', leftMargin, footerY + 7);
+    if (company.ceo) {
+      doc.text(`Inhaberverwaltungsrat: ${company.ceo}`, leftMargin, footerY);
+      doc.text(company.uid || '', footerRightX, footerY);
+      doc.text(`Geschäftsführer: ${company.ceo}`, leftMargin, footerY + 3.5);
+      doc.text(company.hr_id || '', footerRightX, footerY + 3.5);
+    }
+    doc.text(`Sitz der Gesellschaft und Gerichtsstand: ${company.city}`, leftMargin, footerY + 7);
 
     // ========== SEITE 2: Swiss QR-Rechnung ==========
     doc.addPage();
@@ -528,12 +575,12 @@ export async function GET(
     const firstTraveler = booking.travelers[0];
     const debtorName = `${firstTraveler.firstName} ${firstTraveler.lastName}`;
     const qrAmount = invoice.total_amount.toFixed(2);
-    const creditorName = 'Faltin Travel AG';
-    const creditorAddress = 'Riedthofstrasse 172';
-    const creditorZip = '8105';
-    const creditorCity = 'Regensdorf';
-    const creditorCountry = 'CH';
-    const creditorIBAN = 'CH650029129111351860G';
+    const creditorName = company.name;
+    const creditorAddress = company.street;
+    const creditorZip = company.zip;
+    const creditorCity = company.city;
+    const creditorCountry = company.country || 'CH';
+    const creditorIBAN = bank.iban.replace(/\s/g, '');
     const formattedIBAN = creditorIBAN.match(/.{1,4}/g)?.join(' ') || creditorIBAN;
     
     // BESSERE STRUKTUR: Saubere Detail-Box (druckfreundlich)
@@ -677,9 +724,8 @@ export async function GET(
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 60, 60);
-    doc.text('Wir wünschen Ihnen eine unvergessliche Reise zum Super Bowl LXI', leftMargin + 85, currentY, { align: 'center' });
+    doc.text(noteMeta.thank_you_text || settings.event.thank_you_text || `Wir freuen uns, Sie bei ${eventName} begleiten zu dürfen.`, leftMargin + 85, currentY, { align: 'center' });
     currentY += 4;
-    doc.text('und freuen uns, Sie bei diesem einzigartigen Event zu begleiten.', leftMargin + 85, currentY, { align: 'center' });
     
     currentY += 10;
     
@@ -702,7 +748,7 @@ export async function GET(
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(140, 140, 140);
-    doc.text('Riedthofstrasse 172 | 8105 Regensdorf | info@faltin-travel.ch', leftMargin + 85, currentY, { align: 'center' });
+    doc.text(`${company.street} | ${company.zip} ${company.city} | ${company.email}`, leftMargin + 85, currentY, { align: 'center' });
     
     currentY += 10;
     
@@ -711,7 +757,7 @@ export async function GET(
       'SPC', '0200', '1', creditorIBAN, 'K',
       creditorName, creditorAddress, `${creditorZip} ${creditorCity}`, '', '', creditorCountry,
       '', '', '', '', '', '', '',
-      qrAmount, 'EUR', 'K',
+      qrAmount, bank.currency || 'EUR', 'K',
       debtorName, booking.email, booking.phone, '', '', 'CH',
       'NON', '', `Rechnung ${invoice.invoice_number}`, 'EPD', ''
     ].join('\r\n');
