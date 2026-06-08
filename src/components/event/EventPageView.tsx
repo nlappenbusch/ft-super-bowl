@@ -318,9 +318,8 @@ export default function EventPageView({
   const hasTicketCats = showTicketCats && ticketCats.length > 0;
 
   const eventDateRange = getEventDateRange(event.start_date, event.end_date);
-  const bookingHref = event.base_url
-    ? `${event.base_url.replace(/\/$/, '')}/booking?event=${encodeURIComponent(event.slug)}`
-    : `/booking?event=${encodeURIComponent(event.slug)}`;
+  // CTA-Buttons springen on-page zum Anfrage-/Packages-Bereich (#tickets)
+  const ctaHref = '#tickets';
   const heroSubline = buildHeroSubline(event);
   const heroIntro   = buildHeroIntro(event);
   const heroCtaLabel = `Jetzt ${event.name || event.title || 'Event'} Tickets unverbindlich anfragen`;
@@ -341,7 +340,7 @@ export default function EventPageView({
     showStadionplan && { label: 'Stadionplan',   href: '#stadionplan' },
     hasLageplan     && { label: 'Lageplan',      href: '#lageplan'    },
     hasTicketCats   && { label: 'Ticket-Kategorien', href: '#ticket-kategorien' },
-    showPackages    && { label: 'Tickets',       href: '#tickets'     },
+    showPackages    && { label: 'Packages',      href: '#tickets'     },
     showFaqs        && { label: 'FAQ',           href: '#faq'         },
   ].filter(Boolean) as { label: string; href: string }[];
 
@@ -441,7 +440,7 @@ export default function EventPageView({
 
           <div className="mt-6">
             <Link
-              href={bookingHref}
+              href={ctaHref}
               className="inline-flex items-center rounded-sm px-8 py-4 text-base md:text-lg font-bold text-white transition-all hover:opacity-90 hover:scale-[1.02] shadow-lg"
               style={{ background: '#d9531e' }}
             >
@@ -546,7 +545,7 @@ export default function EventPageView({
                 )}
                 <div className="mt-8">
                   <Link
-                    href={bookingHref}
+                    href={ctaHref}
                     className="inline-flex items-center rounded-sm px-7 py-3.5 text-base font-bold text-white shadow-lg transition-all hover:opacity-90 hover:scale-[1.02]"
                     style={{ background: '#d9531e' }}
                   >
@@ -769,7 +768,7 @@ export default function EventPageView({
       {showPackages && (
         <section className="py-14 px-4 scroll-mt-40" id="tickets" style={{ background: '#eef3fb', borderTop: '1px solid #e5e8ed' }}>
           <div className="container mx-auto max-w-5xl">
-            <h2 className="text-3xl md:text-4xl font-extrabold mb-2 leading-tight text-center" style={{ color: '#143047' }}>Unsere Tickets</h2>
+            <h2 className="text-3xl md:text-4xl font-extrabold mb-2 leading-tight text-center" style={{ color: '#143047' }}>Unsere Packages</h2>
             <p className="text-gray-600 text-center mb-10 max-w-2xl mx-auto">
               Wählen Sie Ihr Package — von einzelnen Spieltagen bis zu exklusiven Halbfinale- und Finale-Kombinationen.
             </p>
@@ -869,7 +868,7 @@ export default function EventPageView({
       <section className="py-12 px-4 text-center" style={{ background: '#143047' }}>
         <p className="text-white/70 text-sm mb-4 uppercase tracking-widest font-semibold">Bereit für Ihr Erlebnis?</p>
         <Link
-          href={bookingHref}
+          href={ctaHref}
           className="inline-flex items-center rounded-sm px-8 py-4 text-base md:text-lg font-bold text-white transition-all hover:opacity-90 hover:scale-[1.02] shadow-lg"
           style={{ background: '#d9531e' }}
         >

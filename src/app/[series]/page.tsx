@@ -10,6 +10,7 @@ import EventContactForm from '@/components/EventContactForm';
 import EkomiWidget from '@/components/EkomiWidget';
 import { siteConfig } from '@/lib/siteConfig';
 import { toCategorySlug } from '@/lib/category';
+import { generateFaqPageSchema } from '@/lib/schema';
 
 interface SeriesPageProps {
   params: Promise<{ series: string }>;
@@ -104,6 +105,9 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
 
   return (
     <div className="min-h-screen" style={{ fontFamily: "'Montserrat','Open Sans',system-ui,sans-serif" }}>
+      {seriesFaqs.length > 0 && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(generateFaqPageSchema(seriesFaqs)) }} />
+      )}
       <Breadcrumbs items={crumbs} />
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden" style={{ minHeight: 360 }}>
@@ -131,6 +135,15 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
             <span className="inline-flex items-center gap-1.5"><Ticket className="h-4 w-4" style={{ color: '#f5c842' }} /> {events.length} {events.length === 1 ? 'Event' : 'Events'}</span>
             <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4" style={{ color: '#f5c842' }} /> Hospitality & Reisepakete</span>
           </div>
+          <div className="mt-7">
+            <a
+              href="#anfrage"
+              className="inline-flex items-center gap-2 rounded-sm px-7 py-3.5 text-base font-bold text-white shadow-lg transition-all hover:opacity-90 hover:scale-[1.02]"
+              style={{ background: '#d9531e' }}
+            >
+              Unverbindlich anfragen <ArrowRight className="h-5 w-5" />
+            </a>
+          </div>
         </div>
       </section>
 
@@ -144,9 +157,17 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
       </section>
 
       {/* ── INTRO / HIGHLIGHTS (Evergreen-Hub) ───────────────────────────── */}
-      {(seriesData.intro_text || highlights.length > 0) && (
-        <section className="bg-white px-4 pt-14">
-          <div className="mx-auto max-w-6xl">
+      <section className="bg-white px-4 pt-14">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-9 text-center">
+            <h2 className="text-2xl md:text-3xl font-extrabold leading-tight" style={{ color: '#143047' }}>
+              {seriesData.title} Tickets, Hospitality &amp; Reisepakete
+            </h2>
+            <p className="mx-auto mt-2 max-w-2xl text-gray-600">
+              Offizielle Tickets, erstklassige Hospitality und sorgenfreie Reisepakete – persönlich für Sie zusammengestellt.
+            </p>
+          </div>
+          {(seriesData.intro_text || highlights.length > 0) && (
             <div className="grid gap-10 md:grid-cols-[1.3fr_1fr] md:items-start">
               {seriesData.intro_text && (
                 <div className="whitespace-pre-line text-base md:text-lg leading-relaxed text-gray-700">
@@ -167,9 +188,9 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
                 </div>
               )}
             </div>
+          )}
           </div>
         </section>
-      )}
 
       {/* ── WARUM FALTIN TRAVEL ──────────────────────────────────────────── */}
       <section className="bg-white px-4 pb-4 pt-10">
@@ -343,8 +364,19 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
       </section>
 
       {/* ── ANFRAGE (mit Event-Auswahl) ──────────────────────────────────── */}
-      <section className="bg-white px-4 py-16">
+      <section id="anfrage" className="scroll-mt-28 px-4 py-16" style={{ background: 'radial-gradient(70% 100% at 50% 0%, rgba(58,124,190,0.30), transparent 60%), linear-gradient(180deg,#143e63,#0c2138)' }}>
         <div className="mx-auto max-w-3xl">
+          <div className="mb-8 text-center">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-white/80">
+              <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: '#d9531e' }} /> Unverbindlich &amp; kostenlos
+            </span>
+            <h2 className="mt-4 text-3xl md:text-4xl font-extrabold leading-tight text-white">
+              Bereit für Ihr {seriesData.title}-Erlebnis?
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-white/80">
+              Sagen Sie uns Ihr Wunsch-Event und Ihre Vorstellungen – wir erstellen Ihnen ein massgeschneidertes Angebot. Antwort in der Regel innerhalb von 24 Stunden.
+            </p>
+          </div>
           <EventContactForm
             eventSlug={eventOptions[0]?.slug || series}
             eventName={seriesData.title}

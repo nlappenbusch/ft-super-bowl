@@ -1,7 +1,7 @@
 import { notFound, permanentRedirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import EventPageView from '@/components/event/EventPageView';
-import { generateEventSchema, generateProductSchema } from '@/lib/schema';
+import { generateEventSchema, generateProductSchema, generateFaqPageSchema } from '@/lib/schema';
 import {
   getEventBySlug, getEventFaqs, getPackagesByEventSlug, getSeriesById, getPinIconsList,
 } from '@/lib/eventData';
@@ -69,6 +69,9 @@ export default async function LegacyEventPage({ params }: EventPageProps) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(eventSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
+      {faqs.length > 0 && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(generateFaqPageSchema(faqs)) }} />
+      )}
       <EventPageView event={event} series={series} packages={packages} faqs={faqs} pinIcons={pinIcons} />
     </>
   );

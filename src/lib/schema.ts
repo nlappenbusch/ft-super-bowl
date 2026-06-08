@@ -23,6 +23,22 @@ export interface ProductSchemaInput {
   url?: string;
 }
 
+/** FAQPage-Strukturdaten (Rich Results) aus einer Frage/Antwort-Liste. */
+export function generateFaqPageSchema(faqs: Array<{ question?: string; answer?: string }>) {
+  const items = (faqs || [])
+    .filter((f) => f && f.question && f.answer)
+    .map((f) => ({
+      '@type': 'Question',
+      name: f.question,
+      acceptedAnswer: { '@type': 'Answer', text: f.answer },
+    }));
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items,
+  };
+}
+
 export function generateOrganizationSchema() {
   return {
     '@context': 'https://schema.org',
