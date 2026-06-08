@@ -461,19 +461,12 @@ export default function EventPageView({
       {anchors.length > 0 && (
         <nav className="sticky z-40" style={{ top: 86 }}>
           <div
-            className="relative"
             style={{
               background: 'linear-gradient(180deg, #18395a 0%, #102538 100%)',
               boxShadow: '0 10px 28px rgba(8,20,33,0.35)',
               backdropFilter: 'saturate(140%)',
             }}
           >
-            {/* Marken-Akzentlinie statt harter weisser Kante */}
-            <span
-              className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px]"
-              style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(217,83,30,0.85) 50%, transparent 100%)' }}
-              aria-hidden
-            />
             <div className="mx-auto flex w-full max-w-6xl overflow-x-auto">
               {anchors.map((anchor) => {
                 const isActive = activeHash === anchor.href;
