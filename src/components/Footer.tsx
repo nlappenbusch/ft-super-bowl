@@ -54,10 +54,10 @@ export default function Footer() {
                 Ryder Cup 2027 | Authorized Distributor
               </p>
               <p className="text-base sm:text-lg font-semibold text-white mt-2">
-                Offizieller Vertriebspartner fuer Ryder Cup 2027 Reisepakete
+                Offizieller Vertriebspartner für Ryder Cup 2027 Reisepakete
               </p>
               <p className="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed">
-                Faltin Travel ist stolz darauf, als Authorized Distributor offizieller Vertriebspartner fuer den Ryder Cup 2027 zu sein.
+                Faltin Travel ist stolz darauf, als Authorized Distributor offizieller Vertriebspartner für den Ryder Cup 2027 zu sein.
               </p>
             </div>
           </div>

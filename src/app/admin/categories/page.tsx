@@ -245,7 +245,7 @@ export default function AdminCategoriesPage() {
               value={form.intro_text}
               onChange={(event) => updateField('intro_text', event.target.value)}
               rows={6}
-              placeholder="Hier den laengeren Kategorietext fuer SEO eintragen..."
+              placeholder="Hier den längeren Kategorietext für SEO eintragen..."
             />
 
             <TextAreaField
@@ -254,7 +254,7 @@ export default function AdminCategoriesPage() {
               value={form.meta_description}
               onChange={(event) => updateField('meta_description', event.target.value)}
               rows={3}
-              placeholder="Kurztext fuer Suchergebnisse (ca. 140-160 Zeichen)"
+              placeholder="Kurztext für Suchergebnisse (ca. 140-160 Zeichen)"
             />
 
             <Field label="Status">

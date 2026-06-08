@@ -24,54 +24,54 @@ function seedCategorySeo(): CategorySeoRecord[] {
       slug: 'sportevents',
       title: 'Sport Events',
       intro_text:
-        'In der Kategorie Sport Events finden Sie internationale Top-Highlights mit klar strukturierten Ticket- und Reiseloesungen. Von Planung bis Rueckreise profitieren Sie von festen Ansprechpartnern, nachvollziehbaren Leistungen und einer Organisation, die auf verlaessliche Umsetzbarkeit ausgerichtet ist.',
+        'In der Kategorie Sport Events finden Sie internationale Top-Highlights mit klar strukturierten Ticket- und Reiselösungen. Von Planung bis Rückreise profitieren Sie von festen Ansprechpartnern, nachvollziehbaren Leistungen und einer Organisation, die auf verlässliche Umsetzbarkeit ausgerichtet ist.',
       meta_description:
-        'Sport Events Reisen mit Faltin Travel: Premium Tickets, Hotels und professionelle Betreuung fuer internationale Top-Events.',
+        'Sport Events Reisen mit Faltin Travel: Premium Tickets, Hotels und professionelle Betreuung für internationale Top-Events.',
       status: 'active'
     },
     {
       slug: 'tennis',
       title: 'Tennis',
       intro_text:
-        'Unsere Tennis Eventreisen verbinden Grand-Slam-Atmosphaere mit verlaesslicher Reiseplanung. Ob Wimbledon, ATP Finals oder weitere Top-Turniere: Sie erhalten abgestimmte Ticket-Optionen, passende Hotels und persoenliche Beratung fuer einen reibungslosen Ablauf vor Ort.',
+        'Unsere Tennis Eventreisen verbinden Grand-Slam-Atmosphäre mit verlässlicher Reiseplanung. Ob Wimbledon, ATP Finals oder weitere Top-Turniere: Sie erhalten abgestimmte Ticket-Optionen, passende Hotels und persönliche Beratung für einen reibungslosen Ablauf vor Ort.',
       meta_description:
-        'Tennis Tickets und Eventreisen mit Faltin Travel: Grand Slams, Top-Turniere, Hotels und persoenliche Betreuung aus einer Hand.',
+        'Tennis Tickets und Eventreisen mit Faltin Travel: Grand Slams, Top-Turniere, Hotels und persönliche Betreuung aus einer Hand.',
       status: 'active'
     },
     {
       slug: 'motorsport-radsport',
       title: 'Motorsport & Radsport',
       intro_text:
-        'Motorsport- und Radsportreisen mit Fokus auf Erlebnisqualitaet, Zugang und Timing. Sie erhalten Eventzugang, passende Hoteloptionen und eine Planung, die Anreise, Renntage und Zusatzprogramme sinnvoll aufeinander abstimmt.',
+        'Motorsport- und Radsportreisen mit Fokus auf Erlebnisqualität, Zugang und Timing. Sie erhalten Eventzugang, passende Hoteloptionen und eine Planung, die Anreise, Renntage und Zusatzprogramme sinnvoll aufeinander abstimmt.',
       meta_description:
-        'Motorsport und Radsport Reisen mit Tickets, Hotels und strukturierter Planung fuer starke Live-Erlebnisse.',
+        'Motorsport und Radsport Reisen mit Tickets, Hotels und strukturierter Planung für starke Live-Erlebnisse.',
       status: 'active'
     },
     {
       slug: 'super-bowl',
       title: 'Super Bowl',
       intro_text:
-        'Der Super Bowl ist eines der gefragtesten Sportereignisse weltweit. Unsere Pakete kombinieren ausgewaehlte Ticketkategorien, hochwertige Hotels und eine belastbare Ablaufplanung, damit Sie das Event in Los Angeles entspannt und sicher erleben koennen.',
+        'Der Super Bowl ist eines der gefragtesten Sportereignisse weltweit. Unsere Pakete kombinieren ausgewählte Ticketkategorien, hochwertige Hotels und eine belastbare Ablaufplanung, damit Sie das Event in Los Angeles entspannt und sicher erleben können.',
       meta_description:
-        'Super Bowl Tickets und Reisepakete mit Hotel, Betreuung und klarer Organisation fuer Ihr NFL Highlight vor Ort.',
+        'Super Bowl Tickets und Reisepakete mit Hotel, Betreuung und klarer Organisation für Ihr NFL Highlight vor Ort.',
       status: 'active'
     },
     {
       slug: 'darts',
       title: 'Darts WM',
       intro_text:
-        'Darts-WM Reisen mit Fokus auf Stimmung, Sitzplatzqualitaet und logistischer Klarheit. Von der Ticketloesung bis zur Hotelwahl werden alle Bausteine so kombiniert, dass Ihr Eventtrip stressfrei und planbar bleibt.',
+        'Darts-WM Reisen mit Fokus auf Stimmung, Sitzplatzqualität und logistischer Klarheit. Von der Ticketlösung bis zur Hotelwahl werden alle Bausteine so kombiniert, dass Ihr Eventtrip stressfrei und planbar bleibt.',
       meta_description:
-        'Darts WM Reisen mit Tickets und Hotels: optimal organisiert fuer ein unvergessliches Ally-Pally Erlebnis.',
+        'Darts WM Reisen mit Tickets und Hotels: optimal organisiert für ein unvergessliches Ally-Pally Erlebnis.',
       status: 'active'
     },
     {
       slug: 'kultur-events-konzerte',
       title: 'Kultur Events & Konzerte',
       intro_text:
-        'Fuer Kultur- und Konzertreisen bieten wir kuratierte Arrangements mit Eventzugang, passenden Unterkuenften und abgestimmten Zeitplaenen. So entstehen hochwertige Erlebnisse, die Genuss, Komfort und Verlaesslichkeit verbinden.',
+        'Für Kultur- und Konzertreisen bieten wir kuratierte Arrangements mit Eventzugang, passenden Unterkünften und abgestimmten Zeitplänen. So entstehen hochwertige Erlebnisse, die Genuss, Komfort und Verlässlichkeit verbinden.',
       meta_description:
-        'Kultur und Konzertreisen mit Eventzugang, Hotels und durchdachter Planung fuer besondere Live-Momente.',
+        'Kultur und Konzertreisen mit Eventzugang, Hotels und durchdachter Planung für besondere Live-Momente.',
       status: 'active'
     }
   ];
