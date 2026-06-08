@@ -365,7 +365,7 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
 
       {/* ── ANFRAGE (mit Event-Auswahl) ──────────────────────────────────── */}
       <section id="anfrage" className="scroll-mt-28 px-4 py-16" style={{ background: 'radial-gradient(70% 100% at 50% 0%, rgba(58,124,190,0.30), transparent 60%), linear-gradient(180deg,#143e63,#0c2138)' }}>
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-4xl">
           <div className="mb-8 text-center">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-white/80">
               <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: '#d9531e' }} /> Unverbindlich &amp; kostenlos

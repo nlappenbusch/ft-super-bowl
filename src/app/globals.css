@@ -23,6 +23,13 @@
    fast-weiß setzen → heller Text auf hellen Feldern ("grau auf grau"). Daher
    bewusst KEIN Dark-Mode-Override. */
 
+/* Globale Basis-Schriftgröße: skaliert Fonts UND rem-Abstände gleichmässig
+   herunter, damit die Seite bei 100% Zoom nicht überdimensioniert wirkt.
+   16px = Browser-Standard; 15px ≈ 94%. Wert hier zentral anpassbar. */
+html {
+  font-size: 15px;
+}
+
 body {
   background: linear-gradient(180deg, #f9f8f7 0%, var(--background) 100%);
   color: var(--foreground);
