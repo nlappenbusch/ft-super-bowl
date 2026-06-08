@@ -105,6 +105,8 @@ export interface EventRecord {
   first_paragraph_image_3_title?: string | null;
   /** Reihenfolge der Modul-Sektionen auf der Event-Seite (Schlüssel, z.B. 'spielplan'). */
   module_order?: string[] | null;
+  /** Hervorgehoben (Featured) – Spotlight im Kalender / auf der Startseite. */
+  featured?: boolean | null;
 }
 
 export interface SeriesRecord {
@@ -116,6 +118,7 @@ export interface SeriesRecord {
   category_seo_text?: string | null;
   hero_image?: string | null;
   status?: 'active' | 'draft' | 'archived' | null;
+  featured?: boolean | null;
   /** Evergreen-Hub-Inhalte */
   intro_text?: string | null;
   highlights?: string[] | null;

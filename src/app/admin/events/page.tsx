@@ -103,6 +103,7 @@ interface EventFormState {
   ticket_categories_intro: string;
   ticket_categories: Array<{ name: string; items: string[]; note: string }>;
   module_order: string[];
+  featured: boolean;
 }
 
 const DEFAULT_MODULE_ORDER = ['leistungen', 'about', 'spielplan', 'wissenswertes', 'stadionplan', 'lageplan', 'ticket_categories', 'packages', 'faq'];
@@ -181,7 +182,8 @@ const emptyForm: EventFormState = {
   ticket_categories_title: '',
   ticket_categories_intro: '',
   ticket_categories: [],
-  module_order: [...DEFAULT_MODULE_ORDER]
+  module_order: [...DEFAULT_MODULE_ORDER],
+  featured: false
 };
 
 function normalizeEventFormState(event?: Partial<EventFormState> | null): EventFormState {
@@ -251,7 +253,8 @@ function normalizeEventFormState(event?: Partial<EventFormState> | null): EventF
     })),
     module_order: (event?.module_order as string[] | undefined)?.length
       ? (event!.module_order as string[])
-      : [...DEFAULT_MODULE_ORDER]
+      : [...DEFAULT_MODULE_ORDER],
+    featured: !!(event?.featured)
   };
 }
 
@@ -466,7 +469,8 @@ export default function AdminEventsPage() {
       ticket_categories: form.ticket_categories
         .map((c) => ({ name: c.name.trim(), items: c.items.map((i) => i.trim()).filter(Boolean), note: c.note.trim() }))
         .filter((c) => c.name || c.items.length),
-      module_order: form.module_order
+      module_order: form.module_order,
+      featured: form.featured
     };
 
     const response = await fetch(`/api/admin/events${form.id ? `/${form.id}` : ''}`, {
@@ -970,6 +974,13 @@ export default function AdminEventsPage() {
                 title="Module & Reihenfolge"
                 description="Schalter = Modul an/aus. Per ⠿-Griff ziehen, um die Reihenfolge auf der Event-Seite zu ändern (Live-Vorschau passt sich an)."
               >
+                <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border-2 p-4" style={{ borderColor: form.featured ? '#d9531e' : COLORS.stroke, background: form.featured ? '#fff7f2' : '#fff' }}>
+                  <div>
+                    <div className="flex items-center gap-2 text-sm font-bold" style={{ color: COLORS.navy }}>⭐ Featured-Event</div>
+                    <div className="text-xs" style={{ color: COLORS.textMuted }}>Hebt das Event im Kalender als Spotlight hervor (wie früher das Super-Bowl-Highlight).</div>
+                  </div>
+                  <Toggle checked={form.featured} onChange={(v) => updateField('featured', v)} />
+                </div>
                 <div className="space-y-2">
                   {(() => {
                     const known = Object.keys(MODULE_META);

@@ -8,6 +8,7 @@ import {
   X,
   Menu,
   ArrowRight,
+  CalendarDays,
   Phone,
   Trophy,
   CircleDot,
@@ -19,7 +20,7 @@ import {
 
 /* ─── Types ──────────────────────────────────────────────────── */
 type NavLink = { label: string; href: string; desc?: string };
-type NavColumn = { title: string; icon: LucideIcon; items: NavLink[] };
+type NavColumn = { title: string; iconKey: string; items: NavLink[] };
 
 interface MegaItem {
   type: 'mega';
@@ -36,72 +37,29 @@ interface LinkItem {
   external?: boolean;
 }
 
-type NavItem = MegaItem | LinkItem;
+type CalPreview = { name: string; href: string; category: string; dateLabel: string; startISO: string };
+interface CalendarItem {
+  type: 'calendar';
+  label: string;
+  href: string;
+  events: CalPreview[];
+}
+
+export type NavItem = MegaItem | LinkItem | CalendarItem;
+
+/* iconKey → Lucide-Icon (Menü-Daten sind serialisierbar, kommen via Prop) */
+const ICONS: Record<string, LucideIcon> = {
+  tennis: CircleDot,
+  gauge: Gauge,
+  music: Music2,
+  star: Star,
+  trophy: Trophy,
+};
 
 /* ─── Navigation definition ──────────────────────────────────── */
-const NAV: NavItem[] = [
-  { type: 'link', label: 'Home', href: 'https://faltintravel.com' },
-  {
-    type: 'mega',
-    label: 'Sportevents',
-    key: 'sport',
-    columns: [
-      {
-        title: 'Fussball',
-        icon: Trophy,
-        items: [
-          { label: 'Champions League Finale', href: 'https://faltintravel.com/champions-league-finale-tickets/', desc: 'Das Finale der Könige' },
-          { label: 'Premier League', href: 'https://faltintravel.com/premier-league-tickets/', desc: 'Englands Top-Liga live' },
-        ],
-      },
-      {
-        title: 'Tennis',
-        icon: CircleDot,
-        items: [
-          { label: 'Wimbledon 2026', href: 'https://faltintravel.com/wimbledon-tickets/', desc: 'Das prestigeträchtigste Turnier' },
-          { label: 'French Open 2026', href: 'https://faltintravel.com/french-open-tickets/', desc: 'Roland Garros, Paris' },
-        ],
-      },
-      {
-        title: 'Motorsport',
-        icon: Gauge,
-        items: [
-          { label: 'Formel 1 2025', href: 'https://faltintravel.com/formel-1-tickets/', desc: 'Races weltweit' },
-          { label: 'Monaco Grand Prix', href: 'https://faltintravel.com/monaco-grand-prix-tickets/', desc: 'Glamour in Monte Carlo' },
-        ],
-      },
-      {
-        title: 'American Sports',
-        icon: Star,
-        items: [
-          { label: 'Super Bowl 2027', href: 'https://faltintravel.com/super-bowl-2027-tickets/', desc: 'LA, 14. Februar 2027' },
-          { label: 'Olympia 2028', href: 'https://faltintravel.com/olympia-2028-tickets/', desc: 'Los Angeles 2028' },
-        ],
-      },
-    ],
-    featured: {
-      title: 'Super Bowl LXI 2027',
-      desc: 'Das grösste Sportevent der Welt. VIP-Pakete mit 4★ Hotel, Premium-Tickets & exklusivem Zugang.',
-      href: '/',
-      image: '/Super-Bowl-LXI-Tickets-Packages.webp',
-    },
-  },
-  {
-    type: 'mega',
-    label: 'Kulturevents',
-    key: 'kultur',
-    columns: [
-      {
-        title: 'Klassik & Oper',
-        icon: Music2,
-        items: [
-          { label: 'Neujahrskonzert 2027', href: 'https://faltintravel.com/neujahrskonzert-tickets/', desc: 'Wien, Musikverein' },
-          { label: 'Wiener Opernball', href: 'https://faltintravel.com/wiener-opernball-tickets/', desc: 'Der Ball der Bälle' },
-        ],
-      },
-    ],
-  },
-  { type: 'link', label: 'Incentive', href: 'https://incentive-agentur.ch/', external: true },
+/* Fallback, falls kein dynamisches Menü übergeben wird (Daten nicht ladbar). */
+const FALLBACK_NAV: NavItem[] = [
+  { type: 'link', label: 'Home', href: '/' },
   { type: 'link', label: 'Über uns', href: 'https://faltintravel.com/wir-ueber-uns/' },
   { type: 'link', label: 'Kontakt', href: 'https://faltintravel.com/kontakt/' },
 ];
@@ -114,12 +72,16 @@ function innerColClass(count: number): string {
 }
 
 /* ─── Component ──────────────────────────────────────────────── */
-export default function NavBar() {
+export default function NavBar({ menu }: { menu?: NavItem[] }) {
+  const NAV = menu && menu.length ? menu : FALLBACK_NAV;
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
+  const [now, setNow] = useState<number | null>(null);
   const headerRef = useRef<HTMLElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { setNow(Date.now()); }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -157,6 +119,18 @@ export default function NavBar() {
   }, []);
 
   const megaItems = NAV.filter((item): item is MegaItem => item.type === 'mega');
+  const calendarItem = NAV.find((item): item is CalendarItem => item.type === 'calendar');
+
+  const cd = (startISO: string): string => {
+    if (now === null) return '';
+    const d = new Date(`${startISO}T00:00:00`);
+    if (isNaN(d.getTime())) return '';
+    const days = Math.ceil((d.getTime() - now) / 86400000);
+    if (days < 0) return 'läuft';
+    if (days === 0) return 'heute';
+    if (days === 1) return 'morgen';
+    return `in ${days} Tagen`;
+  };
 
   return (
     <>
@@ -221,7 +195,7 @@ export default function NavBar() {
                         {item.columns.map((col) => (
                           <div key={col.title}>
                             <div className="flex items-center gap-1.5 px-2 py-1">
-                              <col.icon className="h-3.5 w-3.5 text-white/50" />
+                              {(() => { const Icon = ICONS[col.iconKey] || Trophy; return <Icon className="h-3.5 w-3.5 text-white/50" />; })()}
                               <span className="text-[10px] uppercase tracking-widest font-bold text-white/40">
                                 {col.title}
                               </span>
@@ -241,6 +215,19 @@ export default function NavBar() {
                       </div>
                     )}
                   </div>
+                );
+              }
+
+              if (item.type === 'calendar') {
+                return (
+                  <Link
+                    key="calendar-m"
+                    href={item.href}
+                    className="flex items-center text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 py-3 px-3 rounded-xl transition"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
                 );
               }
 
@@ -311,6 +298,25 @@ export default function NavBar() {
                         <ChevronDown
                           className={`w-3.5 h-3.5 transition-transform duration-200 ${active ? '-rotate-180' : ''}`}
                         />
+                      </button>
+                    </div>
+                  );
+                }
+
+                if (item.type === 'calendar') {
+                  const active = openMenu === 'calendar';
+                  return (
+                    <div key="calendar" onMouseEnter={() => openOnHover('calendar')} onMouseLeave={scheduleClose}>
+                      <button
+                        onClick={() => toggleMenu('calendar')}
+                        className={`flex items-center gap-1 px-3 py-2 rounded-xl text-[14px] font-semibold transition-all duration-150 ${
+                          active
+                            ? 'bg-white/22 text-white shadow-[0_6px_16px_rgba(0,0,0,0.2)]'
+                            : 'text-white/92 hover:text-white hover:bg-white/16'
+                        }`}
+                      >
+                        {item.label}
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${active ? '-rotate-180' : ''}`} />
                       </button>
                     </div>
                   );
@@ -390,7 +396,7 @@ export default function NavBar() {
                       {item.columns.map((col) => (
                         <div key={col.title}>
                           <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
-                            <col.icon className="h-4 w-4 text-slate-600" />
+                            {(() => { const Icon = ICONS[col.iconKey] || Trophy; return <Icon className="h-4 w-4 text-slate-600" />; })()}
                             <h3
                               className="text-[11px] font-bold uppercase tracking-[0.16em]"
                               style={{ color: '#184a7b' }}
@@ -466,6 +472,67 @@ export default function NavBar() {
             </div>
           );
         })}
+
+        {/* ── Kalender-Dropdown ── */}
+        {calendarItem && (
+          <div
+            className="absolute left-0 right-0 z-50"
+            style={{
+              top: '100%',
+              opacity: openMenu === 'calendar' ? 1 : 0,
+              pointerEvents: openMenu === 'calendar' ? 'auto' : 'none',
+              transform: openMenu === 'calendar' ? 'translateY(0)' : 'translateY(-4px)',
+              transition: 'opacity 180ms ease, transform 180ms ease',
+            }}
+            onMouseEnter={cancelClose}
+            onMouseLeave={scheduleClose}
+          >
+            <div className="container mx-auto px-4 pb-6">
+              <div className="mx-auto max-w-xl overflow-hidden rounded-3xl shadow-2xl" style={{ border: '1px solid rgba(0,0,0,0.08)', background: '#fff' }}>
+                <div className="flex items-center justify-between px-6 py-4" style={{ background: 'linear-gradient(135deg,#163e63,#0e2842)' }}>
+                  <span className="flex items-center gap-2 font-bold text-white">
+                    <CalendarDays className="h-5 w-5" style={{ color: '#f5c842' }} /> Nächste Events
+                  </span>
+                  <a href="/api/calendar/ics" className="rounded-lg px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90" style={{ background: '#d9531e' }}>Abonnieren</a>
+                </div>
+                {calendarItem.events.length === 0 ? (
+                  <div className="px-6 py-8 text-center text-sm text-gray-400">Keine anstehenden Events.</div>
+                ) : (
+                  <div>
+                    {calendarItem.events.map((ev) => (
+                      <Link
+                        key={ev.href}
+                        href={ev.href}
+                        onClick={() => setOpenMenu(null)}
+                        className="flex items-center gap-3 border-b px-6 py-3 transition-colors hover:bg-slate-50"
+                        style={{ borderColor: '#eef1f4' }}
+                      >
+                        <span className="flex h-11 w-12 shrink-0 items-center justify-center rounded-lg text-xs font-extrabold text-white" style={{ background: '#143047' }}>
+                          {ev.dateLabel.slice(0, 5)}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-bold" style={{ color: '#143047' }}>{ev.name}</span>
+                          <span className="block text-xs text-gray-500">{ev.dateLabel} · {ev.category}</span>
+                        </span>
+                        {cd(ev.startISO) && (
+                          <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: '#eef3fb', color: '#18395a' }}>{cd(ev.startISO)}</span>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+                <Link
+                  href="/kalender"
+                  onClick={() => setOpenMenu(null)}
+                  className="flex items-center justify-center gap-1.5 px-6 py-3.5 text-sm font-bold transition-colors hover:bg-slate-50"
+                  style={{ color: '#d9531e' }}
+                >
+                  Alle Events im Kalender <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
     </>
   );

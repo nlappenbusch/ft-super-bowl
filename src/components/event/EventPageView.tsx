@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { MapPin, CalendarDays, ShieldCheck, Ticket, Award, ChevronDown } from 'lucide-react';
 import PackageCard from '@/components/PackageCard';
 import EventContactForm from '@/components/EventContactForm';
-import EkomiWidget from '@/components/EkomiWidget';
 import LageplanMap from '@/components/LageplanMap';
 import type { EventRecord, SeriesRecord, PackageRecord, EventFaqRecord } from '@/lib/eventData';
 
@@ -949,18 +948,6 @@ export default function EventPageView({
           </div>
         </section>
       )}
-
-      {/* ── KUNDENSTIMMEN (eKomi) ────────────────────────────────────────────── */}
-      <section className="py-14 px-4 bg-white" style={{ order: 99, borderTop: '1px solid #e5e8ed' }}>
-        <div className="container mx-auto max-w-5xl text-center">
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-widest" style={{ background: '#eef3fb', color: '#18395a' }}>
-            <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: '#d9531e' }} /> Kundenstimmen
-          </div>
-          <h2 className="text-2xl md:text-3xl font-extrabold mb-2" style={{ color: '#143047' }}>Das sagen unsere Kunden</h2>
-          <p className="mx-auto mb-8 max-w-2xl text-sm text-gray-500">Unabhängig erhobene Bewertungen über Faltin Travel – ausgezeichnet mit dem eKomi Gold-Siegel.</p>
-          <EkomiWidget token="sf1193616993086c0b0e7" draftMode language="de" className="w-full overflow-hidden" />
-        </div>
-      </section>
 
       {/* ── BOTTOM CTA STRIP ─────────────────────────────────────────────────── */}
       <section className="py-12 px-4 text-center" style={{ background: '#143047', order: 100 }}>

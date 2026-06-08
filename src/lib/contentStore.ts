@@ -80,6 +80,7 @@ export interface ContentEventRecord {
   first_paragraph_image_3_alt?: string | null;
   first_paragraph_image_3_title?: string | null;
   module_order?: string[] | null;
+  featured?: boolean | null;
 }
 
 export interface ContentPackageInclude {
@@ -106,6 +107,7 @@ export interface ContentSeriesRecord {
   seo_text?: string | null;
   faqs?: Array<{ question: string; answer: string }> | null;
   guide_sections?: Array<{ title: string; text: string }> | null;
+  featured?: boolean | null;
 }
 
 export interface ContentPackageRecord {

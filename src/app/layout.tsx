@@ -4,6 +4,7 @@ import "./globals.css";
 import NavBarWrapper from '@/components/NavBarWrapper';
 import FooterWrapper from '@/components/FooterWrapper';
 import { siteConfig } from '@/lib/siteConfig';
+import { buildNavMenu } from '@/lib/navMenu';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -73,11 +74,12 @@ export const metadata: Metadata = {
   }
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const navMenu = await buildNavMenu();
   return (
     <html lang="de-CH" suppressHydrationWarning>
       <head>
@@ -87,7 +89,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} antialiased`}
         suppressHydrationWarning
       >
-        <NavBarWrapper />
+        <NavBarWrapper menu={navMenu} />
         {children}
         <FooterWrapper />
       </body>
