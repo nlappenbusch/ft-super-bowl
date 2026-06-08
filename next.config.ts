@@ -36,7 +36,15 @@ const nextConfig: NextConfig = {
   
   // Headers für SEO & Sicherheit
   async headers() {
+    // Globaler Noindex (Staging / vor Go-Live). Abschalten mit NOINDEX=false in der .env.
+    const noindex = process.env.NOINDEX !== 'false';
     return [
+      ...(noindex
+        ? [{
+            source: '/:path*',
+            headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }]
+          }]
+        : []),
       {
         source: '/:path*',
         headers: [

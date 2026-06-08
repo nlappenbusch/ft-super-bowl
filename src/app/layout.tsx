@@ -54,17 +54,20 @@ export const metadata: Metadata = {
     description: siteConfig.description,
     images: [siteConfig.ogImage]
   },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
+  // Globaler Noindex (Staging / vor Go-Live). Abschalten mit NOINDEX=false in der .env.
+  robots: process.env.NOINDEX !== 'false'
+    ? { index: false, follow: false, googleBot: { index: false, follow: false } }
+    : {
+        index: true,
+        follow: true,
+        googleBot: {
+          index: true,
+          follow: true,
+          'max-video-preview': -1,
+          'max-image-preview': 'large',
+          'max-snippet': -1,
+        },
+      },
   verification: {
     google: 'your-google-verification-code',
   }
