@@ -3,6 +3,7 @@
 import React, { createElement, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { MapPin, CalendarDays } from 'lucide-react';
 import PackageCard from '@/components/PackageCard';
 import EventContactForm from '@/components/EventContactForm';
 import LageplanMap from '@/components/LageplanMap';
@@ -243,16 +244,6 @@ function getEventLocationLine(event: {
     .join(', ');
 }
 
-function buildHeroSubline(event: EventRecord) {
-  const baseName = event.name || 'Event';
-  const location = getEventLocationLine(event);
-  const dateRange = getEventDateRange(event.start_date, event.end_date);
-  const parts = [baseName];
-  if (location) parts.push(`Ort: ${location}`);
-  if (dateRange) parts.push(`Termin: ${dateRange}`);
-  return parts.join(' | ');
-}
-
 function buildHeroIntro(event: EventRecord) {
   if (event.description) return event.description;
   const baseName = event.name || event.title || 'dieses Event';
@@ -318,9 +309,9 @@ export default function EventPageView({
   const hasTicketCats = showTicketCats && ticketCats.length > 0;
 
   const eventDateRange = getEventDateRange(event.start_date, event.end_date);
+  const heroLocation = getEventLocationLine(event);
   // CTA-Buttons springen on-page zum Anfrage-/Packages-Bereich (#tickets)
   const ctaHref = '#tickets';
-  const heroSubline = buildHeroSubline(event);
   const heroIntro   = buildHeroIntro(event);
   const heroCtaLabel = `Jetzt ${event.name || event.title || 'Event'} Tickets unverbindlich anfragen`;
   const firstParagraphHeading = buildFirstParagraphHeading(event);
@@ -424,8 +415,17 @@ export default function EventPageView({
               as="h1"
               className="text-3xl md:text-5xl font-extrabold text-white leading-tight mb-3"
             />
-            <Editable editable={editable} target="location" as="p" className="text-sm md:text-base font-semibold text-white/80 mb-5 tracking-tight">
-              {heroSubline}
+            <Editable editable={editable} target="location" as="div" className="mb-6 flex flex-wrap items-center justify-center gap-2.5">
+              {heroLocation && (
+                <span className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold text-white" style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}>
+                  <MapPin className="h-4 w-4 shrink-0" style={{ color: '#f5c842' }} /> {heroLocation}
+                </span>
+              )}
+              {eventDateRange && (
+                <span className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold text-white" style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}>
+                  <CalendarDays className="h-4 w-4 shrink-0" style={{ color: '#f5c842' }} /> {eventDateRange}
+                </span>
+              )}
             </Editable>
             <InlineEditable
               editable={editable}
@@ -463,7 +463,7 @@ export default function EventPageView({
 
       {/* ── STICKY ANCHOR NAV ────────────────────────────────────────────────── */}
       {anchors.length > 0 && (
-        <nav className="sticky z-40" style={{ top: 86 }}>
+        <nav className="sticky z-40" style={{ top: 78 }}>
           <div
             style={{
               background: 'linear-gradient(180deg, #18395a 0%, #102538 100%)',
