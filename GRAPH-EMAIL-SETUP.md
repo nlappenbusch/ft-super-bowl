@@ -10,6 +10,18 @@ und für die Zuordnung beim Antworten genutzt wird.
 Microsoft 365 Admin Center → Teams & Gruppen → **Shared Mailboxes** → `request@faltintravel.com`.
 Shared Mailboxes brauchen **keine** Lizenz.
 
+## Schnellweg: Setup-Script aus dem Admin-Panel
+
+Im Adminbereich unter **E-Mail / Microsoft 365 → „Setup-Script generieren"** kannst du
+ein fertiges PowerShell-Script erzeugen (App-Name + Postfach eingeben, optional
+„Zugriff auf Postfach beschränken"). Das Script legt App-Registrierung,
+Berechtigungen, Admin-Consent, Client-Secret und (optional) die
+ApplicationAccessPolicy automatisch an und gibt am Ende `TENANT_ID / CLIENT_ID /
+CLIENT_SECRET` aus. Diese Werte trägst du anschließend **direkt im selben Panel**
+unter „Konfiguration" ein (kein .env-Eintrag nötig – die Panel-Werte haben Vorrang).
+
+Die folgenden Schritte sind die manuelle Alternative.
+
 ## 2. App-Registrierung in Entra ID (Azure AD)
 
 1. https://entra.microsoft.com → **App registrations** → **New registration**

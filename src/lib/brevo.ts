@@ -3,6 +3,8 @@
  * Requires BREVO_API_KEY in environment variables
  */
 
+import { getSettings } from './settingsStore';
+
 const BREVO_API_URL = 'https://api.brevo.com/v3';
 
 interface BrevoContactAttributes {
@@ -19,7 +21,7 @@ export async function addContactToBrevoList(
   phone: string,
   listId: number
 ): Promise<{ success: boolean; error?: string }> {
-  const apiKey = process.env.BREVO_API_KEY;
+  const apiKey = getSettings().mail.brevo_api_key || process.env.BREVO_API_KEY;
   if (!apiKey) {
     console.warn('[Brevo] BREVO_API_KEY not set — skipping Brevo sync');
     return { success: false, error: 'No API key configured' };

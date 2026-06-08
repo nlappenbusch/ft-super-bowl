@@ -83,7 +83,22 @@ export interface AllSettings {
   invoice: InvoiceSettings;
   event: EventSettings;
   site: SiteSettings;
+  mail: MailSettings;
   updated_at?: string;
+}
+
+export interface MailSettings {
+  /** Microsoft 365 / Graph (App-only) */
+  tenant_id: string;
+  client_id: string;
+  client_secret: string;
+  /** Shared Mailbox als Absender & Eingang, z.B. request@faltintravel.com */
+  mailbox: string;
+  from_name: string;
+  /** Schutz-Token für den Inbound-Poll-Endpoint */
+  inbound_poll_secret: string;
+  /** Brevo API-Key (Marketing-Listen) */
+  brevo_api_key: string;
 }
 
 const DEFAULT_SETTINGS: AllSettings = {
@@ -138,6 +153,15 @@ const DEFAULT_SETTINGS: AllSettings = {
     og_image: '/Super-Bowl-LXI-Tickets-Packages.webp',
     admin_password: 'faltin-admin-2025',
   },
+  mail: {
+    tenant_id: '',
+    client_id: '',
+    client_secret: '',
+    mailbox: '',
+    from_name: 'Faltin Travel',
+    inbound_poll_secret: '',
+    brevo_api_key: '',
+  },
 };
 
 function ensureDataDir() {
@@ -162,6 +186,7 @@ export function getSettings(): AllSettings {
       invoice: { ...DEFAULT_SETTINGS.invoice, ...parsed.invoice },
       event: { ...DEFAULT_SETTINGS.event, ...parsed.event },
       site: { ...DEFAULT_SETTINGS.site, ...parsed.site },
+      mail: { ...DEFAULT_SETTINGS.mail, ...parsed.mail },
       updated_at: parsed.updated_at,
     };
   } catch {
@@ -178,6 +203,7 @@ export function saveSettings(updates: Partial<AllSettings>): AllSettings {
     invoice: { ...current.invoice, ...(updates.invoice || {}) },
     event: { ...current.event, ...(updates.event || {}) },
     site: { ...current.site, ...(updates.site || {}) },
+    mail: { ...current.mail, ...(updates.mail || {}) },
     updated_at: new Date().toISOString(),
   };
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(merged, null, 2), 'utf-8');

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { runInboundPoll } from '@/lib/inboundPoll';
+import { getSettings } from '@/lib/settingsStore';
 
 /**
  * Inbound-Polling (Cron-Endpoint).
@@ -7,7 +8,7 @@ import { runInboundPoll } from '@/lib/inboundPoll';
  * Schutz: wenn INBOUND_POLL_SECRET gesetzt ist, muss es übergeben werden.
  */
 async function handle(request: Request) {
-  const secret = process.env.INBOUND_POLL_SECRET;
+  const secret = getSettings().mail.inbound_poll_secret || process.env.INBOUND_POLL_SECRET;
   if (secret) {
     const url = new URL(request.url);
     const provided =

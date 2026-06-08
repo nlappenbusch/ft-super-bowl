@@ -18,23 +18,33 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
+import { getSettings } from './settingsStore';
+
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 
+/** Effektive Mail-Konfiguration: Admin-Settings haben Vorrang, dann .env. */
+function mailConfig() {
+  const m = getSettings().mail;
+  return {
+    tenantId: m.tenant_id || process.env.GRAPH_TENANT_ID || '',
+    clientId: m.client_id || process.env.GRAPH_CLIENT_ID || '',
+    clientSecret: m.client_secret || process.env.GRAPH_CLIENT_SECRET || '',
+    mailbox: m.mailbox || process.env.GRAPH_MAILBOX || '',
+    fromName: m.from_name || process.env.GRAPH_FROM_NAME || 'Faltin Travel',
+  };
+}
+
 export function isGraphConfigured(): boolean {
-  return !!(
-    process.env.GRAPH_TENANT_ID &&
-    process.env.GRAPH_CLIENT_ID &&
-    process.env.GRAPH_CLIENT_SECRET &&
-    process.env.GRAPH_MAILBOX
-  );
+  const c = mailConfig();
+  return !!(c.tenantId && c.clientId && c.clientSecret && c.mailbox);
 }
 
 export function getMailbox(): string {
-  return process.env.GRAPH_MAILBOX || '';
+  return mailConfig().mailbox;
 }
 
 export function getFromName(): string {
-  return process.env.GRAPH_FROM_NAME || 'Faltin Travel';
+  return mailConfig().fromName;
 }
 
 // Token-Cache (Prozesslaufzeit), spart Token-Requests
@@ -47,10 +57,11 @@ async function getGraphToken(): Promise<string | null> {
     return cachedToken.value;
   }
 
-  const tenant = process.env.GRAPH_TENANT_ID!;
+  const c = mailConfig();
+  const tenant = c.tenantId;
   const params = new URLSearchParams({
-    client_id: process.env.GRAPH_CLIENT_ID!,
-    client_secret: process.env.GRAPH_CLIENT_SECRET!,
+    client_id: c.clientId,
+    client_secret: c.clientSecret,
     scope: 'https://graph.microsoft.com/.default',
     grant_type: 'client_credentials',
   });
