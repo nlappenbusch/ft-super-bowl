@@ -15,7 +15,10 @@ export async function POST(request: Request) {
       category: body.category || 'Sonstiges',
       category_seo_text: body.category_seo_text || null,
       hero_image: body.hero_image || null,
-      status: body.status || 'active'
+      status: body.status || 'active',
+      intro_text: body.intro_text || null,
+      highlights: body.highlights || [],
+      seo_text: body.seo_text || null
     });
 
     return NextResponse.json({ success: true, data: series });

@@ -6,6 +6,7 @@ export interface ContentEventRecord {
   id: string;
   series_id?: string | null;
   slug: string;
+  url_segment?: string | null;
   name: string;
   title: string;
   description?: string | null;
@@ -83,6 +84,9 @@ export interface ContentSeriesRecord {
   category_seo_text?: string | null;
   hero_image?: string | null;
   status?: 'active' | 'draft' | 'archived' | null;
+  intro_text?: string | null;
+  highlights?: string[] | null;
+  seo_text?: string | null;
 }
 
 export interface ContentPackageRecord {

@@ -29,6 +29,9 @@ interface SeriesFormState {
   category_seo_text: string;
   hero_image: string;
   status: 'active' | 'draft' | 'archived';
+  intro_text: string;
+  highlights: string;
+  seo_text: string;
 }
 
 const emptyForm: SeriesFormState = {
@@ -38,7 +41,10 @@ const emptyForm: SeriesFormState = {
   description: '',
   category_seo_text: '',
   hero_image: '',
-  status: 'active'
+  status: 'active',
+  intro_text: '',
+  highlights: '',
+  seo_text: ''
 };
 
 const STATUS_TONE: Record<SeriesFormState['status'], 'ok' | 'warn' | 'muted'> = {
@@ -100,7 +106,10 @@ export default function AdminSeriesPage() {
       description: form.description || null,
       category_seo_text: form.category_seo_text || null,
       hero_image: form.hero_image || null,
-      status: form.status
+      status: form.status,
+      intro_text: form.intro_text || null,
+      highlights: form.highlights.split('\n').map((s) => s.trim()).filter(Boolean),
+      seo_text: form.seo_text || null
     };
 
     const response = await fetch(`/api/admin/series${form.id ? `/${form.id}` : ''}` , {
@@ -214,7 +223,15 @@ export default function AdminSeriesPage() {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => setForm({ ...item })}
+                    onClick={() => {
+                      const raw = item as unknown as { intro_text?: string; seo_text?: string; highlights?: string[] | string };
+                      setForm({
+                        ...item,
+                        intro_text: raw.intro_text ?? '',
+                        seo_text: raw.seo_text ?? '',
+                        highlights: Array.isArray(raw.highlights) ? raw.highlights.join('\n') : (raw.highlights ?? ''),
+                      });
+                    }}
                     className="w-full rounded-xl p-4 text-left transition"
                     style={{
                       border: `1.5px solid ${isActive ? COLORS.accent : COLORS.stroke}`,
@@ -289,6 +306,38 @@ export default function AdminSeriesPage() {
                   onChange={(event) => updateField('category_seo_text', event.target.value)}
                   placeholder="Einzigartiger SEO-Text fuer die Kategorie, z. B. Sportevents ..."
                   hint="Wird auf der Kategorie-Seite ausgegeben und fuer die Meta-Description genutzt."
+                />
+
+                <div className="mt-2 rounded-xl p-3" style={{ background: '#fff7f3', border: '1px solid #fff1ea' }}>
+                  <div className="text-xs font-bold uppercase tracking-wide" style={{ color: COLORS.accent }}>Serien-Seite (Evergreen-Hub)</div>
+                  <p className="mt-1 text-xs" style={{ color: COLORS.textMuted }}>Diese Inhalte erscheinen dauerhaft auf <span className="font-mono">/{form.slug || '<serie>'}</span> – unabhängig von einzelnen Events (gut für SEO).</p>
+                </div>
+
+                <TextAreaField
+                  label="Intro-Text (Hub)"
+                  rows={5}
+                  value={form.intro_text}
+                  onChange={(event) => updateField('intro_text', event.target.value)}
+                  placeholder="Zeitloser Einleitungstext zur Serie (z. B. was die French Open ausmacht, warum Hospitality ...)."
+                  hint="Erscheint oben auf der Serien-Seite. Absätze mit Leerzeile trennen."
+                />
+
+                <TextAreaField
+                  label="Highlights (eine pro Zeile)"
+                  rows={5}
+                  value={form.highlights}
+                  onChange={(event) => updateField('highlights', event.target.value)}
+                  placeholder={'Offizielle Hospitality-Tickets\nPersönliche Beratung\nSchweizer Reisegarantie'}
+                  hint="Generelle Vorteile der Serie – als Checkliste neben dem Intro."
+                />
+
+                <TextAreaField
+                  label="SEO-Text (unten auf der Serien-Seite)"
+                  rows={5}
+                  value={form.seo_text}
+                  onChange={(event) => updateField('seo_text', event.target.value)}
+                  placeholder="Ausführlicher, zeitloser Text über die Serie für Suchmaschinen."
+                  hint="Fällt auf die Beschreibung zurück, wenn leer."
                 />
               </div>
             </Card>

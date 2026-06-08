@@ -13,6 +13,7 @@ export async function POST(request: Request) {
     const event = createEvent({
       series_id: eventPayload.series_id || null,
       slug: eventPayload.slug,
+      url_segment: eventPayload.url_segment || null,
       name: eventPayload.name,
       title: eventPayload.title,
       description: eventPayload.description || null,

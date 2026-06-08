@@ -394,6 +394,12 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS ticket_categories_title TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS ticket_categories_intro TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS ticket_categories JSONB DEFAULT '[]'::jsonb;
 
+-- SEO: kurzes URL-Segment je Event + Serien-Hub-Inhalte
+ALTER TABLE events ADD COLUMN IF NOT EXISTS url_segment TEXT;
+ALTER TABLE series ADD COLUMN IF NOT EXISTS intro_text TEXT;
+ALTER TABLE series ADD COLUMN IF NOT EXISTS highlights JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE series ADD COLUMN IF NOT EXISTS seo_text TEXT;
+
 -- ============================================================================
 -- MIGRATION: RQ-Anfragenummern + CRM-Konversation (E-Mail-Thread)
 -- Idempotent – kann gefahrlos erneut ausgeführt werden.

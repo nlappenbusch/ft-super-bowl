@@ -1,44 +1,59 @@
 import { notFound, permanentRedirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import EventPageView from '@/components/event/EventPageView';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import { generateEventSchema, generateProductSchema } from '@/lib/schema';
+import { siteConfig } from '@/lib/siteConfig';
+import { toCategorySlug } from '@/lib/category';
 import {
-  getEventBySlug, getEventFaqs, getPackagesByEventSlug, getSeriesById, getPinIconsList,
+  getEventBySlug, getEventsBySeriesSlug, getEventFaqs, getPackagesByEventSlug, getSeriesById, getPinIconsList,
 } from '@/lib/eventData';
 
 interface EventPageProps {
   params: Promise<{ series: string; event: string }>;
 }
 
+/** Event anhand url_segment (oder vollem slug) innerhalb der Serie auflösen. */
+async function resolveEvent(seriesSlug: string, eventParam: string) {
+  let event = await getEventBySlug(eventParam);
+  if (!event) {
+    const evts = await getEventsBySeriesSlug(seriesSlug);
+    event = evts.find((e) => (e.url_segment || '') === eventParam) || null;
+  }
+  return event;
+}
+
 export async function generateMetadata({ params }: EventPageProps): Promise<Metadata> {
-  const { event: eventSlug } = await params;
-  const event = await getEventBySlug(eventSlug);
+  const { series: seriesSlug, event: eventParam } = await params;
+  const event = await resolveEvent(seriesSlug, eventParam);
   if (!event) return {};
   const title = event.title || event.name || 'Event';
   const description = event.description || `Tickets & Packages für ${event.name || event.slug}`;
+  const seg = event.url_segment || event.slug;
+  const canonical = `${(siteConfig.url || '').replace(/\/$/, '')}/${seriesSlug}/${seg}`;
   return {
     title,
     description,
-    openGraph: { title, description, images: event.hero_image ? [{ url: event.hero_image }] : undefined },
+    alternates: { canonical },
+    openGraph: { title, description, url: canonical, images: event.hero_image ? [{ url: event.hero_image }] : undefined },
   };
 }
 
 export default async function EventUnderSeriesPage({ params }: EventPageProps) {
-  const { series: seriesSlug, event: eventSlug } = await params;
-  const event = await getEventBySlug(eventSlug);
+  const { series: seriesSlug, event: eventParam } = await params;
+  const event = await resolveEvent(seriesSlug, eventParam);
   if (!event) return notFound();
 
   const series = event.series_id ? await getSeriesById(event.series_id) : null;
+  const canonicalSeg = event.url_segment || event.slug;
 
-  // Falls die URL-Serie nicht zur tatsächlichen Serie des Events passt → auf
-  // den kanonischen Pfad umleiten (bzw. /events/<slug>, wenn keine Serie).
-  if ((series?.slug || '') !== seriesSlug) {
-    permanentRedirect(series?.slug ? `/${series.slug}/${event.slug}` : `/events/${event.slug}`);
+  // Auf kanonischen Pfad umleiten (falsche Serie ODER voller Slug statt url_segment)
+  if ((series?.slug || '') !== seriesSlug || canonicalSeg !== eventParam) {
+    permanentRedirect(series?.slug ? `/${series.slug}/${canonicalSeg}` : `/events/${event.slug}`);
   }
 
-  const packages = await getPackagesByEventSlug(eventSlug);
-  const faqs = await getEventFaqs(eventSlug);
-
+  const packages = await getPackagesByEventSlug(event.slug);
+  const faqs = await getEventFaqs(event.slug);
   const showLageplan = event.show_lageplan ?? false;
   const eventPins = (event.lageplan_pins || []) as Array<{ id: string; lat: number; lng: number }>;
   const pinIcons = showLageplan && eventPins.length > 0 ? await getPinIconsList() : [];
@@ -64,10 +79,18 @@ export default async function EventUnderSeriesPage({ params }: EventPageProps) {
     url: event.base_url ? `${event.base_url}/booking?event=${encodeURIComponent(event.slug)}` : undefined,
   });
 
+  const crumbs = [
+    { name: 'Start', href: '/' },
+    ...(series ? [{ name: series.category || 'Events', href: `/kategorie/${toCategorySlug(series.category || 'sonstiges')}` }] : []),
+    ...(series ? [{ name: series.title, href: `/${series.slug}` }] : []),
+    { name: event.name || event.title || 'Event', href: `/${seriesSlug}/${canonicalSeg}` },
+  ];
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(eventSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
+      <Breadcrumbs items={crumbs} />
       <EventPageView event={event} series={series} packages={packages} faqs={faqs} pinIcons={pinIcons} />
     </>
   );

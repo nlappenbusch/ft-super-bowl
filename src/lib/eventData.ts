@@ -29,6 +29,8 @@ export interface EventRecord {
   id: string;
   series_id?: string | null;
   slug: string;
+  /** Kurzes URL-Segment für /<serie>/<edition> (z.B. "2027"); leer = slug */
+  url_segment?: string | null;
   name: string;
   title: string;
   description?: string | null;
@@ -96,6 +98,10 @@ export interface SeriesRecord {
   category_seo_text?: string | null;
   hero_image?: string | null;
   status?: 'active' | 'draft' | 'archived' | null;
+  /** Evergreen-Hub-Inhalte */
+  intro_text?: string | null;
+  highlights?: string[] | null;
+  seo_text?: string | null;
 }
 
 export interface PackageIncludeRecord {

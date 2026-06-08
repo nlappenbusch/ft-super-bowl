@@ -34,7 +34,7 @@ export default async function LegacyEventPage({ params }: EventPageProps) {
 
   const series = event.series_id ? await getSeriesById(event.series_id) : null;
   if (series?.slug) {
-    permanentRedirect(`/${series.slug}/${event.slug}`);
+    permanentRedirect(`/${series.slug}/${event.url_segment || event.slug}`);
   }
 
   // Fallback: Event ohne Serie -> hier rendern (kein kanonischer Serien-Pfad)

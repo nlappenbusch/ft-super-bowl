@@ -37,6 +37,7 @@ interface EventFormState {
   id?: string;
   series_id: string;
   slug: string;
+  url_segment: string;
   name: string;
   title: string;
   description: string;
@@ -119,6 +120,7 @@ interface SeriesOption {
 const emptyForm: EventFormState = {
   series_id: '',
   slug: '',
+  url_segment: '',
   name: '',
   title: '',
   description: '',
@@ -174,6 +176,7 @@ function normalizeEventFormState(event?: Partial<EventFormState> | null): EventF
     id: event?.id,
     series_id: event?.series_id ?? '',
     slug: event?.slug ?? '',
+    url_segment: event?.url_segment ?? '',
     name: event?.name ?? '',
     title: event?.title ?? '',
     description: event?.description ?? '',
@@ -388,6 +391,7 @@ export default function AdminEventsPage() {
     const payload = {
       series_id: form.series_id || null,
       slug: form.slug.trim(),
+      url_segment: form.url_segment.trim() || null,
       name: form.name.trim(),
       title: form.title.trim(),
       description: form.description || null,
@@ -751,6 +755,14 @@ export default function AdminEventsPage() {
                       </SelectInput>
                     </Field>
                   </div>
+
+                  <InputField
+                    label="URL-Segment (optional)"
+                    value={form.url_segment}
+                    onChange={(event) => updateField('url_segment', event.target.value)}
+                    placeholder="z.B. 2027"
+                    hint="Kürzt die URL zu /<serie>/<segment>. Leer = voller Slug. Alte URLs leiten automatisch um."
+                  />
 
                   <InputField
                     id="ev-f-name"

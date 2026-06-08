@@ -78,7 +78,6 @@ export default function RootLayout({
   return (
     <html lang="de-CH" suppressHydrationWarning>
       <head>
-        <link rel="canonical" href="https://faltintravel.com" />
         <link rel="icon" href="/favicon.ico" />
       </head>
       <body

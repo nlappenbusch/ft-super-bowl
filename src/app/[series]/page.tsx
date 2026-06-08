@@ -2,8 +2,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { Calendar, MapPin, ArrowRight, Ticket } from 'lucide-react';
+import { Calendar, MapPin, ArrowRight, Ticket, CheckCircle2 } from 'lucide-react';
 import { getEventsBySeriesSlug, getSeriesBySlug } from '@/lib/eventData';
+import Breadcrumbs from '@/components/Breadcrumbs';
+import { siteConfig } from '@/lib/siteConfig';
+import { toCategorySlug } from '@/lib/category';
 
 interface SeriesPageProps {
   params: Promise<{ series: string }>;
@@ -27,12 +30,16 @@ export async function generateMetadata({ params }: SeriesPageProps): Promise<Met
   if (reservedSlugs.has(series)) return {};
   const seriesData = await getSeriesBySlug(series);
   if (!seriesData) return {};
+  const title = `${seriesData.title} Tickets & Hospitality`;
+  const canonical = `${(siteConfig.url || '').replace(/\/$/, '')}/${series}`;
   return {
-    title: seriesData.title,
-    description: seriesData.description || `Event-Serie ${seriesData.title} – Tickets, Hospitality & Reisepakete.`,
+    title,
+    description: seriesData.description || `${seriesData.title}: Tickets, Hospitality & Reisepakete von Faltin Travel – persönliche Beratung & Schweizer Reisegarantie.`,
+    alternates: { canonical },
     openGraph: {
-      title: seriesData.title,
+      title,
       description: seriesData.description || undefined,
+      url: canonical,
       images: seriesData.hero_image ? [{ url: seriesData.hero_image }] : undefined,
     },
   };
@@ -47,9 +54,17 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
 
   const events = await getEventsBySeriesSlug(series);
   const upcoming = [...events].sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''));
+  const highlights = (seriesData.highlights || []).filter(Boolean);
+
+  const crumbs = [
+    { name: 'Start', href: '/' },
+    { name: seriesData.category || 'Events', href: `/kategorie/${toCategorySlug(seriesData.category || 'sonstiges')}` },
+    { name: seriesData.title, href: `/${series}` },
+  ];
 
   return (
     <div className="min-h-screen" style={{ fontFamily: "'Montserrat','Open Sans',system-ui,sans-serif" }}>
+      <Breadcrumbs items={crumbs} />
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden" style={{ minHeight: 360 }}>
         {seriesData.hero_image ? (
@@ -79,6 +94,34 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
         </div>
       </section>
 
+      {/* ── INTRO / HIGHLIGHTS (Evergreen-Hub) ───────────────────────────── */}
+      {(seriesData.intro_text || highlights.length > 0) && (
+        <section className="bg-white px-4 pt-14">
+          <div className="mx-auto max-w-6xl">
+            <div className="grid gap-10 md:grid-cols-[1.3fr_1fr] md:items-start">
+              {seriesData.intro_text && (
+                <div className="whitespace-pre-line text-base md:text-lg leading-relaxed text-gray-700">
+                  {seriesData.intro_text}
+                </div>
+              )}
+              {highlights.length > 0 && (
+                <div className="rounded-2xl p-6" style={{ background: '#f5f7fa', border: '1px solid #e5e8ed' }}>
+                  <div className="mb-4 text-sm font-bold uppercase tracking-wider" style={{ color: '#143047' }}>Das erwartet Sie</div>
+                  <ul className="space-y-2.5">
+                    {highlights.map((h, i) => (
+                      <li key={i} className="flex items-start gap-2.5 text-gray-700">
+                        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" style={{ color: '#d9531e' }} />
+                        <span>{h}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ── EVENTS ───────────────────────────────────────────────────────── */}
       <section className="bg-white px-4 py-16">
         <div className="mx-auto max-w-6xl">
@@ -103,7 +146,7 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
                 return (
                   <Link
                     key={event.id}
-                    href={`/${series}/${event.slug}`}
+                    href={`/${series}/${event.url_segment || event.slug}`}
                     className="group flex flex-col overflow-hidden rounded-2xl bg-white transition-all hover:-translate-y-1 hover:shadow-xl"
                     style={{ border: '1px solid #e5e8ed', boxShadow: '0 2px 10px rgba(20,48,71,0.06)' }}
                   >
@@ -137,10 +180,10 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
           )}
 
           {/* SEO / Info text */}
-          {seriesData.description && (
+          {(seriesData.seo_text || seriesData.description) && (
             <div className="mt-16 rounded-2xl p-8" style={{ background: '#f5f7fa', border: '1px solid #e5e8ed' }}>
               <h3 className="text-xl font-extrabold" style={{ color: '#143047' }}>Über {seriesData.title}</h3>
-              <p className="mt-3 leading-relaxed text-gray-700">{seriesData.description}</p>
+              <p className="mt-3 whitespace-pre-line leading-relaxed text-gray-700">{seriesData.seo_text || seriesData.description}</p>
             </div>
           )}
         </div>
