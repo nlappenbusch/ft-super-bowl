@@ -68,5 +68,5 @@ export default function EventPreviewPage() {
     );
   }
 
-  return <EventPageView event={event} series={series} packages={packages} faqs={faqs} pinIcons={pinIcons} />;
+  return <EventPageView event={event} series={series} packages={packages} faqs={faqs} pinIcons={pinIcons} editable />;
 }

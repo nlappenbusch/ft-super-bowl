@@ -1,9 +1,49 @@
+import React, { createElement } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import PackageCard from '@/components/PackageCard';
 import EventContactForm from '@/components/EventContactForm';
 import LageplanMap from '@/components/LageplanMap';
 import type { EventRecord, SeriesRecord, PackageRecord, EventFaqRecord } from '@/lib/eventData';
+
+/**
+ * Editable: macht ein Element in der Admin-Vorschau anklickbar (Click-to-Edit).
+ * Sendet beim Klick die Ziel-Feld-Kennung per postMessage an den Editor (parent).
+ * Im öffentlichen Einsatz (editable=false) wird das Element unverändert gerendert.
+ */
+function Editable({
+  editable,
+  target,
+  as = 'div',
+  className,
+  style,
+  children,
+}: {
+  editable: boolean;
+  target: string;
+  as?: keyof React.JSX.IntrinsicElements;
+  className?: string;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+}) {
+  if (!editable) {
+    return createElement(as, { className, style }, children);
+  }
+  return createElement(
+    as,
+    {
+      className: [className, 'ft-editable'].filter(Boolean).join(' '),
+      style,
+      title: 'Zum Bearbeiten klicken',
+      onClick: (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.parent?.postMessage({ type: 'ft-edit-field', target }, '*');
+      },
+    },
+    children
+  );
+}
 
 /**
  * EventPageView
@@ -27,6 +67,8 @@ export interface EventPageViewProps {
   packages?: PackageRecord[];
   faqs?: EventFaqRecord[];
   pinIcons?: PinIcon[];
+  /** Admin-Vorschau: macht Elemente anklickbar (Click-to-Edit). */
+  editable?: boolean;
 }
 
 /* ─── Date helpers ──────────────────────────────────────────────────────────── */
@@ -106,6 +148,7 @@ export default function EventPageView({
   packages = [],
   faqs = [],
   pinIcons = [],
+  editable = false,
 }: EventPageViewProps) {
   const showAbout       = event.show_about       ?? true;
   const showPackages    = event.show_packages     ?? true;
@@ -166,30 +209,53 @@ export default function EventPageView({
           <div className="absolute inset-0" style={{ background: 'linear-gradient(160deg,#184a7b 0%,#143047 100%)' }} />
         )}
 
+        {editable && (
+          <button
+            type="button"
+            onClick={() => window.parent?.postMessage({ type: 'ft-edit-field', target: 'hero_image' }, '*')}
+            className="absolute right-4 top-4 z-20 rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold shadow"
+            style={{ color: '#143047' }}
+          >
+            ✎ Hero-Bild ändern
+          </button>
+        )}
+
         <div className="relative z-10 flex flex-col items-center justify-center px-4 py-16">
           {series && (
-            <Link
-              href={`/${series.slug}`}
-              className="mb-4 inline-flex items-center gap-2 rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-widest text-white"
-              style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}
-            >
-              {series.title}
-            </Link>
+            editable ? (
+              <Editable
+                editable
+                target="series"
+                as="span"
+                className="mb-4 inline-flex items-center gap-2 rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-widest text-white"
+                style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}
+              >
+                {series.title}
+              </Editable>
+            ) : (
+              <Link
+                href={`/${series.slug}`}
+                className="mb-4 inline-flex items-center gap-2 rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-widest text-white"
+                style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}
+              >
+                {series.title}
+              </Link>
+            )
           )}
 
           <div
             className="w-full max-w-4xl text-center rounded-sm px-8 py-10"
             style={{ background: 'rgba(14,34,56,0.82)', border: '1px solid rgba(255,255,255,0.08)' }}
           >
-            <h1 className="text-3xl md:text-5xl font-extrabold text-white leading-tight mb-3">
+            <Editable editable={editable} target="title" as="h1" className="text-3xl md:text-5xl font-extrabold text-white leading-tight mb-3">
               {event.title || event.name}
-            </h1>
-            <p className="text-sm md:text-base font-semibold text-white/80 mb-5 tracking-tight">
+            </Editable>
+            <Editable editable={editable} target="location" as="p" className="text-sm md:text-base font-semibold text-white/80 mb-5 tracking-tight">
               {heroSubline}
-            </p>
-            <p className="text-base md:text-lg text-white/90 leading-relaxed max-w-3xl mx-auto">
+            </Editable>
+            <Editable editable={editable} target="description" as="p" className="text-base md:text-lg text-white/90 leading-relaxed max-w-3xl mx-auto">
               {heroIntro}
-            </p>
+            </Editable>
           </div>
 
           <div className="mt-6">
@@ -242,12 +308,12 @@ export default function EventPageView({
           <div className="container mx-auto max-w-6xl">
             <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-10 items-center">
               <div>
-                <h2 className="text-3xl md:text-4xl font-extrabold mb-5 leading-tight" style={{ color: '#143047' }}>
+                <Editable editable={editable} target="fp_heading" as="h2" className="text-3xl md:text-4xl font-extrabold mb-5 leading-tight" style={{ color: '#143047' }}>
                   {firstParagraphHeading}
-                </h2>
-                <p className="text-base md:text-lg leading-relaxed text-gray-700">
+                </Editable>
+                <Editable editable={editable} target="fp_text" as="p" className="text-base md:text-lg leading-relaxed text-gray-700">
                   {firstParagraphText}
-                </p>
+                </Editable>
               </div>
               {firstParagraphImages.length > 0 && (
                 <div className="grid grid-cols-1 gap-3">
@@ -267,7 +333,7 @@ export default function EventPageView({
       {showSpielplan && spielplan && spielplan.length > 0 && (
         <section className="py-14 px-4 scroll-mt-40" id="spielplan" style={{ background: '#f5f7fa', borderTop: '1px solid #e5e8ed', borderBottom: '1px solid #e5e8ed' }}>
           <div className="container mx-auto max-w-4xl">
-            <h2 className="text-3xl md:text-4xl font-extrabold mb-8 leading-tight" style={{ color: '#143047' }}>Spielplan</h2>
+            <Editable editable={editable} target="spielplan" as="h2" className="text-3xl md:text-4xl font-extrabold mb-8 leading-tight" style={{ color: '#143047' }}>Spielplan</Editable>
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left text-sm">
@@ -306,7 +372,7 @@ export default function EventPageView({
       {showWissenswertes && (
         <section className="py-14 px-4 bg-white scroll-mt-40" id="wissenswertes">
           <div className="container mx-auto max-w-4xl">
-            <h2 className="text-3xl md:text-4xl font-extrabold mb-5 leading-tight" style={{ color: '#143047' }}>{wissenswertesTitle}</h2>
+            <Editable editable={editable} target="wissenswertes" as="h2" className="text-3xl md:text-4xl font-extrabold mb-5 leading-tight" style={{ color: '#143047' }}>{wissenswertesTitle}</Editable>
             <p className="text-base md:text-lg leading-relaxed text-gray-700 mb-6">{wissenswertesText}</p>
             {wissenswertesAccordionText && (
               <details className="group overflow-hidden border rounded-sm [&_summary::-webkit-details-marker]:hidden" style={{ borderColor: '#143047' }}>
@@ -327,7 +393,7 @@ export default function EventPageView({
       {showStadionplan && (
         <section className="py-14 px-4 scroll-mt-40" id="stadionplan" style={{ background: '#f5f7fa', borderTop: '1px solid #e5e8ed', borderBottom: '1px solid #e5e8ed' }}>
           <div className="container mx-auto max-w-6xl">
-            <h2 className="text-3xl md:text-4xl font-extrabold mb-8 leading-tight" style={{ color: '#143047' }}>{stadionplanTitle}</h2>
+            <Editable editable={editable} target="stadionplan" as="h2" className="text-3xl md:text-4xl font-extrabold mb-8 leading-tight" style={{ color: '#143047' }}>{stadionplanTitle}</Editable>
             <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1.2fr] gap-10 items-start">
               {stadionplanImage ? (
                 <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm flex justify-center items-center">
@@ -354,7 +420,7 @@ export default function EventPageView({
       {hasLageplan && (
         <section className="py-14 px-4 bg-white scroll-mt-40" id="lageplan">
           <div className="container mx-auto max-w-6xl">
-            <h2 className="text-3xl md:text-4xl font-extrabold mb-2 leading-tight" style={{ color: '#143047' }}>Lageplan</h2>
+            <Editable editable={editable} target="lageplan" as="h2" className="text-3xl md:text-4xl font-extrabold mb-2 leading-tight" style={{ color: '#143047' }}>Lageplan</Editable>
             {getEventLocationLine(event) && (
               <p className="text-base text-gray-600 mb-8 flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="#d9531e">
@@ -447,7 +513,7 @@ export default function EventPageView({
       {showFaqs && (
         <section className="py-14 px-4 bg-white scroll-mt-40" id="faq">
           <div className="container mx-auto max-w-4xl">
-            <h2 className="text-3xl md:text-4xl font-extrabold mb-8 leading-tight" style={{ color: '#143047' }}>FAQ zu {event.name || event.title}</h2>
+            <Editable editable={editable} target="faq" as="h2" className="text-3xl md:text-4xl font-extrabold mb-8 leading-tight" style={{ color: '#143047' }}>FAQ zu {event.name || event.title}</Editable>
             {faqs.length === 0 ? (
               <p className="text-gray-400">Noch keine FAQs hinterlegt.</p>
             ) : (

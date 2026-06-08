@@ -35,13 +35,16 @@ export function Card({
   children,
   className,
   padded = true,
+  id,
 }: {
   children: React.ReactNode;
   className?: string;
   padded?: boolean;
+  id?: string;
 }) {
   return (
     <div
+      id={id}
       className={cn('rounded-2xl bg-white', padded && 'p-6', className)}
       style={{ border: `1px solid ${COLORS.stroke}`, boxShadow: '0 1px 3px rgba(20,48,71,0.06)' }}
     >
@@ -57,6 +60,7 @@ export function SectionCard({
   actions,
   children,
   className,
+  id,
 }: {
   title?: string;
   description?: string;
@@ -64,9 +68,10 @@ export function SectionCard({
   actions?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  id?: string;
 }) {
   return (
-    <Card className={className}>
+    <Card className={className} id={id}>
       {(title || actions) && (
         <div className="flex items-start justify-between gap-4 mb-5">
           <div className="flex items-start gap-3">

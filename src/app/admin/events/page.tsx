@@ -471,6 +471,40 @@ export default function AdminEventsPage() {
     return () => window.removeEventListener('message', onMsg);
   }, [form, series]);
 
+  // Click-to-Edit: Klick in der Vorschau → zum passenden Feld scrollen & fokussieren
+  useEffect(() => {
+    const MAP: Record<string, string> = {
+      title: 'ev-f-title',
+      name: 'ev-f-name',
+      description: 'ev-f-description',
+      series: 'ev-f-series',
+      location: 'ev-s-location',
+      hero_image: 'ev-s-hero',
+      fp_heading: 'ev-f-fp_heading',
+      fp_text: 'ev-f-fp_text',
+      spielplan: 'ev-s-spielplan',
+      wissenswertes: 'ev-s-wissenswertes',
+      stadionplan: 'ev-s-stadionplan',
+      lageplan: 'ev-s-lageplan',
+      faq: 'ev-s-faq',
+    };
+    function onEdit(e: MessageEvent) {
+      const d = e.data as { type?: string; target?: string };
+      if (d?.type !== 'ft-edit-field' || !d.target) return;
+      const id = MAP[d.target];
+      if (!id) return;
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const focusEl = (el.matches('input,textarea,select') ? el : el.querySelector('input,textarea,select')) as HTMLElement | null;
+      window.setTimeout(() => focusEl?.focus({ preventScroll: true }), 350);
+      el.classList.add('ft-flash');
+      window.setTimeout(() => el.classList.remove('ft-flash'), 1300);
+    }
+    window.addEventListener('message', onEdit);
+    return () => window.removeEventListener('message', onEdit);
+  }, []);
+
   const previewCtaLabel = `Jetzt \"${form.name.trim() || form.title.trim() || 'Event'}\" Tickets anfragen`;
   const previewImages = [
     form.first_paragraph_image_1,
@@ -627,6 +661,7 @@ export default function AdminEventsPage() {
                 <div className="grid gap-4">
                   <Field label="Serie">
                     <SelectInput
+                      id="ev-f-series"
                       value={form.series_id}
                       onChange={(event) => updateField('series_id', event.target.value)}
                     >
@@ -660,6 +695,7 @@ export default function AdminEventsPage() {
                   </div>
 
                   <InputField
+                    id="ev-f-name"
                     label="Name"
                     required
                     value={form.name}
@@ -668,6 +704,7 @@ export default function AdminEventsPage() {
                   />
 
                   <InputField
+                    id="ev-f-title"
                     label="Titel"
                     required
                     value={form.title}
@@ -676,6 +713,7 @@ export default function AdminEventsPage() {
                   />
 
                   <TextAreaField
+                    id="ev-f-description"
                     label="Beschreibung"
                     value={form.description}
                     onChange={(event) => updateField('description', event.target.value)}
@@ -687,6 +725,7 @@ export default function AdminEventsPage() {
 
               <SectionCard
                 icon={<MapPin className="h-5 w-5" />}
+                id="ev-s-location"
                 title="Termin & Ort"
                 description="Alle Daten, die spaeter in Hero, Listen und Reiseinfos angezeigt werden."
               >
@@ -742,6 +781,7 @@ export default function AdminEventsPage() {
 
               <SectionCard
                 icon={<LayoutTemplate className="h-5 w-5" />}
+                id="ev-s-hero"
                 title="Hero Modul"
                 description="Visueller Einstieg mit Titelbild und dem automatisch erzeugten Anfrage-CTA."
               >
@@ -793,6 +833,7 @@ export default function AdminEventsPage() {
               >
                 <div className="grid gap-4">
                   <InputField
+                    id="ev-f-fp_heading"
                     label="Erster Absatz H2"
                     value={form.first_paragraph_heading}
                     onChange={(event) => updateField('first_paragraph_heading', event.target.value)}
@@ -800,6 +841,7 @@ export default function AdminEventsPage() {
                   />
 
                   <TextAreaField
+                    id="ev-f-fp_text"
                     label="Erster Absatz Text"
                     value={form.first_paragraph_text}
                     onChange={(event) => updateField('first_paragraph_text', event.target.value)}
@@ -869,6 +911,7 @@ export default function AdminEventsPage() {
               {form.show_spielplan && (
                 <SectionCard
                   icon={<CalendarDays className="h-5 w-5" />}
+                  id="ev-s-spielplan"
                   title="Spielplan Einträge"
                   description="Verwalten Sie die Zeilen der Spielplan-Tabelle. Alle Änderungen werden erst beim Klick auf 'Event speichern' dauerhaft übernommen."
                 >
@@ -1010,6 +1053,7 @@ export default function AdminEventsPage() {
               {form.show_wissenswertes && (
                 <SectionCard
                   icon={<Layers className="h-5 w-5" />}
+                  id="ev-s-wissenswertes"
                   title="Wissenswertes Modul"
                   description="Pflegen Sie hier die allgemeinen Fakten und den anklappbaren Textbereich (Akkordeon) für das Event."
                 >
@@ -1056,6 +1100,7 @@ export default function AdminEventsPage() {
               {form.show_stadionplan && (
                 <SectionCard
                   icon={<Layers className="h-5 w-5" />}
+                  id="ev-s-stadionplan"
                   title="Stadion-/Hallenplan Modul"
                   description="Pflegen Sie hier die Überschriften, das Übersichts-Bild und die Beschreibung für den Stadion- oder Hallenplan."
                 >
@@ -1098,6 +1143,7 @@ export default function AdminEventsPage() {
               {form.show_lageplan && (
                 <SectionCard
                   icon={<MapPin className="h-5 w-5" />}
+                  id="ev-s-lageplan"
                   title="Lageplan Pins"
                   description="Verwalten Sie die Kartenmarkierungen direkt für dieses Event. Icons werden zentral in 'Lageplan-Icons' verwaltet."
                 >
@@ -1120,6 +1166,7 @@ export default function AdminEventsPage() {
               {form.show_faqs && (
                 <SectionCard
                   icon={<Layers className="h-5 w-5" />}
+                  id="ev-s-faq"
                   title="FAQ Einträge"
                   description="Verwalten Sie die häufigen Fragen (FAQs) für dieses Event direkt in-place. Alle Änderungen werden erst beim Klick auf 'Event speichern' dauerhaft übernommen."
                 >

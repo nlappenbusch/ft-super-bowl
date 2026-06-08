@@ -111,3 +111,24 @@ body {
 .ft-category-column:hover::before {
   opacity: 0;
 }
+
+/* ─── Admin Click-to-Edit (nur in der Event-Live-Vorschau aktiv) ──────────── */
+.ft-editable {
+  cursor: pointer;
+  outline: 2px dashed transparent;
+  outline-offset: 3px;
+  transition: outline-color .12s ease, background-color .12s ease;
+}
+.ft-editable:hover {
+  outline-color: #d9531e;
+  background-color: rgba(217, 83, 30, 0.06);
+}
+/* Kurzes Hervorheben des Zielfelds im Editor */
+.ft-flash {
+  animation: ftFlash 1.2s ease;
+  border-radius: 14px;
+}
+@keyframes ftFlash {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(217,83,30,0); }
+  20% { box-shadow: 0 0 0 4px rgba(217,83,30,0.35); }
+}
