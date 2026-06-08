@@ -505,6 +505,22 @@ export default function AdminEventsPage() {
     return () => window.removeEventListener('message', onEdit);
   }, []);
 
+  // Inline-Tippen: Textänderung aus der Vorschau direkt ins Formularfeld schreiben
+  useEffect(() => {
+    const ALLOWED = new Set<keyof EventFormState>([
+      'title', 'description', 'first_paragraph_heading', 'first_paragraph_text',
+      'wissenswertes_title', 'wissenswertes_text', 'stadionplan_title', 'stadionplan_description',
+    ]);
+    function onInline(e: MessageEvent) {
+      const d = e.data as { type?: string; field?: string; value?: string };
+      if (d?.type !== 'ft-inline-edit' || !d.field) return;
+      if (!ALLOWED.has(d.field as keyof EventFormState)) return;
+      setForm((prev) => ({ ...prev, [d.field as keyof EventFormState]: d.value ?? '' }));
+    }
+    window.addEventListener('message', onInline);
+    return () => window.removeEventListener('message', onInline);
+  }, []);
+
   const previewCtaLabel = `Jetzt \"${form.name.trim() || form.title.trim() || 'Event'}\" Tickets anfragen`;
   const previewImages = [
     form.first_paragraph_image_1,

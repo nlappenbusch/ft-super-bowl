@@ -132,3 +132,20 @@ body {
   0%, 100% { box-shadow: 0 0 0 0 rgba(217,83,30,0); }
   20% { box-shadow: 0 0 0 4px rgba(217,83,30,0.35); }
 }
+
+/* Inline-Tippen (contentEditable) in der Event-Live-Vorschau */
+.ft-inline:focus {
+  outline: 2px solid #d9531e;
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+.ft-inline:hover {
+  outline: 2px dashed rgba(217, 83, 30, 0.5);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+.ft-inline:empty:before {
+  content: attr(data-placeholder);
+  opacity: 0.5;
+  font-style: italic;
+}

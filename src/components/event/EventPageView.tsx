@@ -1,4 +1,6 @@
-import React, { createElement } from 'react';
+'use client';
+
+import React, { createElement, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import PackageCard from '@/components/PackageCard';
@@ -43,6 +45,69 @@ function Editable({
     },
     children
   );
+}
+
+/**
+ * InlineEditable: echtes WYSIWYG-Inline-Tippen in der Admin-Vorschau.
+ * Im editable-Modus wird das Element contentEditable; Änderungen werden per
+ * postMessage (ft-inline-edit) direkt an das passende Editor-Feld geschrieben.
+ * Im öffentlichen Einsatz wird `display` (bzw. der Rohwert) normal gerendert.
+ */
+function InlineEditable({
+  editable,
+  field,
+  value,
+  display,
+  placeholder,
+  as = 'div',
+  className,
+  style,
+  singleLine = false,
+}: {
+  editable: boolean;
+  field: string;
+  value: string;
+  display?: React.ReactNode;
+  placeholder?: string;
+  as?: keyof React.JSX.IntrinsicElements;
+  className?: string;
+  style?: React.CSSProperties;
+  singleLine?: boolean;
+}) {
+  const ref = useRef<HTMLElement | null>(null);
+  const initial = useRef(value);
+
+  // Externe Änderungen (z.B. Tippen im Editor-Feld) übernehmen – aber nie,
+  // während der Nutzer gerade in diesem Element tippt (sonst Cursor-Sprung).
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (document.activeElement === el) return;
+    if (el.innerText !== value) el.innerText = value || '';
+  }, [value]);
+
+  if (!editable) {
+    return createElement(as, { className, style }, display ?? value);
+  }
+
+  const props: Record<string, unknown> = {
+    ref,
+    className: [className, 'ft-inline'].filter(Boolean).join(' '),
+    style: { ...style, whiteSpace: singleLine ? undefined : 'pre-wrap' },
+    contentEditable: true,
+    suppressContentEditableWarning: true,
+    'data-placeholder': placeholder || '',
+    onKeyDown: singleLine
+      ? (e: React.KeyboardEvent) => { if (e.key === 'Enter') e.preventDefault(); }
+      : undefined,
+    onInput: (e: React.FormEvent<HTMLElement>) => {
+      window.parent?.postMessage(
+        { type: 'ft-inline-edit', field, value: (e.currentTarget as HTMLElement).innerText },
+        '*'
+      );
+    },
+  };
+  return createElement(as, props, initial.current);
 }
 
 /**
@@ -247,15 +312,28 @@ export default function EventPageView({
             className="w-full max-w-4xl text-center rounded-sm px-8 py-10"
             style={{ background: 'rgba(14,34,56,0.82)', border: '1px solid rgba(255,255,255,0.08)' }}
           >
-            <Editable editable={editable} target="title" as="h1" className="text-3xl md:text-5xl font-extrabold text-white leading-tight mb-3">
-              {event.title || event.name}
-            </Editable>
+            <InlineEditable
+              editable={editable}
+              field="title"
+              singleLine
+              value={event.title || ''}
+              display={event.title || event.name}
+              placeholder={event.name || 'Event-Titel'}
+              as="h1"
+              className="text-3xl md:text-5xl font-extrabold text-white leading-tight mb-3"
+            />
             <Editable editable={editable} target="location" as="p" className="text-sm md:text-base font-semibold text-white/80 mb-5 tracking-tight">
               {heroSubline}
             </Editable>
-            <Editable editable={editable} target="description" as="p" className="text-base md:text-lg text-white/90 leading-relaxed max-w-3xl mx-auto">
-              {heroIntro}
-            </Editable>
+            <InlineEditable
+              editable={editable}
+              field="description"
+              value={event.description || ''}
+              display={heroIntro}
+              placeholder="Intro-/Beschreibungstext…"
+              as="p"
+              className="text-base md:text-lg text-white/90 leading-relaxed max-w-3xl mx-auto"
+            />
           </div>
 
           <div className="mt-6">
@@ -308,12 +386,26 @@ export default function EventPageView({
           <div className="container mx-auto max-w-6xl">
             <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-10 items-center">
               <div>
-                <Editable editable={editable} target="fp_heading" as="h2" className="text-3xl md:text-4xl font-extrabold mb-5 leading-tight" style={{ color: '#143047' }}>
-                  {firstParagraphHeading}
-                </Editable>
-                <Editable editable={editable} target="fp_text" as="p" className="text-base md:text-lg leading-relaxed text-gray-700">
-                  {firstParagraphText}
-                </Editable>
+                <InlineEditable
+                  editable={editable}
+                  field="first_paragraph_heading"
+                  singleLine
+                  value={event.first_paragraph_heading || ''}
+                  display={firstParagraphHeading}
+                  placeholder="Überschrift…"
+                  as="h2"
+                  className="text-3xl md:text-4xl font-extrabold mb-5 leading-tight"
+                  style={{ color: '#143047' }}
+                />
+                <InlineEditable
+                  editable={editable}
+                  field="first_paragraph_text"
+                  value={event.first_paragraph_text || ''}
+                  display={firstParagraphText}
+                  placeholder="Einleitungstext…"
+                  as="p"
+                  className="text-base md:text-lg leading-relaxed text-gray-700"
+                />
               </div>
               {firstParagraphImages.length > 0 && (
                 <div className="grid grid-cols-1 gap-3">
@@ -372,8 +464,26 @@ export default function EventPageView({
       {showWissenswertes && (
         <section className="py-14 px-4 bg-white scroll-mt-40" id="wissenswertes">
           <div className="container mx-auto max-w-4xl">
-            <Editable editable={editable} target="wissenswertes" as="h2" className="text-3xl md:text-4xl font-extrabold mb-5 leading-tight" style={{ color: '#143047' }}>{wissenswertesTitle}</Editable>
-            <p className="text-base md:text-lg leading-relaxed text-gray-700 mb-6">{wissenswertesText}</p>
+            <InlineEditable
+              editable={editable}
+              field="wissenswertes_title"
+              singleLine
+              value={event.wissenswertes_title || ''}
+              display={wissenswertesTitle}
+              placeholder="Titel…"
+              as="h2"
+              className="text-3xl md:text-4xl font-extrabold mb-5 leading-tight"
+              style={{ color: '#143047' }}
+            />
+            <InlineEditable
+              editable={editable}
+              field="wissenswertes_text"
+              value={wissenswertesText}
+              display={wissenswertesText}
+              placeholder="Text…"
+              as="p"
+              className="text-base md:text-lg leading-relaxed text-gray-700 mb-6"
+            />
             {wissenswertesAccordionText && (
               <details className="group overflow-hidden border rounded-sm [&_summary::-webkit-details-marker]:hidden" style={{ borderColor: '#143047' }}>
                 <summary className="flex cursor-pointer items-center justify-between px-6 py-4 font-bold text-base select-none hover:bg-blue-50/30 transition" style={{ color: '#143047' }}>
@@ -393,7 +503,17 @@ export default function EventPageView({
       {showStadionplan && (
         <section className="py-14 px-4 scroll-mt-40" id="stadionplan" style={{ background: '#f5f7fa', borderTop: '1px solid #e5e8ed', borderBottom: '1px solid #e5e8ed' }}>
           <div className="container mx-auto max-w-6xl">
-            <Editable editable={editable} target="stadionplan" as="h2" className="text-3xl md:text-4xl font-extrabold mb-8 leading-tight" style={{ color: '#143047' }}>{stadionplanTitle}</Editable>
+            <InlineEditable
+              editable={editable}
+              field="stadionplan_title"
+              singleLine
+              value={event.stadionplan_title || ''}
+              display={stadionplanTitle}
+              placeholder="Titel…"
+              as="h2"
+              className="text-3xl md:text-4xl font-extrabold mb-8 leading-tight"
+              style={{ color: '#143047' }}
+            />
             <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1.2fr] gap-10 items-start">
               {stadionplanImage ? (
                 <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm flex justify-center items-center">
@@ -407,9 +527,14 @@ export default function EventPageView({
                 {stadionplanVenueName && (
                   <h3 className="text-xl md:text-2xl font-extrabold mb-5 leading-tight" style={{ color: '#143047' }}>{stadionplanVenueName}</h3>
                 )}
-                <div className="text-gray-700 text-sm md:text-base leading-relaxed space-y-4">
-                  {stadionplanDescription.split('\n\n').map((p, i) => <p key={i}>{p}</p>)}
-                </div>
+                <InlineEditable
+                  editable={editable}
+                  field="stadionplan_description"
+                  value={stadionplanDescription}
+                  placeholder="Beschreibung…"
+                  className="text-gray-700 text-sm md:text-base leading-relaxed space-y-4"
+                  display={stadionplanDescription.split('\n\n').map((p, i) => <p key={i}>{p}</p>)}
+                />
               </div>
             </div>
           </div>
