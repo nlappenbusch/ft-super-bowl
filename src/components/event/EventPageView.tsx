@@ -3,7 +3,7 @@
 import React, { createElement, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MapPin, CalendarDays } from 'lucide-react';
+import { MapPin, CalendarDays, ShieldCheck, Ticket, Award } from 'lucide-react';
 import PackageCard from '@/components/PackageCard';
 import EventContactForm from '@/components/EventContactForm';
 import LageplanMap from '@/components/LageplanMap';
@@ -448,13 +448,18 @@ export default function EventPageView({
             </a>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs md:text-sm font-semibold text-white/85">
-            {['Schweizer Reisegarantie', 'Offizielle Hospitality-Tickets', '20+ Jahre Erfahrung'].map((t) => (
-              <span key={t} className="inline-flex items-center gap-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="#f5c842">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                </svg>
-                {t}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
+            {[
+              { Icon: ShieldCheck, label: 'Schweizer Reisegarantie' },
+              { Icon: Ticket, label: 'Offizielle Hospitality-Tickets' },
+              { Icon: Award, label: '20+ Jahre Erfahrung' },
+            ].map(({ Icon, label }) => (
+              <span
+                key={label}
+                className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs md:text-sm font-semibold text-white"
+                style={{ background: 'rgba(11,24,40,0.6)', border: '1px solid rgba(255,255,255,0.18)' }}
+              >
+                <Icon className="h-4 w-4 shrink-0" style={{ color: '#f5c842' }} /> {label}
               </span>
             ))}
           </div>
