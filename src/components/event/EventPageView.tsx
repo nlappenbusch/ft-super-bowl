@@ -8,6 +8,15 @@ import EventContactForm from '@/components/EventContactForm';
 import LageplanMap from '@/components/LageplanMap';
 import type { EventRecord, SeriesRecord, PackageRecord, EventFaqRecord } from '@/lib/eventData';
 
+/** FT-Signatur: dunkles Navy mit weichem blauem Radial-Glow (wie faltintravel.com). */
+const BLUE_GLOW: React.CSSProperties = {
+  background:
+    'radial-gradient(60% 95% at 12% 12%, rgba(58,124,190,0.45), transparent 60%),' +
+    'radial-gradient(55% 85% at 90% 22%, rgba(34,84,143,0.40), transparent 55%),' +
+    'radial-gradient(70% 90% at 50% 110%, rgba(28,72,126,0.35), transparent 60%),' +
+    'linear-gradient(180deg, #163e63 0%, #0e2842 55%, #0c2138 100%)',
+};
+
 /**
  * Editable: macht ein Element in der Admin-Vorschau anklickbar (Click-to-Edit).
  * Sendet beim Klick die Ziel-Feld-Kennung per postMessage an den Editor (parent).
@@ -592,7 +601,7 @@ export default function EventPageView({
 
       {/* ── SPIELPLAN ────────────────────────────────────────────────────────── */}
       {showSpielplan && spielplan && spielplan.length > 0 && (
-        <section className="py-14 px-4 scroll-mt-40" id="spielplan" style={{ background: '#f5f7fa', borderTop: '1px solid #e5e8ed', borderBottom: '1px solid #e5e8ed' }}>
+        <section className="py-14 px-4 scroll-mt-40" id="spielplan" style={{ background: '#eef3fb', borderTop: '1px solid #e5e8ed', borderBottom: '1px solid #e5e8ed' }}>
           <div className="container mx-auto max-w-4xl">
             <Editable editable={editable} target="spielplan" as="h2" className="text-3xl md:text-4xl font-extrabold mb-8 leading-tight" style={{ color: '#143047' }}>Spielplan</Editable>
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -631,7 +640,7 @@ export default function EventPageView({
 
       {/* ── WISSENSWERTES ────────────────────────────────────────────────────── */}
       {showWissenswertes && (
-        <section className="py-14 px-4 bg-white scroll-mt-40" id="wissenswertes">
+        <section className="py-14 px-4 scroll-mt-40" id="wissenswertes" style={BLUE_GLOW}>
           <div className="container mx-auto max-w-4xl">
             <InlineEditable
               editable={editable}
@@ -641,8 +650,7 @@ export default function EventPageView({
               display={wissenswertesTitle}
               placeholder="Titel…"
               as="h2"
-              className="text-3xl md:text-4xl font-extrabold mb-5 leading-tight"
-              style={{ color: '#143047' }}
+              className="text-3xl md:text-4xl font-extrabold mb-5 leading-tight text-white"
             />
             <InlineEditable
               editable={editable}
@@ -651,15 +659,15 @@ export default function EventPageView({
               display={wissenswertesText}
               placeholder="Text…"
               as="p"
-              className="text-base md:text-lg leading-relaxed text-gray-700 mb-6"
+              className="text-base md:text-lg leading-relaxed text-white/80 mb-6"
             />
             {wissenswertesAccordionText && (
-              <details className="group overflow-hidden border rounded-sm [&_summary::-webkit-details-marker]:hidden" style={{ borderColor: '#143047' }}>
-                <summary className="flex cursor-pointer items-center justify-between px-6 py-4 font-bold text-base select-none hover:bg-blue-50/30 transition" style={{ color: '#143047' }}>
+              <details className="group overflow-hidden rounded-xl [&_summary::-webkit-details-marker]:hidden" style={{ border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.04)' }}>
+                <summary className="flex cursor-pointer items-center justify-between px-6 py-4 font-bold text-base text-white select-none transition hover:bg-white/5">
                   <span>{wissenswertesAccordionTitle}</span>
                   <div className="flex items-center justify-center w-7 h-7 rounded-full border font-bold text-xl leading-none transition-all duration-300 group-open:rotate-45" style={{ borderColor: '#d9531e', color: '#d9531e' }}>+</div>
                 </summary>
-                <div className="px-6 pb-6 pt-4 text-gray-700 text-base leading-relaxed space-y-4 border-t border-gray-200 whitespace-pre-line">
+                <div className="px-6 pb-6 pt-4 text-white/80 text-base leading-relaxed space-y-4 whitespace-pre-line" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                   {wissenswertesAccordionText.split('\n\n').map((p, i) => <p key={i}>{p}</p>)}
                 </div>
               </details>
@@ -670,7 +678,7 @@ export default function EventPageView({
 
       {/* ── STADIONPLAN ──────────────────────────────────────────────────────── */}
       {showStadionplan && (
-        <section className="py-14 px-4 scroll-mt-40" id="stadionplan" style={{ background: '#f5f7fa', borderTop: '1px solid #e5e8ed', borderBottom: '1px solid #e5e8ed' }}>
+        <section className="py-14 px-4 scroll-mt-40" id="stadionplan" style={{ background: '#eef3fb', borderTop: '1px solid #e5e8ed', borderBottom: '1px solid #e5e8ed' }}>
           <div className="container mx-auto max-w-6xl">
             <InlineEditable
               editable={editable}
@@ -740,7 +748,7 @@ export default function EventPageView({
 
       {/* ── PACKAGES / TICKETS ───────────────────────────────────────────────── */}
       {showPackages && (
-        <section className="py-14 px-4 scroll-mt-40" id="tickets" style={{ background: '#f5f7fa', borderTop: '1px solid #e5e8ed' }}>
+        <section className="py-14 px-4 scroll-mt-40" id="tickets" style={{ background: '#eef3fb', borderTop: '1px solid #e5e8ed' }}>
           <div className="container mx-auto max-w-5xl">
             <h2 className="text-3xl md:text-4xl font-extrabold mb-2 leading-tight text-center" style={{ color: '#143047' }}>Unsere Tickets</h2>
             <p className="text-gray-600 text-center mb-10 max-w-2xl mx-auto">
@@ -812,24 +820,24 @@ export default function EventPageView({
 
       {/* ── FAQ ──────────────────────────────────────────────────────────────── */}
       {showFaqs && (
-        <section className="py-14 px-4 bg-white scroll-mt-40" id="faq">
+        <section className="py-14 px-4 scroll-mt-40" id="faq" style={BLUE_GLOW}>
           <div className="container mx-auto max-w-4xl">
-            <Editable editable={editable} target="faq" as="h2" className="text-3xl md:text-4xl font-extrabold mb-8 leading-tight" style={{ color: '#143047' }}>FAQ zu {event.name || event.title}</Editable>
+            <Editable editable={editable} target="faq" as="h2" className="text-3xl md:text-4xl font-extrabold mb-8 leading-tight text-white">FAQ zu {event.name || event.title}</Editable>
             {faqs.length === 0 ? (
-              <p className="text-gray-400">Noch keine FAQs hinterlegt.</p>
+              <p className="text-white/50">Noch keine FAQs hinterlegt.</p>
             ) : (
-              <div className="divide-y" style={{ borderTop: '1px solid #e5e8ed' }}>
+              <div className="space-y-3">
                 {faqs.map((faq, idx) => (
-                  <details key={faq.id || idx} className="group [&_summary::-webkit-details-marker]:hidden" style={{ borderBottom: '1px solid #e5e8ed' }}>
-                    <summary className="flex cursor-pointer items-center justify-between py-5 font-semibold text-base md:text-lg select-none hover:bg-blue-50/20 px-2 transition rounded-sm" style={{ color: '#143047' }}>
-                      <span className="pr-4 leading-snug">{faq.question}</span>
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 shrink-0 transition-all duration-300" style={{ borderColor: '#143047', color: '#143047' }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4 transition-transform duration-300 group-open:rotate-180">
+                  <details key={faq.id || idx} className="group overflow-hidden rounded-xl [&_summary::-webkit-details-marker]:hidden" style={{ border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(255,255,255,0.04)' }}>
+                    <summary className="flex cursor-pointer items-center justify-between gap-4 px-5 py-4 font-semibold text-base md:text-lg text-white select-none transition hover:bg-white/5">
+                      <span className="leading-snug">{faq.question}</span>
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 shrink-0 transition-all duration-300 group-open:rotate-180" style={{ borderColor: 'rgba(255,255,255,0.45)', color: '#fff' }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4">
                           <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                         </svg>
                       </div>
                     </summary>
-                    <div className="px-2 pb-5 pt-2 text-gray-700 text-sm md:text-base leading-relaxed whitespace-pre-line">{faq.answer}</div>
+                    <div className="px-5 pb-5 pt-1 text-white/80 text-sm md:text-base leading-relaxed whitespace-pre-line">{faq.answer}</div>
                   </details>
                 ))}
               </div>
