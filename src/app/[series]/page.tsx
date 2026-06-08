@@ -7,6 +7,7 @@ import { getEventsBySeriesSlug, getSeriesBySlug, getPackagesByEventSlug } from '
 import Breadcrumbs from '@/components/Breadcrumbs';
 import SeriesPackages, { type SeriesPackageGroup } from '@/components/SeriesPackages';
 import EventContactForm from '@/components/EventContactForm';
+import EkomiWidget from '@/components/EkomiWidget';
 import { siteConfig } from '@/lib/siteConfig';
 import { toCategorySlug } from '@/lib/category';
 
@@ -72,6 +73,8 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
   const events = await getEventsBySeriesSlug(series);
   const upcoming = [...events].sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''));
   const highlights = (seriesData.highlights || []).filter(Boolean);
+  const seriesFaqs = (seriesData.faqs || []).filter((f) => f && f.question);
+  const guideSections = (seriesData.guide_sections || []).filter((g) => g && (g.title || g.text));
 
   // Packages aller Events der Serie laden
   const packagesByEvent = await Promise.all(upcoming.map((e) => getPackagesByEventSlug(e.slug)));
@@ -167,6 +170,27 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
           </div>
         </section>
       )}
+
+      {/* ── WARUM FALTIN TRAVEL ──────────────────────────────────────────── */}
+      <section className="bg-white px-4 pb-4 pt-10">
+        <div className="mx-auto max-w-6xl">
+          <h2 className="mb-8 text-center text-2xl md:text-3xl font-extrabold" style={{ color: '#143047' }}>Warum {seriesData.title} mit Faltin Travel?</h2>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { icon: <Award className="h-6 w-6" />, title: 'Offizielle Hospitality-Tickets', text: 'Verbindliche Kategorie-1-Plätze & Hospitality-Zugang aus offiziellen Kontingenten.' },
+              { icon: <ShieldCheck className="h-6 w-6" />, title: 'Schweizer Reisegarantie', text: 'Abgesicherte Buchung nach Schweizer Standard – Ihr Geld ist geschützt.' },
+              { icon: <Headset className="h-6 w-6" />, title: 'Persönliche Beratung', text: 'Ein fester Ansprechpartner plant Ihre Reise von der Anfrage bis zur Rückkehr.' },
+              { icon: <Ticket className="h-6 w-6" />, title: 'Alles aus einer Hand', text: 'Tickets, Hotel, Transfers & VIP-Service als sorgenfreies Komplettpaket.' },
+            ].map((b) => (
+              <div key={b.title} className="rounded-2xl p-6" style={{ background: '#f5f7fa', border: '1px solid #e5e8ed' }}>
+                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: '#143047', color: '#f5c842' }}>{b.icon}</div>
+                <div className="font-bold" style={{ color: '#143047' }}>{b.title}</div>
+                <p className="mt-1.5 text-sm leading-relaxed text-gray-600">{b.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* ── EVENTS ───────────────────────────────────────────────────────── */}
       <section className="bg-white px-4 py-16">
@@ -269,6 +293,54 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
           </div>
         </section>
       )}
+
+      {/* ── REDAKTIONELLER GUIDE ─────────────────────────────────────────── */}
+      {guideSections.length > 0 && (
+        <section className="bg-white px-4 py-16">
+          <div className="mx-auto max-w-5xl">
+            <h2 className="mb-10 text-center text-3xl md:text-4xl font-extrabold" style={{ color: '#143047' }}>{seriesData.title} – Guide &amp; Tipps</h2>
+            <div className="space-y-10">
+              {guideSections.map((g, i) => (
+                <div key={i} className="border-l-4 pl-6" style={{ borderColor: '#d9531e' }}>
+                  <h3 className="text-xl md:text-2xl font-extrabold" style={{ color: '#143047' }}>{g.title}</h3>
+                  <div className="mt-3 whitespace-pre-line text-base leading-relaxed text-gray-700">{g.text}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── FAQ (Serie) ──────────────────────────────────────────────────── */}
+      {seriesFaqs.length > 0 && (
+        <section className="px-4 py-16" style={{ background: 'radial-gradient(60% 95% at 12% 12%, rgba(58,124,190,0.45), transparent 60%), radial-gradient(55% 85% at 90% 22%, rgba(34,84,143,0.40), transparent 55%), linear-gradient(180deg,#163e63 0%,#0c2138 100%)' }}>
+          <div className="mx-auto max-w-4xl">
+            <h2 className="mb-8 text-3xl md:text-4xl font-extrabold leading-tight text-white">Häufige Fragen zu {seriesData.title}</h2>
+            <div className="space-y-3">
+              {seriesFaqs.map((faq, idx) => (
+                <details key={idx} className="group overflow-hidden rounded-xl [&_summary::-webkit-details-marker]:hidden" style={{ border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(255,255,255,0.04)' }}>
+                  <summary className="flex cursor-pointer items-center justify-between gap-4 px-5 py-4 font-semibold text-base md:text-lg text-white select-none transition hover:bg-white/5">
+                    <span className="leading-snug">{faq.question}</span>
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300 group-open:rotate-180" style={{ borderColor: 'rgba(255,255,255,0.45)', color: '#fff' }}>
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="h-4 w-4"><path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                    </div>
+                  </summary>
+                  <div className="whitespace-pre-line px-5 pb-5 pt-1 text-sm md:text-base leading-relaxed text-white/80">{faq.answer}</div>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── KUNDENSTIMMEN (eKomi) ────────────────────────────────────────── */}
+      <section className="bg-white px-4 py-16">
+        <div className="mx-auto max-w-6xl">
+          <h2 className="mb-2 text-center text-3xl md:text-4xl font-extrabold" style={{ color: '#143047' }}>Das sagen unsere Kunden</h2>
+          <p className="mb-8 text-center text-gray-600">Ausgezeichnet durch das eKomi Gold-Siegel.</p>
+          <EkomiWidget token="sf1193616993086c0b0e7" className="min-h-[120px]" />
+        </div>
+      </section>
 
       {/* ── ANFRAGE (mit Event-Auswahl) ──────────────────────────────────── */}
       <section className="bg-white px-4 py-16">

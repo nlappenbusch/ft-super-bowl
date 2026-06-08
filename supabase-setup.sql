@@ -399,6 +399,8 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS url_segment TEXT;
 ALTER TABLE series ADD COLUMN IF NOT EXISTS intro_text TEXT;
 ALTER TABLE series ADD COLUMN IF NOT EXISTS highlights JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE series ADD COLUMN IF NOT EXISTS seo_text TEXT;
+ALTER TABLE series ADD COLUMN IF NOT EXISTS faqs JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE series ADD COLUMN IF NOT EXISTS guide_sections JSONB DEFAULT '[]'::jsonb;
 
 -- ============================================================================
 -- MIGRATION: RQ-Anfragenummern + CRM-Konversation (E-Mail-Thread)

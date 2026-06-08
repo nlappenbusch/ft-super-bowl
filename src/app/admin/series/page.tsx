@@ -32,6 +32,8 @@ interface SeriesFormState {
   intro_text: string;
   highlights: string;
   seo_text: string;
+  faqs: Array<{ question: string; answer: string }>;
+  guide_sections: Array<{ title: string; text: string }>;
 }
 
 const emptyForm: SeriesFormState = {
@@ -44,7 +46,9 @@ const emptyForm: SeriesFormState = {
   status: 'active',
   intro_text: '',
   highlights: '',
-  seo_text: ''
+  seo_text: '',
+  faqs: [],
+  guide_sections: []
 };
 
 const STATUS_TONE: Record<SeriesFormState['status'], 'ok' | 'warn' | 'muted'> = {
@@ -109,7 +113,9 @@ export default function AdminSeriesPage() {
       status: form.status,
       intro_text: form.intro_text || null,
       highlights: form.highlights.split('\n').map((s) => s.trim()).filter(Boolean),
-      seo_text: form.seo_text || null
+      seo_text: form.seo_text || null,
+      faqs: form.faqs.map((f) => ({ question: f.question.trim(), answer: f.answer.trim() })).filter((f) => f.question || f.answer),
+      guide_sections: form.guide_sections.map((g) => ({ title: g.title.trim(), text: g.text.trim() })).filter((g) => g.title || g.text)
     };
 
     const response = await fetch(`/api/admin/series${form.id ? `/${form.id}` : ''}` , {
@@ -224,12 +230,18 @@ export default function AdminSeriesPage() {
                   <button
                     key={item.id}
                     onClick={() => {
-                      const raw = item as unknown as { intro_text?: string; seo_text?: string; highlights?: string[] | string };
+                      const raw = item as unknown as {
+                        intro_text?: string; seo_text?: string; highlights?: string[] | string;
+                        faqs?: Array<{ question: string; answer: string }>;
+                        guide_sections?: Array<{ title: string; text: string }>;
+                      };
                       setForm({
                         ...item,
                         intro_text: raw.intro_text ?? '',
                         seo_text: raw.seo_text ?? '',
                         highlights: Array.isArray(raw.highlights) ? raw.highlights.join('\n') : (raw.highlights ?? ''),
+                        faqs: Array.isArray(raw.faqs) ? raw.faqs : [],
+                        guide_sections: Array.isArray(raw.guide_sections) ? raw.guide_sections : [],
                       });
                     }}
                     className="w-full rounded-xl p-4 text-left transition"
@@ -339,6 +351,44 @@ export default function AdminSeriesPage() {
                   placeholder="Ausführlicher, zeitloser Text über die Serie für Suchmaschinen."
                   hint="Fällt auf die Beschreibung zurück, wenn leer."
                 />
+
+                {/* Guide-Abschnitte */}
+                <div className="rounded-xl p-3" style={{ background: '#f0f7ff', border: '1px solid #1a6fa820' }}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wide" style={{ color: COLORS.navy }}>Guide-Abschnitte (Anreise, Geschichte, Tipps …)</span>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => setForm((p) => ({ ...p, guide_sections: [...p.guide_sections, { title: '', text: '' }] }))}><Plus className="h-3.5 w-3.5" /> Abschnitt</Button>
+                  </div>
+                  <div className="mt-3 space-y-3">
+                    {form.guide_sections.map((g, i) => (
+                      <div key={i} className="rounded-lg bg-white p-3" style={{ border: '1px solid #e5e8ed' }}>
+                        <div className="flex items-center gap-2">
+                          <InputField className="flex-1" placeholder="Titel (z.B. Anreise & Hotels)" value={g.title} onChange={(e) => setForm((p) => { const a = [...p.guide_sections]; a[i] = { ...a[i], title: e.target.value }; return { ...p, guide_sections: a }; })} />
+                          <button type="button" onClick={() => setForm((p) => ({ ...p, guide_sections: p.guide_sections.filter((_, j) => j !== i) }))} className="rounded-lg p-2 hover:bg-red-50"><Trash2 className="h-4 w-4 text-red-500" /></button>
+                        </div>
+                        <TextAreaField className="mt-2" rows={4} placeholder="Text des Abschnitts…" value={g.text} onChange={(e) => setForm((p) => { const a = [...p.guide_sections]; a[i] = { ...a[i], text: e.target.value }; return { ...p, guide_sections: a }; })} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Serien-FAQ */}
+                <div className="rounded-xl p-3" style={{ background: '#fff7f3', border: '1px solid #fff1ea' }}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wide" style={{ color: COLORS.accent }}>Serien-FAQ</span>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => setForm((p) => ({ ...p, faqs: [...p.faqs, { question: '', answer: '' }] }))}><Plus className="h-3.5 w-3.5" /> Frage</Button>
+                  </div>
+                  <div className="mt-3 space-y-3">
+                    {form.faqs.map((f, i) => (
+                      <div key={i} className="rounded-lg bg-white p-3" style={{ border: '1px solid #e5e8ed' }}>
+                        <div className="flex items-center gap-2">
+                          <InputField className="flex-1" placeholder="Frage" value={f.question} onChange={(e) => setForm((p) => { const a = [...p.faqs]; a[i] = { ...a[i], question: e.target.value }; return { ...p, faqs: a }; })} />
+                          <button type="button" onClick={() => setForm((p) => ({ ...p, faqs: p.faqs.filter((_, j) => j !== i) }))} className="rounded-lg p-2 hover:bg-red-50"><Trash2 className="h-4 w-4 text-red-500" /></button>
+                        </div>
+                        <TextAreaField className="mt-2" rows={3} placeholder="Antwort" value={f.answer} onChange={(e) => setForm((p) => { const a = [...p.faqs]; a[i] = { ...a[i], answer: e.target.value }; return { ...p, faqs: a }; })} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </Card>
 

@@ -18,7 +18,9 @@ export async function POST(request: Request) {
       status: body.status || 'active',
       intro_text: body.intro_text || null,
       highlights: body.highlights || [],
-      seo_text: body.seo_text || null
+      seo_text: body.seo_text || null,
+      faqs: body.faqs || [],
+      guide_sections: body.guide_sections || []
     });
 
     return NextResponse.json({ success: true, data: series });

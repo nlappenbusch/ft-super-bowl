@@ -102,6 +102,8 @@ export interface SeriesRecord {
   intro_text?: string | null;
   highlights?: string[] | null;
   seo_text?: string | null;
+  faqs?: Array<{ question: string; answer: string }> | null;
+  guide_sections?: Array<{ title: string; text: string }> | null;
 }
 
 export interface PackageIncludeRecord {
