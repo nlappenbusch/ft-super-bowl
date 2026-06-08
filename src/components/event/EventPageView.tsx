@@ -468,7 +468,10 @@ export default function EventPageView({
           <div
             style={{
               background: 'linear-gradient(180deg, #18395a 0%, #102538 100%)',
-              boxShadow: '0 10px 28px rgba(8,20,33,0.35)',
+              // 1px-Linie in der Nav-Eigenfarbe deckt den Sub-Pixel-Spalt ab (sonst blitzt der helle Body-BG beim Scroll durch)
+              boxShadow: '0 1px 0 0 #102538, 0 12px 28px rgba(8,20,33,0.35)',
+              transform: 'translateZ(0)',
+              backfaceVisibility: 'hidden',
             }}
           >
             <div className="mx-auto flex w-full max-w-6xl overflow-x-auto">
