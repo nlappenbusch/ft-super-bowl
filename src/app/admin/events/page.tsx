@@ -102,7 +102,21 @@ interface EventFormState {
   ticket_categories_title: string;
   ticket_categories_intro: string;
   ticket_categories: Array<{ name: string; items: string[]; note: string }>;
+  module_order: string[];
 }
+
+const DEFAULT_MODULE_ORDER = ['leistungen', 'about', 'spielplan', 'wissenswertes', 'stadionplan', 'lageplan', 'ticket_categories', 'packages', 'faq'];
+const MODULE_META: Record<string, { toggle: keyof EventFormState; title: string; desc: string }> = {
+  leistungen: { toggle: 'show_leistungen', title: 'Unsere Leistungen', desc: 'Leistungs-Liste mit Bild & CTA' },
+  about: { toggle: 'show_about', title: 'Über das Event', desc: 'Erster Absatz / Intro' },
+  spielplan: { toggle: 'show_spielplan', title: 'Spielplan', desc: 'Match Schedule Tabelle' },
+  wissenswertes: { toggle: 'show_wissenswertes', title: 'Wissenswertes', desc: 'Fakten & Akkordeon' },
+  stadionplan: { toggle: 'show_stadionplan', title: 'Stadionplan', desc: 'Stadion- / Hallenplan' },
+  lageplan: { toggle: 'show_lageplan', title: 'Lageplan', desc: 'Interaktive Karte (Pins)' },
+  ticket_categories: { toggle: 'show_ticket_categories', title: 'Unsere Tickets', desc: 'Ticket-Kategorien in Reitern' },
+  packages: { toggle: 'show_packages', title: 'Packages', desc: 'Reisepakete & Hotel' },
+  faq: { toggle: 'show_faqs', title: 'FAQs', desc: 'Häufige Fragen' },
+};
 
 interface PinIconOption {
   id: string;
@@ -166,7 +180,8 @@ const emptyForm: EventFormState = {
   show_ticket_categories: false,
   ticket_categories_title: '',
   ticket_categories_intro: '',
-  ticket_categories: []
+  ticket_categories: [],
+  module_order: [...DEFAULT_MODULE_ORDER]
 };
 
 function normalizeEventFormState(event?: Partial<EventFormState> | null): EventFormState {
@@ -233,7 +248,10 @@ function normalizeEventFormState(event?: Partial<EventFormState> | null): EventF
       name: c?.name ?? '',
       items: Array.isArray(c?.items) ? c.items : [],
       note: c?.note ?? '',
-    }))
+    })),
+    module_order: (event?.module_order as string[] | undefined)?.length
+      ? (event!.module_order as string[])
+      : [...DEFAULT_MODULE_ORDER]
   };
 }
 
@@ -300,6 +318,7 @@ export default function AdminEventsPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [pinIcons, setPinIcons] = useState<PinIconOption[]>([]);
+  const dragModuleKey = useRef<string | null>(null);
 
   const loadPinIcons = async () => {
     try {
@@ -446,7 +465,8 @@ export default function AdminEventsPage() {
       ticket_categories_intro: form.ticket_categories_intro || null,
       ticket_categories: form.ticket_categories
         .map((c) => ({ name: c.name.trim(), items: c.items.map((i) => i.trim()).filter(Boolean), note: c.note.trim() }))
-        .filter((c) => c.name || c.items.length)
+        .filter((c) => c.name || c.items.length),
+      module_order: form.module_order
     };
 
     const response = await fetch(`/api/admin/events${form.id ? `/${form.id}` : ''}`, {
@@ -947,36 +967,46 @@ export default function AdminEventsPage() {
 
               <SectionCard
                 icon={<Layers className="h-5 w-5" />}
-                title="Aktivierte Module"
-                description="Wählen Sie aus, welche Module auf der Event-Detailseite geladen und angezeigt werden sollen."
+                title="Module & Reihenfolge"
+                description="Schalter = Modul an/aus. Per ⠿-Griff ziehen, um die Reihenfolge auf der Event-Seite zu ändern (Live-Vorschau passt sich an)."
               >
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {([
-                    { key: 'show_about', value: form.show_about, title: 'Über das Event', desc: 'Erster Absatz / Intro' },
-                    { key: 'show_packages', value: form.show_packages, title: 'Packages', desc: 'Reisepakete & Hotel' },
-                    { key: 'show_faqs', value: form.show_faqs, title: 'FAQs', desc: 'Häufige Fragen' },
-                    { key: 'show_spielplan', value: form.show_spielplan, title: 'Spielplan', desc: 'Match Schedule Tabelle' },
-                    { key: 'show_wissenswertes', value: form.show_wissenswertes, title: 'Wissenswertes', desc: 'Fakten & Akkordeon' },
-                    { key: 'show_stadionplan', value: form.show_stadionplan, title: 'Stadionplan', desc: 'Stadion- / Hallenplan' },
-                    { key: 'show_lageplan', value: form.show_lageplan, title: 'Lageplan', desc: 'Interaktive Karte (Pins)' },
-                    { key: 'show_leistungen', value: form.show_leistungen, title: 'Unsere Leistungen', desc: 'Leistungs-Liste mit Bild & CTA' },
-                    { key: 'show_ticket_categories', value: form.show_ticket_categories, title: 'Unsere Tickets', desc: 'Ticket-Kategorien in Reitern' }
-                  ] as const).map((mod) => (
-                    <div
-                      key={mod.key}
-                      className="flex items-center justify-between gap-3 rounded-xl border p-4"
-                      style={{ borderColor: mod.value ? COLORS.navy : COLORS.stroke, background: mod.value ? '#f7fafc' : '#fff' }}
-                    >
-                      <div>
-                        <div className="text-sm font-semibold" style={{ color: COLORS.navy }}>{mod.title}</div>
-                        <div className="text-xs" style={{ color: COLORS.textMuted }}>{mod.desc}</div>
-                      </div>
-                      <Toggle
-                        checked={mod.value}
-                        onChange={(v) => updateField(mod.key, v)}
-                      />
-                    </div>
-                  ))}
+                <div className="space-y-2">
+                  {(() => {
+                    const known = Object.keys(MODULE_META);
+                    const displayOrder = [
+                      ...form.module_order.filter((k) => known.includes(k)),
+                      ...known.filter((k) => !form.module_order.includes(k)),
+                    ];
+                    const move = (from: string, to: string) => {
+                      if (from === to) return;
+                      const o = displayOrder.filter((k) => k !== from);
+                      o.splice(o.indexOf(to), 0, from);
+                      updateField('module_order', o);
+                    };
+                    return displayOrder.map((key, idx) => {
+                      const meta = MODULE_META[key];
+                      const on = Boolean(form[meta.toggle]);
+                      return (
+                        <div
+                          key={key}
+                          draggable
+                          onDragStart={() => { dragModuleKey.current = key; }}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={() => { if (dragModuleKey.current) move(dragModuleKey.current, key); dragModuleKey.current = null; }}
+                          className="flex items-center gap-3 rounded-xl border p-3"
+                          style={{ borderColor: on ? COLORS.navy : COLORS.stroke, background: on ? '#f7fafc' : '#fff' }}
+                        >
+                          <span className="cursor-grab select-none text-lg leading-none text-gray-400" title="Ziehen zum Sortieren">⠿</span>
+                          <span className="w-5 text-center text-xs font-bold text-gray-400">{idx + 1}</span>
+                          <div className="flex-1">
+                            <div className="text-sm font-semibold" style={{ color: COLORS.navy }}>{meta.title}</div>
+                            <div className="text-xs" style={{ color: COLORS.textMuted }}>{meta.desc}</div>
+                          </div>
+                          <Toggle checked={on} onChange={(v) => updateField(meta.toggle, v)} />
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </SectionCard>
 

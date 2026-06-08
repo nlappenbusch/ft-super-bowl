@@ -1,6 +1,6 @@
 import { notFound, permanentRedirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import EventPageView from '@/components/event/EventPageView';
+import EventLiveEditor from '@/components/event/EventLiveEditor';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { generateEventSchema, generateProductSchema, generateFaqPageSchema } from '@/lib/schema';
 import { siteConfig } from '@/lib/siteConfig';
@@ -27,8 +27,8 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
   const { series: seriesSlug, event: eventParam } = await params;
   const event = await resolveEvent(seriesSlug, eventParam);
   if (!event) return {};
-  const title = event.title || event.name || 'Event';
-  const description = event.description || `Tickets & Packages für ${event.name || event.slug}`;
+  const title = event.seo_title || event.title || event.name || 'Event';
+  const description = event.seo_description || event.description || `Tickets & Packages für ${event.name || event.slug}`;
   const seg = event.url_segment || event.slug;
   const canonical = `${(siteConfig.url || '').replace(/\/$/, '')}/${seriesSlug}/${seg}`;
   return {
@@ -94,7 +94,7 @@ export default async function EventUnderSeriesPage({ params }: EventPageProps) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(generateFaqPageSchema(faqs)) }} />
       )}
       <Breadcrumbs items={crumbs} />
-      <EventPageView event={event} series={series} packages={packages} faqs={faqs} pinIcons={pinIcons} />
+      <EventLiveEditor event={event} series={series} packages={packages} faqs={faqs} pinIcons={pinIcons} />
     </>
   );
 }

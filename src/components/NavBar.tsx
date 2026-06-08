@@ -278,8 +278,8 @@ export default function NavBar() {
               backdropFilter: 'blur(3px)'
             }}
           >
-            {/* Logo */}
-            <Link href="https://faltintravel.com" className="shrink-0 min-[960px]:mr-12">
+            {/* Logo -> Startseite dieser Site */}
+            <Link href="/" className="shrink-0 min-[960px]:mr-12">
               <Image
                 src="/faltin-logo.svg"
                 alt="Faltin Travel"

@@ -63,6 +63,23 @@ export interface ContentEventRecord {
   ticket_categories_title?: string | null;
   ticket_categories_intro?: string | null;
   ticket_categories?: Array<{ name: string; items: string[]; note?: string | null }> | null;
+  // SEO (Meta-Override pro Event)
+  seo_title?: string | null;
+  seo_description?: string | null;
+  // Bild-Alt-/Title-Attribute
+  hero_image_alt?: string | null;
+  hero_image_title?: string | null;
+  leistungen_image_alt?: string | null;
+  leistungen_image_title?: string | null;
+  stadionplan_image_alt?: string | null;
+  stadionplan_image_title?: string | null;
+  first_paragraph_image_1_alt?: string | null;
+  first_paragraph_image_1_title?: string | null;
+  first_paragraph_image_2_alt?: string | null;
+  first_paragraph_image_2_title?: string | null;
+  first_paragraph_image_3_alt?: string | null;
+  first_paragraph_image_3_title?: string | null;
+  module_order?: string[] | null;
 }
 
 export interface ContentPackageInclude {

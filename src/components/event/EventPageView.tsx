@@ -316,24 +316,37 @@ export default function EventPageView({
   const heroCtaLabel = `Jetzt ${event.name || event.title || 'Event'} Tickets unverbindlich anfragen`;
   const firstParagraphHeading = buildFirstParagraphHeading(event);
   const firstParagraphText    = buildFirstParagraphText(event);
-  const firstParagraphImages  = [event.first_paragraph_image_1, event.first_paragraph_image_2, event.first_paragraph_image_3].filter(Boolean) as string[];
+  type AboutImg = { url: string; alt?: string | null; title?: string | null };
+  const firstParagraphImages = ([
+    { url: event.first_paragraph_image_1, alt: event.first_paragraph_image_1_alt, title: event.first_paragraph_image_1_title },
+    { url: event.first_paragraph_image_2, alt: event.first_paragraph_image_2_alt, title: event.first_paragraph_image_2_title },
+    { url: event.first_paragraph_image_3, alt: event.first_paragraph_image_3_alt, title: event.first_paragraph_image_3_title },
+  ].filter((x) => x.url) as AboutImg[]);
   // Fallback: wenn keine Absatz-Bilder gepflegt sind, ein vorhandenes Event-Bild nutzen (keine leere Spalte)
   const aboutImages = (firstParagraphImages.length > 0
     ? firstParagraphImages
-    : [event.ticket_image, event.hero_image].filter(Boolean) as string[]
+    : ([{ url: event.ticket_image }, { url: event.hero_image }].filter((x) => x.url) as AboutImg[])
   ).slice(0, 2);
 
-  const anchors = [
-    hasLeistungen   && { label: 'Unsere Leistungen', href: '#unsere-leistungen' },
-    showAbout       && { label: 'Überblick',     href: '#leistungen' },
-    showSpielplan   && spielplan.length > 0 && { label: 'Spielplan',   href: '#spielplan'  },
-    showWissenswertes && { label: 'Wissenswertes', href: '#wissenswertes' },
-    showStadionplan && { label: 'Stadionplan',   href: '#stadionplan' },
-    hasLageplan     && { label: 'Lageplan',      href: '#lageplan'    },
-    hasTicketCats   && { label: 'Ticket-Kategorien', href: '#ticket-kategorien' },
-    showPackages    && { label: 'Packages',      href: '#tickets'     },
-    showFaqs        && { label: 'FAQ',           href: '#faq'         },
-  ].filter(Boolean) as { label: string; href: string }[];
+  // Modul-Reihenfolge (per Admin/Drag steuerbar). Hero/Nav/CTA bleiben fest.
+  const DEFAULT_MODULE_ORDER = ['leistungen', 'about', 'spielplan', 'wissenswertes', 'stadionplan', 'lageplan', 'ticket_categories', 'packages', 'faq'];
+  const moduleOrder = (Array.isArray(event.module_order) && event.module_order.length ? event.module_order : DEFAULT_MODULE_ORDER);
+  const orderOf = (key: string) => {
+    const i = moduleOrder.indexOf(key);
+    return (i === -1 ? DEFAULT_MODULE_ORDER.indexOf(key) : i) + 1;
+  };
+
+  const anchors = ([
+    hasLeistungen   && { key: 'leistungen', label: 'Unsere Leistungen', href: '#unsere-leistungen' },
+    showAbout       && { key: 'about', label: 'Überblick', href: '#leistungen' },
+    showSpielplan   && spielplan.length > 0 && { key: 'spielplan', label: 'Spielplan', href: '#spielplan' },
+    showWissenswertes && { key: 'wissenswertes', label: 'Wissenswertes', href: '#wissenswertes' },
+    showStadionplan && { key: 'stadionplan', label: 'Stadionplan', href: '#stadionplan' },
+    hasLageplan     && { key: 'lageplan', label: 'Lageplan', href: '#lageplan' },
+    hasTicketCats   && { key: 'ticket_categories', label: 'Ticket-Kategorien', href: '#ticket-kategorien' },
+    showPackages    && { key: 'packages', label: 'Packages', href: '#tickets' },
+    showFaqs        && { key: 'faq', label: 'FAQ', href: '#faq' },
+  ].filter(Boolean) as { key: string; label: string; href: string }[]).sort((a, b) => orderOf(a.key) - orderOf(b.key));
 
   // Scroll-Spy: aktiven Abschnitt in der Sticky-Nav hervorheben
   const anchorKey = anchors.map((a) => a.href).join('|');
@@ -355,12 +368,12 @@ export default function EventPageView({
   }, [anchorKey]);
 
   return (
-    <div className="min-h-screen font-sans" style={{ fontFamily: "'Montserrat', 'Open Sans', system-ui, sans-serif" }}>
+    <div className="flex min-h-screen flex-col font-sans" style={{ fontFamily: "'Montserrat', 'Open Sans', system-ui, sans-serif" }}>
       {/* ── HERO ─────────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden" style={{ minHeight: 420 }}>
         {event.hero_image ? (
           <div className="absolute inset-0">
-            <Image src={event.hero_image} alt={event.title || event.name || 'Event'} fill className="object-cover object-center" priority />
+            <Image src={event.hero_image} alt={event.hero_image_alt || event.title || event.name || 'Event'} title={event.hero_image_title || undefined} fill className="object-cover object-center" priority />
             <div className="absolute inset-0" style={{ background: 'rgba(14,34,56,0.45)' }} />
           </div>
         ) : (
@@ -540,7 +553,7 @@ export default function EventPageView({
 
       {/* ── UNSERE LEISTUNGEN ────────────────────────────────────────────────── */}
       {hasLeistungen && (
-        <section className="py-14 px-4 scroll-mt-40" id="unsere-leistungen" style={BLUE_GLOW}>
+        <section className="py-14 px-4 scroll-mt-40" id="unsere-leistungen" style={{ ...BLUE_GLOW, order: orderOf('leistungen') }}>
           <div className="container mx-auto max-w-6xl">
             <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2">
               <div>
@@ -584,9 +597,9 @@ export default function EventPageView({
                 </div>
               </div>
               {leistungenImage && (
-                <div className="relative h-72 overflow-hidden rounded-xl bg-white/5 md:h-96">
-                  <Image src={leistungenImage} alt={leistungenTitle} fill className="object-cover" />
-                </div>
+                <Editable editable={editable} target="leistungen_items" as="div" className="relative h-72 overflow-hidden rounded-xl bg-white/5 md:h-96">
+                  <Image src={leistungenImage} alt={event.leistungen_image_alt || leistungenTitle} title={event.leistungen_image_title || undefined} fill className="object-cover" />
+                </Editable>
               )}
             </div>
           </div>
@@ -595,7 +608,7 @@ export default function EventPageView({
 
       {/* ── LEISTUNGEN / ABOUT (Erster Absatz) ───────────────────────────────── */}
       {showAbout && (
-        <section className="py-14 px-4 bg-white scroll-mt-40" id="leistungen">
+        <section className="py-14 px-4 bg-white scroll-mt-40" id="leistungen" style={{ order: orderOf('about') }}>
           <div className="container mx-auto max-w-6xl">
             <div className={`grid grid-cols-1 gap-10 md:items-center ${aboutImages.length > 0 ? 'md:grid-cols-[1.05fr_1fr]' : ''}`}>
               <div className={aboutImages.length > 0 ? '' : 'mx-auto max-w-3xl text-center'}>
@@ -625,20 +638,24 @@ export default function EventPageView({
               </div>
               {aboutImages.length > 0 && (
                 <div className={aboutImages.length > 1 ? 'grid grid-cols-1 gap-4' : ''}>
-                  {aboutImages.map((imageUrl, index) => (
-                    <div
-                      key={`${imageUrl}-${index}`}
+                  {aboutImages.map((img, index) => (
+                    <Editable
+                      editable={editable}
+                      target="about_images"
+                      as="div"
+                      key={`${img.url}-${index}`}
                       className={`group relative overflow-hidden rounded-2xl bg-gray-100 ${aboutImages.length > 1 ? 'h-56' : 'h-72 md:h-[420px]'}`}
                       style={{ boxShadow: '0 18px 40px rgba(20,48,71,0.18)', border: '1px solid #e5e8ed' }}
                     >
                       <Image
-                        src={imageUrl}
-                        alt={`${event.title || event.name || 'Event'} Bild ${index + 1}`}
+                        src={img.url}
+                        alt={img.alt || `${event.title || event.name || 'Event'} Bild ${index + 1}`}
+                        title={img.title || undefined}
                         fill
                         className="object-cover transition-transform duration-700 group-hover:scale-105"
                       />
                       <div className="pointer-events-none absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 60%, rgba(20,48,71,0.28))' }} />
-                    </div>
+                    </Editable>
                   ))}
                 </div>
               )}
@@ -649,7 +666,7 @@ export default function EventPageView({
 
       {/* ── SPIELPLAN ────────────────────────────────────────────────────────── */}
       {showSpielplan && spielplan && spielplan.length > 0 && (
-        <section className="py-14 px-4 scroll-mt-40" id="spielplan" style={{ background: '#eef3fb', borderTop: '1px solid #e5e8ed', borderBottom: '1px solid #e5e8ed' }}>
+        <section className="py-14 px-4 scroll-mt-40" id="spielplan" style={{ background: '#eef3fb', borderTop: '1px solid #e5e8ed', borderBottom: '1px solid #e5e8ed', order: orderOf('spielplan') }}>
           <div className="container mx-auto max-w-4xl">
             <Editable editable={editable} target="spielplan" as="h2" className="text-3xl md:text-4xl font-extrabold mb-8 leading-tight" style={{ color: '#143047' }}>Spielplan</Editable>
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -688,7 +705,7 @@ export default function EventPageView({
 
       {/* ── WISSENSWERTES ────────────────────────────────────────────────────── */}
       {showWissenswertes && (
-        <section className="py-14 px-4 scroll-mt-40" id="wissenswertes" style={BLUE_GLOW}>
+        <section className="py-14 px-4 scroll-mt-40" id="wissenswertes" style={{ ...BLUE_GLOW, order: orderOf('wissenswertes') }}>
           <div className="container mx-auto max-w-4xl">
             <InlineEditable
               editable={editable}
@@ -726,7 +743,7 @@ export default function EventPageView({
 
       {/* ── STADIONPLAN ──────────────────────────────────────────────────────── */}
       {showStadionplan && (
-        <section className="py-14 px-4 scroll-mt-40" id="stadionplan" style={{ background: '#eef3fb', borderTop: '1px solid #e5e8ed', borderBottom: '1px solid #e5e8ed' }}>
+        <section className="py-14 px-4 scroll-mt-40" id="stadionplan" style={{ background: '#eef3fb', borderTop: '1px solid #e5e8ed', borderBottom: '1px solid #e5e8ed', order: orderOf('stadionplan') }}>
           <div className="container mx-auto max-w-6xl">
             <InlineEditable
               editable={editable}
@@ -741,10 +758,10 @@ export default function EventPageView({
             />
             <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1.2fr] gap-10 items-start">
               {stadionplanImage ? (
-                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm flex justify-center items-center">
+                <Editable editable={editable} target="stadionplan" as="div" className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm flex justify-center items-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={stadionplanImage} alt={stadionplanTitle} className="max-h-[500px] w-auto object-contain rounded-lg" />
-                </div>
+                  <img src={stadionplanImage} alt={event.stadionplan_image_alt || stadionplanTitle} title={event.stadionplan_image_title || undefined} className="max-h-[500px] w-auto object-contain rounded-lg" />
+                </Editable>
               ) : (
                 <div className="flex aspect-video items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 text-gray-400 text-sm">Kein Plan-Bild hinterlegt</div>
               )}
@@ -768,7 +785,7 @@ export default function EventPageView({
 
       {/* ── LAGEPLAN ─────────────────────────────────────────────────────────── */}
       {hasLageplan && (
-        <section className="py-14 px-4 bg-white scroll-mt-40" id="lageplan">
+        <section className="py-14 px-4 bg-white scroll-mt-40" id="lageplan" style={{ order: orderOf('lageplan') }}>
           <div className="container mx-auto max-w-6xl">
             <Editable editable={editable} target="lageplan" as="h2" className="text-3xl md:text-4xl font-extrabold mb-2 leading-tight" style={{ color: '#143047' }}>Lageplan</Editable>
             {getEventLocationLine(event) && (
@@ -789,14 +806,14 @@ export default function EventPageView({
 
       {/* ── UNSERE TICKETS (Kategorien-Tabs) ─────────────────────────────────── */}
       {hasTicketCats && (
-        <section className="py-14 px-4 bg-white scroll-mt-40" id="ticket-kategorien">
+        <section className="py-14 px-4 bg-white scroll-mt-40" id="ticket-kategorien" style={{ order: orderOf('ticket_categories') }}>
           <TicketCategories title={ticketCatsTitle} intro={ticketCatsIntro} categories={ticketCats} editable={editable} />
         </section>
       )}
 
       {/* ── PACKAGES / TICKETS ───────────────────────────────────────────────── */}
       {showPackages && (
-        <section className="py-14 px-4 scroll-mt-40" id="tickets" style={{ background: '#eef3fb', borderTop: '1px solid #e5e8ed' }}>
+        <section className="py-14 px-4 scroll-mt-40" id="tickets" style={{ background: '#eef3fb', borderTop: '1px solid #e5e8ed', order: orderOf('packages') }}>
           <div className="container mx-auto max-w-5xl">
             <h2 className="text-3xl md:text-4xl font-extrabold mb-2 leading-tight text-center" style={{ color: '#143047' }}>Unsere Packages</h2>
             <p className="text-gray-600 text-center mb-10 max-w-2xl mx-auto">
@@ -868,7 +885,7 @@ export default function EventPageView({
 
       {/* ── FAQ ──────────────────────────────────────────────────────────────── */}
       {showFaqs && (
-        <section className="py-14 px-4 scroll-mt-40" id="faq" style={BLUE_GLOW}>
+        <section className="py-14 px-4 scroll-mt-40" id="faq" style={{ ...BLUE_GLOW, order: orderOf('faq') }}>
           <div className="container mx-auto max-w-4xl">
             <Editable editable={editable} target="faq" as="h2" className="text-3xl md:text-4xl font-extrabold mb-8 leading-tight text-white">FAQ zu {event.name || event.title}</Editable>
             {faqs.length === 0 ? (
@@ -895,7 +912,7 @@ export default function EventPageView({
       )}
 
       {/* ── BOTTOM CTA STRIP ─────────────────────────────────────────────────── */}
-      <section className="py-12 px-4 text-center" style={{ background: '#143047' }}>
+      <section className="py-12 px-4 text-center" style={{ background: '#143047', order: 100 }}>
         <p className="text-white/70 text-sm mb-4 uppercase tracking-widest font-semibold">Bereit für Ihr Erlebnis?</p>
         <a
           href={ctaHref}

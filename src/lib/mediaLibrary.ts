@@ -83,6 +83,51 @@ function sanitizeFileName(fileName: string) {
   return `${safeBaseName}${extension}`;
 }
 
+function extFromContentType(contentType: string): string {
+  const ct = contentType.toLowerCase();
+  if (ct.includes('webp')) return '.webp';
+  if (ct.includes('png')) return '.png';
+  if (ct.includes('jpeg') || ct.includes('jpg')) return '.jpg';
+  if (ct.includes('avif')) return '.avif';
+  if (ct.includes('svg')) return '.svg';
+  if (ct.includes('gif')) return '.gif';
+  return '.jpg';
+}
+
+/**
+ * Lädt ein Remote-Bild herunter und speichert es lokal unter /public/uploads/media.
+ * Gibt die lokale Public-URL zurück. Bereits lokale URLs (oder leere) werden
+ * unverändert zurückgegeben.
+ */
+export async function localizeRemoteImage(url: string): Promise<string> {
+  const trimmed = (url || '').trim();
+  if (!trimmed || !/^https?:\/\//i.test(trimmed)) return trimmed; // schon lokal / leer
+
+  const res = await fetch(trimmed, { redirect: 'follow' });
+  if (!res.ok) throw new Error(`Download fehlgeschlagen (${res.status}): ${trimmed}`);
+
+  const contentType = res.headers.get('content-type') || '';
+  const buf = Buffer.from(await res.arrayBuffer());
+
+  let pathname = '/image';
+  try { pathname = new URL(trimmed).pathname; } catch { /* ignore */ }
+  const rawBase = path.basename(pathname) || 'image';
+  let ext = path.extname(rawBase).toLowerCase();
+  if (!IMAGE_EXTENSIONS.has(ext)) ext = extFromContentType(contentType);
+
+  const baseNoExt = path.basename(rawBase, path.extname(rawBase));
+  const safeBase = sanitizeFileName(`${baseNoExt}${ext}`);
+
+  await mkdir(UPLOADS_DIR, { recursive: true });
+  const timeStamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const finalName = `${timeStamp}-${safeBase}`;
+  const finalPath = path.join(UPLOADS_DIR, finalName);
+  await writeFile(finalPath, buf);
+
+  const relativePath = path.relative(PUBLIC_DIR, finalPath).split(path.sep).join('/');
+  return toPublicUrl(relativePath);
+}
+
 export async function saveUploadedMedia(file: File): Promise<MediaItem> {
   const originalName = file.name || 'upload.bin';
   const extension = path.extname(originalName).toLowerCase();
