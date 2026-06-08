@@ -2,9 +2,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { Calendar, MapPin, ArrowRight, Ticket, CheckCircle2 } from 'lucide-react';
-import { getEventsBySeriesSlug, getSeriesBySlug } from '@/lib/eventData';
+import { Calendar, MapPin, ArrowRight, Ticket, CheckCircle2, ShieldCheck, Award, Headset } from 'lucide-react';
+import { getEventsBySeriesSlug, getSeriesBySlug, getPackagesByEventSlug } from '@/lib/eventData';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import SeriesPackages, { type SeriesPackageGroup } from '@/components/SeriesPackages';
+import EventContactForm from '@/components/EventContactForm';
 import { siteConfig } from '@/lib/siteConfig';
 import { toCategorySlug } from '@/lib/category';
 
@@ -56,6 +58,26 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
   const upcoming = [...events].sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''));
   const highlights = (seriesData.highlights || []).filter(Boolean);
 
+  // Packages aller Events der Serie laden
+  const packagesByEvent = await Promise.all(upcoming.map((e) => getPackagesByEventSlug(e.slug)));
+  const packageGroups: SeriesPackageGroup[] = upcoming
+    .map((e, i) => ({
+      eventSegment: e.url_segment || e.slug,
+      eventName: e.title || e.name || e.slug,
+      packages: (packagesByEvent[i] || []).map((p) => ({
+        id: p.id,
+        slug: p.slug || p.id,
+        title: p.title || '',
+        price: Number(p.price || 0),
+        popular: Boolean(p.popular),
+        shortDescription: p.short_description || '',
+        availableSpots: p.available_spots ?? null,
+      })),
+    }))
+    .filter((g) => g.packages.length > 0);
+  const totalPackages = packageGroups.reduce((s, g) => s + g.packages.length, 0);
+  const eventOptions = upcoming.map((e) => ({ slug: e.slug, name: e.title || e.name || e.slug }));
+
   const crumbs = [
     { name: 'Start', href: '/' },
     { name: seriesData.category || 'Events', href: `/kategorie/${toCategorySlug(seriesData.category || 'sonstiges')}` },
@@ -91,6 +113,15 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
             <span className="inline-flex items-center gap-1.5"><Ticket className="h-4 w-4" style={{ color: '#f5c842' }} /> {events.length} {events.length === 1 ? 'Event' : 'Events'}</span>
             <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4" style={{ color: '#f5c842' }} /> Hospitality & Reisepakete</span>
           </div>
+        </div>
+      </section>
+
+      {/* ── TRUST-BAND ───────────────────────────────────────────────────── */}
+      <section className="px-4 py-5" style={{ background: '#0f2742' }}>
+        <div className="mx-auto flex max-w-6xl flex-col flex-wrap items-center justify-center gap-x-10 gap-y-3 text-sm font-semibold text-white/85 sm:flex-row">
+          <span className="inline-flex items-center gap-2"><ShieldCheck className="h-5 w-5" style={{ color: '#f5c842' }} /> Schweizer Reisegarantie</span>
+          <span className="inline-flex items-center gap-2"><Award className="h-5 w-5" style={{ color: '#f5c842' }} /> Offizielle Hospitality-Tickets</span>
+          <span className="inline-flex items-center gap-2"><Headset className="h-5 w-5" style={{ color: '#f5c842' }} /> Persönliche Beratung · 20+ Jahre Erfahrung</span>
         </div>
       </section>
 
@@ -189,16 +220,34 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
         </div>
       </section>
 
-      {/* ── CTA ──────────────────────────────────────────────────────────── */}
-      <section className="px-4 py-14 text-center" style={{ background: '#143047' }}>
-        <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-white/70">Kein passendes Event gefunden?</p>
-        <Link
-          href="/booking"
-          className="inline-flex items-center gap-2 rounded-sm px-8 py-4 text-base font-bold text-white shadow-lg transition-all hover:opacity-90 hover:scale-[1.02]"
-          style={{ background: '#d9531e' }}
-        >
-          Unverbindlich anfragen <ArrowRight className="h-5 w-5" />
-        </Link>
+      {/* ── PACKAGES DER SERIE ───────────────────────────────────────────── */}
+      {totalPackages > 0 && (
+        <section className="px-4 py-16" style={{ background: '#f5f7fa', borderTop: '1px solid #e5e8ed' }}>
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-8 text-center">
+              <h2 className="text-3xl md:text-4xl font-extrabold" style={{ color: '#143047' }}>Alle Packages der Serie</h2>
+              <p className="mx-auto mt-2 max-w-2xl text-gray-600">Filtern Sie nach Event – jedes Package ist klar zugeordnet. Ein Klick führt direkt zu Details &amp; Buchung.</p>
+            </div>
+            <SeriesPackages seriesSlug={series} groups={packageGroups} />
+          </div>
+        </section>
+      )}
+
+      {/* ── ANFRAGE (mit Event-Auswahl) ──────────────────────────────────── */}
+      <section className="bg-white px-4 py-16">
+        <div className="mx-auto max-w-3xl">
+          <EventContactForm
+            eventSlug={eventOptions[0]?.slug || series}
+            eventName={seriesData.title}
+            events={eventOptions.length > 0 ? eventOptions : undefined}
+            title={totalPackages > 0 ? 'Individuelle Anfrage' : `Anfrage für ${seriesData.title}`}
+            intro={
+              totalPackages > 0
+                ? 'Nichts Passendes dabei oder offene Fragen? Wählen Sie Ihr Event – wir erstellen Ihnen ein massgeschneidertes Angebot.'
+                : 'Stellen Sie unverbindlich Ihre Anfrage. Wählen Sie Ihr Wunsch-Event und wir melden uns mit einem individuellen Angebot.'
+            }
+          />
+        </div>
       </section>
     </div>
   );

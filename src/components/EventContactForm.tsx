@@ -1,14 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { Mail, Phone, User, Send, CheckCircle } from 'lucide-react';
+import { Mail, Phone, User, Send, CheckCircle, CalendarDays } from 'lucide-react';
 
 interface EventContactFormProps {
   eventSlug: string;
   eventName?: string;
+  /** Optional: Auswahl aus mehreren Events (z.B. auf der Serien-Seite). */
+  events?: { slug: string; name: string }[];
+  /** Überschrift-/Intro-Override */
+  title?: string;
+  intro?: string;
 }
 
-export default function EventContactForm({ eventSlug, eventName }: EventContactFormProps) {
+export default function EventContactForm({ eventSlug, eventName, events, title, intro }: EventContactFormProps) {
+  const hasEventChoice = !!(events && events.length > 0);
+  const [selectedEvent, setSelectedEvent] = useState<string>(events?.[0]?.slug || eventSlug);
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -20,6 +27,11 @@ export default function EventContactForm({ eventSlug, eventName }: EventContactF
   const [sent, setSent] = useState(false);
   const [requestNumber, setRequestNumber] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const effectiveSlug = hasEventChoice ? selectedEvent : eventSlug;
+  const effectiveName = hasEventChoice
+    ? (events!.find((e) => e.slug === selectedEvent)?.name || eventName)
+    : eventName;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,10 +47,10 @@ export default function EventContactForm({ eventSlug, eventName }: EventContactF
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          eventSlug,
+          eventSlug: effectiveSlug,
           packageSlug: null,
           packageId: 'contact-inquiry',
-          packageTitle: `Allgemeine Anfrage – ${eventName || eventSlug}`,
+          packageTitle: `Allgemeine Anfrage – ${effectiveName || effectiveSlug}`,
           startDate: '',
           numberOfPersons: 1,
           doubleRooms: 0,
@@ -98,16 +110,39 @@ export default function EventContactForm({ eventSlug, eventName }: EventContactF
       <div className="px-8 pt-8 pb-6" style={{ background: '#143047' }}>
         <div className="flex items-center gap-3 mb-2">
           <Mail className="w-6 h-6" style={{ color: '#d9531e' }} />
-          <h3 className="text-xl font-extrabold text-white">Jetzt unverbindlich anfragen</h3>
+          <h3 className="text-xl font-extrabold text-white">{title || 'Jetzt unverbindlich anfragen'}</h3>
         </div>
         <p className="text-white/70 text-sm">
-          Kein passendes Package sichtbar? Kontaktieren Sie uns direkt — wir erstellen Ihnen ein individuelles Angebot für{' '}
-          <strong className="text-white">{eventName || 'dieses Event'}</strong>.
+          {intro || (
+            <>
+              Kein passendes Package sichtbar? Kontaktieren Sie uns direkt — wir erstellen Ihnen ein individuelles Angebot für{' '}
+              <strong className="text-white">{effectiveName || 'dieses Event'}</strong>.
+            </>
+          )}
         </p>
       </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="p-8 bg-white space-y-4">
+        {hasEventChoice && (
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
+              <CalendarDays className="inline w-3.5 h-3.5 mr-1 -mt-0.5" /> Für welches Event interessieren Sie sich?
+            </label>
+            <select
+              value={selectedEvent}
+              onChange={(e) => setSelectedEvent(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none transition bg-white"
+              style={{ borderColor: '#e5e8ed' }}
+              onFocus={(e) => (e.target.style.borderColor = '#143047')}
+              onBlur={(e) => (e.target.style.borderColor = '#e5e8ed')}
+            >
+              {events!.map((ev) => (
+                <option key={ev.slug} value={ev.slug}>{ev.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">
