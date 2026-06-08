@@ -3,26 +3,32 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      # NEXT_PUBLIC_* müssen zur Build-Zeit vorhanden sein (werden ins Client-JS eingebacken).
-      # Compose zieht die Werte automatisch aus der .env-Datei in diesem Ordner.
+      # NEXT_PUBLIC_* werden zur Build-Zeit ins Client-JS eingebacken.
+      # Werte kommen aus einer optionalen .env-Datei in diesem Ordner; sonst greifen die Defaults.
       args:
-        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
-        NEXT_PUBLIC_ADMIN_PASSWORD: ${NEXT_PUBLIC_ADMIN_PASSWORD}
-        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
-        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://superbowl.faltintravel.com}
+        NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME:-Faltin Travel Sports Events}
+        NEXT_PUBLIC_ADMIN_PASSWORD: ${NEXT_PUBLIC_ADMIN_PASSWORD:-faltin-admin-2025}
+        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
     container_name: super-bowl-app
     restart: unless-stopped
     ports:
       - "8085:3000"  # Externer Port 8085 -> Container Port 3000
     volumes:
-      - ./data:/app/data  # Inhalte (events/series/...) + SQLite + settings.json – bleiben persistent & beschreibbar
-    # Laufzeit-Secrets (Graph/Brevo/Inbound) kommen aus der .env-Datei (NICHT im Git!)
-    env_file:
-      - .env
+      - ./data:/app/data  # Inhalte + SQLite + settings.json – persistent & beschreibbar
+    # Laufzeit-Variablen. ${VAR:-default} => funktioniert AUCH ohne .env (kein harter Fehler).
     environment:
       - NODE_ENV=production
       - DATABASE_PATH=/app/data/bookings.db
+      - GRAPH_TENANT_ID=${GRAPH_TENANT_ID:-}
+      - GRAPH_CLIENT_ID=${GRAPH_CLIENT_ID:-}
+      - GRAPH_CLIENT_SECRET=${GRAPH_CLIENT_SECRET:-}
+      - GRAPH_MAILBOX=${GRAPH_MAILBOX:-request@faltintravel.com}
+      - GRAPH_FROM_NAME=${GRAPH_FROM_NAME:-Faltin Travel}
+      - BREVO_API_KEY=${BREVO_API_KEY:-}
+      - INBOUND_POLL_SECRET=${INBOUND_POLL_SECRET:-}
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
       interval: 30s

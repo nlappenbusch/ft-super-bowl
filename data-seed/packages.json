@@ -1,0 +1,238 @@
+[
+  {
+    "id": "9b1d32c9-ce06-40c9-a932-8ca337f0b20a",
+    "event_id": "9a7b4076-68ae-4d23-8948-a2c185c8c6bb",
+    "slug": "budget-camper",
+    "package_name": "Budget-Camper",
+    "title": "Budget-Camping auf dem Burning Man",
+    "short_description": "Budget-Camping auf dem Burning Man",
+    "description": "Budget-Camping auf dem Burning Man",
+    "hotel": null,
+    "stars": null,
+    "nights": 2,
+    "price": 399,
+    "currency": "EUR",
+    "single_supplement": 100,
+    "popular": false,
+    "available_spots": 99,
+    "rating": 4.8,
+    "reviews": 999,
+    "hotel_images": [],
+    "distances": {
+      "airport": "",
+      "stadium": "",
+      "downtown": ""
+    },
+    "room_categories": [],
+    "extension_nights": null,
+    "badge_text": "Jetzt SandkÃ¶rner fressen!!",
+    "includes": [],
+    "active": true
+  },
+  {
+    "id": "7ddbbf5a-8582-4f68-864f-be8f637d69d0",
+    "event_id": "001fc1f3-ac11-472f-b859-211181e21227",
+    "slug": "super-bowl-2029",
+    "package_name": "Ticket & Hotel",
+    "title": "Super Bowl 2029 Tickets & Reisen",
+    "short_description": "Boutique-Hotel im Herzen von Hollywood mit Rooftop-Pool und Blick auf das Hollywood Sign",
+    "description": "Boutique-Hotel im Herzen von Hollywood mit Rooftop-Pool und Blick auf das Hollywood Sign",
+    "hotel": "Beste Hotel",
+    "stars": 4,
+    "nights": 2,
+    "price": 999,
+    "currency": "EUR",
+    "single_supplement": 199,
+    "popular": true,
+    "available_spots": 99,
+    "rating": 4.8,
+    "reviews": 99,
+    "hotel_images": [],
+    "distances": {
+      "airport": "9",
+      "stadium": "9",
+      "downtown": "9"
+    },
+    "room_categories": [
+      "Doppelzimmer",
+      "Einzelzimmer"
+    ],
+    "extension_nights": "VerlÃ¤ngerung auf Anfrage",
+    "badge_text": "Offizielles Hospitality-Package",
+    "includes": [],
+    "active": true
+  },
+  {
+    "id": "package-dream-hollywood",
+    "event_id": "event-super-bowl-2027",
+    "slug": "dream-hollywood",
+    "package_name": "Ticket- & Hotel-Package",
+    "title": "Dream Hollywood, by Hyatt",
+    "short_description": "Boutique-Hotel im Herzen von Hollywood mit Rooftop-Pool und Blick auf das Hollywood Sign",
+    "description": "Boutique-Hotel im Herzen von Hollywood mit Rooftop-Pool und Blick auf das Hollywood Sign",
+    "hotel": "Dream Hollywood, by Hyatt",
+    "stars": 4,
+    "nights": 4,
+    "price": 8950,
+    "currency": "EUR",
+    "single_supplement": 1485,
+    "popular": true,
+    "available_spots": 12,
+    "rating": 4.8,
+    "reviews": 156,
+    "hotel_images": [
+      "https://superbowl.faltintravel.com/bilder-hotel/540997872.jpg",
+      "https://superbowl.faltintravel.com/bilder-hotel/540998091.jpg",
+      "https://superbowl.faltintravel.com/bilder-hotel/568783347.jpg"
+    ],
+    "distances": {
+      "airport": "40 Min. / ca. 30 km (LAX)",
+      "stadium": "35 Min. / ca. 29 km (SoFi Stadium)",
+      "downtown": "20 Min. / ca. 11 km"
+    },
+    "room_categories": [
+      "Doppelzimmer",
+      "Einzelzimmer"
+    ],
+    "extension_nights": "Verlaengerungsnaechte auf Anfrage gegen Aufpreis buchbar",
+    "badge_text": "Offizielles Hospitality-Package",
+    "includes": [
+      {
+        "type": "ticket",
+        "name": "Super Bowl LXI Premium Ticket",
+        "category": "500er Level (Lower Bowl)",
+        "status": "OK",
+        "icon": "ticket",
+        "description": "Offizielles NFL Premium-Ticket mit VIP-Zugang",
+        "sort_order": 1
+      },
+      {
+        "type": "hotel",
+        "name": "Dream Hollywood, by Hyatt",
+        "category": "4-Sterne Superior",
+        "status": "OK",
+        "icon": "hotel",
+        "description": "Boutique-Hotel mit Rooftop-Pool und Hollywood Sign Blick",
+        "sort_order": 2
+      },
+      {
+        "type": "transfer",
+        "name": "Flughafen-Hotel-Stadium Transfers",
+        "category": "Hin- und Rueckfahrt",
+        "status": "OK",
+        "icon": "transfer",
+        "description": "Komfortable Shuttles zu allen wichtigen Locations",
+        "sort_order": 3
+      },
+      {
+        "type": "hospitality",
+        "name": "VIP Pregame-Party",
+        "category": "Inkl. Catering & Getraenke",
+        "status": "OK",
+        "icon": "hospitality",
+        "description": "Exklusiver Zugang zur offiziellen Pregame-Party",
+        "sort_order": 4
+      }
+    ],
+    "active": true
+  },
+  {
+    "single_supplement": 350,
+    "id": "fo2027-standard",
+    "popular": true,
+    "short_description": "VIP-Erlebnis auf dem Centre Court Philippe-Chatrier inkl. 2 Übernachtungen im Hotel Astoria Paris und exklusivem Hospitality-Zugang.",
+    "title": "French Open 2027 – Hospitality Package",
+    "price": 1315,
+    "description": "Erleben Sie Roland Garros 2027 hautnah! Ihr Package beinhaltet 2 Übernachtungen mit Frühstücksbuffet im renommierten Hotel Astoria Paris (Superior-Doppelzimmer), einen Kat.-1-Sitzplatz auf dem Centre Court Philippe-Chatrier sowie Zutritt zum exklusiven Hospitality-Bereich mit Finger-Food-Buffet & Open Bar über einen separaten VIP-Eingang. Zugang zu allen Nebenplätzen (Outside Courts/Annexes) inklusive. Dazu: Roland-Garros-Magazin & Tageszeitungen, Paris Stadtführer, Faltin Travel Lanyard, Reisebeutel & Kofferanhänger sowie detaillierte Reiseinformationen und Schweizer Reisegarantie.\n\nPreise ab 655 € (Außen-Courts) bzw. ab 1.315 € (Centre Court) pro Person im Doppelzimmer – je nach gewähltem Termin und Spielrunde.",
+    "available_spots": null,
+    "event_slug": "french-open-2027",
+    "slug": "fo2027-standard",
+    "rating": null,
+    "stars": 4,
+    "currency": "EUR",
+    "reviews": null,
+    "nights": 2,
+    "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
+    "hotel": "Hotel Astoria Paris",
+    "hotel_images": [],
+    "distances": {
+      "airport": "26 km (CDG)",
+      "stadium": "8 km",
+      "downtown": "1 km (Place de Clichy)"
+    },
+    "room_categories": [
+      "Doppelzimmer Superior",
+      "Einzelzimmer Superior"
+    ],
+    "badge_text": "",
+    "includes": [],
+    "package_name": "Hospitality-Package",
+    "active": false
+  },
+  {
+    "single_supplement": 350,
+    "id": "fo2027-halbfinale",
+    "popular": false,
+    "short_description": "Das Halbfinale hautnah erleben – kombiniertes 2-Tage-Package mit Damen-Halbfinale (03.06.) und Herren-Halbfinale Night Session (04.06.).",
+    "title": "French Open 2027 – Halbfinale Package",
+    "price": 3475,
+    "description": "Das ultimative Halbfinale-Erlebnis! Dieses Kombi-Package beinhaltet Tickets für beide Halbfinale auf dem Centre Court Philippe-Chatrier: Damen-Halbfinale am 03.06.2027 und Herren-Halbfinale (Night Session) am 04.06.2027 – kombiniert mit 2 Nächten Hospitality-Unterbringung im Hotel Astoria Paris.\n\nIm Preis inbegriffen: 2× Übernachtung + Frühstück im Superior-DZ, Kat.-1-Sitzplatz Centre Court (beide Tage), exklusiver VIP-Hospitality-Zugang mit Finger-Food-Buffet & Open Bar, Zugang zu allen Außenplätzen, Roland-Garros-Magazin, Paris Stadtführer, Schweizer Reisegarantie und sämtliche Faltin-Travel-Reiseunterlagen.",
+    "available_spots": 8,
+    "event_slug": "french-open-2027",
+    "slug": "fo2027-halbfinale",
+    "rating": null,
+    "stars": 4,
+    "currency": "EUR",
+    "reviews": null,
+    "nights": 2,
+    "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
+    "hotel": "Hotel Astoria Paris",
+    "hotel_images": [],
+    "distances": {
+      "airport": "26 km (CDG)",
+      "stadium": "8 km",
+      "downtown": "1 km (Place de Clichy)"
+    },
+    "room_categories": [
+      "Doppelzimmer Superior",
+      "Einzelzimmer Superior"
+    ],
+    "badge_text": "",
+    "includes": [],
+    "package_name": "Hospitality-Package",
+    "active": false
+  },
+  {
+    "single_supplement": 350,
+    "id": "fo2027-finale",
+    "popular": false,
+    "short_description": "Der Höhepunkt von Roland Garros! Kombi-Package mit Damen Finale / Herren DBL Finale (05.06.) plus Herren Einzel Finale (06.06.).",
+    "title": "French Open 2027 – Finale Package ⭐",
+    "price": 2395,
+    "description": "Der krönende Abschluss von Roland Garros 2027! Dieses exklusive Finale-Package kombiniert Tickets für das Damen Einzel Finale / Herren Doppel Finale am 05.06.2027 und das Herren Einzel Finale am 06.06.2027 auf dem legendären Centre Court Philippe-Chatrier.\n\nIm Preis inbegriffen: 2× Übernachtung + Frühstück im Superior-DZ, Kat.-1-Sitzplatz Centre Court (beide Finals-Tage), exklusiver VIP-Hospitality-Zugang, Roland-Garros-Magazin, Paris Stadtführer, Schweizer Reisegarantie und alle Faltin-Travel-Reiseunterlagen.\n\nNur wenige Plätze verfügbar – frühzeitige Buchung empfohlen.",
+    "available_spots": 4,
+    "event_slug": "french-open-2027",
+    "slug": "fo2027-finale",
+    "rating": null,
+    "stars": 4,
+    "currency": "EUR",
+    "reviews": null,
+    "nights": 2,
+    "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
+    "hotel": "Hotel Astoria Paris",
+    "hotel_images": [],
+    "distances": {
+      "airport": "26 km (CDG)",
+      "stadium": "8 km",
+      "downtown": "1 km (Place de Clichy)"
+    },
+    "room_categories": [
+      "Doppelzimmer Superior",
+      "Einzelzimmer Superior"
+    ],
+    "badge_text": "",
+    "includes": [],
+    "package_name": "Hospitality-Package",
+    "active": false
+  }
+]

@@ -1,0 +1,709 @@
+[
+  {
+    "id": "faq-1",
+    "event_id": "event-super-bowl-2027",
+    "question": "Sind meine Plaetze nebeneinander?",
+    "answer": "Ja, bei Buchungen werden die Sitzplaetze im gleichen Block reserviert.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-2",
+    "event_id": "event-super-bowl-2027",
+    "question": "Wie kann ich bezahlen?",
+    "answer": "Zahlung per Ueberweisung auf unser Schweizer Bankkonto (CHF oder EUR moeglich).",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-3",
+    "event_id": "event-super-bowl-2027",
+    "question": "Was ist das Hospitality-Package?",
+    "answer": "Das Package beinhaltet VIP-Eingang, offizielle Pregame-Party mit Catering & Getraenken, Live-Entertainment und reservierte Sitzplaetze im 500er Level.",
+    "sort_order": 3
+  },
+  {
+    "id": "french-faq-1",
+    "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
+    "question": "Wie bekomme ich French Open Tickets?",
+    "answer": "Tickets für die French Open (Roland Garros) können Sie über offizielle Verkaufsstellen erwerben oder im Komplettpaket inklusive Hotelübernachtung direkt bei Faltin Travel buchen.",
+    "sort_order": 1
+  },
+  {
+    "id": "french-faq-2",
+    "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
+    "question": "Wie viel kosten French Open Tickets?",
+    "answer": "Die Ticketpreise variieren stark je nach Turniertag (Vorrunde vs. Finale) und Sitzplatzkategorie. Komplettpakete inklusive Hotel starten in der Regel bei wenigen hundert Euro und gehen bis hin zu VIP-Hospitality-Bereichen für die Finalspiele.",
+    "sort_order": 2
+  },
+  {
+    "id": "french-faq-3",
+    "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
+    "question": "Lohnt es sich, zu den French Open zu gehen?",
+    "answer": "Absolut! Die French Open sind das einzige Sandplatz-Grand-Slam-Turnier und bieten eine einzigartige Atmosphäre im Stade Roland Garros in Paris. Das langsame Spiel auf roter Asche sorgt für dramatische Ballwechsel.",
+    "sort_order": 3
+  },
+  {
+    "id": "french-faq-4",
+    "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
+    "question": "Warum heißen die French Open auch Roland Garros?",
+    "answer": "Das Turnier und das Stadion sind nach dem französischen Luftfahrtpionier und Kampfflieger Roland Garros benannt, der im Ersten Weltkrieg berühmt wurde.",
+    "sort_order": 4
+  },
+  {
+    "id": "french-faq-5",
+    "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
+    "question": "Was ist ein Hospitality Ticket bei den French Open?",
+    "answer": "Ein Hospitality Ticket beinhaltet neben erstklassigen Sitzplätzen auf den Center Courts auch den Zugang zu exklusiven VIP-Lounges mit feinstem Catering, Getränken und separaten Eingängen.",
+    "sort_order": 5
+  },
+  {
+    "id": "french-faq-6",
+    "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
+    "question": "Wann finden die French Open 2027 statt?",
+    "answer": "Die French Open 2027 finden voraussichtlich vom Sonntag, 23. Mai bis Sonntag, 6. Juni 2027 in Paris statt.",
+    "sort_order": 6
+  },
+  {
+    "id": "french-faq-7",
+    "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
+    "question": "Wo finden die French Open 2027 statt?",
+    "answer": "Das Turnier wird traditionell im Stade Roland Garros im Südwesten von Paris, direkt am Rande des Bois de Boulogne, ausgetragen.",
+    "sort_order": 7
+  },
+  {
+    "id": "french-faq-8",
+    "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
+    "question": "Warum sind die French Open besonders?",
+    "answer": "Es ist das einzige Grand-Slam-Turnier auf Sand. Der Belag erfordert von den Spielern maximale Fitness, da die Bälle langsamer abspringen und die Ballwechsel deutlich länger sind als auf Rasen oder Hartplatz.",
+    "sort_order": 8
+  },
+  {
+    "id": "french-faq-9",
+    "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
+    "question": "Wie kann ich Tickets und Unterkunft für die French Open buchen?",
+    "answer": "Wählen Sie einfach eines unserer passenden Reise-Packages aus und senden Sie uns eine unverbindliche Anfrage über das Buchungsformular. Unser Team meldet sich umgehend mit einem maßgeschneiderten Angebot.",
+    "sort_order": 9
+  },
+  {
+    "id": "d2a046a4-935b-4720-9526-6472d65582b2",
+    "event_id": "6143d55e-8698-47ff-8435-34fb8a5fe3a6",
+    "question": "Wann finden die Wimbledon Championships 2026 statt?",
+    "answer": "Die Wimbledon Tennis Championships 2026 finden von Montag, 29. Juni 2026 bis Sonntag, 12. Juli 2026 im All England Lawn Tennis and Croquet Club statt.",
+    "sort_order": 1
+  },
+  {
+    "id": "3f24d6e7-d1c8-4efe-a244-a1b138d52430",
+    "event_id": "6143d55e-8698-47ff-8435-34fb8a5fe3a6",
+    "question": "Wie kann ich Tickets für Wimbledon kaufen?",
+    "answer": "Tickets können über die offizielle Wimbledon-Website, die jährliche öffentliche Auslosung (Ballot) oder autorisierte Ticketanbieter erworben werden.",
+    "sort_order": 2
+  },
+  {
+    "id": "0468d708-7a3e-4b53-9dc2-22b07c706cce",
+    "event_id": "6143d55e-8698-47ff-8435-34fb8a5fe3a6",
+    "question": "Was kostet ein Ticket für Wimbledon?",
+    "answer": "Preise variieren je nach Spielfeld und Tag. Centre Court Tickets ab ca. £90; Debenture-Tickets £2.000-£10.000 mit erstklassigen Sitzplätzen und Lounge-Zugang.",
+    "sort_order": 3
+  },
+  {
+    "id": "aff59cc7-d6a2-44e6-9019-12cd00df91cd",
+    "event_id": "6143d55e-8698-47ff-8435-34fb8a5fe3a6",
+    "question": "Wie reise ich am besten zum All England Club?",
+    "answer": "Der All England Club ist gut mit öffentlichen Verkehrsmitteln erreichbar, insbesondere über die Londoner U-Bahn (District Line) zur Station Southfields.",
+    "sort_order": 4
+  },
+  {
+    "id": "56344779-9f16-4b92-896a-1a372edd21e7",
+    "event_id": "6143d55e-8698-47ff-8435-34fb8a5fe3a6",
+    "question": "Gibt es eine Kleiderordnung für Zuschauer bei Wimbledon?",
+    "answer": "Es gibt keine strenge Kleiderordnung für Zuschauer, aber elegante Freizeitkleidung wird empfohlen. In bestimmten Bereichen gelten strengere Vorgaben.",
+    "sort_order": 5
+  },
+  {
+    "id": "208f973a-dc8f-418a-8eb8-f84bca85eec4",
+    "event_id": "6143d55e-8698-47ff-8435-34fb8a5fe3a6",
+    "question": "Welche Spielbeläge werden bei Wimbledon verwendet?",
+    "answer": "Wimbledon ist das einzige Grand-Slam-Turnier, das auf Rasen gespielt wird.",
+    "sort_order": 6
+  },
+  {
+    "id": "65ba8d23-f3dd-4a4a-a788-564287a7e089",
+    "event_id": "6143d55e-8698-47ff-8435-34fb8a5fe3a6",
+    "question": "Gibt es E-Tickets oder Papier-Tickets für Wimbledon?",
+    "answer": "Der Veranstalter setzt verstärkt auf E-Tickets, die über die offizielle Wimbledon-App bereitgestellt werden.",
+    "sort_order": 7
+  },
+  {
+    "id": "e21a4338-0292-4eb8-9ab5-9c16cc2a6d44",
+    "event_id": "e0a320ef-9c67-4691-b4a1-6b2664b92690",
+    "question": "Wann findet der Laver Cup 2026 statt?",
+    "answer": "Der Laver Cup 2026 findet vom 25. bis 27. September statt.",
+    "sort_order": 1
+  },
+  {
+    "id": "430eb77f-a5f9-4f61-85d7-f3286f4bd4c4",
+    "event_id": "e0a320ef-9c67-4691-b4a1-6b2664b92690",
+    "question": "Wo wird der Laver Cup 2026 ausgetragen?",
+    "answer": "Der Laver Cup 2026 wird in der O2 Arena in London, Grossbritannien ausgetragen.",
+    "sort_order": 2
+  },
+  {
+    "id": "bfe44cd9-338e-4c1b-8c92-91b202fe9f24",
+    "event_id": "e0a320ef-9c67-4691-b4a1-6b2664b92690",
+    "question": "Was ist im Leistungspaket enthalten?",
+    "answer": "Das Paket umfasst 2x Hotelübernachtung, Frühstück, Ticketzutritt, reservierte Sitzplätze, Hospitality-Zugang und die Schweizer Reisegarantie.",
+    "sort_order": 3
+  },
+  {
+    "id": "752cf20e-1881-4678-b9e7-88f4d6bb4abe",
+    "event_id": "e0a320ef-9c67-4691-b4a1-6b2664b92690",
+    "question": "Wie bekomme ich Laver Cup Tickets?",
+    "answer": "Laver Cup Tickets sind heiss begehrt und schnell vergriffen. Bei Faltin Travel buchen Sie Ihr Ticket bequem im Komplettpaket inklusive Hotel und Betreuung. Stellen Sie dazu einfach eine unverbindliche Anfrage über unser Buchungsformular.",
+    "sort_order": 4
+  },
+  {
+    "id": "6d2309b7-b74d-4ba9-b07b-5a77a8472ca7",
+    "event_id": "e0a320ef-9c67-4691-b4a1-6b2664b92690",
+    "question": "Wie viel kosten Laver Cup Tickets?",
+    "answer": "Die Preise hängen von der gewählten Session und der Sitzplatzkategorie ab. Einstiegskategorien sind deutlich günstiger als VIP- und Hospitality-Plätze. Gerne erstellen wir Ihnen ein massgeschneidertes Angebot mit der gewünschten Kategorie.",
+    "sort_order": 5
+  },
+  {
+    "id": "59f20f30-73db-4891-acdb-166975deb3a7",
+    "event_id": "e0a320ef-9c67-4691-b4a1-6b2664b92690",
+    "question": "Was ist ein Hospitality-Ticket beim Laver Cup?",
+    "answer": "Ein Hospitality-Ticket kombiniert einen reservierten Top-Sitzplatz mit dem Zugang zu einem exklusiven Hospitality-Bereich. Dort erwarten Sie Catering und Getränke sowie ein separater VIP-Eingang – für ein besonders komfortables Live-Erlebnis.",
+    "sort_order": 6
+  },
+  {
+    "id": "7a413771-4c58-4b0b-a1ca-a24379dbb5ab",
+    "event_id": "e0a320ef-9c67-4691-b4a1-6b2664b92690",
+    "question": "Lohnt es sich, zum Laver Cup zu gehen?",
+    "answer": "Auf jeden Fall. Der Laver Cup ist der einzige grosse Teamwettbewerb, bei dem die besten Spieler gemeinsam in einem Team antreten und sich gegenseitig anfeuern. Die emotionale Atmosphäre in der ausverkauften O2 Arena macht das Event zu einem unvergesslichen Erlebnis.",
+    "sort_order": 7
+  },
+  {
+    "id": "3797a1e2-fea5-47fe-b39b-333a168e2bb0",
+    "event_id": "e0a320ef-9c67-4691-b4a1-6b2664b92690",
+    "question": "Warum ist der Laver Cup besonders?",
+    "answer": "Der Laver Cup vereint Topspieler, die sonst Konkurrenten sind, in den Teams Europe und World. Das gewichtete Punktesystem über drei Tage und der markante schwarze Court sorgen für eine einzigartige Spannung und ein Format, das es im Tennis sonst nicht gibt.",
+    "sort_order": 8
+  },
+  {
+    "id": "717456d7-c8b4-4483-abf9-0cc6075ad788",
+    "event_id": "e0a320ef-9c67-4691-b4a1-6b2664b92690",
+    "question": "Wie kann ich Tickets und Unterkunft für den Laver Cup buchen?",
+    "answer": "Wählen Sie eines unserer Reise-Packages aus und senden Sie uns eine unverbindliche Anfrage über das Buchungsformular. Unser Team von Faltin Travel meldet sich umgehend mit einem auf Sie zugeschnittenen Angebot.",
+    "sort_order": 9
+  },
+  {
+    "id": "2430972d-f628-47be-93ed-9f27a6a2b143",
+    "event_id": "19e49b29-90fe-49e3-89c6-185d23f1cf98",
+    "question": "Wie bekomme ich Swiss Indoors Tickets?",
+    "answer": "Tickets für die Swiss Indoors sind schnell ausverkauft. Bei Faltin Travel buchen Sie Ihr Ticket bequem im Komplettpaket inklusive Hotel und Betreuung. Senden Sie uns dazu einfach eine unverbindliche Anfrage über unser Buchungsformular.",
+    "sort_order": 1
+  },
+  {
+    "id": "2f31dbbe-b4b5-4569-a835-b3a8b4afa08f",
+    "event_id": "19e49b29-90fe-49e3-89c6-185d23f1cf98",
+    "question": "Wie viel kosten Swiss Indoors Tickets?",
+    "answer": "Die Preise richten sich nach Turniertag und Sitzplatzkategorie. Tickets für die frühen Turniertage sind günstiger als für das Wochenende und die Finalspiele, exklusive Hospitality-Varianten liegen entsprechend höher. Gerne erstellen wir Ihnen ein massgeschneidertes Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "8af1a272-31d9-403e-be1a-9321347f86aa",
+    "event_id": "19e49b29-90fe-49e3-89c6-185d23f1cf98",
+    "question": "Wann finden die Swiss Indoors 2025 statt?",
+    "answer": "Die Swiss Indoors Basel 2025 finden vom 18. bis 26. Oktober 2025 statt. Gespielt wird traditionell im Spätherbst über rund eine Woche inklusive Qualifikation.",
+    "sort_order": 3
+  },
+  {
+    "id": "d279fbe2-78c2-4703-8b11-388b153d26bf",
+    "event_id": "19e49b29-90fe-49e3-89c6-185d23f1cf98",
+    "question": "Wo finden die Swiss Indoors statt?",
+    "answer": "Austragungsort ist die St. Jakobshalle in Basel, Schweiz. Die moderne, nach umfassender Renovierung wiedereröffnete Halle bietet eine kompakte und stimmungsvolle Kulisse für Weltklasse-Tennis.",
+    "sort_order": 4
+  },
+  {
+    "id": "37ca3e4c-0c72-44a3-a362-7b66388b4b18",
+    "event_id": "19e49b29-90fe-49e3-89c6-185d23f1cf98",
+    "question": "Was ist ein Hospitality-Ticket bei den Swiss Indoors?",
+    "answer": "Ein Hospitality-Ticket kombiniert hochwertige Sitzplätze mit dem Zugang zu exklusiven Lounge- und VIP-Bereichen. Dort erwarten Sie First-Class-Catering, Getränke und ein gehobener Service – für ein besonders komfortables Tenniserlebnis.",
+    "sort_order": 5
+  },
+  {
+    "id": "b570079d-f936-4397-9be7-0505b8816570",
+    "event_id": "19e49b29-90fe-49e3-89c6-185d23f1cf98",
+    "question": "Lohnt es sich, zu den Swiss Indoors zu gehen?",
+    "answer": "Auf jeden Fall. Die Swiss Indoors gehören zu den grössten Sportanlässen der Schweiz und bieten Weltklasse-Tennis in familiärer, intensiver Hallenatmosphäre. Die Nähe zum Court und das begeisterte Publikum machen den Besuch zu einem besonderen Erlebnis.",
+    "sort_order": 6
+  },
+  {
+    "id": "62ba75c9-e6fa-48a3-b825-29f4b86877e0",
+    "event_id": "19e49b29-90fe-49e3-89c6-185d23f1cf98",
+    "question": "Warum sind die Swiss Indoors besonders?",
+    "answer": "Die Swiss Indoors zählen zu den bedeutendsten Hallenturnieren der Welt und werden seit 1970 ausgetragen. Rekordsieger ist der Basler Roger Federer mit zehn Titeln in seiner Heimatstadt – ein Stück Tennisgeschichte, das den besonderen Charakter des Turniers prägt.",
+    "sort_order": 7
+  },
+  {
+    "id": "4ad8679e-bb34-4ba8-b0e1-d214c878fcea",
+    "event_id": "19e49b29-90fe-49e3-89c6-185d23f1cf98",
+    "question": "Wie kann ich Tickets und Unterkunft für die Swiss Indoors buchen?",
+    "answer": "Wählen Sie eines unserer Reise-Packages aus und senden Sie uns eine unverbindliche Anfrage über das Buchungsformular. Das Team von Faltin Travel meldet sich umgehend mit einem auf Sie zugeschnittenen Angebot inklusive Tickets und Hotel.",
+    "sort_order": 8
+  },
+  {
+    "id": "13bf4588-70ad-4563-b9ab-140c6c370b33",
+    "event_id": "04b93f4f-5061-478f-bad8-66627531f388",
+    "question": "Wie bekomme ich Rom Masters Tickets?",
+    "answer": "Tickets für die Rom Masters sind sehr begehrt. Bei Faltin Travel buchen Sie Ihr Ticket bequem im Komplettpaket inklusive Hotel und persönlicher Betreuung. Senden Sie uns dazu einfach eine unverbindliche Anfrage über unser Buchungsformular.",
+    "sort_order": 1
+  },
+  {
+    "id": "cdf8f9b5-a9ae-4896-aa75-63a4218f7861",
+    "event_id": "04b93f4f-5061-478f-bad8-66627531f388",
+    "question": "Wie viel kosten Rom Masters Tickets?",
+    "answer": "Die Preise hängen vom Turniertag und der Sitzplatzkategorie ab. Tickets für die frühen Tage sind günstiger als für die Endphase des Turniers, exklusive Hospitality-Plätze liegen entsprechend höher. Gerne erstellen wir Ihnen ein individuelles Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "b11a7719-8c02-4943-b4b4-21ef0a764921",
+    "event_id": "04b93f4f-5061-478f-bad8-66627531f388",
+    "question": "Wann finden die Rom Masters 2026 statt?",
+    "answer": "Die Rom Masters 2026 finden vom 6. bis 17. Mai 2026 statt. Das Turnier wird traditionell im Frühling kurz vor den French Open ausgetragen.",
+    "sort_order": 3
+  },
+  {
+    "id": "dbbf0def-08e2-40ac-b560-560f5549cffb",
+    "event_id": "04b93f4f-5061-478f-bad8-66627531f388",
+    "question": "Wo finden die Rom Masters statt?",
+    "answer": "Austragungsort ist das geschichtsträchtige Foro Italico in Rom, Italien. Die Matches der grossen Stars finden auf dem von Statuen umgebenen Centre Court „Campo Centrale“ statt.",
+    "sort_order": 4
+  },
+  {
+    "id": "63c13735-9e62-4153-ad4e-6063d1da01a1",
+    "event_id": "04b93f4f-5061-478f-bad8-66627531f388",
+    "question": "Was ist ein Hospitality-Ticket bei den Rom Masters?",
+    "answer": "Ein Hospitality-Ticket verbindet hochwertige Sitzplätze mit dem Zugang zu exklusiven Lounge-Bereichen. Dort erwarten Sie First-Class-Catering, Getränke und ein gehobener Service – für ein besonders komfortables Live-Erlebnis im Foro Italico.",
+    "sort_order": 5
+  },
+  {
+    "id": "e0e23c1b-dbd3-423a-bfe8-ffab59745c7c",
+    "event_id": "04b93f4f-5061-478f-bad8-66627531f388",
+    "question": "Lohnt es sich, zu den Rom Masters zu gehen?",
+    "answer": "Auf jeden Fall. Die Kombination aus Weltklasse-Tennis auf Sand, der einzigartigen antiken Kulisse des Foro Italico und der leidenschaftlichen italienischen Stimmung macht den Besuch zu einem unvergesslichen Erlebnis – ideal verbunden mit einer Städtereise nach Rom.",
+    "sort_order": 6
+  },
+  {
+    "id": "fdc5bffd-643a-43ad-9b55-07bf139feae6",
+    "event_id": "04b93f4f-5061-478f-bad8-66627531f388",
+    "question": "Warum sind die Rom Masters besonders?",
+    "answer": "Die Rom Masters zählen seit 1930 zu den ältesten Turnieren der Welt und gelten als eines der wichtigsten Sandplatzturniere vor den French Open. Die monumentale Anlage des Foro Italico und die mediterrane Atmosphäre verleihen dem Event einen unverwechselbaren Charakter.",
+    "sort_order": 7
+  },
+  {
+    "id": "b003ddce-27f9-45ab-b232-9a55a35822ea",
+    "event_id": "04b93f4f-5061-478f-bad8-66627531f388",
+    "question": "Wie kann ich Tickets und Unterkunft für die Rom Masters buchen?",
+    "answer": "Wählen Sie eines unserer Reise-Packages aus und senden Sie uns eine unverbindliche Anfrage über das Buchungsformular. Das Team von Faltin Travel meldet sich umgehend mit einem auf Sie zugeschnittenen Angebot inklusive Tickets und Hotel in Rom.",
+    "sort_order": 8
+  },
+  {
+    "id": "ff3cdd7c-7eaa-456e-84ac-4290185afe22",
+    "event_id": "3abf795c-72ee-479d-951f-5e12c9bf92e5",
+    "question": "Wie bekomme ich Mutua Madrid Open Tickets?",
+    "answer": "Tickets für die Mutua Madrid Open sind sehr gefragt. Bei Faltin Travel buchen Sie Ihr Ticket bequem im Komplettpaket inklusive Hotel und persönlicher Betreuung. Senden Sie uns dazu einfach eine unverbindliche Anfrage über unser Buchungsformular.",
+    "sort_order": 1
+  },
+  {
+    "id": "ba3e892f-0b22-44d7-ae3b-d81f737a7a1b",
+    "event_id": "3abf795c-72ee-479d-951f-5e12c9bf92e5",
+    "question": "Wie viel kosten Mutua Madrid Open Tickets?",
+    "answer": "Die Preise richten sich nach Turniertag und Sitzplatzkategorie. Tickets für die frühen Turniertage sind günstiger als für die Endphase, exklusive Hospitality-Varianten liegen entsprechend höher. Gerne erstellen wir Ihnen ein massgeschneidertes Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "42999ba3-a73b-4c5b-8b16-cbde6f46423d",
+    "event_id": "3abf795c-72ee-479d-951f-5e12c9bf92e5",
+    "question": "Wann finden die Mutua Madrid Open 2026 statt?",
+    "answer": "Die Mutua Madrid Open 2026 finden vom 20. April bis 3. Mai 2026 statt. Das kombinierte Herren- und Damenturnier wird traditionell Ende April bis Anfang Mai ausgetragen.",
+    "sort_order": 3
+  },
+  {
+    "id": "05423c74-3e90-45b9-aed6-458b8fd3c427",
+    "event_id": "3abf795c-72ee-479d-951f-5e12c9bf92e5",
+    "question": "Wo finden die Mutua Madrid Open statt?",
+    "answer": "Austragungsort ist die Caja Mágica in Madrid, Spanien – eines der modernsten Tennisstadien der Welt mit verschiebbaren Dächern. Die grossen Matches finden auf dem Centre Court „Manolo Santana“ statt.",
+    "sort_order": 4
+  },
+  {
+    "id": "95947f20-9628-4c4e-9929-5c902e3dc8f2",
+    "event_id": "3abf795c-72ee-479d-951f-5e12c9bf92e5",
+    "question": "Was ist ein Hospitality-Ticket bei den Mutua Madrid Open?",
+    "answer": "Ein Hospitality-Ticket kombiniert hochwertige Sitzplätze mit dem Zugang zu exklusiven Lounge- und VIP-Bereichen wie der Sky Lounge oder der Platinum Lounge. Dort erwarten Sie First-Class-Catering, Getränke und ein gehobener Service.",
+    "sort_order": 5
+  },
+  {
+    "id": "4ef5ad6c-0070-4608-b9db-a313e12874a1",
+    "event_id": "3abf795c-72ee-479d-951f-5e12c9bf92e5",
+    "question": "Lohnt es sich, zu den Mutua Madrid Open zu gehen?",
+    "answer": "Auf jeden Fall. Sie erleben Herren- und Damen-Weltklasse-Tennis am selben Ort, in einem hochmodernen Stadion und in der lebendigen Metropole Madrid. Die Kombination aus Spitzentennis und spanischem Lebensgefühl macht den Besuch besonders.",
+    "sort_order": 6
+  },
+  {
+    "id": "d9f05979-ee14-4d3d-b5b6-38f89df9a73b",
+    "event_id": "3abf795c-72ee-479d-951f-5e12c9bf92e5",
+    "question": "Warum sind die Mutua Madrid Open besonders?",
+    "answer": "Die Mutua Madrid Open sind das einzige europäische Turnier, das sowohl auf der ATP- als auch auf der WTA-Tour zu den höchstdotierten Sandplatzturnieren zählt. Durch die Höhenlage Madrids springt der Ball schneller ab als auf anderen Sandplätzen – eine besondere Herausforderung für die Spieler.",
+    "sort_order": 7
+  },
+  {
+    "id": "636b3c71-8246-486a-a2e6-4bb5f697f678",
+    "event_id": "3abf795c-72ee-479d-951f-5e12c9bf92e5",
+    "question": "Wie kann ich Tickets und Unterkunft für die Mutua Madrid Open buchen?",
+    "answer": "Wählen Sie eines unserer Reise-Packages aus und senden Sie uns eine unverbindliche Anfrage über das Buchungsformular. Das Team von Faltin Travel meldet sich umgehend mit einem auf Sie zugeschnittenen Angebot inklusive Tickets und Hotel in Madrid.",
+    "sort_order": 8
+  },
+  {
+    "id": "eb5e284e-d332-49fb-bdee-8d88083c6ee5",
+    "event_id": "f6eb192e-d9e6-45d4-9169-f6734487c952",
+    "question": "Wie bekomme ich Monte-Carlo Rolex Masters Tickets?",
+    "answer": "Tickets für die Monte-Carlo Rolex Masters sind heiss begehrt. Bei Faltin Travel buchen Sie Ihr Ticket bequem im Komplettpaket inklusive Hotel und persönlicher Betreuung. Senden Sie uns dazu einfach eine unverbindliche Anfrage über unser Buchungsformular.",
+    "sort_order": 1
+  },
+  {
+    "id": "1f92eb67-0885-4230-a3c9-b87eb7c2b1ed",
+    "event_id": "f6eb192e-d9e6-45d4-9169-f6734487c952",
+    "question": "Wie viel kosten Monte-Carlo Rolex Masters Tickets?",
+    "answer": "Die Preise hängen vom Turniertag und der Sitzplatzkategorie ab. Tickets für die frühen Tage sind günstiger als für die Endphase, exklusive VIP- und Hospitality-Pakete liegen entsprechend höher. Gerne erstellen wir Ihnen ein individuelles Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "6fbbe63b-33aa-42bc-bd24-35244ec77840",
+    "event_id": "f6eb192e-d9e6-45d4-9169-f6734487c952",
+    "question": "Wann finden die Monte-Carlo Rolex Masters 2027 statt?",
+    "answer": "Die Monte-Carlo Rolex Masters 2027 finden vom 3. bis 11. April 2027 statt. Das Turnier eröffnet traditionell im April die europäische Sandplatzsaison.",
+    "sort_order": 3
+  },
+  {
+    "id": "95e20b05-9985-4988-b09c-4dd7b125cf83",
+    "event_id": "f6eb192e-d9e6-45d4-9169-f6734487c952",
+    "question": "Wo finden die Monte-Carlo Rolex Masters statt?",
+    "answer": "Austragungsort ist der Monte Carlo Country Club, der im französischen Roquebrune-Cap-Martin direkt an der Côte d'Azur und der Grenze zu Monaco liegt. Die Hauptmatches finden auf dem Centre Court Rainier III mit Blick aufs Mittelmeer statt.",
+    "sort_order": 4
+  },
+  {
+    "id": "4b428fcb-f7de-4201-8d06-da7caedabc7e",
+    "event_id": "f6eb192e-d9e6-45d4-9169-f6734487c952",
+    "question": "Was ist ein Hospitality-Ticket bei den Monte-Carlo Rolex Masters?",
+    "answer": "Ein Hospitality-Ticket kombiniert erstklassige Sitzplätze mit dem Zugang zum exklusiven Village-Bereich. Je nach Variante erwarten Sie Aperitif, mehrgängige Menüs, Champagner und ein gehobener Service – für ein besonders luxuriöses Live-Erlebnis.",
+    "sort_order": 5
+  },
+  {
+    "id": "6e0b8827-d18a-42b8-bc69-9ada87eaf2bb",
+    "event_id": "f6eb192e-d9e6-45d4-9169-f6734487c952",
+    "question": "Lohnt es sich, zu den Monte-Carlo Rolex Masters zu gehen?",
+    "answer": "Auf jeden Fall. Kaum ein Turnier verbindet Weltklasse-Tennis mit einer so spektakulären Kulisse: Sandplätze direkt über dem Mittelmeer, das mondäne Flair Monacos und die Côte d'Azur machen den Besuch zu einem unvergesslichen Erlebnis.",
+    "sort_order": 6
+  },
+  {
+    "id": "0c6fcb34-96ac-4ebe-b619-a91f7c54bd6a",
+    "event_id": "f6eb192e-d9e6-45d4-9169-f6734487c952",
+    "question": "Warum sind die Monte-Carlo Rolex Masters besonders?",
+    "answer": "Das Turnier wird seit 1897 ausgetragen und zählt zu den traditionsreichsten der Welt. Die einzigartige Lage am Mittelmeer, das luxuriöse Ambiente und Rafael Nadals Rekord von elf Titeln verleihen den Monte-Carlo Rolex Masters einen ganz besonderen Glanz.",
+    "sort_order": 7
+  },
+  {
+    "id": "06c85fd2-1cf3-444b-a09c-4b9c8ee3db1c",
+    "event_id": "f6eb192e-d9e6-45d4-9169-f6734487c952",
+    "question": "Wie kann ich Tickets und Unterkunft für die Monte-Carlo Rolex Masters buchen?",
+    "answer": "Wählen Sie eines unserer Reise-Packages aus und senden Sie uns eine unverbindliche Anfrage über das Buchungsformular. Das Team von Faltin Travel meldet sich umgehend mit einem auf Sie zugeschnittenen Angebot inklusive Tickets und Hotel an der Côte d'Azur.",
+    "sort_order": 8
+  },
+  {
+    "id": "a2374cd2-e214-4a3e-896e-0eac3196f24f",
+    "event_id": "4873865e-ead3-4f9b-99f6-cf9a56a208b7",
+    "question": "Wie bekomme ich Nitto ATP Finals Tickets?",
+    "answer": "Tickets für die Nitto ATP Finals sind sehr begehrt. Bei Faltin Travel buchen Sie Ihr Ticket bequem im Komplettpaket inklusive Hotel und persönlicher Betreuung. Senden Sie uns dazu einfach eine unverbindliche Anfrage über unser Buchungsformular.",
+    "sort_order": 1
+  },
+  {
+    "id": "5731b0be-9e62-47d5-89f1-30ab66025437",
+    "event_id": "4873865e-ead3-4f9b-99f6-cf9a56a208b7",
+    "question": "Wie viel kosten Nitto ATP Finals Tickets?",
+    "answer": "Die Preise richten sich nach der Session, dem Spieltag und der Sitzplatzkategorie. Plätze im Oberrang sind günstiger als im Unterrang, exklusive VIP- und Hospitality-Varianten liegen entsprechend höher. Gerne erstellen wir Ihnen ein individuelles Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "d8433f14-a600-4323-9ef3-98f01c3e591c",
+    "event_id": "4873865e-ead3-4f9b-99f6-cf9a56a208b7",
+    "question": "Wann finden die Nitto ATP Finals 2026 statt?",
+    "answer": "Die Nitto ATP Finals 2026 finden vom 15. bis 22. November 2026 statt. Das Turnier bildet traditionell im November den Saisonabschluss im Herrentennis.",
+    "sort_order": 3
+  },
+  {
+    "id": "e02a9308-1c62-4981-b353-853dd40f8fa3",
+    "event_id": "4873865e-ead3-4f9b-99f6-cf9a56a208b7",
+    "question": "Wo finden die Nitto ATP Finals statt?",
+    "answer": "Austragungsort ist die Pala Alpitour in Turin, Italien – die grösste Hallenarena des Landes. Gespielt wird in der Halle auf Hartplatz.",
+    "sort_order": 4
+  },
+  {
+    "id": "b0c05197-10d2-4677-a3e5-0e38c48c2da8",
+    "event_id": "4873865e-ead3-4f9b-99f6-cf9a56a208b7",
+    "question": "Was ist ein Hospitality-Ticket bei den Nitto ATP Finals?",
+    "answer": "Ein Hospitality-Ticket kombiniert einen reservierten Top-Sitzplatz im Unterrang mit dem Zugang zu einem exklusiven Hospitality-Bereich. Dort erwarten Sie Catering, Getränke und ein separater VIP-Eingang – für ein besonders komfortables Erlebnis.",
+    "sort_order": 5
+  },
+  {
+    "id": "65d5dba1-1151-4b75-97b2-2f319a2b716b",
+    "event_id": "4873865e-ead3-4f9b-99f6-cf9a56a208b7",
+    "question": "Lohnt es sich, zu den Nitto ATP Finals zu gehen?",
+    "answer": "Auf jeden Fall. Bei den ATP Finals erleben Sie ausschliesslich die acht besten Spieler und Doppel-Teams der Saison – also geballte Weltklasse an jedem einzelnen Spieltag. Die Show-Inszenierung und die dichte Hallenatmosphäre in Turin machen den Besuch zu einem Höhepunkt.",
+    "sort_order": 6
+  },
+  {
+    "id": "5a0c2dba-866c-4d22-a1a4-a073e5cfca8e",
+    "event_id": "4873865e-ead3-4f9b-99f6-cf9a56a208b7",
+    "question": "Warum sind die Nitto ATP Finals besonders?",
+    "answer": "Die Nitto ATP Finals sind der prestigeträchtige Saisonabschluss, bei dem nur die acht besten Spieler des Jahres antreten. Nach den vier Grand Slams gilt das Turnier als bedeutendster Wettbewerb im Herrentennis – jeder Sieg hat hier besonderes Gewicht.",
+    "sort_order": 7
+  },
+  {
+    "id": "89109f01-7998-416d-8c80-e6c1e7da9177",
+    "event_id": "4873865e-ead3-4f9b-99f6-cf9a56a208b7",
+    "question": "Wie kann ich Tickets und Unterkunft für die Nitto ATP Finals buchen?",
+    "answer": "Wählen Sie eines unserer Reise-Packages aus und senden Sie uns eine unverbindliche Anfrage über das Buchungsformular. Das Team von Faltin Travel meldet sich umgehend mit einem auf Sie zugeschnittenen Angebot inklusive Tickets und Hotel in Turin.",
+    "sort_order": 8
+  },
+  {
+    "id": "06568133-5f12-41fd-ab00-f587eb8f5c55",
+    "event_id": "fc3286be-50c6-4f14-953a-2d1dbb82ad75",
+    "question": "Wie bekomme ich BNP Paribas Open Tickets?",
+    "answer": "Tickets für die BNP Paribas Open sind heiss begehrt und schnell ausverkauft. Bei Faltin Travel buchen Sie Ihr Ticket bequem im Komplettpaket inklusive Hotel und persönlicher Betreuung. Senden Sie uns dazu einfach eine unverbindliche Anfrage über unser Buchungsformular.",
+    "sort_order": 1
+  },
+  {
+    "id": "daabe1c9-71aa-46d2-ab33-d38f960c3df7",
+    "event_id": "fc3286be-50c6-4f14-953a-2d1dbb82ad75",
+    "question": "Wie viel kosten BNP Paribas Open Tickets?",
+    "answer": "Die Preise hängen vom Turniertag und der Sitzplatzkategorie ab. Tickets für die frühen Tage sind günstiger als für die Endphase, exklusive Hospitality-Plätze wie die Luxury Suites liegen entsprechend höher. Gerne erstellen wir Ihnen ein individuelles Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "a7b9ac72-b3e6-4b20-800b-31309ef74be6",
+    "event_id": "fc3286be-50c6-4f14-953a-2d1dbb82ad75",
+    "question": "Wann finden die BNP Paribas Open 2025 statt?",
+    "answer": "Die BNP Paribas Open 2025 finden vom 5. bis 16. März 2025 statt. Das Turnier wird traditionell im März über knapp zwei Wochen ausgetragen.",
+    "sort_order": 3
+  },
+  {
+    "id": "8c371179-55c8-4b41-90c8-2f75e1ff3ae5",
+    "event_id": "fc3286be-50c6-4f14-953a-2d1dbb82ad75",
+    "question": "Wo finden die BNP Paribas Open statt?",
+    "answer": "Austragungsort ist der Indian Wells Tennis Garden in Indian Wells, Kalifornien (USA), im Coachella Valley. Das Stadium 1 ist mit rund 16.100 Plätzen das zweitgrösste Tennisstadion der Welt.",
+    "sort_order": 4
+  },
+  {
+    "id": "6d6437a3-a2ee-49be-a08c-af7835e094a3",
+    "event_id": "fc3286be-50c6-4f14-953a-2d1dbb82ad75",
+    "question": "Was ist ein Hospitality-Ticket bei den BNP Paribas Open?",
+    "answer": "Ein Hospitality-Ticket kombiniert hochwertige Sitzplätze – etwa Courtside Seats oder eine Luxury Suite – mit dem Zugang zu exklusiven Lounge-Bereichen. Dort erwarten Sie hervorragendes Catering, Getränke und ein gehobener Service.",
+    "sort_order": 5
+  },
+  {
+    "id": "577afd67-b01f-4c43-a701-d04fe87b7ee1",
+    "event_id": "fc3286be-50c6-4f14-953a-2d1dbb82ad75",
+    "question": "Lohnt es sich, zu den BNP Paribas Open zu gehen?",
+    "answer": "Auf jeden Fall. Die Kombination aus Weltklasse-Tennis, der entspannten «Tennis Paradise»-Atmosphäre und der traumhaften Wüstenkulisse Kaliforniens macht den Besuch zu einem einzigartigen Erlebnis – ideal verbunden mit einer Reise an die US-Westküste.",
+    "sort_order": 6
+  },
+  {
+    "id": "a01bc91e-9ba9-4fb1-8838-86f97cefada4",
+    "event_id": "fc3286be-50c6-4f14-953a-2d1dbb82ad75",
+    "question": "Warum sind die BNP Paribas Open besonders?",
+    "answer": "Die BNP Paribas Open sind eines der grössten kombinierten Herren- und Damenturniere der Welt und werden oft als «fünftes Grand-Slam-Turnier» bezeichnet. Die weitläufige Anlage, das angenehme Klima und das stets hochkarätige Teilnehmerfeld verleihen dem Turnier seinen besonderen Ruf.",
+    "sort_order": 7
+  },
+  {
+    "id": "0cc9c263-3fca-4cb9-9856-0d5e2801dbe4",
+    "event_id": "fc3286be-50c6-4f14-953a-2d1dbb82ad75",
+    "question": "Wie kann ich Tickets und Unterkunft für die BNP Paribas Open buchen?",
+    "answer": "Wählen Sie eines unserer Reise-Packages aus und senden Sie uns eine unverbindliche Anfrage über das Buchungsformular. Das Team von Faltin Travel meldet sich umgehend mit einem auf Sie zugeschnittenen Angebot inklusive Tickets und Hotel in Kalifornien.",
+    "sort_order": 8
+  },
+  {
+    "id": "172cb961-74b7-4760-9ea1-abc0805142c3",
+    "event_id": "7ebe517c-9f8f-46ac-90a7-051dc47f9e06",
+    "question": "Wo finden die Miami Open statt?",
+    "answer": "Die Miami Open finden im Hard Rock Stadium in Miami Gardens, Florida statt, ca. 30 km nördlich von Downtown Miami.",
+    "sort_order": 1
+  },
+  {
+    "id": "c46d664b-b021-4d9a-8a54-0af12bcf2926",
+    "event_id": "7ebe517c-9f8f-46ac-90a7-051dc47f9e06",
+    "question": "Wie viel Preisgeld wird ausgeschüttet?",
+    "answer": "Es werden insgesamt rund 17 bis 18 Millionen US-Dollar Preisgeld ausbezahlt.",
+    "sort_order": 2
+  },
+  {
+    "id": "4cdb7d2f-7a22-4840-8193-8f804c834700",
+    "event_id": "7ebe517c-9f8f-46ac-90a7-051dc47f9e06",
+    "question": "Wer sind die Rekordsieger?",
+    "answer": "Die Rekordsieger sind mit je sechs Titeln Andre Agassi und Novak Đoković.",
+    "sort_order": 3
+  },
+  {
+    "id": "3f25badd-0c4b-4940-b023-69212687d6e1",
+    "event_id": "7ebe517c-9f8f-46ac-90a7-051dc47f9e06",
+    "question": "Wann beginnen Day und Evening Sessions?",
+    "answer": "Die Day Session beginnt in der Regel um 11:00 Uhr, die Evening Session um 19:00 Uhr.",
+    "sort_order": 4
+  },
+  {
+    "id": "47b1923c-39e3-4962-8466-73861d5d9cf6",
+    "event_id": "7ebe517c-9f8f-46ac-90a7-051dc47f9e06",
+    "question": "Wie bekomme ich Miami Open Tickets?",
+    "answer": "Tickets für die Miami Open sind heiss begehrt und schnell ausverkauft. Bei Faltin Travel buchen Sie Ihr Ticket bequem im Komplettpaket inklusive Hotel und persönlicher Betreuung. Senden Sie uns dazu einfach eine unverbindliche Anfrage über unser Buchungsformular.",
+    "sort_order": 5
+  },
+  {
+    "id": "4130cde2-c9ac-4fac-93ca-bb9eb2a79c01",
+    "event_id": "7ebe517c-9f8f-46ac-90a7-051dc47f9e06",
+    "question": "Wie viel kosten Miami Open Tickets?",
+    "answer": "Die Preise richten sich nach Turniertag und Sitzplatzkategorie. Plätze im 200er-Level sind günstiger als im 100er-Level oder in den exklusiven Suites. Gerne erstellen wir Ihnen ein massgeschneidertes Angebot mit der gewünschten Kategorie.",
+    "sort_order": 6
+  },
+  {
+    "id": "ce58c71b-3100-45ac-86a7-c463d0448175",
+    "event_id": "7ebe517c-9f8f-46ac-90a7-051dc47f9e06",
+    "question": "Wann finden die Miami Open 2026 statt?",
+    "answer": "Die Miami Open 2026 finden vom 14. bis 28. März 2026 statt. Das kombinierte Herren- und Damenturnier wird traditionell im März über rund zwei Wochen ausgetragen.",
+    "sort_order": 7
+  },
+  {
+    "id": "0f8f6b9f-29b4-4577-9dc0-4abacaac56da",
+    "event_id": "7ebe517c-9f8f-46ac-90a7-051dc47f9e06",
+    "question": "Was ist ein Hospitality-Ticket bei den Miami Open?",
+    "answer": "Ein Hospitality-Ticket kombiniert hochwertige Sitzplätze – etwa in den Cabana oder Executive Suites – mit dem Zugang zu exklusiven Bereichen mit erstklassigem Catering und Getränken in gehobener Atmosphäre.",
+    "sort_order": 8
+  },
+  {
+    "id": "37551894-0d6c-41a5-a364-20961beaf38e",
+    "event_id": "7ebe517c-9f8f-46ac-90a7-051dc47f9e06",
+    "question": "Wie kann ich Tickets und Unterkunft für die Miami Open buchen?",
+    "answer": "Wählen Sie eines unserer Reise-Packages aus und senden Sie uns eine unverbindliche Anfrage über das Buchungsformular. Das Team von Faltin Travel meldet sich umgehend mit einem auf Sie zugeschnittenen Angebot inklusive Tickets und Hotel in Florida.",
+    "sort_order": 9
+  },
+  {
+    "id": "4afc4317-b823-48e6-834d-992568fef00e",
+    "event_id": "e67ec684-b0bc-4f2f-8cab-dec6b9561c85",
+    "question": "Wie bekomme ich Australian Open Tickets?",
+    "answer": "Tickets für die Australian Open sind heiss begehrt und schwer erhältlich. Bei Faltin Travel buchen Sie Ihr Ticket bequem im Komplettpaket inklusive Hotel und persönlicher Betreuung. Senden Sie uns dazu einfach eine unverbindliche Anfrage über unser Buchungsformular.",
+    "sort_order": 1
+  },
+  {
+    "id": "082a3d21-abed-4936-a907-f8869cb69710",
+    "event_id": "e67ec684-b0bc-4f2f-8cab-dec6b9561c85",
+    "question": "Wie viel kosten Australian Open Tickets?",
+    "answer": "Die Preise hängen vom Turniertag und der Sitzplatzkategorie ab. Plätze im Oberrang sind günstiger als im Unterrang oder in den Hospitality-Kategorien. Gerne erstellen wir Ihnen ein massgeschneidertes Angebot mit der gewünschten Kategorie.",
+    "sort_order": 2
+  },
+  {
+    "id": "5e03c062-5c21-4288-a7ae-1143e68f313c",
+    "event_id": "e67ec684-b0bc-4f2f-8cab-dec6b9561c85",
+    "question": "Wann finden die Australian Open 2027 statt?",
+    "answer": "Die Australian Open 2027 finden vom 17. bis 31. Januar 2027 statt. Das Turnier eröffnet traditionell im Januar die Grand-Slam-Saison.",
+    "sort_order": 3
+  },
+  {
+    "id": "21b2df64-4dd8-49c9-b012-be6c620fc577",
+    "event_id": "e67ec684-b0bc-4f2f-8cab-dec6b9561c85",
+    "question": "Wo finden die Australian Open statt?",
+    "answer": "Austragungsort ist der Melbourne Park in Melbourne, Australien. Die grossen Matches werden in der Rod Laver Arena ausgetragen, ergänzt durch die Margaret Court Arena und weitere Show Courts.",
+    "sort_order": 4
+  },
+  {
+    "id": "67d51796-ed7b-4b8a-9e79-0f3b306a7c84",
+    "event_id": "e67ec684-b0bc-4f2f-8cab-dec6b9561c85",
+    "question": "Was ist ein Hospitality-Ticket bei den Australian Open?",
+    "answer": "Ein Hospitality-Ticket kombiniert sehr gute Sitzplätze mit dem Zugang zu exklusiven Bereichen wie der klimatisierten Atrium Lounge. Je nach Variante – bis hin zum On-Court Seating – erwarten Sie First-Class-Catering, Getränke und ein gehobener Service.",
+    "sort_order": 5
+  },
+  {
+    "id": "b32b7a3b-2265-40bc-a56f-1137f52794fa",
+    "event_id": "e67ec684-b0bc-4f2f-8cab-dec6b9561c85",
+    "question": "Lohnt es sich, zu den Australian Open zu gehen?",
+    "answer": "Auf jeden Fall. Der «Happy Slam» besticht durch seine entspannte, fröhliche Atmosphäre, den australischen Sommer und Weltklasse-Tennis in der modernen Rod Laver Arena. Der Besuch lässt sich wunderbar mit einer Reise durch Australien verbinden.",
+    "sort_order": 6
+  },
+  {
+    "id": "ae1d42c1-9993-4e65-b025-432bd8e8d781",
+    "event_id": "e67ec684-b0bc-4f2f-8cab-dec6b9561c85",
+    "question": "Warum sind die Australian Open besonders?",
+    "answer": "Die Australian Open sind das erste Grand-Slam-Turnier des Jahres und gelten dank ihrer lockeren Stimmung als «Happy Slam». Drei überdachte Hauptarenen und das hochsommerliche Klima Melbournes verleihen dem Turnier seinen unverwechselbaren Charakter.",
+    "sort_order": 7
+  },
+  {
+    "id": "6120e162-0ab1-4722-95e2-d74861d9e46f",
+    "event_id": "e67ec684-b0bc-4f2f-8cab-dec6b9561c85",
+    "question": "Wie kann ich Tickets und Unterkunft für die Australian Open buchen?",
+    "answer": "Wählen Sie eines unserer Reise-Packages aus und senden Sie uns eine unverbindliche Anfrage über das Buchungsformular. Das Team von Faltin Travel meldet sich umgehend mit einem auf Sie zugeschnittenen Angebot inklusive Tickets und Hotel in Melbourne.",
+    "sort_order": 8
+  },
+  {
+    "id": "15c9ea67-110f-47a8-b516-2ed644df3a2e",
+    "event_id": "d309ae85-47ce-4f76-b6df-05b1ba53fbe2",
+    "question": "Wie bekomme ich US Open Tickets?",
+    "answer": "Tickets für die US Open sind heiss begehrt und schnell vergriffen. Bei Faltin Travel buchen Sie Ihr Ticket bequem im Komplettpaket inklusive Hotel in Manhattan und persönlicher Betreuung. Senden Sie uns dazu einfach eine unverbindliche Anfrage über unser Buchungsformular.",
+    "sort_order": 1
+  },
+  {
+    "id": "f65f7382-5504-438a-907b-b703d1a9ed22",
+    "event_id": "d309ae85-47ce-4f76-b6df-05b1ba53fbe2",
+    "question": "Wie viel kosten US Open Tickets?",
+    "answer": "Die Preise hängen vom Turniertag und der Sitzplatzkategorie ab. Plätze im Oberrang (Promenade) sind günstiger als courtnahe Sitze oder exklusive Hospitality-Varianten. Gerne erstellen wir Ihnen ein massgeschneidertes Angebot mit der gewünschten Kategorie.",
+    "sort_order": 2
+  },
+  {
+    "id": "0a7a0398-d8fe-49f8-a613-781bb10ecd7b",
+    "event_id": "d309ae85-47ce-4f76-b6df-05b1ba53fbe2",
+    "question": "Wann finden die US Open 2026 statt?",
+    "answer": "Die US Open 2026 finden vom 30. August bis 13. September 2026 statt. Sie bilden als letztes Grand-Slam-Turnier traditionell den Abschluss der Major-Saison.",
+    "sort_order": 3
+  },
+  {
+    "id": "e8e3af0e-4bf9-4aa4-a5ab-86d42a5d413b",
+    "event_id": "d309ae85-47ce-4f76-b6df-05b1ba53fbe2",
+    "question": "Wo finden die US Open statt?",
+    "answer": "Austragungsort ist das USTA Billie Jean King National Tennis Center in Flushing Meadows, im New Yorker Stadtteil Queens. Die grossen Matches werden im Arthur Ashe Stadium ausgetragen.",
+    "sort_order": 4
+  },
+  {
+    "id": "1db1b988-eae5-4922-bea7-15dc7959fe2b",
+    "event_id": "d309ae85-47ce-4f76-b6df-05b1ba53fbe2",
+    "question": "Was ist ein Hospitality-Ticket bei den US Open?",
+    "answer": "Ein Hospitality-Ticket kombiniert hochwertige Sitzplätze mit dem Zugang zu exklusiven Bereichen wie der Loge Box, dem 1968 Room oder den Luxury Suites. Dort erwarten Sie erstklassiges Catering, Getränke und ein gehobener Service.",
+    "sort_order": 5
+  },
+  {
+    "id": "314e8025-543b-48f8-85e3-5d4624d7bdb3",
+    "event_id": "d309ae85-47ce-4f76-b6df-05b1ba53fbe2",
+    "question": "Lohnt es sich, zu den US Open zu gehen?",
+    "answer": "Auf jeden Fall. Die US Open sind das lauteste und spektakulärste Grand-Slam-Turnier – mit Night Sessions im grössten Tennisstadion der Welt und der pulsierenden Kulisse New Yorks. Der Besuch lässt sich ideal mit einer Sightseeing- oder Shoppingtour im «Big Apple» verbinden.",
+    "sort_order": 6
+  },
+  {
+    "id": "50e1ed14-e347-452d-9cd9-fe7277b49907",
+    "event_id": "d309ae85-47ce-4f76-b6df-05b1ba53fbe2",
+    "question": "Warum sind die US Open besonders?",
+    "answer": "Die US Open sind das höchstdotierte Tennisturnier der Welt und das letzte Grand-Slam-Event der Saison. Das Arthur Ashe Stadium ist mit rund 23.771 Plätzen das grösste Tennisstadion der Welt und seit 2016 überdacht – die elektrisierenden Night Sessions sind legendär.",
+    "sort_order": 7
+  },
+  {
+    "id": "9383063d-c11e-42ef-abd6-c52a7b83f4f4",
+    "event_id": "d309ae85-47ce-4f76-b6df-05b1ba53fbe2",
+    "question": "Wie kann ich Tickets und Unterkunft für die US Open buchen?",
+    "answer": "Wählen Sie eines unserer Reise-Packages aus und senden Sie uns eine unverbindliche Anfrage über das Buchungsformular. Das Team von Faltin Travel meldet sich umgehend mit einem auf Sie zugeschnittenen Angebot inklusive Tickets und Hotel in New York.",
+    "sort_order": 8
+  }
+]

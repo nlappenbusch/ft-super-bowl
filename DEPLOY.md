@@ -1,207 +1,103 @@
-# Deployment – Faltin Travel Events (Docker + persistentes Volume)
+# Deployment – Faltin Travel Events
 
-Diese Anleitung bringt die App **inklusive aller Inhalte** (Events, Serien, Kategorien,
-Module, Packages, FAQs, Pins, Mail-Settings) live – und zwar so, dass der **Admin-Bereich
-weiterhin live editierbar** bleibt.
+Die App läuft als Docker-Container auf eurem self-hosted Server (`/opt/super-bowl`).
+Deployt wird **automatisch per GitHub Actions** bei jedem Push auf `main`.
 
-## Wie die Persistenz funktioniert
+## Auto-Deploy (so läuft es)
 
-Alle Inhalte liegen als Dateien im Ordner **`data/`**:
+1. Push auf `main` → GitHub Actions (`.github/workflows/deploy.yml`) startet auf dem
+   self-hosted Runner `docker-prod-01`.
+2. Der Runner führt `/opt/super-bowl/deploy.sh` aus:
+   - `git reset --hard origin/main` (holt den neuen Code)
+   - `docker compose down && docker compose up -d --build` (baut & startet neu)
+   - Health-Check auf Port **8085**
+3. Beim Container-Start rollt `docker-entrypoint.sh` die Inhalte aus (siehe unten).
 
-| Datei | Inhalt |
-|---|---|
-| `events.json` | Events + alle Modul-Inhalte |
-| `series.json` | Serien / Hubs |
-| `category-seo.json` | Kategorien-Texte |
-| `packages.json` | Packages |
-| `faqs.json` | Event-FAQs |
-| `pins.json`, `pin-icons.json` | Lageplan-Pins |
-| `settings.json` | Firma, Bank, Mail-Settings, Admin-Passwort |
-| `bookings.db` | Buchungs-/Anfragen-Datenbank (SQLite) |
+➡️ **Zum Live-gehen reicht: nach `main` pushen.** Kein manuelles Kopieren nötig.
 
-`docker-compose.yml` mountet diesen Ordner als Volume (`./data:/app/data`). Dadurch:
-- liest die App beim Start die echten Inhalte,
-- **schreiben Admin-Änderungen zurück auf die Server-Platte** (bleiben erhalten),
-- überlebt der Inhalt Container-Neustarts und Updates.
+## Wie Inhalte auf den Server kommen (Auto-Seed)
 
-> ⚠️ **`data/` ist bewusst NICHT im Git** (enthält u.a. das Admin-Passwort / Mail-Secrets).
-> Der Ordner muss **einmalig** auf den Server kopiert werden (Schritt 3). Danach lebt er dort.
+Die Website-Inhalte (Events, Serien, Kategorien, Packages, FAQs, Pins) liegen als
+Seed im Repo unter **`data-seed/`** und werden beim Containerstart ins persistente
+Volume `data/` kopiert – aber **nur wenn sich `data-seed/SEED_VERSION` geändert hat**.
 
----
+Daraus folgt:
+- **Neuer Content geht beim Deploy automatisch live** (sobald SEED_VERSION hochgezählt wurde).
+- **Admin-Bearbeitungen auf dem Server bleiben erhalten** – bei gleicher SEED_VERSION wird
+  nichts überschrieben.
+- **`bookings.db` (echte Anfragen) und `settings.json` werden NIE angefasst** (nicht Teil des Seeds).
 
-## Voraussetzungen (auf dem Server)
+### Neuen lokalen Content ausrollen
 
-- Linux-Server / VPS (z.B. Hetzner, DigitalOcean) **oder** PaaS mit persistentem Volume (Railway, Render, Fly.io)
-- **Docker** + **Docker Compose** installiert
-- Eine (Sub-)Domain, z.B. `events.faltintravel.com`, die auf den Server zeigt
-- Reverse Proxy mit TLS davor (nginx oder Caddy) – siehe Schritt 5
+Wenn du lokal Inhalte geändert hast und sie live bringen willst:
 
----
-
-## Schritt 1 – Code committen & pushen (lokal)
-
-Aktueller Stand muss auf GitHub:
-
-```bash
-git add -A
-git commit -m "Deploy-Setup: Docker build-args, compose env, deploy docs"
-git push origin feat/admin-redesign
+```powershell
+# 1. Aktuelle Inhalte in den Seed übernehmen
+cd F:\super-bowl\ft-super-bowl
+Copy-Item data\events.json,data\series.json,data\category-seo.json,data\packages.json,data\faqs.json,data\pins.json,data\pin-icons.json data-seed\ -Force
+# 2. SEED_VERSION hochzählen (z.B. Datum-Index)
+"2026-06-08-2" | Out-File data-seed\SEED_VERSION -Encoding ascii -NoNewline
+# 3. committen & pushen
+git add data-seed; git commit -m "content: update seed"; git push origin main
 ```
 
-(Optional: vorher nach `main` mergen, dann auf dem Server `main` auschecken.)
+> ⚠️ Beim Hochzählen der SEED_VERSION werden die Content-Dateien im Volume **überschrieben**.
+> Falls zwischenzeitlich direkt im Server-Admin editiert wurde, gehen diese Änderungen für
+> die geseedeten Dateien verloren. Faustregel: Content entweder **lokal** pflegen (dann seeden)
+> **oder** im Server-Admin (dann SEED_VERSION in Ruhe lassen) – nicht vermischen.
 
-## Schritt 2 – Code auf den Server holen
+## Umgebungsvariablen (`.env`, optional)
 
-```bash
-ssh user@dein-server
-git clone https://github.com/nlappenbusch/ft-super-bowl.git
-cd ft-super-bowl
-git checkout feat/admin-redesign
-```
-
-## Schritt 3 – Inhalte (`data/`) einmalig auf den Server kopieren
-
-Vom **lokalen** Rechner aus (PowerShell / Terminal), im Projektordner:
-
-```bash
-# Variante A: scp (rekursiv)
-scp -r ./data user@dein-server:/pfad/zu/ft-super-bowl/data
-
-# Variante B: rsync (besser, überträgt nur Änderungen)
-rsync -avz ./data/ user@dein-server:/pfad/zu/ft-super-bowl/data/
-```
-
-Danach liegt der komplette Inhalt auf dem Server. (Für spätere Content-Backups
-genau diesen Ordner sichern – siehe unten.)
-
-## Schritt 4 – `.env` auf dem Server anlegen
-
-Im Projektordner auf dem Server eine Datei **`.env`** erstellen (wird von Compose
-sowohl für Build-Args als auch zur Laufzeit gelesen). Vorlage:
+Die `docker-compose.yml` nutzt `${VAR:-default}` – die App startet **auch ohne `.env`**.
+Für echte Werte (Google-Maps-Key, Mail-Secrets, andere Domain) eine Datei
+`/opt/super-bowl/.env` anlegen:
 
 ```dotenv
-# ── Build-Zeit (werden ins Client-JS eingebacken – bei Änderung NEU bauen!) ──
+# Build-Zeit (ins Client-JS eingebacken – bei Änderung neu deployen)
+NEXT_PUBLIC_SITE_URL=https://superbowl.faltintravel.com
+NEXT_PUBLIC_ADMIN_PASSWORD=faltin-admin-2025
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=DEIN_GOOGLE_MAPS_KEY
-NEXT_PUBLIC_ADMIN_PASSWORD=ein-sicheres-admin-passwort
-NEXT_PUBLIC_SITE_URL=https://events.faltintravel.com
-# Optional (nur falls Supabase genutzt wird):
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_SITE_NAME=Faltin Travel Sports Events
 
-# ── Laufzeit-Secrets (Server-seitig, NICHT im Client) ──
-# Microsoft 365 / Graph (Mail-Versand & Inbound). Alternativ im Admin-Mail-Panel pflegbar.
+# Laufzeit (Server-seitig) – Mail optional, sonst im Admin-Panel pflegbar
 GRAPH_TENANT_ID=
 GRAPH_CLIENT_ID=
 GRAPH_CLIENT_SECRET=
 GRAPH_MAILBOX=request@faltintravel.com
 GRAPH_FROM_NAME=Faltin Travel
-
-# Brevo (Marketing-Listen)
 BREVO_API_KEY=
-
-# Schutz-Token für den Inbound-Poll-Endpoint (/api/inbound/poll)
 INBOUND_POLL_SECRET=ein-langes-zufalls-token
-
-# Optional: Standard-Event/Package-Slugs
-DEFAULT_EVENT_SLUG=
-DEFAULT_PACKAGE_SLUG=
 ```
 
-> Mail-Secrets kannst du **entweder** hier in die `.env` setzen **oder** später im
-> Admin-Bereich unter *Mail-Einstellungen* eintragen (landet dann in `data/settings.json`
-> auf dem Volume). Beides funktioniert.
+**Defaults ohne `.env`:** Domain = `superbowl.faltintravel.com`, Admin-PW = `faltin-admin-2025`,
+**Google-Maps-Key leer** → die interaktive Lageplan-Karte bleibt leer, bis der Key gesetzt ist.
 
-## Schritt 5 – Bauen & starten
+## Andere/mehrere Domains
+
+Komplett domain-agnostisch: alle eigenen Canonical-/SEO-/OG-/Sitemap-/JSON-LD-URLs
+kommen aus `NEXT_PUBLIC_SITE_URL` (`src/lib/siteConfig.ts`). Für eine andere Domain
+einfach diese Variable in der `.env` setzen und neu deployen (Build-Zeit-Variable!).
+Externe Links (NavBar „Home/Über uns", Footer, Social) zeigen bewusst weiter auf die
+WordPress-Hauptseite `faltintravel.com`.
+
+> Falls die App unter einer fremden Domain in WordPress **eingebettet** wird: in
+> `next.config.ts` ist CORS `Access-Control-Allow-Origin` für `/api/*` auf
+> `https://faltintravel.com` gesetzt – dort ggf. anpassen.
+
+## Backups
+
+Sichern reicht der `data/`-Ordner auf dem Server (enthält `bookings.db` + ggf.
+server-seitig editierten Content + `settings.json`):
 
 ```bash
-docker compose up -d --build
-```
-
-Die App läuft danach auf **Port 8085** des Servers (`http://SERVER_IP:8085`).
-Status prüfen:
-
-```bash
-docker compose ps
-docker compose logs -f super-bowl-app
-```
-
-## Schritt 6 – Reverse Proxy + HTTPS
-
-Beispiel **Caddy** (`/etc/caddy/Caddyfile`) – kümmert sich automatisch um TLS:
-
-```
-events.faltintravel.com {
-    reverse_proxy localhost:8085
-}
-```
-
-Beispiel **nginx** (vereinfacht):
-
-```nginx
-server {
-    server_name events.faltintravel.com;
-    location / {
-        proxy_pass http://localhost:8085;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-# TLS via certbot --nginx
-```
-
-Fertig – die Seite ist unter `https://events.faltintravel.com` live, der Admin unter `/admin`.
-
----
-
-## Updates später einspielen
-
-```bash
-ssh user@dein-server
-cd ft-super-bowl
-git pull
-docker compose up -d --build   # baut neu, data/ bleibt unangetastet
-```
-
-> Bei Änderung einer `NEXT_PUBLIC_*`-Variable IMMER neu bauen (`--build`), da diese
-> zur Build-Zeit fest eingebacken werden.
-
-## Content-Backups
-
-Nur der `data/`-Ordner enthält veränderliche Inhalte. Regelmäßig sichern:
-
-```bash
+cd /opt/super-bowl
 tar czf backup-data-$(date +%F).tgz data/
 ```
 
-(Für die SQLite-DB ist im WAL-Modus der laufende Betrieb okay; für ein konsistentes
-Backup ggf. kurz `docker compose stop` davor.)
+## Sicherheit
 
----
-
-## Mehrere / andere Domains
-
-Die App ist **domain-agnostisch**. Alle eigenen Canonical-/SEO-/OG-/Sitemap-/JSON-LD-URLs
-leiten sich aus **`NEXT_PUBLIC_SITE_URL`** ab (zentral in `src/lib/siteConfig.ts`).
-
-- Pro Deployment einfach `NEXT_PUBLIC_SITE_URL` setzen, z.B.
-  - `https://superbowl.faltintravel.com`
-  - `https://frenchopen.faltintravel.com`
-  - oder eine ganz fremde Domain.
-- Da es eine `NEXT_PUBLIC_*`-Variable ist, wird sie zur **Build-Zeit** eingebacken →
-  bei Domainwechsel **neu bauen** (`docker compose up -d --build`).
-- Externe Links zur Hauptseite (NavBar „Home/Über uns/Kontakt", Footer, Social) zeigen
-  bewusst weiter auf `faltintravel.com` (das ist die Marketing-WordPress-Seite, nicht die App-Domain).
-
-> Optional, falls die App unter einer neuen Domain in WordPress **eingebettet** wird:
-> In `next.config.ts` ist die CORS-`Access-Control-Allow-Origin` für `/api/*` fest auf
-> `https://faltintravel.com` gesetzt. Bei Embedding von einer anderen Origin dort anpassen.
-
-## Sicherheits-Hinweise
-
-- **`NEXT_PUBLIC_ADMIN_PASSWORD`** ist im Client-JS sichtbar (Design der aktuellen
-  `AdminGate`). Es schützt nur oberflächlich. Für echten Schutz sollte der Admin
-  zusätzlich auf Server-Ebene (Basic-Auth im Reverse Proxy oder IP-Whitelist) abgesichert
-  werden. Empfehlung: lege z.B. eine Caddy/nginx Basic-Auth über `/admin`.
-- **`.env`** und **`data/`** niemals ins Git committen (beide sind in `.gitignore`).
-- Mail-Secrets (Graph/Brevo) gehören in `.env` **oder** ins Admin-Panel – nie ins Repo.
+- `data-seed/` enthält **nur öffentlichen Website-Content** – keine Secrets.
+- `settings.json` (mit Admin-PW/Mail-Secrets) und `.env` bleiben aus dem Git heraus.
+- `NEXT_PUBLIC_ADMIN_PASSWORD` ist im Client-JS sichtbar (Design der `AdminGate`).
+  Für echten Schutz `/admin` zusätzlich serverseitig absichern (Basic-Auth im Reverse
+  Proxy oder IP-Whitelist).

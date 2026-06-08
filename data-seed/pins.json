@@ -1,0 +1,26 @@
+[
+  {
+    "id": "paris-pin-cdg",
+    "name": "Flughafen Paris-Charles-de-Gaulle (CDG)",
+    "lat": 49.0097,
+    "lng": 2.5479,
+    "type": "airport",
+    "label": "Roissy-en-France"
+  },
+  {
+    "id": "paris-pin-hotel",
+    "name": "Hyatt Regency Paris Étoile",
+    "lat": 48.8797,
+    "lng": 2.2858,
+    "type": "hotel",
+    "label": "Hotel"
+  },
+  {
+    "id": "paris-pin-stadium",
+    "name": "Stade Roland Garros",
+    "lat": 48.8471,
+    "lng": 2.2492,
+    "type": "stadium",
+    "label": "Roland Garros"
+  }
+]

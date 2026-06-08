@@ -1,0 +1,22 @@
+[
+  {
+    "id": "icon-airport",
+    "name": "Flughafen",
+    "image": null
+  },
+  {
+    "id": "icon-hotel",
+    "name": "Hotel",
+    "image": null
+  },
+  {
+    "id": "icon-stadium",
+    "name": "Stadion / Spielort",
+    "image": null
+  },
+  {
+    "id": "icon-other",
+    "name": "Sonstiges",
+    "image": null
+  }
+]

@@ -54,6 +54,11 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
+# Content-Seed + Entrypoint (rollt Inhalte beim Start ins Volume, ohne bookings.db/settings.json zu überschreiben)
+COPY data-seed ./data-seed
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Create directory for SQLite database
 RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
 
@@ -64,4 +69,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["node", "server.js"]
