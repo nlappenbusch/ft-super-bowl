@@ -367,6 +367,23 @@ export default function EventPageView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anchorKey]);
 
+  // Countdown (client-only, vermeidet Hydration-Mismatch)
+  const [daysLeft, setDaysLeft] = useState<number | null>(null);
+  useEffect(() => {
+    const raw = (event.start_date || '').trim();
+    if (!raw) { setDaysLeft(null); return; }
+    let d: Date | null = null;
+    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+      d = new Date(`${raw.slice(0, 10)}T00:00:00`);
+    } else {
+      const m = raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/); // TT.MM.JJJJ
+      if (m) d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+      else { const g = new Date(raw); if (!isNaN(g.getTime())) d = g; }
+    }
+    if (!d || isNaN(d.getTime())) { setDaysLeft(null); return; }
+    setDaysLeft(Math.ceil((d.getTime() - Date.now()) / 86400000));
+  }, [event.start_date]);
+
   return (
     <div className="flex min-h-screen flex-col font-sans" style={{ fontFamily: "'Montserrat', 'Open Sans', system-ui, sans-serif" }}>
       {/* ── HERO ─────────────────────────────────────────────────────────────── */}
@@ -437,6 +454,11 @@ export default function EventPageView({
               {eventDateRange && (
                 <span className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold text-white" style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}>
                   <CalendarDays className="h-4 w-4 shrink-0" style={{ color: '#f5c842' }} /> {eventDateRange}
+                </span>
+              )}
+              {daysLeft !== null && daysLeft > 0 && (
+                <span className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-bold text-white" style={{ background: 'rgba(217,83,30,0.30)', border: '1px solid rgba(245,200,66,0.5)' }}>
+                  ⏳ Noch {daysLeft} {daysLeft === 1 ? 'Tag' : 'Tage'}
                 </span>
               )}
             </Editable>
@@ -922,6 +944,24 @@ export default function EventPageView({
           {heroCtaLabel}
         </a>
       </section>
+
+      {/* ── STICKY MOBIL-CTA ──────────────────────────────────────────────────── */}
+      {!editable && (
+        <div
+          className="fixed inset-x-0 bottom-0 z-50 md:hidden"
+          style={{ background: 'rgba(11,24,40,0.97)', borderTop: '1px solid rgba(255,255,255,0.16)', backdropFilter: 'blur(4px)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          <div className="flex items-center gap-3 px-4 py-2.5">
+            <div className="min-w-0 flex-1">
+              {eventDateRange && <div className="truncate text-[11px] text-white/65">{eventDateRange}</div>}
+              <div className="truncate text-sm font-bold text-white">{event.name || event.title}</div>
+            </div>
+            <a href={ctaHref} className="shrink-0 rounded-lg px-4 py-2.5 text-sm font-bold text-white shadow-md" style={{ background: '#d9531e' }}>
+              Jetzt anfragen
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
