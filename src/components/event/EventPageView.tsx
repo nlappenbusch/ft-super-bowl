@@ -439,13 +439,13 @@ export default function EventPageView({
           </div>
 
           <div className="mt-6">
-            <Link
+            <a
               href={ctaHref}
               className="inline-flex items-center rounded-sm px-8 py-4 text-base md:text-lg font-bold text-white transition-all hover:opacity-90 hover:scale-[1.02] shadow-lg"
               style={{ background: '#d9531e' }}
             >
               {heroCtaLabel}
-            </Link>
+            </a>
           </div>
 
           <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs md:text-sm font-semibold text-white/85">
@@ -544,13 +544,13 @@ export default function EventPageView({
                   </ul>
                 )}
                 <div className="mt-8">
-                  <Link
+                  <a
                     href={ctaHref}
                     className="inline-flex items-center rounded-sm px-7 py-3.5 text-base font-bold text-white shadow-lg transition-all hover:opacity-90 hover:scale-[1.02]"
                     style={{ background: '#d9531e' }}
                   >
                     Jetzt unverbindlich anfragen.
-                  </Link>
+                  </a>
                 </div>
               </div>
               {leistungenImage && (
@@ -867,13 +867,13 @@ export default function EventPageView({
       {/* ── BOTTOM CTA STRIP ─────────────────────────────────────────────────── */}
       <section className="py-12 px-4 text-center" style={{ background: '#143047' }}>
         <p className="text-white/70 text-sm mb-4 uppercase tracking-widest font-semibold">Bereit für Ihr Erlebnis?</p>
-        <Link
+        <a
           href={ctaHref}
           className="inline-flex items-center rounded-sm px-8 py-4 text-base md:text-lg font-bold text-white transition-all hover:opacity-90 hover:scale-[1.02] shadow-lg"
           style={{ background: '#d9531e' }}
         >
           {heroCtaLabel}
-        </Link>
+        </a>
       </section>
     </div>
   );
