@@ -6,9 +6,15 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 import { getSettings } from './settingsStore';
+import { siteConfig } from './siteConfig';
 
 const NAVY = '#143047';
 const ACCENT = '#d9531e';
+
+/** Absolute Basis-URL (E-Mails brauchen absolute Bild-URLs). */
+function baseUrl(): string {
+  return (process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url).replace(/\/+$/, '');
+}
 
 /** Eindeutiger Betreff-Tag für Threading, z.B. "[RQ-12345]" */
 export function subjectTag(requestNumber: string): string {
@@ -50,10 +56,10 @@ function layout(innerHtml: string, preheader = ''): string {
     <tr><td align="center">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(20,48,71,0.10);">
         <!-- Header -->
-        <tr><td style="background:${NAVY};padding:30px 36px;">
+        <tr><td style="background:#ffffff;padding:26px 36px 18px;">
           <table role="presentation" width="100%"><tr>
-            <td style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:0.4px;">Faltin&nbsp;Travel</td>
-            <td align="right" style="font-size:12px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1.5px;">Sports&nbsp;Travel</td>
+            <td><img src="${baseUrl()}/faltin-logo-email.png" alt="Faltin Travel" height="40" style="display:block;height:40px;width:auto;border:0;outline:none;text-decoration:none;" /></td>
+            <td align="right" style="font-size:12px;color:#9aa6b2;text-transform:uppercase;letter-spacing:1.5px;">Sports&nbsp;Travel</td>
           </tr></table>
         </td></tr>
         <!-- Accent bar -->
