@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import InvoiceEditor, { type InvoiceLead } from '@/components/admin/InvoiceEditor';
 import AdminShell from '@/components/admin/AdminShell';
 import {
   User, Mail, Phone, Calendar, Package, Euro,
@@ -190,9 +191,6 @@ function InvoiceTab({ lead }: { lead: Lead }) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [items, setItems] = useState<InvoiceItem[]>([]);
-  const [dueDays, setDueDays] = useState(14);
   const [payInput, setPayInput] = useState<Record<string, string>>({});
 
   const loadInvoices = useCallback(async () => {
@@ -206,43 +204,7 @@ function InvoiceTab({ lead }: { lead: Lead }) {
     }
   }, [lead.id]);
 
-  useEffect(() => {
-    loadInvoices();
-    // Pre-fill with booking data
-    setItems([{
-      description: `${lead.event_slug ? lead.event_slug + ' – ' : ''}${lead.package_title || 'Pauschalreise'}\n${lead.number_of_persons || 1} Person(en)`,
-      quantity: 1,
-      unit_price: lead.total_price || 0,
-    }]);
-  }, [loadInvoices, lead]);
-
-  const handleCreate = async () => {
-    if (items.length === 0 || items.some(i => !i.description.trim() || i.unit_price <= 0)) {
-      alert('Bitte alle Positionen ausfüllen.');
-      return;
-    }
-    setCreating(true);
-    try {
-      const res = await fetch('/api/invoices', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bookingId: lead.id,
-          items: items.map(i => ({ ...i, total_price: i.quantity * i.unit_price })),
-          dueInDays: dueDays,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setShowCreate(false);
-        loadInvoices();
-      } else {
-        alert('Fehler: ' + data.error);
-      }
-    } finally {
-      setCreating(false);
-    }
-  };
+  useEffect(() => { loadInvoices(); }, [loadInvoices]);
 
   const handlePayment = async (invoiceId: string) => {
     const amount = parseFloat(payInput[invoiceId] || '0');
@@ -339,92 +301,11 @@ function InvoiceTab({ lead }: { lead: Lead }) {
 
       {/* Create form */}
       {showCreate && (
-        <div className="rounded-xl p-4 space-y-3" style={{ background: '#f0f7ff', border: '1.5px solid #1a6fa820' }}>
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-sm" style={{ color: '#143047' }}>Neue Rechnung</span>
-            <button onClick={() => setShowCreate(false)}><X className="w-4 h-4 text-gray-400" /></button>
-          </div>
-
-          {items.map((item, idx) => (
-            <div key={idx} className="bg-white rounded-lg p-3 space-y-2" style={{ border: '1px solid #e5e8ed' }}>
-              <textarea
-                value={item.description}
-                onChange={e => setItems(prev => prev.map((it, i) => i === idx ? { ...it, description: e.target.value } : it))}
-                rows={2}
-                placeholder="Beschreibung"
-                className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none resize-none"
-                style={{ borderColor: '#e5e8ed' }}
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs text-gray-500">Anzahl</label>
-                  <input
-                    type="number"
-                    value={item.quantity}
-                    onChange={e => setItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: parseInt(e.target.value) || 1 } : it))}
-                    min="1"
-                    className="w-full text-sm border rounded-lg px-3 py-1.5 focus:outline-none"
-                    style={{ borderColor: '#e5e8ed' }}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">Einzelpreis (€)</label>
-                  <input
-                    type="number"
-                    value={item.unit_price}
-                    onChange={e => setItems(prev => prev.map((it, i) => i === idx ? { ...it, unit_price: parseFloat(e.target.value) || 0 } : it))}
-                    min="0"
-                    step="0.01"
-                    className="w-full text-sm border rounded-lg px-3 py-1.5 focus:outline-none"
-                    style={{ borderColor: '#e5e8ed' }}
-                  />
-                </div>
-              </div>
-              <div className="text-xs text-right font-semibold text-gray-700">
-                Gesamt: {formatCurrency(item.quantity * item.unit_price)}
-              </div>
-              {items.length > 1 && (
-                <button onClick={() => setItems(prev => prev.filter((_, i) => i !== idx))} className="text-xs text-red-500 hover:text-red-700">
-                  Position entfernen
-                </button>
-              )}
-            </div>
-          ))}
-
-          <button
-            onClick={() => setItems(prev => [...prev, { description: '', quantity: 1, unit_price: 0 }])}
-            className="w-full py-2 rounded-lg text-sm border-2 border-dashed text-gray-500 hover:bg-white transition flex items-center justify-center gap-1"
-            style={{ borderColor: '#e5e8ed' }}
-          >
-            <Plus className="w-3 h-3" /> Position hinzufügen
-          </button>
-
-          <div>
-            <label className="text-xs text-gray-500">Zahlungsziel (Tage)</label>
-            <input
-              type="number"
-              value={dueDays}
-              onChange={e => setDueDays(parseInt(e.target.value) || 14)}
-              min="1"
-              className="w-full text-sm border rounded-lg px-3 py-1.5 focus:outline-none mt-1"
-              style={{ borderColor: '#e5e8ed' }}
-            />
-          </div>
-
-          <div className="flex items-center justify-between text-sm font-bold pt-1" style={{ color: '#143047' }}>
-            <span>Rechnungssumme</span>
-            <span>{formatCurrency(items.reduce((s, i) => s + i.quantity * i.unit_price, 0))}</span>
-          </div>
-
-          <button
-            onClick={handleCreate}
-            disabled={creating}
-            className="w-full py-2.5 rounded-lg text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-60"
-            style={{ background: '#143047' }}
-          >
-            {creating ? 'Wird erstellt…' : '📄 Rechnung erstellen'}
-          </button>
-        </div>
+        <InvoiceEditor
+          lead={lead as unknown as InvoiceLead}
+          onCreated={() => { setShowCreate(false); loadInvoices(); }}
+          onCancel={() => setShowCreate(false)}
+        />
       )}
 
       {!showCreate && (

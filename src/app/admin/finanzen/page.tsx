@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
+import InvoiceEditor, { type InvoiceLead } from '@/components/admin/InvoiceEditor';
 import AdminShell from '@/components/admin/AdminShell';
 import {
   COLORS, Card, SectionCard, PageHeader, Button, Badge, StatCard,
@@ -115,6 +116,7 @@ export default function FinanzenPage() {
   const [loading, setLoading] = useState(true);
   const [eventFilter, setEventFilter] = useState('all');
   const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [showInvoiceForm, setShowInvoiceForm] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -319,7 +321,25 @@ export default function FinanzenPage() {
       </SectionCard>
 
       {/* Invoices table */}
-      <SectionCard title="Alle Rechnungen" icon={<Receipt className="w-5 h-5" />} className="mb-8">
+      <SectionCard
+        title="Alle Rechnungen"
+        icon={<Receipt className="w-5 h-5" />}
+        actions={
+          <Button variant="primary" size="sm" onClick={() => setShowInvoiceForm(v => !v)}>
+            <Plus className="w-4 h-4" /> Neue Rechnung
+          </Button>
+        }
+        className="mb-8"
+      >
+        {showInvoiceForm && (
+          <div className="mb-4">
+            <InvoiceEditor
+              leads={leads as unknown as InvoiceLead[]}
+              onCreated={() => { setShowInvoiceForm(false); loadData(); }}
+              onCancel={() => setShowInvoiceForm(false)}
+            />
+          </div>
+        )}
         <div className="overflow-x-auto -mx-6 -mb-6">
           <table className="w-full text-sm">
             <thead>
