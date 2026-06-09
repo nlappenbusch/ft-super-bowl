@@ -15,6 +15,8 @@ export interface InvoiceLead {
   package_title?: string;
   event_slug?: string;
   number_of_persons?: number;
+  double_rooms?: number;
+  single_rooms?: number;
   total_price?: number;
   travelers?: string | Array<{ firstName?: string; lastName?: string; first_name?: string; last_name?: string }>;
 }
@@ -51,13 +53,36 @@ export default function InvoiceEditor({
   const [manual, setManual] = useState({ firstName: '', lastName: '', email: '', phone: '', packageTitle: '' });
   const [items, setItems] = useState<Item[]>(
     lead
-      ? [{ description: `${lead.event_slug ? lead.event_slug + ' – ' : ''}${lead.package_title || 'Pauschalreise'}\n${lead.number_of_persons || 1} Person(en)`, quantity: 1, unit_price: lead.total_price || 0 }]
+      ? [{
+          description: `${lead.event_slug ? lead.event_slug + ' – ' : ''}${lead.package_title || 'Pauschalreise'}\n${lead.number_of_persons || 1} Personen${(lead.double_rooms || lead.single_rooms) ? `, ${lead.double_rooms || 0} DZ, ${lead.single_rooms || 0} EZ` : ''}`,
+          quantity: 1,
+          unit_price: lead.total_price || 0,
+        }]
       : [{ description: '', quantity: 1, unit_price: 0 }]
   );
   const [dueDays, setDueDays] = useState(14);
-  const [meta, setMeta] = useState({ event_name: '', destination: '', hotel_description: '', ticket_details: '', thank_you_text: '' });
-  const [showMeta, setShowMeta] = useState(false);
+  const [meta, setMeta] = useState({
+    event_name: '',
+    destination: '',
+    hotel_description: '',
+    ticket_details: [
+      'Inkl. Zutritt zum VIP-Bereich mit Catering & Getränken',
+      'Inkl. Faltin Travel Lanyard',
+      'Inkl. detaillierte Reiseinformation & Schweizer Reisegarantie',
+    ].join('\n'),
+    thank_you_text: '',
+  });
+  const [showMeta, setShowMeta] = useState(true);
   const setM = (k: keyof typeof meta, v: string) => setMeta((m) => ({ ...m, [k]: v }));
+
+  const addExtraNight = (position: 'before' | 'after') => {
+    const timing = position === 'before' ? 'VORAB' : 'VERLÄNGERUNG';
+    setItems((prev) => {
+      const idx = prev.findIndex((it) => it.description.toLowerCase().includes('zusatznacht') && it.description.toLowerCase().includes(timing.toLowerCase()));
+      if (idx !== -1) return prev.map((it, i) => (i === idx ? { ...it, quantity: it.quantity + 1 } : it));
+      return [...prev, { description: `Zusatznacht ${timing}\nDoppelzimmer mit Frühstück`, quantity: 1, unit_price: 0 }];
+    });
+  };
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -160,6 +185,11 @@ export default function InvoiceEditor({
         className="w-full py-2 rounded-lg text-sm border-2 border-dashed text-gray-500 hover:bg-white transition flex items-center justify-center gap-1" style={bd}>
         <Plus className="w-3 h-3" /> Position hinzufügen
       </button>
+
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" onClick={() => addExtraNight('before')} className="rounded-lg border px-3 py-2 text-xs font-semibold text-gray-600 transition hover:bg-white" style={bd}>+ Zusatznacht vorab</button>
+        <button type="button" onClick={() => addExtraNight('after')} className="rounded-lg border px-3 py-2 text-xs font-semibold text-gray-600 transition hover:bg-white" style={bd}>+ Zusatznacht Verlängerung</button>
+      </div>
 
       <div>
         <label className="text-xs text-gray-500">Zahlungsziel (Tage)</label>
