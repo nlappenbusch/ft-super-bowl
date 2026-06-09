@@ -462,6 +462,12 @@ function ConversationTab({ lead }: { lead: Lead }) {
 
   useEffect(() => { load(); }, [load]);
 
+  // Live: offene Konversation alle 20s neu laden (neue Kundenantworten erscheinen automatisch)
+  useEffect(() => {
+    const id = setInterval(() => { load(); }, 20000);
+    return () => clearInterval(id);
+  }, [load]);
+
   const handleSend = async () => {
     if (!reply.trim()) return;
     setSending(true);
@@ -794,6 +800,19 @@ export default function CrmPage() {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Live: Posteingang automatisch abrufen (beim Öffnen + alle 20s), solange das CRM offen ist.
+  // Holt Kundenantworten aus request@… und ordnet sie per RQ-Nummer zu – ohne Klick/Cron.
+  useEffect(() => {
+    let active = true;
+    const poll = async () => {
+      try { await fetch('/api/admin/mail/poll', { method: 'POST' }); } catch { /* still / non-fatal */ }
+      if (active) loadData();
+    };
+    poll();
+    const id = setInterval(poll, 20000);
+    return () => { active = false; clearInterval(id); };
+  }, [loadData]);
 
   const handleUpdate = async (id: string, updates: { status?: CrmStatus; notes?: string }) => {
     await fetch(`/api/bookings/${id}`, {
