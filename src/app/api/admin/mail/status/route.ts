@@ -1,19 +1,21 @@
 import { NextResponse } from 'next/server';
 import { isGraphConfigured, getMailbox, getFromName } from '@/lib/graphMailer';
+import { getSettings } from '@/lib/settingsStore';
 
 export async function GET() {
-  const graphConfigured = isGraphConfigured();
+  const m = getSettings().mail;
   return NextResponse.json({
     success: true,
     data: {
-      graphConfigured,
+      graphConfigured: isGraphConfigured(),
       mailbox: getMailbox(),
       fromName: getFromName(),
-      tenantSet: !!process.env.GRAPH_TENANT_ID,
-      clientSet: !!process.env.GRAPH_CLIENT_ID,
-      secretSet: !!process.env.GRAPH_CLIENT_SECRET,
-      brevoConfigured: !!process.env.BREVO_API_KEY,
-      pollSecretSet: !!process.env.INBOUND_POLL_SECRET,
+      tenantSet: !!(m.tenant_id || process.env.GRAPH_TENANT_ID),
+      clientSet: !!(m.client_id || process.env.GRAPH_CLIENT_ID),
+      secretSet: !!(m.client_secret || process.env.GRAPH_CLIENT_SECRET),
+      mailboxSet: !!(m.mailbox || process.env.GRAPH_MAILBOX),
+      brevoConfigured: !!(m.brevo_api_key || process.env.BREVO_API_KEY),
+      pollSecretSet: !!(m.inbound_poll_secret || process.env.INBOUND_POLL_SECRET),
     },
   });
 }

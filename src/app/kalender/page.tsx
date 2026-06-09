@@ -4,7 +4,7 @@ import EventCalendar, { type CalEvent } from '@/components/EventCalendar';
 import { getEventsList, getSeriesList } from '@/lib/eventData';
 import { siteConfig } from '@/lib/siteConfig';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 const SITE = siteConfig.url.replace(/\/+$/, '');
 const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];

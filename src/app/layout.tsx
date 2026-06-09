@@ -6,6 +6,11 @@ import FooterWrapper from '@/components/FooterWrapper';
 import { siteConfig } from '@/lib/siteConfig';
 import { buildNavMenu } from '@/lib/navMenu';
 
+// Inhalte (Menü, Events, Serien) kommen aus dateibasierten Stores, die zur Laufzeit
+// im Volume liegen. Daher dynamisch rendern (sonst „friert" der Build-Zeit-Stand ein,
+// da data/ beim Docker-Build via .dockerignore fehlt).
+export const dynamic = 'force-dynamic';
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

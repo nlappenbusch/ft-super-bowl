@@ -1,7 +1,7 @@
 import { getEventsList, getSeriesList } from '@/lib/eventData';
 import { siteConfig } from '@/lib/siteConfig';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 const SITE = siteConfig.url.replace(/\/+$/, '');
 

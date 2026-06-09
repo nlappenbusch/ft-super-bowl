@@ -157,7 +157,7 @@ const DEFAULT_SETTINGS: AllSettings = {
     tenant_id: '',
     client_id: '',
     client_secret: '',
-    mailbox: '',
+    mailbox: 'request@faltintravel.com',
     from_name: 'Faltin Travel',
     inbound_poll_secret: '',
     brevo_api_key: '',

@@ -4,7 +4,7 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 import EventContactForm from '@/components/EventContactForm';
 import { getEventsList } from '@/lib/eventData';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Kontakt – Faltin Travel AG | Regensdorf (ZH)',
