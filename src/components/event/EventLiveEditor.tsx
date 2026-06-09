@@ -168,7 +168,7 @@ export default function EventLiveEditor(props: Props) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && sessionStorage.getItem('admin_authenticated') === 'true') setAuthed(true);
+    fetch('/api/auth/session').then((r) => r.json()).then((d) => { if (d?.authenticated) setAuthed(true); }).catch(() => {});
   }, []);
 
   const flush = useCallback(async () => {

@@ -1,15 +1,20 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Inbox, KanbanSquare, Wallet,
   CalendarDays, Layers, Package, HelpCircle, Tag, MapPin,
   Mail, Settings, LogOut, Menu,
 } from 'lucide-react';
-import AdminGate from './AdminGate';
 import { COLORS } from './ui';
+
+async function doLogout() {
+  try { await fetch('/api/auth/logout', { method: 'POST' }); } catch { /* ignore */ }
+  window.location.href = '/admin/login';
+}
 
 interface AdminShellProps {
   title: string;
@@ -56,12 +61,12 @@ function isActive(pathname: string, item: NavItem): boolean {
   return pathname === item.href || pathname.startsWith(item.href + '/');
 }
 
-function SidebarContent({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+function SidebarContent({ pathname, onNavigate, user }: { pathname: string; onNavigate?: () => void; user: { name: string; src: string } | null }) {
   return (
     <div className="flex h-full flex-col" style={{ background: COLORS.navy }}>
       {/* Brand */}
-      <div className="flex items-center gap-2 px-6 py-6">
-        <span className="text-lg font-extrabold tracking-wide text-white">Faltin</span>
+      <div className="flex items-center gap-2.5 px-6 py-6">
+        <Image src="/faltin-logo.svg" alt="Faltin Travel" width={118} height={38} />
         <span className="rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white/60" style={{ background: 'rgba(255,255,255,0.08)' }}>
           Admin
         </span>
@@ -98,13 +103,16 @@ function SidebarContent({ pathname, onNavigate }: { pathname: string; onNavigate
         ))}
       </nav>
 
-      {/* Logout */}
+      {/* User + Logout */}
       <div className="border-t px-3 py-4" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+        {user && (
+          <div className="mb-2 px-3">
+            <div className="truncate text-xs font-semibold text-white/90">{user.name}</div>
+            <div className="text-[11px] text-white/40">{user.src === 'microsoft' ? 'Microsoft 365' : 'Lokaler Admin'}</div>
+          </div>
+        )}
         <button
-          onClick={() => {
-            sessionStorage.removeItem('admin_authenticated');
-            window.location.href = '/admin';
-          }}
+          onClick={doLogout}
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/70 transition hover:bg-white/5"
         >
           <LogOut className={ICON} /> Abmelden
@@ -117,21 +125,25 @@ function SidebarContent({ pathname, onNavigate }: { pathname: string; onNavigate
 export default function AdminShell({ title, children }: AdminShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [user, setUser] = useState<{ name: string; src: string } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/session').then((r) => r.json()).then((d) => { if (d?.user) setUser(d.user); }).catch(() => {});
+  }, []);
 
   return (
-    <AdminGate title={title}>
-      <div className="min-h-screen" style={{ background: COLORS.surfaceMuted }}>
-        {/* Desktop sidebar */}
-        <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 lg:block">
-          <SidebarContent pathname={pathname} />
-        </aside>
+    <div className="min-h-screen" style={{ background: COLORS.surfaceMuted }}>
+      {/* Desktop sidebar */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 lg:block">
+        <SidebarContent pathname={pathname} user={user} />
+      </aside>
 
         {/* Mobile drawer */}
         {mobileOpen && (
           <div className="fixed inset-0 z-50 lg:hidden">
             <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
             <div className="absolute inset-y-0 left-0 w-64">
-              <SidebarContent pathname={pathname} onNavigate={() => setMobileOpen(false)} />
+              <SidebarContent pathname={pathname} onNavigate={() => setMobileOpen(false)} user={user} />
             </div>
           </div>
         )}
@@ -155,6 +167,5 @@ export default function AdminShell({ title, children }: AdminShellProps) {
           <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">{children}</main>
         </div>
       </div>
-    </AdminGate>
   );
 }

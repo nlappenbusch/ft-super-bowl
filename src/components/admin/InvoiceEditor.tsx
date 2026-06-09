@@ -1,12 +1,15 @@
 'use client';
 
 /**
- * InvoiceEditor – gemeinsamer Rechnungs-Editor für CRM (fester Lead) und
- * Finanzen (Lead wählen ODER individuelle/manuelle Buchung).
- * Positionen, Fälligkeit, Notizen. Erstellt über POST /api/invoices.
+ * InvoiceEditor – gemeinsamer Rechnungs-Editor (identisch zum Buchungen-Editor).
+ * Verwendet in CRM (fester Lead), Finanzen (Lead wählen ODER individuelle Buchung)
+ * und Buchungen. Erstellt über POST /api/invoices.
  */
 import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
+import {
+  SectionCard, Field, TextInput, TextArea, SelectInput, InputField, TextAreaField, Button, Spinner,
+} from '@/components/admin/ui';
 
 export interface InvoiceLead {
   id: string;
@@ -35,9 +38,20 @@ export function leadLabel(l: InvoiceLead): string {
   return `${name}${l.package_title ? ' · ' + l.package_title : ''}`;
 }
 
-const fmt = (n: number) => new Intl.NumberFormat('de-CH', { style: 'currency', currency: 'EUR' }).format(n);
-const cls = 'w-full text-sm border rounded-lg px-3 py-2 focus:outline-none';
-const bd = { borderColor: '#e5e8ed' } as React.CSSProperties;
+function defaultItemsFor(lead?: InvoiceLead): Item[] {
+  if (!lead) return [{ description: '', quantity: 1, unit_price: 0 }];
+  return [{
+    description: `${lead.event_slug ? lead.event_slug + ' - ' : ''}${lead.package_title || 'Pauschalreise'}\n${lead.number_of_persons ?? 1} Personen, ${lead.double_rooms ?? 0} DZ, ${lead.single_rooms ?? 0} EZ`,
+    quantity: 1,
+    unit_price: lead.total_price || 0,
+  }];
+}
+
+const DEFAULT_TICKET_DETAILS = [
+  'Inkl. Zutritt zum VIP-Bereich mit Catering & Getränken',
+  'Inkl. Faltin Travel Lanyard',
+  'Inkl. detaillierte Reiseinformation & Schweizer Reisegarantie',
+].join('\n');
 
 export default function InvoiceEditor({
   lead, leads, onCreated, onCancel,
@@ -51,55 +65,77 @@ export default function InvoiceEditor({
   const [mode, setMode] = useState<'lead' | 'manual'>(lockedLead ? 'lead' : (leads && leads.length ? 'lead' : 'manual'));
   const [selectedLeadId, setSelectedLeadId] = useState(lead?.id || leads?.[0]?.id || '');
   const [manual, setManual] = useState({ firstName: '', lastName: '', email: '', phone: '', packageTitle: '' });
-  const [items, setItems] = useState<Item[]>(
-    lead
-      ? [{
-          description: `${lead.event_slug ? lead.event_slug + ' – ' : ''}${lead.package_title || 'Pauschalreise'}\n${lead.number_of_persons || 1} Personen${(lead.double_rooms || lead.single_rooms) ? `, ${lead.double_rooms || 0} DZ, ${lead.single_rooms || 0} EZ` : ''}`,
-          quantity: 1,
-          unit_price: lead.total_price || 0,
-        }]
-      : [{ description: '', quantity: 1, unit_price: 0 }]
-  );
-  const [dueDays, setDueDays] = useState(14);
-  const [meta, setMeta] = useState({
-    event_name: '',
+
+  const selectedLead = lockedLead ? lead : (leads || []).find((l) => l.id === selectedLeadId);
+
+  const [invoiceItems, setInvoiceItems] = useState<Item[]>(defaultItemsFor(lead));
+  const [invoiceDueDays, setInvoiceDueDays] = useState(14);
+  const [invoicePdfMeta, setInvoicePdfMeta] = useState({
+    event_name: lead?.event_slug || '',
     destination: '',
-    hotel_description: '',
-    ticket_details: [
-      'Inkl. Zutritt zum VIP-Bereich mit Catering & Getränken',
-      'Inkl. Faltin Travel Lanyard',
-      'Inkl. detaillierte Reiseinformation & Schweizer Reisegarantie',
-    ].join('\n'),
+    hotel_description: lead?.package_title || '',
+    ticket_details: DEFAULT_TICKET_DETAILS,
     thank_you_text: '',
   });
-  const [showMeta, setShowMeta] = useState(true);
-  const setM = (k: keyof typeof meta, v: string) => setMeta((m) => ({ ...m, [k]: v }));
+
+  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Wenn im Finanzen-Modus ein anderer Lead gewählt wird → Positionen/Meta vorbefüllen
+  const applyLeadPrefill = (l?: InvoiceLead) => {
+    setInvoiceItems(defaultItemsFor(l));
+    setInvoicePdfMeta((prev) => ({
+      ...prev,
+      event_name: l?.event_slug || '',
+      hotel_description: l?.package_title || '',
+    }));
+  };
+
+  const updateInvoiceItem = (index: number, field: keyof Item, value: string | number) => {
+    setInvoiceItems((prev) => prev.map((it, i) => (i === index ? { ...it, [field]: value } : it)));
+  };
+  const removeInvoiceItem = (index: number) => setInvoiceItems((prev) => prev.filter((_, i) => i !== index));
+  const addInvoiceItem = () => setInvoiceItems((prev) => [...prev, { description: '', quantity: 1, unit_price: 0 }]);
 
   const addExtraNight = (position: 'before' | 'after') => {
     const timing = position === 'before' ? 'VORAB' : 'VERLÄNGERUNG';
-    setItems((prev) => {
-      const idx = prev.findIndex((it) => it.description.toLowerCase().includes('zusatznacht') && it.description.toLowerCase().includes(timing.toLowerCase()));
+    setInvoiceItems((prev) => {
+      const idx = prev.findIndex((it) =>
+        it.description.toLowerCase().includes('zusatznacht') && it.description.toLowerCase().includes(timing.toLowerCase()));
       if (idx !== -1) return prev.map((it, i) => (i === idx ? { ...it, quantity: it.quantity + 1 } : it));
       return [...prev, { description: `Zusatznacht ${timing}\nDoppelzimmer mit Frühstück`, quantity: 1, unit_price: 0 }];
     });
   };
-  const [creating, setCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const total = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
-  const setItem = (idx: number, patch: Partial<Item>) => setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+  const invoiceTotal = invoiceItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
 
-  const create = async () => {
+  const createInvoice = async () => {
     setError(null);
-    if (items.some((i) => !i.description.trim() || i.unit_price <= 0)) { setError('Bitte alle Positionen ausfüllen (Beschreibung + Preis).'); return; }
+
+    if (invoiceItems.length === 0) { setError('Bitte mindestens eine Position hinzufügen.'); return; }
+    if (invoiceItems.some((i) => !i.description.trim())) { setError('Alle Positionen müssen eine Beschreibung haben.'); return; }
+    if (invoiceItems.some((i) => i.unit_price <= 0 || i.quantity <= 0)) { setError('Preis und Anzahl müssen größer als 0 sein.'); return; }
+
     const bookingId = lockedLead ? lead!.id : (mode === 'lead' ? selectedLeadId : null);
     if (mode === 'lead' && !bookingId) { setError('Bitte einen Lead auswählen.'); return; }
     if (mode === 'manual' && !manual.lastName.trim() && !manual.firstName.trim()) { setError('Bitte mindestens einen Kundennamen angeben.'); return; }
 
-    const metaFilled = Object.entries(meta).filter(([, v]) => v.trim());
-    const notesPayload = metaFilled.length ? JSON.stringify(Object.fromEntries(metaFilled)) : '';
+    const items = invoiceItems.map((item) => ({
+      description: item.description,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      total_price: item.quantity * item.unit_price,
+    }));
 
-    setCreating(true);
+    const notesJson = JSON.stringify({
+      event_name: invoicePdfMeta.event_name,
+      destination: invoicePdfMeta.destination,
+      hotel_description: invoicePdfMeta.hotel_description,
+      ticket_details: invoicePdfMeta.ticket_details,
+      thank_you_text: invoicePdfMeta.thank_you_text,
+    });
+
+    setIsCreatingInvoice(true);
     try {
       const res = await fetch('/api/invoices', {
         method: 'POST',
@@ -107,9 +143,9 @@ export default function InvoiceEditor({
         body: JSON.stringify({
           bookingId,
           manualCustomer: mode === 'manual' && !lockedLead ? manual : undefined,
-          items: items.map((i) => ({ ...i, total_price: i.quantity * i.unit_price })),
-          dueInDays: dueDays,
-          notes: notesPayload,
+          items,
+          dueInDays: invoiceDueDays,
+          notes: notesJson,
         }),
       });
       const data = await res.json();
@@ -117,109 +153,203 @@ export default function InvoiceEditor({
     } catch {
       setError('Verbindungsfehler.');
     } finally {
-      setCreating(false);
+      setIsCreatingInvoice(false);
     }
   };
 
   return (
-    <div className="rounded-xl p-4 space-y-3" style={{ background: '#f0f7ff', border: '1.5px solid #1a6fa820' }}>
-      <div className="flex items-center justify-between">
-        <span className="font-bold text-sm" style={{ color: '#143047' }}>Neue Rechnung</span>
-        {onCancel && <button onClick={onCancel} aria-label="Schließen"><X className="w-4 h-4 text-gray-400" /></button>}
-      </div>
-
-      {/* Empfänger: nur wenn nicht an festen Lead gebunden (CRM) */}
+    <SectionCard
+      title="Neue Rechnung erstellen"
+      actions={onCancel ? (
+        <Button size="sm" variant="ghost" onClick={onCancel}>
+          <X className="h-4 w-4" />
+        </Button>
+      ) : undefined}
+    >
+      {/* Empfänger: nur wenn nicht an festen Lead gebunden (Finanzen) */}
       {!lockedLead && (
-        <div className="space-y-2">
+        <div className="mb-5 space-y-3">
           <div className="flex gap-2">
             {(['lead', 'manual'] as const).map((m) => (
-              <button key={m} type="button" onClick={() => setMode(m)}
-                className="flex-1 rounded-lg px-3 py-1.5 text-xs font-bold transition"
-                style={{ background: mode === m ? '#143047' : '#fff', color: mode === m ? '#fff' : '#143047', border: '1px solid #d8dde4' }}>
+              <Button
+                key={m}
+                size="sm"
+                variant={mode === m ? 'primary' : 'secondary'}
+                onClick={() => setMode(m)}
+              >
                 {m === 'lead' ? 'Bestehender Lead' : 'Individuelle Buchung'}
-              </button>
+              </Button>
             ))}
           </div>
 
           {mode === 'lead' ? (
-            <select value={selectedLeadId} onChange={(e) => setSelectedLeadId(e.target.value)} className={cls} style={bd}>
-              <option value="">– Lead wählen –</option>
-              {(leads || []).map((l) => <option key={l.id} value={l.id}>{leadLabel(l)}</option>)}
-            </select>
+            <Field label="Lead / Buchung">
+              <SelectInput
+                value={selectedLeadId}
+                onChange={(e) => { setSelectedLeadId(e.target.value); applyLeadPrefill((leads || []).find((l) => l.id === e.target.value)); }}
+              >
+                <option value="">– Lead wählen –</option>
+                {(leads || []).map((l) => <option key={l.id} value={l.id}>{leadLabel(l)}</option>)}
+              </SelectInput>
+            </Field>
           ) : (
-            <div className="space-y-2 rounded-lg bg-white p-3" style={bd}>
-              <div className="grid grid-cols-2 gap-2">
-                <input placeholder="Vorname" value={manual.firstName} onChange={(e) => setManual((m) => ({ ...m, firstName: e.target.value }))} className={cls} style={bd} />
-                <input placeholder="Nachname" value={manual.lastName} onChange={(e) => setManual((m) => ({ ...m, lastName: e.target.value }))} className={cls} style={bd} />
+            <div className="grid grid-cols-2 gap-3">
+              <InputField label="Vorname" value={manual.firstName} onChange={(e) => setManual((m) => ({ ...m, firstName: e.target.value }))} />
+              <InputField label="Nachname" value={manual.lastName} onChange={(e) => setManual((m) => ({ ...m, lastName: e.target.value }))} />
+              <InputField label="E-Mail" type="email" value={manual.email} onChange={(e) => setManual((m) => ({ ...m, email: e.target.value }))} />
+              <InputField label="Telefon" value={manual.phone} onChange={(e) => setManual((m) => ({ ...m, phone: e.target.value }))} />
+              <div className="col-span-2">
+                <InputField label="Bezeichnung der Buchung" value={manual.packageTitle} onChange={(e) => setManual((m) => ({ ...m, packageTitle: e.target.value }))} placeholder="z.B. Individuelle Reise" />
               </div>
-              <input placeholder="E-Mail" type="email" value={manual.email} onChange={(e) => setManual((m) => ({ ...m, email: e.target.value }))} className={cls} style={bd} />
-              <input placeholder="Telefon" value={manual.phone} onChange={(e) => setManual((m) => ({ ...m, phone: e.target.value }))} className={cls} style={bd} />
-              <input placeholder="Bezeichnung der Buchung (optional)" value={manual.packageTitle} onChange={(e) => setManual((m) => ({ ...m, packageTitle: e.target.value }))} className={cls} style={bd} />
             </div>
           )}
         </div>
       )}
 
-      {/* Positionen */}
-      {items.map((item, idx) => (
-        <div key={idx} className="bg-white rounded-lg p-3 space-y-2" style={bd}>
-          <textarea value={item.description} onChange={(e) => setItem(idx, { description: e.target.value })} rows={2} placeholder="Beschreibung" className={`${cls} resize-none`} style={bd} />
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-xs text-gray-500">Anzahl</label>
-              <input type="number" value={item.quantity} onChange={(e) => setItem(idx, { quantity: parseInt(e.target.value) || 1 })} min="1" className={cls} style={bd} />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500">Einzelpreis (€)</label>
-              <input type="number" value={item.unit_price} onChange={(e) => setItem(idx, { unit_price: parseFloat(e.target.value) || 0 })} min="0" step="0.01" className={cls} style={bd} />
-            </div>
+      {/* Invoice Items */}
+      <div className="mb-4 space-y-3">
+        <Field label="Rechnungspositionen">
+          <div className="space-y-3">
+            {invoiceItems.map((item, index) => (
+              <div key={index} className="grid grid-cols-12 items-start gap-2 rounded-xl border border-gray-200 p-3">
+                <div className="col-span-6">
+                  <TextArea
+                    value={item.description}
+                    onChange={(e) => updateInvoiceItem(index, 'description', e.target.value)}
+                    placeholder="Beschreibung (z.B. Eventticket Package)"
+                    rows={2}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <TextInput
+                    type="number"
+                    value={item.quantity}
+                    onChange={(e) => updateInvoiceItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                    placeholder="Anzahl"
+                    min="1"
+                  />
+                </div>
+                <div className="col-span-3">
+                  <TextInput
+                    type="number"
+                    value={item.unit_price}
+                    onChange={(e) => updateInvoiceItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                    placeholder="Preis (CHF)"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div className="col-span-1 flex items-center justify-center">
+                  {invoiceItems.length > 1 && (
+                    <Button size="sm" variant="danger" onClick={() => removeInvoiceItem(index)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                <div className="col-span-12 text-right text-sm font-semibold text-gray-700">
+                  Gesamt: CHF {(item.quantity * item.unit_price).toFixed(2)}
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="text-xs text-right font-semibold text-gray-700">Gesamt: {fmt(item.quantity * item.unit_price)}</div>
-          {items.length > 1 && (
-            <button onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))} className="text-xs text-red-500 hover:text-red-700">Position entfernen</button>
-          )}
+        </Field>
+
+        <div className="grid grid-cols-3 gap-3">
+          <Button variant="secondary" size="sm" onClick={() => addExtraNight('before')}>
+            🏨 ← Nacht DAVOR
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => addExtraNight('after')}>
+            🏨 Nacht DANACH →
+          </Button>
+          <Button variant="secondary" size="sm" onClick={addInvoiceItem}>
+            <Plus className="h-4 w-4" />
+            Andere Position
+          </Button>
         </div>
-      ))}
-
-      <button onClick={() => setItems((prev) => [...prev, { description: '', quantity: 1, unit_price: 0 }])}
-        className="w-full py-2 rounded-lg text-sm border-2 border-dashed text-gray-500 hover:bg-white transition flex items-center justify-center gap-1" style={bd}>
-        <Plus className="w-3 h-3" /> Position hinzufügen
-      </button>
-
-      <div className="grid grid-cols-2 gap-2">
-        <button type="button" onClick={() => addExtraNight('before')} className="rounded-lg border px-3 py-2 text-xs font-semibold text-gray-600 transition hover:bg-white" style={bd}>+ Zusatznacht vorab</button>
-        <button type="button" onClick={() => addExtraNight('after')} className="rounded-lg border px-3 py-2 text-xs font-semibold text-gray-600 transition hover:bg-white" style={bd}>+ Zusatznacht Verlängerung</button>
       </div>
 
-      <div>
-        <label className="text-xs text-gray-500">Zahlungsziel (Tage)</label>
-        <input type="number" value={dueDays} onChange={(e) => setDueDays(parseInt(e.target.value) || 14)} min="1" className={cls} style={bd} />
+      {/* Due Date */}
+      <Field label="Fälligkeitsfrist (Tage)" className="mb-4">
+        <SelectInput value={invoiceDueDays} onChange={(e) => setInvoiceDueDays(parseInt(e.target.value))}>
+          <option value="7">7 Tage</option>
+          <option value="14">14 Tage (Standard)</option>
+          <option value="21">21 Tage</option>
+          <option value="30">30 Tage</option>
+        </SelectInput>
+      </Field>
+
+      {/* PDF Meta Fields */}
+      <details className="mb-4 overflow-hidden rounded-xl border border-gray-200">
+        <summary className="flex cursor-pointer select-none items-center gap-2 px-4 py-3 text-sm font-semibold" style={{ color: '#143047' }}>
+          📄 PDF-Felder bearbeiten <span className="font-normal text-gray-500">(Veranstaltung, Destination, Details…)</span>
+        </summary>
+        <div className="space-y-3 border-t border-gray-200 px-4 pb-4 pt-3">
+          <div className="grid grid-cols-2 gap-3">
+            <InputField
+              label="Veranstaltung"
+              value={invoicePdfMeta.event_name}
+              onChange={(e) => setInvoicePdfMeta((p) => ({ ...p, event_name: e.target.value }))}
+              placeholder="z.B. French Open 2027"
+            />
+            <InputField
+              label="Destination"
+              value={invoicePdfMeta.destination}
+              onChange={(e) => setInvoicePdfMeta((p) => ({ ...p, destination: e.target.value }))}
+              placeholder="z.B. Frankreich – Paris"
+            />
+          </div>
+          <InputField
+            label="Hotel / Package-Beschreibung"
+            value={invoicePdfMeta.hotel_description}
+            onChange={(e) => setInvoicePdfMeta((p) => ({ ...p, hotel_description: e.target.value }))}
+            placeholder="z.B. 5* Hotel Roland Garros"
+          />
+          <TextAreaField
+            label="Leistungen / Inklusivleistungen (eine pro Zeile)"
+            hint="Diese Punkte erscheinen als Liste auf der Rechnung"
+            value={invoicePdfMeta.ticket_details}
+            onChange={(e) => setInvoicePdfMeta((p) => ({ ...p, ticket_details: e.target.value }))}
+            rows={5}
+            placeholder="Inkl. VIP-Zugang&#10;Inkl. Catering & Getränke&#10;Inkl. Reiseinformation"
+            className="font-mono"
+          />
+          <InputField
+            label="Dankes-Text (Seite 2)"
+            value={invoicePdfMeta.thank_you_text}
+            onChange={(e) => setInvoicePdfMeta((p) => ({ ...p, thank_you_text: e.target.value }))}
+            placeholder="Leer = Standard-Text aus Einstellungen"
+          />
+        </div>
+      </details>
+
+      {/* Total Preview */}
+      <div className="mb-4 rounded-xl border-2 p-4" style={{ borderColor: '#143047' }}>
+        <div className="flex justify-between text-lg font-bold">
+          <span style={{ color: '#143047' }}>Gesamtbetrag:</span>
+          <span style={{ color: '#d9531e' }}>CHF {invoiceTotal.toFixed(2)}</span>
+        </div>
       </div>
 
-      <button type="button" onClick={() => setShowMeta((v) => !v)} className="text-xs font-semibold" style={{ color: '#18395a' }}>
-        {showMeta ? '▾' : '▸'} Rechnungs-Texte individualisieren (optional)
-      </button>
-      {showMeta && (
-        <div className="space-y-2 rounded-lg bg-white p-3" style={bd}>
-          <p className="text-[11px] text-gray-400">Überschreiben die automatischen Werte auf der PDF – ideal für individuelle Buchungen.</p>
-          <input placeholder="Event-/Reise-Name" value={meta.event_name} onChange={(e) => setM('event_name', e.target.value)} className={cls} style={bd} />
-          <input placeholder="Reiseziel / Destination" value={meta.destination} onChange={(e) => setM('destination', e.target.value)} className={cls} style={bd} />
-          <input placeholder="Hotel-Beschreibung" value={meta.hotel_description} onChange={(e) => setM('hotel_description', e.target.value)} className={cls} style={bd} />
-          <textarea rows={2} placeholder="Ticket-Details" value={meta.ticket_details} onChange={(e) => setM('ticket_details', e.target.value)} className={`${cls} resize-none`} style={bd} />
-          <textarea rows={2} placeholder="Danke-Text (unten auf der Rechnung)" value={meta.thank_you_text} onChange={(e) => setM('thank_you_text', e.target.value)} className={`${cls} resize-none`} style={bd} />
-        </div>
+      {error && (
+        <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
       )}
 
-      <div className="flex items-center justify-between text-sm font-bold pt-1" style={{ color: '#143047' }}>
-        <span>Rechnungssumme</span><span>{fmt(total)}</span>
+      {/* Actions */}
+      <div className="flex gap-3">
+        {onCancel && (
+          <Button variant="secondary" onClick={onCancel} disabled={isCreatingInvoice} className="flex-1">
+            Abbrechen
+          </Button>
+        )}
+        <Button variant="primary" onClick={createInvoice} disabled={isCreatingInvoice} className="flex-1">
+          {isCreatingInvoice ? (
+            <>
+              <Spinner className="h-4 w-4" />
+              Erstelle Rechnung...
+            </>
+          ) : 'Rechnung erstellen'}
+        </Button>
       </div>
-
-      {error && <p className="text-red-600 text-sm bg-red-50 rounded-lg px-3 py-2 border border-red-200">{error}</p>}
-
-      <button onClick={create} disabled={creating}
-        className="w-full py-2.5 rounded-lg text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-60" style={{ background: '#143047' }}>
-        {creating ? 'Wird erstellt…' : '📄 Rechnung erstellen'}
-      </button>
-    </div>
+    </SectionCard>
   );
 }

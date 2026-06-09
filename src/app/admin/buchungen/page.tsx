@@ -6,16 +6,14 @@ import {
   Download, Search, Mail, Phone, Users, Bed, DollarSign, Eye, Plus, Receipt, X, Inbox,
 } from 'lucide-react';
 import AdminShell from '@/components/admin/AdminShell';
+import InvoiceEditor, { InvoiceLead } from '@/components/admin/InvoiceEditor';
 import {
   Card,
   SectionCard,
   PageHeader,
   Button,
-  Field,
   TextInput,
-  TextArea,
   SelectInput,
-  InputField,
   TextAreaField,
   Badge,
   StatCard,
@@ -57,22 +55,8 @@ export default function AdminDashboard() {
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [invoiceBookingId, setInvoiceBookingId] = useState<string | null>(null);
   const [bookingInvoices, setBookingInvoices] = useState<Invoice[]>([]);
-  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
   const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
   const [showCreateInvoiceForm, setShowCreateInvoiceForm] = useState(false);
-  const [invoiceItems, setInvoiceItems] = useState<Array<{description: string; quantity: number; unit_price: number}>>([]);
-  const [invoiceDueDays, setInvoiceDueDays] = useState(14);
-  const [invoicePdfMeta, setInvoicePdfMeta] = useState({
-    event_name: '',
-    destination: '',
-    hotel_description: '',
-    ticket_details: [
-      'Inkl. Zutritt zum VIP-Bereich mit Catering & Getränken',
-      'Inkl. Faltin Travel Lanyard',
-      'Inkl. detaillierte Reiseinformation & Schweizer Reisegarantie',
-    ].join('\n'),
-    thank_you_text: '',
-  });
 
   useEffect(() => {
     fetchBookings();
@@ -141,24 +125,6 @@ export default function AdminDashboard() {
     setShowInvoiceModal(true);
     setShowCreateInvoiceForm(false);
 
-    // Initialize default invoice items from booking
-    const booking = bookings.find(b => b.id === bookingId);
-    if (booking) {
-      setInvoiceItems([
-        {
-          description: `${booking.event_slug ? booking.event_slug + ' - ' : ''}${booking.package_title}\n${booking.number_of_persons} Personen, ${booking.double_rooms} DZ, ${booking.single_rooms} EZ`,
-          quantity: 1,
-          unit_price: booking.total_price
-        }
-      ]);
-      // Pre-fill PDF meta from booking data
-      setInvoicePdfMeta(prev => ({
-        ...prev,
-        event_name: booking.event_slug || '',
-        hotel_description: booking.package_title || '',
-      }));
-    }
-
     // Fetch existing invoices
     try {
       const response = await fetch(`/api/invoices?bookingId=${bookingId}`);
@@ -173,108 +139,6 @@ export default function AdminDashboard() {
     } finally {
       setIsLoadingInvoices(false);
     }
-  };
-
-  const createInvoice = async () => {
-    if (!invoiceBookingId) return;
-
-    // Validate items
-    if (invoiceItems.length === 0) {
-      alert('⚠️ Bitte mindestens eine Position hinzufügen!');
-      return;
-    }
-
-    const hasEmptyDescription = invoiceItems.some(item => !item.description.trim());
-    if (hasEmptyDescription) {
-      alert('⚠️ Alle Positionen müssen eine Beschreibung haben!');
-      return;
-    }
-
-    const hasInvalidPrice = invoiceItems.some(item => item.unit_price <= 0 || item.quantity <= 0);
-    if (hasInvalidPrice) {
-      alert('⚠️ Preis und Anzahl müssen größer als 0 sein!');
-      return;
-    }
-
-    setIsCreatingInvoice(true);
-
-    const items = invoiceItems.map(item => ({
-      description: item.description,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      total_price: item.quantity * item.unit_price
-    }));
-
-    // Build notes JSON with PDF meta fields
-    const notesJson = JSON.stringify({
-      event_name: invoicePdfMeta.event_name,
-      destination: invoicePdfMeta.destination,
-      hotel_description: invoicePdfMeta.hotel_description,
-      ticket_details: invoicePdfMeta.ticket_details,
-      thank_you_text: invoicePdfMeta.thank_you_text,
-    });
-
-    try {
-      const response = await fetch('/api/invoices', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bookingId: invoiceBookingId,
-          items,
-          dueInDays: invoiceDueDays,
-          notes: notesJson,
-        })
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        alert('✅ Rechnung erfolgreich erstellt!');
-        setShowCreateInvoiceForm(false);
-        openInvoiceModal(invoiceBookingId); // Refresh invoices
-      } else {
-        alert('❌ Fehler: ' + result.error);
-      }
-    } catch (error) {
-      alert('❌ Fehler beim Erstellen: ' + (error as Error).message);
-    } finally {
-      setIsCreatingInvoice(false);
-    }
-  };
-
-  const addInvoiceItem = () => {
-    setInvoiceItems([...invoiceItems, { description: '', quantity: 1, unit_price: 0 }]);
-  };
-
-  const addExtraNight = (position: 'before' | 'after') => {
-    const timing = position === 'before' ? 'VORAB' : 'VERLÄNGERUNG';
-    const existingIndex = invoiceItems.findIndex(item =>
-      item.description.toLowerCase().includes('zusatznacht') &&
-      item.description.toLowerCase().includes(timing.toLowerCase())
-    );
-    if (existingIndex !== -1) {
-      const updated = [...invoiceItems];
-      updated[existingIndex] = {
-        ...updated[existingIndex],
-        quantity: updated[existingIndex].quantity + 1,
-      };
-      setInvoiceItems(updated);
-    } else {
-      setInvoiceItems([...invoiceItems, {
-        description: `Zusatznacht ${timing}\nDoppelzimmer mit Frühstück`,
-        quantity: 1,
-        unit_price: 0
-      }]);
-    }
-  };
-
-  const removeInvoiceItem = (index: number) => {
-    setInvoiceItems(invoiceItems.filter((_, i) => i !== index));
-  };
-
-  const updateInvoiceItem = (index: number, field: string, value: any) => {
-    const updated = [...invoiceItems];
-    updated[index] = { ...updated[index], [field]: value };
-    setInvoiceItems(updated);
   };
 
   const downloadInvoicePDF = (invoiceId: string, invoiceNumber: string) => {
@@ -409,7 +273,7 @@ export default function AdminDashboard() {
     booked: bookings.filter(b => b.status === 'booked').length,
   };
 
-  const invoiceTotal = invoiceItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+  const invoiceBooking = bookings.find((b) => b.id === invoiceBookingId);
 
   return (
     <AdminShell title="Buchungsverwaltung">
@@ -679,168 +543,13 @@ export default function AdminDashboard() {
                   </Button>
                 </div>
               ) : (
-                <SectionCard
-                  title="Neue Rechnung erstellen"
-                  actions={
-                    <Button size="sm" variant="ghost" onClick={() => setShowCreateInvoiceForm(false)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  }
-                >
-                  {/* Invoice Items */}
-                  <div className="mb-4 space-y-3">
-                    <Field label="Rechnungspositionen">
-                      <div className="space-y-3">
-                        {invoiceItems.map((item, index) => (
-                          <div key={index} className="grid grid-cols-12 items-start gap-2 rounded-xl border border-gray-200 p-3">
-                            <div className="col-span-6">
-                              <TextArea
-                                value={item.description}
-                                onChange={(e) => updateInvoiceItem(index, 'description', e.target.value)}
-                                placeholder="Beschreibung (z.B. Eventticket Package)"
-                                rows={2}
-                              />
-                            </div>
-                            <div className="col-span-2">
-                              <TextInput
-                                type="number"
-                                value={item.quantity}
-                                onChange={(e) => updateInvoiceItem(index, 'quantity', parseInt(e.target.value) || 1)}
-                                placeholder="Anzahl"
-                                min="1"
-                              />
-                            </div>
-                            <div className="col-span-3">
-                              <TextInput
-                                type="number"
-                                value={item.unit_price}
-                                onChange={(e) => updateInvoiceItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
-                                placeholder="Preis (CHF)"
-                                min="0"
-                                step="0.01"
-                              />
-                            </div>
-                            <div className="col-span-1 flex items-center justify-center">
-                              {invoiceItems.length > 1 && (
-                                <Button size="sm" variant="danger" onClick={() => removeInvoiceItem(index)}>
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                            <div className="col-span-12 text-right text-sm font-semibold text-gray-700">
-                              Gesamt: CHF {(item.quantity * item.unit_price).toFixed(2)}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </Field>
-
-                    <div className="grid grid-cols-3 gap-3">
-                      <Button variant="secondary" size="sm" onClick={() => addExtraNight('before')}>
-                        🏨 ← Nacht DAVOR
-                      </Button>
-                      <Button variant="secondary" size="sm" onClick={() => addExtraNight('after')}>
-                        🏨 Nacht DANACH →
-                      </Button>
-                      <Button variant="secondary" size="sm" onClick={addInvoiceItem}>
-                        <Plus className="h-4 w-4" />
-                        Andere Position
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Due Date */}
-                  <Field label="Fälligkeitsfrist (Tage)" className="mb-4">
-                    <SelectInput
-                      value={invoiceDueDays}
-                      onChange={(e) => setInvoiceDueDays(parseInt(e.target.value))}
-                    >
-                      <option value="7">7 Tage</option>
-                      <option value="14">14 Tage (Standard)</option>
-                      <option value="21">21 Tage</option>
-                      <option value="30">30 Tage</option>
-                    </SelectInput>
-                  </Field>
-
-                  {/* PDF Meta Fields */}
-                  <details className="mb-4 overflow-hidden rounded-xl border border-gray-200">
-                    <summary className="flex cursor-pointer select-none items-center gap-2 px-4 py-3 text-sm font-semibold" style={{ color: '#143047' }}>
-                      📄 PDF-Felder bearbeiten <span className="font-normal text-gray-500">(Veranstaltung, Destination, Details…)</span>
-                    </summary>
-                    <div className="space-y-3 border-t border-gray-200 px-4 pb-4 pt-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <InputField
-                          label="Veranstaltung"
-                          value={invoicePdfMeta.event_name}
-                          onChange={e => setInvoicePdfMeta(p => ({ ...p, event_name: e.target.value }))}
-                          placeholder="z.B. French Open 2027"
-                        />
-                        <InputField
-                          label="Destination"
-                          value={invoicePdfMeta.destination}
-                          onChange={e => setInvoicePdfMeta(p => ({ ...p, destination: e.target.value }))}
-                          placeholder="z.B. Frankreich – Paris"
-                        />
-                      </div>
-                      <InputField
-                        label="Hotel / Package-Beschreibung"
-                        value={invoicePdfMeta.hotel_description}
-                        onChange={e => setInvoicePdfMeta(p => ({ ...p, hotel_description: e.target.value }))}
-                        placeholder="z.B. 5* Hotel Roland Garros"
-                      />
-                      <TextAreaField
-                        label="Leistungen / Inklusivleistungen (eine pro Zeile)"
-                        hint="Diese Punkte erscheinen als Liste auf der Rechnung"
-                        value={invoicePdfMeta.ticket_details}
-                        onChange={e => setInvoicePdfMeta(p => ({ ...p, ticket_details: e.target.value }))}
-                        rows={5}
-                        placeholder="Inkl. VIP-Zugang&#10;Inkl. Catering & Getränke&#10;Inkl. Reiseinformation"
-                        className="font-mono"
-                      />
-                      <InputField
-                        label="Dankes-Text (Seite 2)"
-                        value={invoicePdfMeta.thank_you_text}
-                        onChange={e => setInvoicePdfMeta(p => ({ ...p, thank_you_text: e.target.value }))}
-                        placeholder="Leer = Standard-Text aus Einstellungen"
-                      />
-                    </div>
-                  </details>
-
-                  {/* Total Preview */}
-                  <div className="mb-4 rounded-xl border-2 p-4" style={{ borderColor: '#143047' }}>
-                    <div className="flex justify-between text-lg font-bold">
-                      <span style={{ color: '#143047' }}>Gesamtbetrag:</span>
-                      <span style={{ color: '#d9531e' }}>
-                        CHF {invoiceTotal.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-3">
-                    <Button
-                      variant="secondary"
-                      onClick={() => setShowCreateInvoiceForm(false)}
-                      disabled={isCreatingInvoice}
-                      className="flex-1"
-                    >
-                      Abbrechen
-                    </Button>
-                    <Button
-                      variant="primary"
-                      onClick={createInvoice}
-                      disabled={isCreatingInvoice}
-                      className="flex-1"
-                    >
-                      {isCreatingInvoice ? (
-                        <>
-                          <Spinner className="h-4 w-4" />
-                          Erstelle Rechnung...
-                        </>
-                      ) : 'Rechnung erstellen'}
-                    </Button>
-                  </div>
-                </SectionCard>
+                invoiceBooking && (
+                  <InvoiceEditor
+                    lead={invoiceBooking as unknown as InvoiceLead}
+                    onCreated={() => { setShowCreateInvoiceForm(false); if (invoiceBookingId) openInvoiceModal(invoiceBookingId); }}
+                    onCancel={() => setShowCreateInvoiceForm(false)}
+                  />
+                )
               )}
 
               {/* Loading State */}
