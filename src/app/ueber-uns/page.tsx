@@ -162,6 +162,51 @@ export default function UeberUnsPage() {
         </div>
       </section>
 
+      {/* ── PARTNER & VERANTWORTUNG ── */}
+      <section className="bg-white px-4 py-14">
+        <div className="container mx-auto grid max-w-6xl gap-5 md:grid-cols-2">
+          {/* Ryder Cup */}
+          <Link
+            href="/ryder-cup-2027"
+            className="group flex items-center gap-5 rounded-2xl p-6 transition hover:-translate-y-1"
+            style={{ border: '1px solid #e5e8ed', background: '#f8fafc', boxShadow: '0 6px 18px rgba(20,48,71,0.05)' }}
+          >
+            <div className="shrink-0 rounded-xl bg-white p-2.5 shadow" style={{ border: '1px solid #e5e8ed' }}>
+              <Image src="/RC_MatchShield_2027_RGB (1).svg" alt="Ryder Cup 2027 Authorized Distributor" width={64} height={64} />
+            </div>
+            <div>
+              <p className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em]" style={{ background: '#eef3fb', color: '#18395a' }}>
+                Authorized Distributor
+              </p>
+              <h3 className="mt-2 text-lg font-bold" style={{ color: '#143047' }}>Ryder Cup 2027</h3>
+              <p className="mt-1 text-sm leading-relaxed text-gray-600">
+                Offizieller Vertriebspartner für Ryder Cup 2027 Reisepakete. <span className="font-semibold group-hover:underline" style={{ color: '#d9531e' }}>Mehr erfahren →</span>
+              </p>
+            </div>
+          </Link>
+
+          {/* Verhaltenskodex */}
+          <Link
+            href="/verhaltenskodex"
+            className="group flex items-center gap-5 rounded-2xl p-6 transition hover:-translate-y-1"
+            style={{ border: '1px solid #e5e8ed', background: '#f8fafc', boxShadow: '0 6px 18px rgba(20,48,71,0.05)' }}
+          >
+            <div className="flex h-[84px] w-[84px] shrink-0 items-center justify-center rounded-xl text-white shadow" style={{ background: 'linear-gradient(135deg,#143047,#1f4c75)' }}>
+              <ShieldCheck className="h-9 w-9" />
+            </div>
+            <div>
+              <p className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em]" style={{ background: '#eef3fb', color: '#18395a' }}>
+                Code of Conduct
+              </p>
+              <h3 className="mt-2 text-lg font-bold" style={{ color: '#143047' }}>Unser Verhaltenskodex</h3>
+              <p className="mt-1 text-sm leading-relaxed text-gray-600">
+                Transparenz, faire Preise, offizielle Tickets. <span className="font-semibold group-hover:underline" style={{ color: '#d9531e' }}>Mehr erfahren →</span>
+              </p>
+            </div>
+          </Link>
+        </div>
+      </section>
+
       {/* ── KUNDENSTIMMEN ── */}
       <section className="bg-white px-4 py-16">
         <div className="container mx-auto max-w-5xl text-center">

@@ -18,9 +18,10 @@ export type MegaItem = {
   featured?: { title: string; desc: string; href: string; image: string };
 };
 export type LinkItem = { type: 'link'; label: string; href: string; external?: boolean };
+export type DropdownItem = { type: 'dropdown'; label: string; href: string; key: string; items: NavLink[] };
 export type CalPreview = { name: string; href: string; category: string; dateLabel: string; startISO: string };
 export type CalendarItem = { type: 'calendar'; label: string; href: string; events: CalPreview[] };
-export type NavItem = MegaItem | LinkItem | CalendarItem;
+export type NavItem = MegaItem | LinkItem | DropdownItem | CalendarItem;
 
 function parseDate(s?: string | null): Date | null {
   const t = (s || '').trim();
@@ -127,7 +128,17 @@ export async function buildNavMenu(): Promise<NavItem[]> {
   if (sportCols.length) menu.push({ type: 'mega', label: 'Sportevents', key: 'sport', columns: sportCols });
   if (kulturCols.length) menu.push({ type: 'mega', label: 'Kulturevents', key: 'kultur', columns: kulturCols });
   menu.push({ type: 'link', label: 'Incentive', href: 'https://incentive-agentur.ch/', external: true });
-  menu.push({ type: 'link', label: 'Über uns', href: '/ueber-uns' });
+  menu.push({
+    type: 'dropdown',
+    label: 'Über uns',
+    href: '/ueber-uns',
+    key: 'about',
+    items: [
+      { label: 'Über Faltin Travel', href: '/ueber-uns', desc: 'Wer wir sind & wofür wir stehen' },
+      { label: 'Ryder Cup 2027 – Authorized Distributor', href: '/ryder-cup-2027', desc: 'Offizieller Vertriebspartner' },
+      { label: 'Verhaltenskodex', href: '/verhaltenskodex', desc: 'Unser Code of Conduct' },
+    ],
+  });
   menu.push({ type: 'link', label: 'Kontakt', href: '/kontakt' });
 
   // Featured-Event als Spotlight-Karte im passenden Mega-Menü (wie früher Super Bowl)

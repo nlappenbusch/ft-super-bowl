@@ -37,6 +37,14 @@ interface LinkItem {
   external?: boolean;
 }
 
+interface DropdownItem {
+  type: 'dropdown';
+  label: string;
+  href: string;
+  key: string;
+  items: NavLink[];
+}
+
 type CalPreview = { name: string; href: string; category: string; dateLabel: string; startISO: string };
 interface CalendarItem {
   type: 'calendar';
@@ -45,7 +53,7 @@ interface CalendarItem {
   events: CalPreview[];
 }
 
-export type NavItem = MegaItem | LinkItem | CalendarItem;
+export type NavItem = MegaItem | LinkItem | DropdownItem | CalendarItem;
 
 /* iconKey → Lucide-Icon (Menü-Daten sind serialisierbar, kommen via Prop) */
 const ICONS: Record<string, LucideIcon> = {
@@ -218,6 +226,35 @@ export default function NavBar({ menu }: { menu?: NavItem[] }) {
                 );
               }
 
+              if (item.type === 'dropdown') {
+                const expanded = mobileExpanded === item.key;
+                return (
+                  <div key={item.key}>
+                    <button
+                      onClick={() => setMobileExpanded(expanded ? null : item.key)}
+                      className="w-full flex items-center justify-between text-white text-sm font-semibold py-3 px-3 rounded-xl hover:bg-white/10 transition"
+                    >
+                      {item.label}
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${expanded ? '-rotate-180' : ''}`} />
+                    </button>
+                    {expanded && (
+                      <div className="ml-2 mt-1 mb-2 space-y-1 border-l border-white/10 pl-3">
+                        {item.items.map((link) => (
+                          <Link
+                            key={link.href}
+                            href={link.href}
+                            className="block text-sm text-white/75 hover:text-white hover:bg-white/10 rounded-lg px-2 py-2 transition"
+                            onClick={() => setMobileOpen(false)}
+                          >
+                            {link.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               if (item.type === 'calendar') {
                 return (
                   <Link
@@ -318,6 +355,57 @@ export default function NavBar({ menu }: { menu?: NavItem[] }) {
                         {item.label}
                         <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${active ? '-rotate-180' : ''}`} />
                       </button>
+                    </div>
+                  );
+                }
+
+                if (item.type === 'dropdown') {
+                  const active = openMenu === item.key;
+                  return (
+                    <div
+                      key={item.key}
+                      className="relative"
+                      onMouseEnter={() => openOnHover(item.key)}
+                      onMouseLeave={scheduleClose}
+                    >
+                      <Link
+                        href={item.href}
+                        className={`flex items-center gap-1 px-3 py-2 rounded-xl text-[14px] font-semibold transition-all duration-150 ${
+                          active
+                            ? 'bg-white/22 text-white shadow-[0_6px_16px_rgba(0,0,0,0.2)]'
+                            : 'text-white/92 hover:text-white hover:bg-white/16'
+                        }`}
+                      >
+                        {item.label}
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${active ? '-rotate-180' : ''}`} />
+                      </Link>
+                      <div
+                        className="absolute left-0 top-full z-50 w-72 pt-2"
+                        style={{
+                          opacity: active ? 1 : 0,
+                          pointerEvents: active ? 'auto' : 'none',
+                          transform: active ? 'translateY(0)' : 'translateY(-4px)',
+                          transition: 'opacity 160ms ease, transform 160ms ease',
+                        }}
+                        onMouseEnter={cancelClose}
+                        onMouseLeave={scheduleClose}
+                      >
+                        <div className="overflow-hidden rounded-2xl bg-white p-2 shadow-2xl" style={{ border: '1px solid rgba(0,0,0,0.08)' }}>
+                          {item.items.map((link) => (
+                            <Link
+                              key={link.href}
+                              href={link.href}
+                              onClick={() => setOpenMenu(null)}
+                              className="group flex flex-col rounded-xl px-3 py-2.5 transition-colors hover:bg-slate-50"
+                            >
+                              <span className="text-[15px] font-semibold text-slate-800 transition-colors group-hover:text-[#184a7b]">
+                                {link.label}
+                              </span>
+                              {link.desc && <span className="mt-0.5 text-xs text-slate-500">{link.desc}</span>}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   );
                 }

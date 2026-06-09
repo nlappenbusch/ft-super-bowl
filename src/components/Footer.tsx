@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import EkomiWidget from '@/components/EkomiWidget';
 
 const socialLinks = [
@@ -38,7 +39,10 @@ export default function Footer() {
   return (
     <footer style={{ backgroundColor: '#143047' }} className="text-gray-300 py-12 px-4">
       <div className="container mx-auto">
-        <div className="mb-10 rounded-2xl border border-white/16 bg-gradient-to-r from-white/[0.08] via-white/[0.04] to-white/[0.08] px-4 py-4 sm:px-6 sm:py-5">
+        <Link
+          href="/ryder-cup-2027"
+          className="group mb-10 block rounded-2xl border border-white/16 bg-gradient-to-r from-white/[0.08] via-white/[0.04] to-white/[0.08] px-4 py-4 transition hover:border-white/30 hover:from-white/[0.12] sm:px-6 sm:py-5"
+        >
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
             <div className="shrink-0 rounded-xl bg-white p-2 border border-slate-200 shadow-[0_4px_14px_rgba(0,0,0,0.22)]">
               <Image
@@ -58,10 +62,11 @@ export default function Footer() {
               </p>
               <p className="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed">
                 Faltin Travel ist stolz darauf, als Authorized Distributor offizieller Vertriebspartner für den Ryder Cup 2027 zu sein.
+                <span className="ml-1 font-semibold text-white/90 group-hover:underline">Mehr erfahren →</span>
               </p>
             </div>
           </div>
-        </div>
+        </Link>
 
         <div className="mb-10 -mx-4 sm:-mx-6 lg:-mx-8 bg-white py-8 sm:py-10">
           <div className="px-4 sm:px-6 lg:px-8">
@@ -109,11 +114,18 @@ export default function Footer() {
               <p>HrID: CH-020.3.037.547-2</p>
             </div>
             <p className="text-sm mt-4">
-              <a href="https://faltintravel.com/impressum/" className="hover:opacity-80 transition">Impressum</a>
+              <Link href="/ueber-uns" className="hover:opacity-80 transition">Über uns</Link>
               <span className="mx-1.5 text-gray-500">|</span>
-              <a href="https://faltintravel.com/allgemeine-geschaeftsbedingungen/" className="hover:opacity-80 transition">AGB</a>
+              <Link href="/verhaltenskodex" className="hover:opacity-80 transition">Verhaltenskodex</Link>
               <span className="mx-1.5 text-gray-500">|</span>
-              <a href="https://faltintravel.com/datenschutzerklaerung/" className="hover:opacity-80 transition">Datenschutzerklaerung</a>
+              <Link href="/ryder-cup-2027" className="hover:opacity-80 transition">Ryder Cup 2027</Link>
+            </p>
+            <p className="text-sm mt-2">
+              <Link href="/impressum" className="hover:opacity-80 transition">Impressum</Link>
+              <span className="mx-1.5 text-gray-500">|</span>
+              <Link href="/agb" className="hover:opacity-80 transition">AGB</Link>
+              <span className="mx-1.5 text-gray-500">|</span>
+              <Link href="/datenschutz" className="hover:opacity-80 transition">Datenschutzerklärung</Link>
             </p>
           </div>
           <div className="lg:items-end lg:text-right flex flex-col gap-3">

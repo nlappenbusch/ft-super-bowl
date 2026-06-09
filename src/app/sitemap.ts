@@ -13,9 +13,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: BASE, lastModified: now, changeFrequency: 'daily', priority: 1 },
     { url: `${BASE}/kalender`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
     { url: `${BASE}/ueber-uns`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${BASE}/ryder-cup-2027`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${BASE}/verhaltenskodex`, lastModified: now, changeFrequency: 'yearly', priority: 0.4 },
     { url: `${BASE}/kontakt`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${BASE}/booking`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${BASE}/agb`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
+    { url: `${BASE}/impressum`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${BASE}/datenschutz`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
   ];
 
   try {
