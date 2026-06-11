@@ -3979,7 +3979,8 @@
         ],
         "note": "Auf Wunsch zubuchbar."
       }
-    ]
+    ],
+    "spielplan_anfrage": false
   },
   {
     "id": "1fe839c5-fb1a-473a-b8df-53feb1300ad8",
@@ -4236,7 +4237,8 @@
         ],
         "note": "Auf Wunsch zubuchbar."
       }
-    ]
+    ],
+    "spielplan_anfrage": false
   },
   {
     "id": "e1576112-9676-41f5-9cd6-d12399a279b9",
@@ -4388,7 +4390,8 @@
         ],
         "note": "Auf Wunsch zubuchbar."
       }
-    ]
+    ],
+    "spielplan_anfrage": false
   },
   {
     "id": "71d7afe3-25c4-4839-a275-155e0ccdd6af",
@@ -6331,7 +6334,8 @@
         ],
         "note": "Auf Wunsch zubuchbar."
       }
-    ]
+    ],
+    "spielplan_anfrage": false
   },
   {
     "id": "97f0a67b-f49e-448a-82e7-b65d3d771cc2",
@@ -6703,7 +6707,8 @@
         ],
         "note": "Auf Wunsch zubuchbar."
       }
-    ]
+    ],
+    "spielplan_anfrage": false
   },
   {
     "id": "3ff55d42-d1c3-414f-b69e-f8b45a788ed8",
@@ -7081,7 +7086,8 @@
         ],
         "note": "Auf Wunsch zubuchbar."
       }
-    ]
+    ],
+    "spielplan_anfrage": false
   },
   {
     "id": "a5e72469-ab40-4ed1-9429-93e262cb1ca9",
@@ -7219,7 +7225,8 @@
         ],
         "note": "Auf Wunsch zubuchbar."
       }
-    ]
+    ],
+    "spielplan_anfrage": false
   },
   {
     "id": "bd670481-104c-4d23-b84a-4e8e7a0fdf83",
@@ -9517,7 +9524,8 @@
         ],
         "note": "Auf Wunsch zubuchbar."
       }
-    ]
+    ],
+    "spielplan_anfrage": false
   },
   {
     "id": "604c6e73-4d49-4831-ac44-6809efb0177b",
@@ -10062,7 +10070,8 @@
         ],
         "note": "Auf Wunsch zubuchbar."
       }
-    ]
+    ],
+    "spielplan_anfrage": false
   },
   {
     "id": "d4462372-de9a-4e68-81b7-bafc22574c37",
