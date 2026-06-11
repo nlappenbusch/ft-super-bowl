@@ -9,9 +9,16 @@ export interface SeriesPackageItem {
   slug: string;
   title: string;
   price: number;
+  currency?: string;
   popular: boolean;
   shortDescription: string;
   availableSpots: number | null;
+}
+
+function fmtPrice(amount: number, currency?: string): string {
+  const cur = (currency || 'EUR').toUpperCase();
+  if (cur === 'EUR') return `${amount.toLocaleString('de-DE')} €`;
+  return `${cur} ${amount.toLocaleString('de-CH')}`;
 }
 export interface SeriesPackageGroup {
   eventSegment: string;
@@ -104,7 +111,7 @@ export default function SeriesPackages({
             <div className="mt-auto pt-4">
               {p.price > 0 && (
                 <>
-                  <div className="text-2xl font-extrabold">ab {p.price.toLocaleString('de-DE')} €</div>
+                  <div className="text-2xl font-extrabold">ab {fmtPrice(p.price, p.currency)}</div>
                   <div className="text-xs" style={{ opacity: 0.65 }}>pro Person im DZ</div>
                 </>
               )}

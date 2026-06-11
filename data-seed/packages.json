@@ -25,7 +25,7 @@
     },
     "room_categories": [],
     "extension_nights": null,
-    "badge_text": "Jetzt SandkÃ¶rner fressen!!",
+    "badge_text": "Budget-Package",
     "includes": [],
     "active": true
   },
@@ -33,34 +33,34 @@
     "id": "7ddbbf5a-8582-4f68-864f-be8f637d69d0",
     "event_id": "001fc1f3-ac11-472f-b859-211181e21227",
     "slug": "super-bowl-2029",
-    "package_name": "Ticket & Hotel",
-    "title": "Super Bowl 2029 Tickets & Reisen",
-    "short_description": "Boutique-Hotel im Herzen von Hollywood mit Rooftop-Pool und Blick auf das Hollywood Sign",
-    "description": "Boutique-Hotel im Herzen von Hollywood mit Rooftop-Pool und Blick auf das Hollywood Sign",
-    "hotel": "Beste Hotel",
+    "package_name": "Ticket- & Hotel-Package",
+    "title": "Super Bowl LXIII Las Vegas – Ticket- & Hotel-Package",
+    "short_description": "4-Sterne Hotel am Las Vegas Strip, wenige Fahrminuten vom Allegiant Stadium",
+    "description": "4-Sterne Hotel am Las Vegas Strip, wenige Fahrminuten vom Allegiant Stadium",
+    "hotel": "4-Sterne Hotel am Las Vegas Strip",
     "stars": 4,
-    "nights": 2,
-    "price": 999,
+    "nights": 4,
+    "price": null,
     "currency": "EUR",
-    "single_supplement": 199,
+    "single_supplement": null,
     "popular": true,
-    "available_spots": 99,
-    "rating": 4.8,
-    "reviews": 99,
+    "available_spots": null,
+    "rating": null,
+    "reviews": null,
     "hotel_images": [],
     "distances": {
-      "airport": "9",
-      "stadium": "9",
-      "downtown": "9"
+      "airport": "",
+      "stadium": "",
+      "downtown": ""
     },
     "room_categories": [
       "Doppelzimmer",
       "Einzelzimmer"
     ],
-    "extension_nights": "VerlÃ¤ngerung auf Anfrage",
+    "extension_nights": "Verlängerungsnächte auf Anfrage gegen Aufpreis buchbar",
     "badge_text": "Offizielles Hospitality-Package",
     "includes": [],
-    "active": true
+    "active": false
   },
   {
     "id": "package-dream-hollywood",
@@ -81,9 +81,9 @@
     "rating": 4.8,
     "reviews": 156,
     "hotel_images": [
-      "https://superbowl.faltintravel.com/bilder-hotel/540997872.jpg",
-      "https://superbowl.faltintravel.com/bilder-hotel/540998091.jpg",
-      "https://superbowl.faltintravel.com/bilder-hotel/568783347.jpg"
+      "/uploads/media/2026-06-08T21-42-25-551Z-540997872.jpg",
+      "/uploads/media/2026-06-08T21-42-25-595Z-540998091.jpg",
+      "/uploads/media/2026-06-08T21-42-25-640Z-568783347.jpg"
     ],
     "distances": {
       "airport": "40 Min. / ca. 30 km (LAX)",

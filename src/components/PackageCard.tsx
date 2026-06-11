@@ -19,6 +19,15 @@ interface PackageCardProps {
   reviews?: number;
   /** Event date range string, e.g. "23.05. – 06.06.2027" */
   eventDateRange?: string;
+  /** ISO-Währungscode des Package-Preises, z.B. "EUR" oder "CHF" (Default: EUR) */
+  currency?: string;
+}
+
+/** Preis inkl. Währung formatieren – EUR mit €-Suffix, alles andere mit Code-Präfix (z.B. "CHF 1'315"). */
+export function formatPackagePrice(amount: number, currency?: string): string {
+  const cur = (currency || 'EUR').toUpperCase();
+  if (cur === 'EUR') return `${amount.toLocaleString('de-DE')} €`;
+  return `${cur} ${amount.toLocaleString('de-CH')}`;
 }
 
 export default function PackageCard({
@@ -35,6 +44,7 @@ export default function PackageCard({
   rating,
   reviews,
   eventDateRange,
+  currency,
 }: PackageCardProps) {
   const [numberOfPersons, setNumberOfPersons] = useState(2);
 
@@ -122,7 +132,7 @@ export default function PackageCard({
           {singleSurcharge && singleSurcharge > 0 ? (
             <div className="col-span-2">
               <div className="text-gray-500 mb-0.5">👤 Einzelzimmer-Zuschlag</div>
-              <div className="font-semibold text-gray-900">+ {singleSurcharge.toLocaleString('de-DE')} €</div>
+              <div className="font-semibold text-gray-900">+ {formatPackagePrice(singleSurcharge, currency)}</div>
             </div>
           ) : null}
         </div>
@@ -180,13 +190,13 @@ export default function PackageCard({
         <div style={{ borderTop: '1.5px solid #e5e8ed', paddingTop: '1.25rem' }}>
           <div className="mb-4">
             <div className="text-4xl font-extrabold" style={{ color: '#143047' }}>
-              {pricePerPerson.toLocaleString('de-DE')} €
+              {formatPackagePrice(pricePerPerson, currency)}
             </div>
             <div className="text-sm text-gray-500 mt-0.5">pro Person im Doppelzimmer</div>
             {numberOfPersons > 1 && (
               <div className="mt-2 inline-block rounded-lg px-3 py-1.5" style={{ background: '#fff3ee', border: '1px solid #f5c2af' }}>
                 <span className="text-base font-bold" style={{ color: '#d9531e' }}>
-                  ab {estimatedTotal.toLocaleString('de-DE')} € Gesamt
+                  ab {formatPackagePrice(estimatedTotal, currency)} Gesamt
                 </span>
                 <span className="text-xs text-gray-500 ml-2">für {numberOfPersons} Personen (geschätzt)</span>
               </div>

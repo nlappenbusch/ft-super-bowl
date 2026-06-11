@@ -56,6 +56,8 @@ export default async function LegacyEventPage({ params }: EventPageProps) {
       addressRegion: event.location_region || undefined,
       addressCountry: event.location_country || undefined,
     },
+    // Spielplan-Paarungen als strukturierte subEvents (nur zukünftige, parsebare Termine)
+    subEvents: (event.spielplan || []).map((r) => ({ name: r.matchup, date: r.date, venue: r.session, round: r.round })),
   });
   const productSchema = generateProductSchema({
     name: primaryPackage ? `${event.name || event.title} Package - ${primaryPackage.title}` : undefined,
@@ -63,6 +65,8 @@ export default async function LegacyEventPage({ params }: EventPageProps) {
     price: primaryPackage?.price || undefined,
     priceCurrency: primaryPackage?.currency || undefined,
     url: event.base_url ? `${event.base_url}/booking?event=${encodeURIComponent(event.slug)}` : undefined,
+    ratingValue: primaryPackage?.rating || undefined,
+    reviewCount: primaryPackage?.reviews || undefined,
   });
 
   return (

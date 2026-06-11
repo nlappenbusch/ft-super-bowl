@@ -32,7 +32,7 @@ export default function Breadcrumbs({ items }: { items: Crumb[] }) {
         aria-label="Breadcrumb"
         style={{ background: 'linear-gradient(180deg,#18395a 0%,#102538 100%)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}
       >
-        <ol className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-1.5 gap-y-1 px-4 py-3 text-sm">
+        <ol className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-1.5 gap-y-1 px-4 pt-5 pb-4 text-sm">
           {items.map((c, i) => {
             const last = i === items.length - 1;
             return (

@@ -30,24 +30,7 @@ export default function Home() {
     }
   ];
 
-  const incentiveSteps = [
-    {
-      title: 'Analyse & Zielbild',
-      description: 'Ziele, Teilnehmerprofil und Wirkung definieren.'
-    },
-    {
-      title: 'Konzept & Destination',
-      description: 'Destination, Ablauf und Budgetrahmen ausarbeiten.'
-    },
-    {
-      title: 'Aktivierung & Dramaturgie',
-      description: 'Motivationsimpulse entlang der Reise planen.'
-    },
-    {
-      title: 'Durchführung & Wirkung',
-      description: 'Umsetzung mit Nachbereitung und Erfolgsauswertung.'
-    }
-  ];
+  const incentiveSteps = ['Analyse & Zielbild', 'Konzept & Destination', 'Aktivierung & Dramaturgie', 'Durchführung & Wirkung'];
 
   const aboutStrengths = [
     {
@@ -178,7 +161,7 @@ export default function Home() {
       <section className="relative w-full overflow-hidden bg-[#0d1f33]">
         <Image
           src="/Faltin Travel Header.jpg"
-          alt="Faltin Travel – Sport- und Kulturevents"
+          alt="Faltin Travel – Tickets & Reisepakete für Sport- und Kulturevents"
           width={1920}
           height={600}
           priority
@@ -193,7 +176,7 @@ export default function Home() {
           className="absolute bottom-4 left-1/2 -translate-x-1/2 group cursor-pointer z-10"
           aria-label="Zu den Kategorien scrollen"
         >
-          <svg className="w-8 h-8 text-white/60 group-hover:text-white transition-colors duration-200 animate-[float_1.8s_ease-in-out_infinite]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <svg className="w-8 h-8 text-[#f36a2a] group-hover:text-[#f57d43] transition-colors duration-200 animate-[float_1.8s_ease-in-out_infinite]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
         </button>
@@ -216,15 +199,15 @@ export default function Home() {
         />
         <div className="container mx-auto relative">
           <div className="text-center mb-10">
-            <div className="text-xs uppercase tracking-[0.3em] text-blue-100/80">Faltin Travel</div>
             <h1
-              className="text-4xl md:text-5xl font-bold mt-3 text-white"
+              className="text-4xl md:text-5xl font-bold text-white text-balance"
               style={{ fontFamily: 'var(--font-display)' }}
             >
-              Unsere Eventreise Kategorien
+              Sportreisen, Event-Tickets & Hospitality-Pakete
             </h1>
-            <p className="text-blue-100/85 max-w-2xl mx-auto mt-3">
-              Wählen Sie eine Kategorie und entdecken Sie passende Serien und Events.
+            <p className="text-blue-100/85 max-w-3xl mx-auto mt-4 text-lg text-pretty">
+              Von Super Bowl über die French Open bis zum Champions-League-Finale: offizielle Tickets samt Hotel,
+              Anreise und persönlicher Betreuung – aus einer Hand und abgesichert über den Schweizer Garantiefonds.
             </p>
           </div>
 
@@ -255,12 +238,12 @@ export default function Home() {
 
           <div className="mt-14">
             <div className="text-center mb-6">
-              <div className="text-xs uppercase tracking-[0.3em] text-blue-100/80">Faltin Travel</div>
-              <h2 className="text-3xl md:text-4xl text-white font-bold mt-3" style={{ fontFamily: 'var(--font-display)' }}>
-                Events entdecken
+              <h2 className="text-3xl md:text-4xl text-white font-bold text-balance" style={{ fontFamily: 'var(--font-display)' }}>
+                Ihr nächstes Live-Erlebnis
               </h2>
-              <p className="text-blue-100/85 mt-3 max-w-2xl mx-auto">
-                Nach Kategorie filtern und direkt zum passenden Event gehen.
+              <p className="text-blue-100/85 mt-3 max-w-2xl mx-auto text-lg text-pretty">
+                Offizielle Tickets, limitierte Kontingente und faire Preise – filtern Sie nach Kategorie und
+                fragen Sie Ihr Wunsch-Event unverbindlich an.
               </p>
             </div>
 
@@ -301,145 +284,121 @@ export default function Home() {
             )}
           </div>
 
-          <div className="mt-14 rounded-3xl border border-white/18 bg-gradient-to-br from-[#102b48] via-[#123657] to-[#184a76] p-5 sm:p-6 lg:p-7 shadow-[0_18px_42px_rgba(3,10,26,0.3)]">
-            <div className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr] lg:items-start">
+          {/* ── Wir über uns ── */}
+          <div className="mt-14 overflow-hidden rounded-3xl bg-[#0e2a47] border border-white/10" style={{ borderTop: '4px solid #f36a2a' }}>
+            <div className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
               <div>
-                <p className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.16em] font-semibold text-blue-100">
-                  Wir über uns
-                </p>
-                <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-white" style={{ fontFamily: 'var(--font-display)' }}>
+                <p className="text-xs uppercase tracking-[0.18em] font-semibold text-[#f5a07a]">Wir über uns</p>
+                <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-white text-balance" style={{ fontFamily: 'var(--font-display)' }}>
                   Faltin Travel AG: Mit Sicherheit ein gutes Gefühl
                 </h2>
-                <p className="mt-3 text-blue-100/90 leading-relaxed">
+                <p className="mt-4 text-blue-100/90 leading-relaxed text-lg text-pretty">
                   Als mehrfach ausgezeichneter Event- und Incentive-Spezialist mit über 20 Jahren Erfahrung profitieren
-                  Sie von fundiertem Know-how, persönlicher Beratung und präziser Umsetzung. Ob Tickets, Hotels,
-                  Anreise oder Programmdesign: Wir setzen auf messbare Qualität, verbindlichen Service und Erlebnisse,
-                  die in Erinnerung bleiben.
+                  Sie von fundiertem Know-how, persönlicher Beratung und präziser Umsetzung – von Tickets über Hotel
+                  und Anreise bis zum kompletten Programmdesign.
                 </p>
 
-                <div className="mt-4 flex flex-wrap items-center gap-2.5">
+                <div className="mt-5 flex flex-wrap gap-2.5">
                   {aboutFacts.map((fact) => (
                     <span
                       key={fact}
-                      className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-blue-50"
+                      className="inline-flex items-center rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-blue-50"
                     >
                       {fact}
                     </span>
                   ))}
                 </div>
 
-                <div className="mt-5 border-t border-white/12 pt-4">
+                <div className="mt-6">
                   <Link
                     href="/ueber-uns"
-                    className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/12 px-6 py-2.5 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(7,18,33,0.28)] transition hover:-translate-y-0.5 hover:bg-white/18"
+                    className="inline-flex items-center justify-center rounded-full border border-white/25 bg-white/10 px-6 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-white/20"
                   >
                     Mehr über Faltin Travel
                   </Link>
                 </div>
-
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 sm:grid-rows-[auto_auto]">
-                <div className="sm:col-span-2 overflow-hidden rounded-2xl border border-white/12 bg-slate-900/60">
-                  <Image
-                    src="/Faltin-Travel-Ihr-serioeser-Partner-fuer-Events-Incentives.webp"
-                    alt="Faltin Travel - Ihr seriöser Partner für Events und Incentives"
-                    width={1200}
-                    height={680}
-                    className="h-40 w-full object-cover"
-                  />
-                </div>
-                <div className="overflow-hidden rounded-2xl border border-white/12 bg-slate-900/60">
-                  <Image
-                    src="/Faltin-TRAVEL-AG-Team.webp"
-                    alt="Faltin Travel Team"
-                    width={760}
-                    height={760}
-                    className="h-32 w-full object-cover"
-                  />
-                </div>
-                <div className="overflow-hidden rounded-2xl border border-white/12 bg-slate-900/60">
-                  <Image
-                    src="/Stefan-Faltin-Geschaeftsfuehrer-Faltin-Travel-AG.webp"
-                    alt="Stefan Faltin - Geschäftsführer Faltin Travel AG"
-                    width={760}
-                    height={760}
-                    className="h-32 w-full object-cover"
-                  />
-                </div>
+              <div className="overflow-hidden rounded-2xl">
+                <Image
+                  src="/Faltin-Travel-Ihr-serioeser-Partner-fuer-Events-Incentives.webp"
+                  alt="Faltin Travel – Ihr seriöser Partner für Events und Incentives"
+                  width={1200}
+                  height={760}
+                  className="h-64 lg:h-full w-full object-cover"
+                />
               </div>
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-x-6 gap-y-6 border-t border-white/10 px-6 py-7 sm:px-8 sm:grid-cols-2 lg:grid-cols-4">
               {aboutStrengths.map((point) => (
-                <div key={point.title} className="rounded-2xl border border-white/12 bg-white/5 p-3">
-                  <div className="flex items-start gap-2.5">
-                    <point.icon className="mt-0.5 h-4.5 w-4.5 text-blue-200" />
-                    <div>
-                      <p className="text-sm font-semibold text-white">{point.title}</p>
-                      <p className="mt-1 text-xs leading-relaxed text-blue-100/85">{point.description}</p>
-                    </div>
+                <div key={point.title} className="flex items-start gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f36a2a]/15">
+                    <point.icon className="h-5 w-5 text-[#f5a07a]" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-white">{point.title}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-blue-100/80 text-pretty">{point.description}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="mt-10 rounded-2xl border border-white/10 bg-gradient-to-br from-[#102b48]/78 to-[#143a5d]/72 p-5 sm:p-6">
-            <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
+          {/* ── Incentive Reisen ── */}
+          <div className="mt-10 overflow-hidden rounded-3xl bg-[#11324f] border border-white/10" style={{ borderLeft: '5px solid #f36a2a' }}>
+            <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
               <div>
-                <p className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.16em] font-semibold text-blue-100">
-                  Incentive Reisen
-                </p>
-                <h2 className="mt-3 text-2xl sm:text-3xl font-bold text-white" style={{ fontFamily: 'var(--font-display)' }}>
+                <p className="text-xs uppercase tracking-[0.18em] font-semibold text-[#f5a07a]">Incentive Reisen</p>
+                <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-white text-balance" style={{ fontFamily: 'var(--font-display)' }}>
                   Motivation, die Ziele messbar erreichbar macht
                 </h2>
-                <p className="mt-2.5 max-w-2xl text-blue-100/85 leading-relaxed">
-                  Maßgeschneiderte Incentive-Reisen mit Fokus auf Motivation, Beteiligung und messbare Wirkung.
+                <p className="mt-3 max-w-2xl text-blue-100/90 leading-relaxed text-lg text-pretty">
+                  Maßgeschneiderte Incentive-Reisen mit Fokus auf Motivation, Beteiligung und messbare Wirkung –
+                  Konzeption, Organisation und Betreuung aus einer Hand.
                 </p>
+
+                <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-blue-100/80">
+                  <span className="font-semibold text-white">So läuft es ab:</span>
+                  {incentiveSteps.map((step, i) => (
+                    <span key={step} className="inline-flex items-center gap-1.5">
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#f36a2a] text-white text-[10px] font-bold">{i + 1}</span>
+                      {step}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="mt-6">
+                  <a
+                    href="https://incentive-agentur.ch/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center rounded-full bg-[#f36a2a] px-6 py-3 text-sm font-bold text-white shadow-[0_10px_24px_rgba(243,106,42,0.35)] transition hover:-translate-y-0.5 hover:bg-[#f57d43]"
+                  >
+                    Incentive-Beratung starten
+                  </a>
+                </div>
               </div>
 
-              <div className="relative h-[170px] sm:h-[190px] lg:h-[210px] -mb-px z-10 pointer-events-none flex justify-start sm:ml-1 lg:ml-4">
+              <div className="relative h-[180px] sm:h-[210px] lg:h-[240px] pointer-events-none flex justify-center">
                 <Image
                   src="/Faltin-Incentives-Header.png"
                   alt="Faltin Incentive Reisen"
                   fill
-                  className="object-contain object-left-bottom drop-shadow-[0_12px_24px_rgba(0,0,0,0.24)]"
+                  className="object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.24)]"
                   sizes="(max-width: 1024px) 100vw, 42vw"
                 />
               </div>
             </div>
 
-            <div className="mt-0 rounded-xl border border-white/10 bg-[#0b2037]/52 p-4">
-              <p className="text-sm font-semibold text-white">So läuft die Incentive-Planung ab</p>
-              <ol className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-2">
-                {incentiveSteps.map((step, index) => (
-                  <li key={step.title} className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-blue-100/85">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#f36a2a] text-white text-xs font-bold">
-                        {index + 1}
-                      </span>
-                      <span className="rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-blue-100/90">
-                        {incentiveHighlights[index]?.title}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm font-semibold text-white">{step.title}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-blue-100/75">{step.description}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-blue-100/65">{incentiveHighlights[index]?.description}</p>
-                  </li>
-                ))}
-              </ol>
-            </div>
-
-            <div className="mt-4">
-              <a
-                href="https://incentive-agentur.ch/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/12 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/18"
-              >
-                Incentive-Beratung starten
-              </a>
+            <div className="grid gap-4 border-t border-white/10 px-6 py-7 sm:px-8 sm:grid-cols-2 lg:grid-cols-4">
+              {incentiveHighlights.map((h) => (
+                <div key={h.title} className="rounded-xl bg-white/[0.06] p-4" style={{ borderLeft: '2px solid #f36a2a' }}>
+                  <CheckCircle2 className="h-5 w-5 text-[#f5a07a]" />
+                  <p className="mt-2 text-sm font-semibold text-white text-balance">{h.title}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-blue-100/80 text-pretty">{h.description}</p>
+                </div>
+              ))}
             </div>
           </div>
 

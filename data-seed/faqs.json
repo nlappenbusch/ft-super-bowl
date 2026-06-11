@@ -705,5 +705,2252 @@
     "question": "Wie kann ich Tickets und Unterkunft für die US Open buchen?",
     "answer": "Wählen Sie eines unserer Reise-Packages aus und senden Sie uns eine unverbindliche Anfrage über das Buchungsformular. Das Team von Faltin Travel meldet sich umgehend mit einem auf Sie zugeschnittenen Angebot inklusive Tickets und Hotel in New York.",
     "sort_order": 8
+  },
+  {
+    "id": "faq-burning-man-2027-1",
+    "event_id": "9a7b4076-68ae-4d23-8948-a2c185c8c6bb",
+    "question": "Wie bekomme ich Burning Man Tickets?",
+    "answer": "Die Eintrittstickets für Burning Man werden vom Veranstalter, dem Burning Man Project, über ein eigenes Verkaufssystem ausgegeben. Faltin Travel unterstützt Sie bei der Reiseorganisation rund um das Event und stellt Ihnen ein passendes Gesamtpaket zusammen. Senden Sie uns einfach Ihre unverbindliche Anfrage und wir beraten Sie zu den Möglichkeiten.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-burning-man-2027-2",
+    "event_id": "9a7b4076-68ae-4d23-8948-a2c185c8c6bb",
+    "question": "Was kostet eine Burning Man Reise mit Faltin Travel?",
+    "answer": "Die Kosten hängen stark von Anreise, Aufenthaltsdauer, Unterkunft und gewünschtem Komfort vor Ort ab. Da Burning Man eine Reise in die Wüste mit besonderen logistischen Anforderungen ist, stellen wir Ihnen ein individuelles Angebot zusammen. Kontaktieren Sie uns für eine persönliche Beratung mit aktuellen Konditionen.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-burning-man-2027-3",
+    "event_id": "9a7b4076-68ae-4d23-8948-a2c185c8c6bb",
+    "question": "Wo findet Burning Man statt?",
+    "answer": "Burning Man findet in der Black Rock Desert im US-Bundesstaat Nevada statt, einer weiten Wüstenebene rund um den kleinen Ort Gerlach. Für die Dauer des Events entsteht dort die temporäre Black Rock City, die nach dem Festival vollständig wieder abgebaut wird. Der nächstgelegene grössere Flughafen ist Reno-Tahoe International.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-burning-man-2027-4",
+    "event_id": "9a7b4076-68ae-4d23-8948-a2c185c8c6bb",
+    "question": "Wann findet Burning Man üblicherweise statt?",
+    "answer": "Burning Man findet in der Regel Ende August bis Anfang September statt und endet traditionell am US-Feiertag Labor Day, dem ersten Montag im September. Das Event erstreckt sich über rund eine Woche. Die genauen Daten variieren von Jahr zu Jahr.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-burning-man-2027-5",
+    "event_id": "9a7b4076-68ae-4d23-8948-a2c185c8c6bb",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach Wunsch umfasst unser Reisepaket die Organisation von Anreise, Unterkunft im Umfeld des Events sowie Logistik und persönliche Betreuung. Wichtig zu wissen: Vor Ort gilt das Prinzip der Selbstversorgung, da auf dem Gelände – mit Ausnahme von Eis und Kaffee – kein Handel stattfindet. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-burning-man-2027-6",
+    "event_id": "9a7b4076-68ae-4d23-8948-a2c185c8c6bb",
+    "question": "Warum Burning Man mit Faltin Travel buchen?",
+    "answer": "Faltin Travel ist ein mehrfach ausgezeichneter Spezialist für Eventreisen mit langjähriger Erfahrung. Gerade bei einer anspruchsvollen Reise in die Wüste profitieren Sie von verlässlicher Organisation, sorgfältig geplanter Logistik und persönlicher Betreuung aus einer Hand – inklusive Schweizer Reisegarantie. So können Sie sich ganz auf das Erlebnis konzentrieren.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-burning-man-2027-7",
+    "event_id": "9a7b4076-68ae-4d23-8948-a2c185c8c6bb",
+    "question": "Wie buche ich die Reise und Unterkunft?",
+    "answer": "Senden Sie uns über das unverbindliche Anfrageformular Ihre Wünsche, und Faltin Travel erstellt Ihnen ein passendes Angebot aus Reise, Unterkunft und Service. Nach Ihrer Bestätigung übernehmen wir die komplette Organisation. So erhalten Sie alles bequem aus einer Hand.",
+    "sort_order": 7
+  },
+  {
+    "id": "faq-super-bowl-2029-1",
+    "event_id": "001fc1f3-ac11-472f-b859-211181e21227",
+    "question": "Wie bekomme ich Super Bowl Tickets?",
+    "answer": "Super Bowl Tickets erhalten Sie bei Faltin Travel als Teil eines exklusiven Hospitality-Pakets mit reservierten Sitzplätzen im jeweiligen Austragungsstadion. Wir kümmern uns um Tickets, Hotel und Service vor Ort, sodass Sie sich nur noch auf das grösste Sportereignis der Welt freuen müssen. Senden Sie uns einfach Ihre unverbindliche Anfrage und wir prüfen die Verfügbarkeit.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-super-bowl-2029-2",
+    "event_id": "001fc1f3-ac11-472f-b859-211181e21227",
+    "question": "Was kosten Super Bowl Tickets und Hospitality-Pakete?",
+    "answer": "Die Preise richten sich nach Sitzplatzkategorie, gewähltem Hotel und Leistungsumfang des Pakets. Da der Super Bowl das nachgefragteste Einzelsportevent überhaupt ist, lohnt sich eine frühzeitige Anfrage. Gerne erstellen wir Ihnen ein individuelles Angebot mit den aktuellen Konditionen.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-super-bowl-2029-3",
+    "event_id": "001fc1f3-ac11-472f-b859-211181e21227",
+    "question": "Wo findet der Super Bowl statt?",
+    "answer": "Der Austragungsort des Super Bowl wechselt jährlich und wird von der NFL jeweils im Voraus an eine US-amerikanische Stadt vergeben. Gespielt wird in modernen Grossstadien, die sich auf das Event und Hunderttausende anreisende Fans einstellen. Bekannte Gastgeberstädte der vergangenen Jahre waren unter anderem Los Angeles, Las Vegas, New Orleans und die San Francisco Bay Area.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-super-bowl-2029-4",
+    "event_id": "001fc1f3-ac11-472f-b859-211181e21227",
+    "question": "Wann findet der Super Bowl üblicherweise statt?",
+    "answer": "Der Super Bowl findet in der Regel Anfang Februar an einem Sonntag statt und bildet den krönenden Abschluss der NFL-Saison. Rund um das Spiel erstreckt sich ein mehrtägiges Programm mit zahlreichen Events. Das genaue Datum variiert von Jahr zu Jahr.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-super-bowl-2029-5",
+    "event_id": "001fc1f3-ac11-472f-b859-211181e21227",
+    "question": "Was ist im Hospitality-Paket enthalten?",
+    "answer": "Je nach Kategorie umfasst das Hospitality-Paket reservierte Sitzplätze, Zugang zu offiziellen Pregame-Partys mit Catering und Getränken sowie weitere exklusive Services. In unseren Reisepaketen sind zudem Hotelübernachtungen, Transfers und persönliche Betreuung vor Ort enthalten. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-super-bowl-2029-6",
+    "event_id": "001fc1f3-ac11-472f-b859-211181e21227",
+    "question": "Warum den Super Bowl mit Faltin Travel buchen?",
+    "answer": "Faltin Travel ist ein mehrfach ausgezeichneter Spezialist für Sport- und Eventreisen mit langjähriger Erfahrung. Sie erhalten verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie. So erleben Sie das grösste Sportevent der Welt entspannt und planungssicher.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-super-bowl-2029-7",
+    "event_id": "001fc1f3-ac11-472f-b859-211181e21227",
+    "question": "Wie buche ich Tickets und Unterkunft?",
+    "answer": "Senden Sie uns über das unverbindliche Anfrageformular Ihre Wünsche, und Faltin Travel erstellt Ihnen ein passendes Angebot aus Tickets, Hotel und Service. Nach Ihrer Bestätigung übernehmen wir die komplette Organisation. So erhalten Sie alles bequem aus einer Hand.",
+    "sort_order": 7
+  },
+  {
+    "id": "faq-fifa-wm-2026-1",
+    "event_id": "1ca9383e-ef98-41ea-b741-e2a18d453dad",
+    "question": "Wie bekomme ich WM 2026 Tickets?",
+    "answer": "WM 2026 Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets mit Hotel und Betreuung. Senden Sie uns Ihre unverbindliche Anfrage mit Wunschspiel und -ort, und wir prüfen die Verfügbarkeit und erstellen Ihr individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-fifa-wm-2026-2",
+    "event_id": "1ca9383e-ef98-41ea-b741-e2a18d453dad",
+    "question": "Wo findet die WM 2026 statt?",
+    "answer": "Die Weltmeisterschaft 2026 wird gemeinsam von den USA, Kanada und Mexiko ausgetragen. Gespielt wird in 16 Host Cities, darunter New York/New Jersey, Los Angeles, Dallas, Toronto, Vancouver und Mexiko-Stadt.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-fifa-wm-2026-3",
+    "event_id": "1ca9383e-ef98-41ea-b741-e2a18d453dad",
+    "question": "Wann findet die WM 2026 statt?",
+    "answer": "Das Turnier läuft vom 11. Juni bis zum 19. Juli 2026. Mit 48 Teams und 104 Partien ist es die bislang grösste Fussball-WM der Geschichte.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-fifa-wm-2026-4",
+    "event_id": "1ca9383e-ef98-41ea-b741-e2a18d453dad",
+    "question": "Was kosten Tickets und Reisepakete?",
+    "answer": "Die Preise hängen von Spiel, Kategorie, Stadt und Hotel ab. Finalspiele und K.-o.-Runden liegen über Gruppenspielen. Gerne stellen wir Ihnen ein massgeschneidertes Angebot mit aktuellen Konditionen zusammen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-fifa-wm-2026-5",
+    "event_id": "1ca9383e-ef98-41ea-b741-e2a18d453dad",
+    "question": "Warum die WM mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Sportreisen-Spezialist bieten wir verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-uefa-euro-2028-1",
+    "event_id": "698ba72a-051d-48c6-a683-e4225fb09ed2",
+    "question": "Wie bekomme ich Euro 2028 Tickets?",
+    "answer": "Euro 2028 Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets. Senden Sie uns Ihre unverbindliche Anfrage mit Wunschspiel, und wir prüfen die Verfügbarkeit und erstellen Ihr Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-uefa-euro-2028-2",
+    "event_id": "698ba72a-051d-48c6-a683-e4225fb09ed2",
+    "question": "Wo findet die EM 2028 statt?",
+    "answer": "Die Europameisterschaft 2028 wird gemeinsam von England und Irland ausgetragen. Zu den Austragungsorten zählen unter anderem London (Wembley), Manchester, Newcastle, Glasgow, Cardiff und Dublin.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-uefa-euro-2028-3",
+    "event_id": "698ba72a-051d-48c6-a683-e4225fb09ed2",
+    "question": "Wann findet die EM 2028 statt?",
+    "answer": "Die EURO 2028 wird im Juni und Juli 2028 ausgetragen. Die genauen Spieltermine werden nach der Auslosung bekannt gegeben.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-uefa-euro-2028-4",
+    "event_id": "698ba72a-051d-48c6-a683-e4225fb09ed2",
+    "question": "Was kosten Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Spiel, Kategorie und Hotel. Das Finale und die K.-o.-Spiele liegen über den Gruppenspielen. Wir erstellen Ihnen ein individuelles Angebot mit aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-uefa-euro-2028-5",
+    "event_id": "698ba72a-051d-48c6-a683-e4225fb09ed2",
+    "question": "Warum die EM mit Faltin Travel buchen?",
+    "answer": "Sie erhalten verlässliche Tickets, ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie und langjähriger Erfahrung im Sportreisen-Bereich.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-uefa-nations-league-2026-1",
+    "event_id": "a0cafb07-46c8-4b91-85ae-9cbff0b80814",
+    "question": "Wie bekomme ich UEFA Nations League Tickets-Tickets?",
+    "answer": "UEFA Nations League Tickets-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-uefa-nations-league-2026-2",
+    "event_id": "a0cafb07-46c8-4b91-85ae-9cbff0b80814",
+    "question": "Wo und wann findet UEFA Nations League Tickets statt?",
+    "answer": "UEFA Nations League Tickets findet 24.09.2026 – 13.06.2027 statt. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-uefa-nations-league-2026-3",
+    "event_id": "a0cafb07-46c8-4b91-85ae-9cbff0b80814",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 1x Hotelübernachtung mit Frühstücksbuffet im First-Class Hotel; Zutritt zum Stadion am gewünschten Austragungsort zum gewünschten Spiel; Reservierter Sitzplatz in der gewünschten Kategorie; Je nach Ticketkategorie Zutritt zum entsprechenden Hospitality-Bereich. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-uefa-nations-league-2026-4",
+    "event_id": "a0cafb07-46c8-4b91-85ae-9cbff0b80814",
+    "question": "Was kosten UEFA Nations League Tickets-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-uefa-nations-league-2026-5",
+    "event_id": "a0cafb07-46c8-4b91-85ae-9cbff0b80814",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Die Nations League als europäischer Wettbewerb zwischen den Nationalmannschaften der 55 UEFA-Mitgliedsverbände fand zum ersten Mal 2018/2019 statt. Sie wird im 2-Jahres-Rhythmus ausgetragen, jeweils in den Jahren ohne EM/WM, und ersetzt den Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-uefa-nations-league-2026-6",
+    "event_id": "a0cafb07-46c8-4b91-85ae-9cbff0b80814",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-champions-league-finale-2027-1",
+    "event_id": "50bbd34e-3ec9-4821-8ac9-b7a3aa44630e",
+    "question": "Wie bekomme ich Tickets für das Champions League Finale?",
+    "answer": "Tickets für das Champions League Finale erhalten Sie bei Faltin Travel als Teil eines Reisepakets mit Hotel und Betreuung. Senden Sie uns Ihre unverbindliche Anfrage – die Nachfrage ist hoch, eine frühzeitige Anfrage lohnt sich.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-champions-league-finale-2027-2",
+    "event_id": "50bbd34e-3ec9-4821-8ac9-b7a3aa44630e",
+    "question": "Wo findet das CL-Finale 2027 statt?",
+    "answer": "Das Endspiel der Saison 2026/2027 wird im Estadio Metropolitano in Madrid ausgetragen, der modernen Heimstätte von Atlético Madrid.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-champions-league-finale-2027-3",
+    "event_id": "50bbd34e-3ec9-4821-8ac9-b7a3aa44630e",
+    "question": "Wann findet das CL-Finale 2027 statt?",
+    "answer": "Das Finale ist für Samstag, den 5. Juni 2027 angesetzt. Den krönenden Abschluss der Königsklasse erleben Sie an einem einzigen, hochemotionalen Abend.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-champions-league-finale-2027-4",
+    "event_id": "50bbd34e-3ec9-4821-8ac9-b7a3aa44630e",
+    "question": "Was kostet ein Finalpaket?",
+    "answer": "Die Preise richten sich nach Sitzplatzkategorie und Hotel. Da die Nachfrage das Angebot deutlich übersteigt, erstellen wir Ihnen ein individuelles Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-champions-league-finale-2027-5",
+    "event_id": "50bbd34e-3ec9-4821-8ac9-b7a3aa44630e",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Sie erhalten verlässliche Tickets, ein gut gelegenes Hotel und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-champions-league-2025-1",
+    "event_id": "1fe839c5-fb1a-473a-b8df-53feb1300ad8",
+    "question": "Wie bekomme ich UEFA Champions League Tickets-Tickets?",
+    "answer": "UEFA Champions League Tickets-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-champions-league-2025-2",
+    "event_id": "1fe839c5-fb1a-473a-b8df-53feb1300ad8",
+    "question": "Wo und wann findet UEFA Champions League Tickets statt?",
+    "answer": "UEFA Champions League Tickets findet Saison 2025/2026 statt. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-champions-league-2025-3",
+    "event_id": "1fe839c5-fb1a-473a-b8df-53feb1300ad8",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 1x Hotelübernachtung im First-Class Hotel; Frühstücksbuffet; Champions League Ticket für das gebuchte Spiel; Je nach Ticketkategorie Zutritt zum entsprechenden Hospitality-Bereich. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-champions-league-2025-4",
+    "event_id": "1fe839c5-fb1a-473a-b8df-53feb1300ad8",
+    "question": "Was kosten UEFA Champions League Tickets-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-champions-league-2025-5",
+    "event_id": "1fe839c5-fb1a-473a-b8df-53feb1300ad8",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Die Champions League ist das prestigeträchtigste Turnier im europäischen Club-Fussball; der Sieger qualifiziert sich für den UEFA Super Cup und die FIFA Club-Weltmeisterschaft. Der Wettbewerb geht auf den Europapokal der Landesmeister zurüc Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-champions-league-2025-6",
+    "event_id": "1fe839c5-fb1a-473a-b8df-53feb1300ad8",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-europa-league-finale-2026-1",
+    "event_id": "6bafac09-40ca-4caa-a636-050e9541dfed",
+    "question": "Wie bekomme ich UEFA Europa League Finale Tickets-Tickets?",
+    "answer": "UEFA Europa League Finale Tickets-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-europa-league-finale-2026-2",
+    "event_id": "6bafac09-40ca-4caa-a636-050e9541dfed",
+    "question": "Wo und wann findet UEFA Europa League Finale Tickets statt?",
+    "answer": "UEFA Europa League Finale Tickets findet 20.05.2026 statt – Austragungsort: Beşiktaş Stadium, Istanbul. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-europa-league-finale-2026-3",
+    "event_id": "6bafac09-40ca-4caa-a636-050e9541dfed",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung im Mittelklassehotel; Frühstücksbuffet; UEFA Europa League Finale Ticket; Je nach Ticketkategorie Zutritt zum Hospitality-Bereich. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-europa-league-finale-2026-4",
+    "event_id": "6bafac09-40ca-4caa-a636-050e9541dfed",
+    "question": "Was kosten UEFA Europa League Finale Tickets-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-europa-league-finale-2026-5",
+    "event_id": "6bafac09-40ca-4caa-a636-050e9541dfed",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Das Finale der UEFA Europa League bildet den Höhepunkt des nach der Champions League bedeutendsten Wettbewerbs im europäischen Klubfussball. Der Sieger erhält eine rund 15 Kilogramm schwere Silbertrophäe und qualifiziert sich für den UEFA S Istanbul ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-europa-league-finale-2026-6",
+    "event_id": "6bafac09-40ca-4caa-a636-050e9541dfed",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-dfb-pokalfinale-2027-1",
+    "event_id": "e1576112-9676-41f5-9cd6-d12399a279b9",
+    "question": "Wie bekomme ich DFB-Pokalfinale-Tickets?",
+    "answer": "DFB-Pokalfinale-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-dfb-pokalfinale-2027-2",
+    "event_id": "e1576112-9676-41f5-9cd6-d12399a279b9",
+    "question": "Wo und wann findet DFB-Pokalfinale 2027 Tickets statt?",
+    "answer": "DFB-Pokalfinale 2027 Tickets findet 29.05.2027 statt – Austragungsort: Olympiastadion, Berlin. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-dfb-pokalfinale-2027-3",
+    "event_id": "e1576112-9676-41f5-9cd6-d12399a279b9",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung mit Frühstücksbuffet; DFB Pokalfinale Ticket; Faltin Travel Lanyard; Berlin Reiseführer mit Stadtplan. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-dfb-pokalfinale-2027-4",
+    "event_id": "e1576112-9676-41f5-9cd6-d12399a279b9",
+    "question": "Was kosten DFB-Pokalfinale-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-dfb-pokalfinale-2027-5",
+    "event_id": "e1576112-9676-41f5-9cd6-d12399a279b9",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Der DFB-Pokal ist nach der Meisterschaft der wichtigste Titel im deutschen Vereinsfussball. Der Wettbewerb wurde 1935 erstmals als Tschammer-Pokal ausgetragen; nach dem Zweiten Weltkrieg führte der DFB ihn 1952 unter dem heutigen Namen DFB- Berlin ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-dfb-pokalfinale-2027-6",
+    "event_id": "e1576112-9676-41f5-9cd6-d12399a279b9",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-fussball-bundesliga-2025-1",
+    "event_id": "71d7afe3-25c4-4839-a275-155e0ccdd6af",
+    "question": "Wie bekomme ich Deutsche Fussball Bundesliga Tickets-Tickets?",
+    "answer": "Deutsche Fussball Bundesliga Tickets-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-fussball-bundesliga-2025-2",
+    "event_id": "71d7afe3-25c4-4839-a275-155e0ccdd6af",
+    "question": "Wo und wann findet Deutsche Fussball Bundesliga Tickets statt?",
+    "answer": "Deutsche Fussball Bundesliga Tickets findet 23.08.2025 – 16.05.2026 statt. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-fussball-bundesliga-2025-3",
+    "event_id": "71d7afe3-25c4-4839-a275-155e0ccdd6af",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 1x Hotelübernachtung mit Frühstücksbuffet im First-Class Hotel; Fussball Bundesliga Ticket für das gewünschte Spiel; Je nach gebuchter Ticket-Kategorie Zutritt zum entsprechenden VIP-Bereich; Faltin Travel Lanyard. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-fussball-bundesliga-2025-4",
+    "event_id": "71d7afe3-25c4-4839-a275-155e0ccdd6af",
+    "question": "Was kosten Deutsche Fussball Bundesliga Tickets-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-fussball-bundesliga-2025-5",
+    "event_id": "71d7afe3-25c4-4839-a275-155e0ccdd6af",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Die höchste Spielklasse im deutschen Fussball steht in der UEFA-Fünfjahreswertung hinter der spanischen Primera División und der englischen Premier League an dritter Stelle. Mit Stadien wie dem Signal Iduna Park in Dortmund (81.365 Plätze), Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-fussball-bundesliga-2025-6",
+    "event_id": "71d7afe3-25c4-4839-a275-155e0ccdd6af",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-premier-league-1",
+    "event_id": "c3369392-a37a-43ff-b044-c036e4dc5b10",
+    "question": "Wie bekomme ich Premier League Tickets-Tickets?",
+    "answer": "Premier League Tickets-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-premier-league-2",
+    "event_id": "c3369392-a37a-43ff-b044-c036e4dc5b10",
+    "question": "Wo und wann findet Premier League Tickets statt?",
+    "answer": "Termin von Premier League Tickets wird rechtzeitig bekanntgegeben. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-premier-league-3",
+    "event_id": "c3369392-a37a-43ff-b044-c036e4dc5b10",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung mit Frühstücksbuffet im First-Class Hotel; Premier League Ticket für das gebuchte Spiel; Je nach Ticketkategorie Zutritt zum entsprechenden VIP-Bereich; Faltin Travel Lanyard. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-premier-league-4",
+    "event_id": "c3369392-a37a-43ff-b044-c036e4dc5b10",
+    "question": "Was kosten Premier League Tickets-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-premier-league-5",
+    "event_id": "c3369392-a37a-43ff-b044-c036e4dc5b10",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Die höchste Spielklasse im englischen Fussball steht in der UEFA-Fünfjahreswertung hinter der spanischen Primera División an zweiter Stelle der spielstärksten europäischen Ligen. Die als „The Greatest Show On Earth“ beworbene Premier League Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-premier-league-6",
+    "event_id": "c3369392-a37a-43ff-b044-c036e4dc5b10",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-primera-division-1",
+    "event_id": "b607684d-979c-4ca3-8522-40ca09b0211d",
+    "question": "Wie bekomme ich Primera División Tickets-Tickets?",
+    "answer": "Primera División Tickets-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-primera-division-2",
+    "event_id": "b607684d-979c-4ca3-8522-40ca09b0211d",
+    "question": "Wo und wann findet Primera División Tickets statt?",
+    "answer": "Termin von Primera División Tickets wird rechtzeitig bekanntgegeben. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-primera-division-3",
+    "event_id": "b607684d-979c-4ca3-8522-40ca09b0211d",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung mit Frühstücksbuffet im First-Class Hotel; LaLiga Ticket für das gewünschte Spiel der Primera División; Reservierter Sitzplatz in der gewünschten Kategorie; Je nach Ticket Zutritt zum entsprechenden VIP-Bereich. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-primera-division-4",
+    "event_id": "b607684d-979c-4ca3-8522-40ca09b0211d",
+    "question": "Was kosten Primera División Tickets-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-primera-division-5",
+    "event_id": "b607684d-979c-4ca3-8522-40ca09b0211d",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Die Primera División ist die höchste spanische Liga im Clubfussball. Sie zählt zusammen mit der englischen Premier League, der deutschen Bundesliga und der italienischen Serie A zu den stärksten Ligen des Kontinents. Vor allem die grossen V Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-primera-division-6",
+    "event_id": "b607684d-979c-4ca3-8522-40ca09b0211d",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-serie-a-1",
+    "event_id": "9154d667-28e0-40da-bb36-fefedb4a4073",
+    "question": "Wie bekomme ich Italienische Serie A Tickets-Tickets?",
+    "answer": "Italienische Serie A Tickets-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-serie-a-2",
+    "event_id": "9154d667-28e0-40da-bb36-fefedb4a4073",
+    "question": "Wo und wann findet Italienische Serie A Tickets statt?",
+    "answer": "Termin von Italienische Serie A Tickets wird rechtzeitig bekanntgegeben. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-serie-a-3",
+    "event_id": "9154d667-28e0-40da-bb36-fefedb4a4073",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung mit Frühstücksbuffet im First-Class Hotel; Serie A Ticket für das gebuchte Spiel; Je nach Ticketkategorie Zutritt zum entsprechenden VIP-Bereich; Faltin Travel Lanyard. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-serie-a-4",
+    "event_id": "9154d667-28e0-40da-bb36-fefedb4a4073",
+    "question": "Was kosten Italienische Serie A Tickets-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-serie-a-5",
+    "event_id": "9154d667-28e0-40da-bb36-fefedb4a4073",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Die Serie A ist die höchste Liga im italienischen Profi-Fussball und zählt neben der spanischen Primera División, der englischen Premier League und der deutschen Bundesliga zu den spielstärksten europäischen Fussball-Ligen gemäss der UEFA-F Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-serie-a-6",
+    "event_id": "9154d667-28e0-40da-bb36-fefedb4a4073",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-fa-cup-finale-2026-1",
+    "event_id": "dbde49a9-b9b1-4c7f-a64e-975f5f6dd342",
+    "question": "Wie bekomme ich FA Cup Finale Tickets-Tickets?",
+    "answer": "FA Cup Finale Tickets-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-fa-cup-finale-2026-2",
+    "event_id": "dbde49a9-b9b1-4c7f-a64e-975f5f6dd342",
+    "question": "Wo und wann findet FA Cup Finale Tickets statt?",
+    "answer": "FA Cup Finale Tickets findet 16.05.2026 statt – Austragungsort: Wembley Stadium, London. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-fa-cup-finale-2026-3",
+    "event_id": "dbde49a9-b9b1-4c7f-a64e-975f5f6dd342",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung mit Frühstücksbuffet im First-Class Hotel; FA Cup Final Ticket für das Wembley Stadium; Je nach Ticketkategorie Zutritt zum entsprechenden Hospitality-Bereich; Faltin Travel Lanyard. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-fa-cup-finale-2026-4",
+    "event_id": "dbde49a9-b9b1-4c7f-a64e-975f5f6dd342",
+    "question": "Was kosten FA Cup Finale Tickets-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-fa-cup-finale-2026-5",
+    "event_id": "dbde49a9-b9b1-4c7f-a64e-975f5f6dd342",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Das Endspiel des Football Association Challenge Cup – kurz FA Cup – ist das Finale des ältesten Fussball-Wettbewerbs der Welt. Es findet jährlich im Wembley Stadium in London statt und bildet den Höhepunkt eines traditionsreichen Pokalturni London ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-fa-cup-finale-2026-6",
+    "event_id": "dbde49a9-b9b1-4c7f-a64e-975f5f6dd342",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-formel-1-2025-1",
+    "event_id": "97f0a67b-f49e-448a-82e7-b65d3d771cc2",
+    "question": "Wie bekomme ich Formel 1 Tickets?",
+    "answer": "Formel 1 Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets mit Hotel und Betreuung. Nennen Sie uns Ihren Wunsch-Grand-Prix, und wir prüfen Verfügbarkeit und Kategorien.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-formel-1-2025-2",
+    "event_id": "97f0a67b-f49e-448a-82e7-b65d3d771cc2",
+    "question": "Welche Grand Prix kann ich buchen?",
+    "answer": "Wir bieten Pakete für die Rennen der laufenden Saison – von europäischen Klassikern wie Monaco, Spielberg, Silverstone und Monza bis zu Übersee-Highlights wie Las Vegas oder Abu Dhabi.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-formel-1-2025-3",
+    "event_id": "97f0a67b-f49e-448a-82e7-b65d3d771cc2",
+    "question": "Was ist der Unterschied zwischen Tribüne, Paddock Club und General Admission?",
+    "answer": "General Admission bietet Stehplätze entlang der Strecke, Tribünentickets feste Sitzplätze mit guter Sicht, und der Paddock Club ist die exklusive Hospitality mit Catering, Boxengassen-Blick und Premium-Service.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-formel-1-2025-4",
+    "event_id": "97f0a67b-f49e-448a-82e7-b65d3d771cc2",
+    "question": "Was kosten Formel 1 Reisepakete?",
+    "answer": "Die Preise hängen von Rennen, Kategorie und Hotel ab. Hospitality-Pakete liegen deutlich über Tribünentickets. Gerne erstellen wir Ihnen ein individuelles Angebot.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-formel-1-2025-5",
+    "event_id": "97f0a67b-f49e-448a-82e7-b65d3d771cc2",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Sie erhalten verlässliche Tickets, gut gelegene Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie und langjähriger Motorsport-Erfahrung.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-monaco-grand-prix-2026-1",
+    "event_id": "59ddbaff-4dfe-4bcd-b205-9b5d336028c5",
+    "question": "Wie bekomme ich Monaco Grand Prix Tickets?",
+    "answer": "Tickets für den Monaco Grand Prix erhalten Sie bei Faltin Travel als Teil eines Reisepakets mit Hotel und Betreuung. Senden Sie uns Ihre unverbindliche Anfrage – Monaco ist begehrt, eine frühzeitige Anfrage lohnt sich.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-monaco-grand-prix-2026-2",
+    "event_id": "59ddbaff-4dfe-4bcd-b205-9b5d336028c5",
+    "question": "Wo und wann findet der Monaco GP 2026 statt?",
+    "answer": "Gefahren wird vom 5. bis 7. Juni 2026 auf dem Stadtkurs Circuit de Monaco mitten durch Monte-Carlo – vorbei an Casino, Hafen und dem berühmten Tunnel.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-monaco-grand-prix-2026-3",
+    "event_id": "59ddbaff-4dfe-4bcd-b205-9b5d336028c5",
+    "question": "Welche Tribünen gibt es?",
+    "answer": "Beliebt sind die Tribünen an der Strecke (z. B. am Hafen oder an der Schwimmbad-Schikane) sowie exklusive Hospitality- und Yacht-Angebote mit Catering und bestem Blick auf die Action.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-monaco-grand-prix-2026-4",
+    "event_id": "59ddbaff-4dfe-4bcd-b205-9b5d336028c5",
+    "question": "Was kostet ein Monaco-Paket?",
+    "answer": "Die Preise richten sich nach Kategorie und Hotel; Hospitality- und Yacht-Optionen liegen entsprechend höher. Gerne erstellen wir Ihnen ein massgeschneidertes Angebot.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-monaco-grand-prix-2026-5",
+    "event_id": "59ddbaff-4dfe-4bcd-b205-9b5d336028c5",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Sie profitieren von verlässlichen Tickets, gut gelegenen Hotels und persönlicher Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-motogp-2025-1",
+    "event_id": "3ff55d42-d1c3-414f-b69e-f8b45a788ed8",
+    "question": "Wie bekomme ich MotoGP Tickets-Tickets?",
+    "answer": "MotoGP Tickets-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-motogp-2025-2",
+    "event_id": "3ff55d42-d1c3-414f-b69e-f8b45a788ed8",
+    "question": "Wo und wann findet MotoGP Tickets statt?",
+    "answer": "MotoGP Tickets findet 02.03.2025 – 16.11.2025 statt – Austragungsort: 22 Austragungsorte. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-motogp-2025-3",
+    "event_id": "3ff55d42-d1c3-414f-b69e-f8b45a788ed8",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung mit Frühstücksbuffet im First-Class Hotel; MotoGP Ticket für einen MotoGP Ihrer Wahl; Zutritt zur Rennstrecke sowie zur gebuchten Tribüne; Reservierter Sitzplatz auf der gebuchten Tribüne mit bester Sicht auf die Rennstrecke. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-motogp-2025-4",
+    "event_id": "3ff55d42-d1c3-414f-b69e-f8b45a788ed8",
+    "question": "Was kosten MotoGP Tickets-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-motogp-2025-5",
+    "event_id": "3ff55d42-d1c3-414f-b69e-f8b45a788ed8",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "In der MotoGP-Rennklasse, der höchsten Rennklasse innerhalb der von der Fédération Internationale de Motocyclisme (FIM) veranstalteten FIM Motorrad Weltmeisterschaft, treten die leistungsstärksten Motorräder in einem Wettbewerb von ca. 21 R Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-motogp-2025-6",
+    "event_id": "3ff55d42-d1c3-414f-b69e-f8b45a788ed8",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-le-mans-2026-1",
+    "event_id": "fb7efa64-6724-4163-9c70-f5b421296c52",
+    "question": "Wie bekomme ich 24h Le Mans Tickets-Tickets?",
+    "answer": "24h Le Mans Tickets-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-le-mans-2026-2",
+    "event_id": "fb7efa64-6724-4163-9c70-f5b421296c52",
+    "question": "Wo und wann findet 24h Le Mans Tickets statt?",
+    "answer": "24h Le Mans Tickets findet 13.06.2026 – 14.06.2026 statt – Austragungsort: Circuit de la Sarthe, Le Mans. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-le-mans-2026-3",
+    "event_id": "fb7efa64-6724-4163-9c70-f5b421296c52",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung mit Frühstücksbuffet im First-Class Hotel; Le Mans Ticket für das 24-Stunden-Rennen von Le Mans; Zutritt zur Rennstrecke sowie zur Panoramaterrasse; Catering & Getränke im Hospitality-Bereich. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-le-mans-2026-4",
+    "event_id": "fb7efa64-6724-4163-9c70-f5b421296c52",
+    "question": "Was kosten 24h Le Mans Tickets-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-le-mans-2026-5",
+    "event_id": "fb7efa64-6724-4163-9c70-f5b421296c52",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Das 24-Stunden-Rennen von Le Mans (frz. 24 Heures du Mans) ist ein Langstreckenrennen für Sportwagen, das vom Automobile Club de l'Ouest (ACO) in der Nähe der französischen Stadt Le Mans veranstaltet wird. Das Rennen wird seit 1923 auf dem  Le Mans ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-le-mans-2026-6",
+    "event_id": "fb7efa64-6724-4163-9c70-f5b421296c52",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-tour-de-france-2026-1",
+    "event_id": "a5e72469-ab40-4ed1-9429-93e262cb1ca9",
+    "question": "Wie bekomme ich Tour de France Finale Tickets-Tickets?",
+    "answer": "Tour de France Finale Tickets-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-tour-de-france-2026-2",
+    "event_id": "a5e72469-ab40-4ed1-9429-93e262cb1ca9",
+    "question": "Wo und wann findet Tour de France Finale Tickets statt?",
+    "answer": "Tour de France Finale Tickets findet 26.07.2026 statt – Austragungsort: Champs-Élysées, Paris. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-tour-de-france-2026-3",
+    "event_id": "a5e72469-ab40-4ed1-9429-93e262cb1ca9",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung im Mittelklasse-Hotel; Frühstücksbuffet; Tour de France Finale Ticket für den Sonderbereich; Zutritt zur Tribüne Grand Palais. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-tour-de-france-2026-4",
+    "event_id": "a5e72469-ab40-4ed1-9429-93e262cb1ca9",
+    "question": "Was kosten Tour de France Finale Tickets-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-tour-de-france-2026-5",
+    "event_id": "a5e72469-ab40-4ed1-9429-93e262cb1ca9",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Die traditionsreiche Tour de France ist das bekannteste und für die Fahrer bedeutendste Strassenradrennen der Welt und zählt zu den grössten jährlich stattfindenden Sportereignissen. Die über 3 Wochen dauernde „Grande Boucle“, wie die Tour  Paris ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-tour-de-france-2026-6",
+    "event_id": "a5e72469-ab40-4ed1-9429-93e262cb1ca9",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-ryder-cup-2027-1",
+    "event_id": "bd670481-104c-4d23-b84a-4e8e7a0fdf83",
+    "question": "Wie bekomme ich Ryder Cup Tickets?",
+    "answer": "Ryder Cup Tickets erhalten Sie bei Faltin Travel als Teil eines Reisepakets mit Hotel und Betreuung. Senden Sie uns Ihre unverbindliche Anfrage – die Nachfrage ist gross, eine frühzeitige Anfrage lohnt sich.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-ryder-cup-2027-2",
+    "event_id": "bd670481-104c-4d23-b84a-4e8e7a0fdf83",
+    "question": "Wo und wann findet der Ryder Cup 2027 statt?",
+    "answer": "Gespielt wird vom 17. bis 19. September 2027 auf dem Golfplatz des Adare Manor in der Grafschaft Limerick, Irland.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-ryder-cup-2027-3",
+    "event_id": "bd670481-104c-4d23-b84a-4e8e7a0fdf83",
+    "question": "Welche Tickets gibt es?",
+    "answer": "Es gibt Tagestickets für die Trainings- und Wettkampftage sowie Hospitality-Optionen mit Catering und exklusivem Zugang. Den genauen Umfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-ryder-cup-2027-4",
+    "event_id": "bd670481-104c-4d23-b84a-4e8e7a0fdf83",
+    "question": "Was kostet ein Ryder-Cup-Paket?",
+    "answer": "Die Preise richten sich nach Tag, Kategorie und Hotel. Hospitality-Pakete liegen über regulären Tagestickets. Gerne erstellen wir Ihnen ein individuelles Angebot.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-ryder-cup-2027-5",
+    "event_id": "bd670481-104c-4d23-b84a-4e8e7a0fdf83",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Sie erhalten verlässliche Tickets, ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-nfl-munich-2026-1",
+    "event_id": "c3bc765e-4f50-40c4-b01e-23ce16ebb823",
+    "question": "Wie bekomme ich NFL München Game Tickets-Tickets?",
+    "answer": "NFL München Game Tickets-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-nfl-munich-2026-2",
+    "event_id": "c3bc765e-4f50-40c4-b01e-23ce16ebb823",
+    "question": "Wo und wann findet NFL München Game Tickets statt?",
+    "answer": "NFL München Game Tickets findet November 2026 statt – Austragungsort: Allianz Arena, München. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-nfl-munich-2026-3",
+    "event_id": "c3bc765e-4f50-40c4-b01e-23ce16ebb823",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 1x Hotelübernachtung im Mittelklassehotel; Frühstücksbuffet; NFL München Game Ticket; Faltin Travel Lanyard. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-nfl-munich-2026-4",
+    "event_id": "c3bc765e-4f50-40c4-b01e-23ce16ebb823",
+    "question": "Was kosten NFL München Game Tickets-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-nfl-munich-2026-5",
+    "event_id": "c3bc765e-4f50-40c4-b01e-23ce16ebb823",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Das NFL Munich Game zählt zu den spektakulärsten Sportereignissen in Europa und zieht Fans aus aller Welt nach München. Austragungsort ist die Allianz Arena, eines der modernsten Stadien Europas. Mit ihrer markanten Architektur und hervorra München ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-nfl-munich-2026-6",
+    "event_id": "c3bc765e-4f50-40c4-b01e-23ce16ebb823",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-nfl-london-2025-1",
+    "event_id": "d3ac3ce4-761b-4745-9406-674d15ee8bbd",
+    "question": "Wie bekomme ich NFL London Games-Tickets?",
+    "answer": "NFL London Games-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-nfl-london-2025-2",
+    "event_id": "d3ac3ce4-761b-4745-9406-674d15ee8bbd",
+    "question": "Wo und wann findet NFL London Games 2025 statt?",
+    "answer": "NFL London Games 2025 findet Oktober 2025 statt – Austragungsort: Tottenham Hotspur Stadium & Wembley Stadium, London. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-nfl-london-2025-3",
+    "event_id": "d3ac3ce4-761b-4745-9406-674d15ee8bbd",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 1x Hotelübernachtung im Mittelklassehotel; Frühstücksbuffet; NFL London Game Ticket; Faltin Travel Lanyard. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-nfl-london-2025-4",
+    "event_id": "d3ac3ce4-761b-4745-9406-674d15ee8bbd",
+    "question": "Was kosten NFL London Games-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-nfl-london-2025-5",
+    "event_id": "d3ac3ce4-761b-4745-9406-674d15ee8bbd",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Die NFL London Games sind ein Highlight für American-Football-Fans in Europa. Seit 2007 werden regelmäßig Spiele der NFL Regular Season in London ausgetragen, um den Sport international weiter zu verbreiten. Die Partien sind Teil der NFL In London ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-nfl-london-2025-6",
+    "event_id": "d3ac3ce4-761b-4745-9406-674d15ee8bbd",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-masters-augusta-2026-1",
+    "event_id": "66f4d122-31be-479c-8c7e-892bc2857490",
+    "question": "Wie bekomme ich Masters Tickets?",
+    "answer": "Tickets für The Masters sind extrem begehrt und streng limitiert. Faltin Travel stellt Ihnen ein Reisepaket mit Eintritt, Hotel und Betreuung zusammen. Senden Sie uns frühzeitig Ihre unverbindliche Anfrage.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-masters-augusta-2026-2",
+    "event_id": "66f4d122-31be-479c-8c7e-892bc2857490",
+    "question": "Wo und wann findet The Masters 2026 statt?",
+    "answer": "Gespielt wird vom 9. bis 12. April 2026 im Augusta National Golf Club in Augusta, Georgia – einem der berühmtesten Golfplätze der Welt.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-masters-augusta-2026-3",
+    "event_id": "66f4d122-31be-479c-8c7e-892bc2857490",
+    "question": "Was ist im Paket enthalten?",
+    "answer": "Je nach Verfügbarkeit umfasst das Paket den Zugang zu Practice Rounds oder Turniertagen, Hotelübernachtungen und persönliche Betreuung. Den genauen Umfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-masters-augusta-2026-4",
+    "event_id": "66f4d122-31be-479c-8c7e-892bc2857490",
+    "question": "Was kostet ein Masters-Paket?",
+    "answer": "Aufgrund der hohen Nachfrage und strengen Limitierung variieren die Preise stark. Gerne erstellen wir Ihnen ein individuelles Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-masters-augusta-2026-5",
+    "event_id": "66f4d122-31be-479c-8c7e-892bc2857490",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Sie erhalten verlässlichen Zugang, ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-olympia-2028-1",
+    "event_id": "7a8fd75e-8479-49a3-b228-de86065992ae",
+    "question": "Wie bekomme ich Olympia-Tickets?",
+    "answer": "Olympia-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-olympia-2028-2",
+    "event_id": "7a8fd75e-8479-49a3-b228-de86065992ae",
+    "question": "Wo und wann findet Olympia 2028 statt?",
+    "answer": "Olympia 2028 findet 14.07.2028 – 30.07.2028 statt – Austragungsort: Los Angeles. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-olympia-2028-3",
+    "event_id": "7a8fd75e-8479-49a3-b228-de86065992ae",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung mit Frühstücksbuffet im Firstclass-Hotel; Olympia-Ticket für die gewünschte Veranstaltung; Faltin Travel Lanyard; Los Angeles Reiseführer mit Stadtplan. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-olympia-2028-4",
+    "event_id": "7a8fd75e-8479-49a3-b228-de86065992ae",
+    "question": "Was kosten Olympia-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-olympia-2028-5",
+    "event_id": "7a8fd75e-8479-49a3-b228-de86065992ae",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Die Olympischen Spiele werden in Sommer- und Winterspiele aufgeteilt, welche abwechslungsweise alle 2 Jahre stattfinden. Seit der Erstaustragung 1896 sind die Spiele stetig gewachsen, so dass mittlerweile mit über 200 Ländern fast die ganze Los Angeles ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-olympia-2028-6",
+    "event_id": "7a8fd75e-8479-49a3-b228-de86065992ae",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-iihf-eishockey-wm-2026-1",
+    "event_id": "db28e73b-bf46-4a3f-8e3b-082016d0cc46",
+    "question": "Wie bekomme ich IIHF Eishockey WM-Tickets?",
+    "answer": "IIHF Eishockey WM-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-iihf-eishockey-wm-2026-2",
+    "event_id": "db28e73b-bf46-4a3f-8e3b-082016d0cc46",
+    "question": "Wo und wann findet IIHF Eishockey WM 2026 statt?",
+    "answer": "IIHF Eishockey WM 2026 findet 15.05.2026 – 31.05.2026 statt – Austragungsort: Swiss Life Arena & BCF Arena, Zürich & Fribourg. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-iihf-eishockey-wm-2026-3",
+    "event_id": "db28e73b-bf46-4a3f-8e3b-082016d0cc46",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung im 4-Sterne Hotel; Frühstücksbuffet; Reservierter Sitzplatz in der Arena; Je nach Ticketvariante Zutritt zum VIP-Bereich. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-iihf-eishockey-wm-2026-4",
+    "event_id": "db28e73b-bf46-4a3f-8e3b-082016d0cc46",
+    "question": "Was kosten IIHF Eishockey WM-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-iihf-eishockey-wm-2026-5",
+    "event_id": "db28e73b-bf46-4a3f-8e3b-082016d0cc46",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Die IIHF Eishockey-Weltmeisterschaft ist das wichtigste jährlich ausgetragene Turnier im internationalen Eishockey. Organisiert vom Weltverband IIHF (International Ice Hockey Federation), bringt es seit 1920 die besten Nationen des Sports z Zürich & Fribourg ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-iihf-eishockey-wm-2026-6",
+    "event_id": "db28e73b-bf46-4a3f-8e3b-082016d0cc46",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-americas-cup-2024-1",
+    "event_id": "b91d7ae9-0864-4585-85a4-036bb6c6ec5e",
+    "question": "Wie bekomme ich America's Cup-Tickets?",
+    "answer": "America's Cup-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-americas-cup-2024-2",
+    "event_id": "b91d7ae9-0864-4585-85a4-036bb6c6ec5e",
+    "question": "Wo und wann findet America's Cup 2024 statt?",
+    "answer": "America's Cup 2024 findet 22.08.2024 – 20.10.2024 statt – Austragungsort: Hafen von Barcelona, Barcelona. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-americas-cup-2024-3",
+    "event_id": "b91d7ae9-0864-4585-85a4-036bb6c6ec5e",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Übernachtung/Frühstück im Firstclass-Hotel; America's Cup Ticket für den Sonderbereich; Zutritt zur gebuchten Tribüne; Open Bar mit Soft Drinks & Bier. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-americas-cup-2024-4",
+    "event_id": "b91d7ae9-0864-4585-85a4-036bb6c6ec5e",
+    "question": "Was kosten America's Cup-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-americas-cup-2024-5",
+    "event_id": "b91d7ae9-0864-4585-85a4-036bb6c6ec5e",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Der America's Cup ist der älteste internationale Sportwettbewerb der Welt. Das Rennen ist nach der amerikanischen Yacht „America\" benannt, die die erste Auflage des Wettbewerbs 1851 gewann. Der America's Cup gilt als der Höhepunkt des profe Barcelona ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-americas-cup-2024-6",
+    "event_id": "b91d7ae9-0864-4585-85a4-036bb6c6ec5e",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-rugby-wm-2027-1",
+    "event_id": "16f71df1-ad77-46cf-996b-eb11bd135a39",
+    "question": "Wie bekomme ich Rugby World Cup-Tickets?",
+    "answer": "Rugby World Cup-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-rugby-wm-2027-2",
+    "event_id": "16f71df1-ad77-46cf-996b-eb11bd135a39",
+    "question": "Wo und wann findet Rugby World Cup 2027 statt?",
+    "answer": "Rugby World Cup 2027 findet 01.10.2027 – 13.11.2027 statt. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-rugby-wm-2027-3",
+    "event_id": "16f71df1-ad77-46cf-996b-eb11bd135a39",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 4x Hotelübernachtung im Mittelklassehotel; Frühstücksbuffet; Rugby Union WM 2027 Ticket; Faltin Travel Lanyard. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-rugby-wm-2027-4",
+    "event_id": "16f71df1-ad77-46cf-996b-eb11bd135a39",
+    "question": "Was kosten Rugby World Cup-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-rugby-wm-2027-5",
+    "event_id": "16f71df1-ad77-46cf-996b-eb11bd135a39",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Die Rugby World Cup zählt – nach der Fussball-Weltmeisterschaft und den Olympischen Sommerspielen – zu den drei grössten internationalen Sportveranstaltungen weltweit. Der wichtigste Wettbewerb im Rugby Union wird seit 1987 alle vier Jahre  Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-rugby-wm-2027-6",
+    "event_id": "16f71df1-ad77-46cf-996b-eb11bd135a39",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-rugby-six-nations-2026-1",
+    "event_id": "a8460736-850b-46ad-a2e0-9575b16edcff",
+    "question": "Wie bekomme ich Rugby Six Nations-Tickets?",
+    "answer": "Rugby Six Nations-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-rugby-six-nations-2026-2",
+    "event_id": "a8460736-850b-46ad-a2e0-9575b16edcff",
+    "question": "Wo und wann findet Rugby Six Nations 2026 statt?",
+    "answer": "Rugby Six Nations 2026 findet 05.02.2026 – 14.03.2026 statt – Austragungsort: London, Paris, Dublin, Rom, Edinburgh, Cardiff. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-rugby-six-nations-2026-3",
+    "event_id": "a8460736-850b-46ad-a2e0-9575b16edcff",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung mit Frühstücksbuffet im Mittelklasse-Hotel; Rugby Six Nations Ticket; Faltin Travel Lanyard; Reiseführer mit Stadtplan. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-rugby-six-nations-2026-4",
+    "event_id": "a8460736-850b-46ad-a2e0-9575b16edcff",
+    "question": "Was kosten Rugby Six Nations-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-rugby-six-nations-2026-5",
+    "event_id": "a8460736-850b-46ad-a2e0-9575b16edcff",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Die Six Nations Championship ist das traditionsreichste und bedeutendste Rugbyturnier Europas. Seit dem Jahr 2000 kämpfen sechs Nationen – England, Frankreich, Irland, Italien, Schottland und Wales – jährlich um die begehrte Championship Tr London, Paris, Dublin, Rom, Edinburgh, Cardiff ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-rugby-six-nations-2026-6",
+    "event_id": "a8460736-850b-46ad-a2e0-9575b16edcff",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-darts-wm-2026-1",
+    "event_id": "7aef5a22-0b58-4bfb-bb54-1b04523bec08",
+    "question": "Wie bekomme ich PDC Darts WM-Tickets?",
+    "answer": "PDC Darts WM-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-darts-wm-2026-2",
+    "event_id": "7aef5a22-0b58-4bfb-bb54-1b04523bec08",
+    "question": "Wo und wann findet PDC Darts WM 2027 statt?",
+    "answer": "PDC Darts WM 2027 findet 11.12.2026 – 03.01.2027 statt – Austragungsort: Alexandra Palace, London. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-darts-wm-2026-3",
+    "event_id": "7aef5a22-0b58-4bfb-bb54-1b04523bec08",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung in London; Frühstücksbuffet; Darts WM 2027 Ticket für den Alexandra Palace (Tribüne, Tisch oder VIP); Detaillierte Reiseinformation. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-darts-wm-2026-4",
+    "event_id": "7aef5a22-0b58-4bfb-bb54-1b04523bec08",
+    "question": "Was kosten PDC Darts WM-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-darts-wm-2026-5",
+    "event_id": "7aef5a22-0b58-4bfb-bb54-1b04523bec08",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Die Paddy Power PDC World Darts Championship wird seit 2007 im altehrwürdigen Alexandra Palace in London ausgetragen. In der West Hall des Ally Pally finden rund 3.000 Zuschauer Platz. Das Teilnehmerfeld besteht seit 2025/26 aus 128 Spieler London ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-darts-wm-2026-6",
+    "event_id": "7aef5a22-0b58-4bfb-bb54-1b04523bec08",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-lidl-final4-2026-1",
+    "event_id": "55a9107a-ff0e-4347-ad19-d58ee6ca0b8b",
+    "question": "Wie bekomme ich Lidl Final4-Tickets?",
+    "answer": "Lidl Final4-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-lidl-final4-2026-2",
+    "event_id": "55a9107a-ff0e-4347-ad19-d58ee6ca0b8b",
+    "question": "Wo und wann findet Lidl Final4 2026 statt?",
+    "answer": "Lidl Final4 2026 findet 18.04.2026 – 19.04.2026 statt – Austragungsort: LANXESS arena, Köln. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-lidl-final4-2026-3",
+    "event_id": "55a9107a-ff0e-4347-ad19-d58ee6ca0b8b",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung mit Frühstücksbuffet im First-Class Hotel; Reservierter Sitzplatz in der gewünschten Kategorie in der LANXESS arena Köln; Je nach Ticketkategorie Zutritt zum entsprechenden Hospitality-Bereich; Faltin Travel Lanyard. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-lidl-final4-2026-4",
+    "event_id": "55a9107a-ff0e-4347-ad19-d58ee6ca0b8b",
+    "question": "Was kosten Lidl Final4-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-lidl-final4-2026-5",
+    "event_id": "55a9107a-ff0e-4347-ad19-d58ee6ca0b8b",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Beim Lidl Final4 wird im Rahmen eines Endspiel-Wochenendes der DHB Pokalsieger ermittelt: am Samstag die beiden Halbfinals, am Sonntag das Finale. Das DHB Final4 zog 2023 nach 29 Jahren von Hamburg nach Köln. Der DHB-Pokal ist der wichtigst Köln ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-lidl-final4-2026-6",
+    "event_id": "55a9107a-ff0e-4347-ad19-d58ee6ca0b8b",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-hahnenkamm-rennen-2027-1",
+    "event_id": "df5cedbb-97a2-453e-aced-297cca00259d",
+    "question": "Wie bekomme ich Hahnenkamm Rennen-Tickets?",
+    "answer": "Hahnenkamm Rennen-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-hahnenkamm-rennen-2027-2",
+    "event_id": "df5cedbb-97a2-453e-aced-297cca00259d",
+    "question": "Wo und wann findet Hahnenkamm Rennen 2027 statt?",
+    "answer": "Hahnenkamm Rennen 2027 findet 18.01.2027 – 24.01.2027 statt – Austragungsort: Streif, Kitzbühel. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-hahnenkamm-rennen-2027-3",
+    "event_id": "df5cedbb-97a2-453e-aced-297cca00259d",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Übernachtung/Frühstück im First-Class Hotel in den Kitzbüheler Alpen; 33. Weisswurstparty im Stanglwirt inkl. Gold Ticket; Tagesticket für die Abfahrt der Herren am Samstag, 23.01.2027; Zutritt zum Renngelände sowie Sitzplatz in der VIP-Zone. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-hahnenkamm-rennen-2027-4",
+    "event_id": "df5cedbb-97a2-453e-aced-297cca00259d",
+    "question": "Was kosten Hahnenkamm Rennen-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-hahnenkamm-rennen-2027-5",
+    "event_id": "df5cedbb-97a2-453e-aced-297cca00259d",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Das Hahnenkamm-Rennen wird seit 1931 am Hahnenkamm in Kitzbühel ausgetragen, traditionell im Januar eine Woche nach dem Lauberhornrennen in Wengen. Die besten Skifahrer der Welt treten in Abfahrt (Streif), Super G und Slalom (Ganslernhang)  Kitzbühel ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-hahnenkamm-rennen-2027-6",
+    "event_id": "df5cedbb-97a2-453e-aced-297cca00259d",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-neujahrskonzert-2027-1",
+    "event_id": "4d54447e-f36f-4b22-9782-876d302815af",
+    "question": "Wie bekomme ich Wiener Neujahrskonzert-Tickets?",
+    "answer": "Wiener Neujahrskonzert-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-neujahrskonzert-2027-2",
+    "event_id": "4d54447e-f36f-4b22-9782-876d302815af",
+    "question": "Wo und wann findet Wiener Neujahrskonzert 2027 statt?",
+    "answer": "Wiener Neujahrskonzert 2027 findet 01.01.2027 statt – Austragungsort: Musikvereinssaal, Wien. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-neujahrskonzert-2027-3",
+    "event_id": "4d54447e-f36f-4b22-9782-876d302815af",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung mit Frühstücksbuffet im First Class Hotel; Eintrittskarte für das Neujahrskonzert der Wiener Philharmoniker; Zutritt zum Goldenen Saal im Musikvereinssaal; Reservierter Sitzplatz in der gebuchten Kategorie. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-neujahrskonzert-2027-4",
+    "event_id": "4d54447e-f36f-4b22-9782-876d302815af",
+    "question": "Was kosten Wiener Neujahrskonzert-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-neujahrskonzert-2027-5",
+    "event_id": "4d54447e-f36f-4b22-9782-876d302815af",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Das Neujahrskonzert der Wiener Philharmoniker ist das bekannteste Neujahrskonzert der Welt. Seit Jahrzehnten präsentieren die Wiener Philharmoniker zum Jahreswechsel ein heiteres und besinnliches Programm aus dem Repertoire der Strauss-Dyna Wien ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-neujahrskonzert-2027-6",
+    "event_id": "4d54447e-f36f-4b22-9782-876d302815af",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-wiener-opernball-2027-1",
+    "event_id": "e0a4c13f-825c-45f4-8985-ff26960f1805",
+    "question": "Wie bekomme ich Wiener Opernball-Tickets?",
+    "answer": "Wiener Opernball-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-wiener-opernball-2027-2",
+    "event_id": "e0a4c13f-825c-45f4-8985-ff26960f1805",
+    "question": "Wo und wann findet Wiener Opernball 2027 statt?",
+    "answer": "Wiener Opernball 2027 findet 04.02.2027 statt – Austragungsort: Wiener Staatsoper, Wien. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-wiener-opernball-2027-3",
+    "event_id": "e0a4c13f-825c-45f4-8985-ff26960f1805",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung mit Frühstücksbuffet im First Class Hotel; Wiener Opernball Ticket; Zutritt zur Wiener Staatsoper für den Wiener Opernball; 1-stündiger Walzerkurs am Tag des Opernballs. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-wiener-opernball-2027-4",
+    "event_id": "e0a4c13f-825c-45f4-8985-ff26960f1805",
+    "question": "Was kosten Wiener Opernball-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-wiener-opernball-2027-5",
+    "event_id": "e0a4c13f-825c-45f4-8985-ff26960f1805",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Einmal im Jahr verwandelt sich die Wiener Staatsoper in den schönsten und elegantesten Ballsaal der Welt. Mit dem Wiener Opernball steht ein rauschendes gesellschaftliches Grossereignis an, das als Vorbild für Bälle auf der ganzen Welt gilt Wien ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-wiener-opernball-2027-6",
+    "event_id": "e0a4c13f-825c-45f4-8985-ff26960f1805",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-bayreuther-festspiele-2026-1",
+    "event_id": "604c6e73-4d49-4831-ac44-6809efb0177b",
+    "question": "Wie bekomme ich Bayreuther Festspiele-Tickets?",
+    "answer": "Bayreuther Festspiele-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-bayreuther-festspiele-2026-2",
+    "event_id": "604c6e73-4d49-4831-ac44-6809efb0177b",
+    "question": "Wo und wann findet Bayreuther Festspiele 2026 statt?",
+    "answer": "Bayreuther Festspiele 2026 findet 25.07.2026 – 26.08.2026 statt – Austragungsort: Richard-Wagner-Festspielhaus, Bayreuth. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-bayreuther-festspiele-2026-3",
+    "event_id": "604c6e73-4d49-4831-ac44-6809efb0177b",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung im First-Class Hotel; Frühstücksbuffet; Bayreuther Festspiele Ticket für das Bayreuther Festspielhaus; Faltin Travel Lanyard. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-bayreuther-festspiele-2026-4",
+    "event_id": "604c6e73-4d49-4831-ac44-6809efb0177b",
+    "question": "Was kosten Bayreuther Festspiele-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-bayreuther-festspiele-2026-5",
+    "event_id": "604c6e73-4d49-4831-ac44-6809efb0177b",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Die Bayreuther Festspiele – Erbe eines Visionärs, Revolutionärs, Utopisten – zählen heute zu den bekanntesten und populärsten Musiktheaterfestivals der Welt. Jeden Sommer pilgern Kenner, Verehrer und Skeptiker zum Grünen Hügel in Bayreuth,  Bayreuth ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-bayreuther-festspiele-2026-6",
+    "event_id": "604c6e73-4d49-4831-ac44-6809efb0177b",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-elbphilharmonie-1",
+    "event_id": "55dda071-35ae-4c03-819d-27dab1f327fa",
+    "question": "Wie bekomme ich Hamburger Elbphilharmonie-Tickets?",
+    "answer": "Hamburger Elbphilharmonie-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-elbphilharmonie-2",
+    "event_id": "55dda071-35ae-4c03-819d-27dab1f327fa",
+    "question": "Wo und wann findet Hamburger Elbphilharmonie statt?",
+    "answer": "Termin von Hamburger Elbphilharmonie wird rechtzeitig bekanntgegeben – Austragungsort: Elbphilharmonie, Hamburg. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-elbphilharmonie-3",
+    "event_id": "55dda071-35ae-4c03-819d-27dab1f327fa",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 1x Hotelübernachtung mit Frühstücksbuffet im First-Class Hotel; Hamburger Elbphilharmonie Ticket (Grosser Saal); Reservierter Sitzplatz in der gebuchten Kategorie; Faltin Travel Lanyard. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-elbphilharmonie-4",
+    "event_id": "55dda071-35ae-4c03-819d-27dab1f327fa",
+    "question": "Was kosten Hamburger Elbphilharmonie-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-elbphilharmonie-5",
+    "event_id": "55dda071-35ae-4c03-819d-27dab1f327fa",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Die im Wesentlichen vom Architekturbüro Herzog & de Meuron als neues Wahrzeichen der Stadt geplante und 2016 fertiggestellte Elbphilharmonie wurde am 11. Januar 2017 eingeweiht. Die über 600 Konzerte im ersten Jahr wurden von rund 850.000 M Hamburg ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-elbphilharmonie-6",
+    "event_id": "55dda071-35ae-4c03-819d-27dab1f327fa",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-last-night-of-the-proms-2026-1",
+    "event_id": "bf340fa9-bcd7-48c5-80ac-614e5bf1dbba",
+    "question": "Wie bekomme ich Last Night of the Proms-Tickets?",
+    "answer": "Last Night of the Proms-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-last-night-of-the-proms-2026-2",
+    "event_id": "bf340fa9-bcd7-48c5-80ac-614e5bf1dbba",
+    "question": "Wo und wann findet Last Night of the Proms 2026 statt?",
+    "answer": "Last Night of the Proms 2026 findet 12.09.2026 statt – Austragungsort: Royal Albert Hall, London. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-last-night-of-the-proms-2026-3",
+    "event_id": "bf340fa9-bcd7-48c5-80ac-614e5bf1dbba",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 1x Hotelübernachtung; Frühstücksbuffet; Last Night of the Proms Ticket (Circle Seating); Faltin Travel Lanyard. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-last-night-of-the-proms-2026-4",
+    "event_id": "bf340fa9-bcd7-48c5-80ac-614e5bf1dbba",
+    "question": "Was kosten Last Night of the Proms-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-last-night-of-the-proms-2026-5",
+    "event_id": "bf340fa9-bcd7-48c5-80ac-614e5bf1dbba",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Die Last Night of the Proms ist das Abschlusskonzert der traditionsreichen Sommerkonzertreihe „Proms“, die erstmals 1895 stattfand. Untrennbar mit der Geschichte verbunden ist Dirigent Sir Henry Wood, dessen Büste bis heute vor der Orgel in London ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-last-night-of-the-proms-2026-6",
+    "event_id": "bf340fa9-bcd7-48c5-80ac-614e5bf1dbba",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-eurovision-song-contest-2026-1",
+    "event_id": "d4462372-de9a-4e68-81b7-bafc22574c37",
+    "question": "Wie bekomme ich Eurovision Song Contest-Tickets?",
+    "answer": "Eurovision Song Contest-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-eurovision-song-contest-2026-2",
+    "event_id": "d4462372-de9a-4e68-81b7-bafc22574c37",
+    "question": "Wo und wann findet Eurovision Song Contest 2026 statt?",
+    "answer": "Eurovision Song Contest 2026 findet 16.05.2026 statt – Austragungsort: Wiener Stadthalle, Wien. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-eurovision-song-contest-2026-3",
+    "event_id": "d4462372-de9a-4e68-81b7-bafc22574c37",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung im Mittelklassehotel in Wien; Frühstücksbuffet; Eurovision Song Contest Ticket; Faltin Travel Lanyard. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-eurovision-song-contest-2026-4",
+    "event_id": "d4462372-de9a-4e68-81b7-bafc22574c37",
+    "question": "Was kosten Eurovision Song Contest-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-eurovision-song-contest-2026-5",
+    "event_id": "d4462372-de9a-4e68-81b7-bafc22574c37",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Der Eurovision Song Contest wird jedes Jahr von über 180 Millionen Zuschauern weltweit verfolgt. Seit 1958 findet der Wettbewerb mit wenigen Ausnahmen jeweils im Land des Vorjahressiegers statt. Der erste ESC fand 1956 in Lugano in der Schw Wien ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-eurovision-song-contest-2026-6",
+    "event_id": "d4462372-de9a-4e68-81b7-bafc22574c37",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-oktoberfest-2026-1",
+    "event_id": "da0068be-db08-4e4b-91b0-8fa93237191d",
+    "question": "Wie bekomme ich eine Oktoberfest-Tischreservierung?",
+    "answer": "Faltin Travel organisiert Tischreservierungen in beliebten Festzelten – meist inklusive Verzehrgutscheinen – auf Wunsch kombiniert mit Hotel und Betreuung. Senden Sie uns frühzeitig Ihre unverbindliche Anfrage.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-oktoberfest-2026-2",
+    "event_id": "da0068be-db08-4e4b-91b0-8fa93237191d",
+    "question": "Wo und wann findet das Oktoberfest 2026 statt?",
+    "answer": "Das Oktoberfest läuft vom 19. September bis 4. Oktober 2026 auf der Theresienwiese in München.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-oktoberfest-2026-3",
+    "event_id": "da0068be-db08-4e4b-91b0-8fa93237191d",
+    "question": "Sind Verzehrgutscheine inklusive?",
+    "answer": "In der Regel beinhalten Festzelt-Reservierungen Verzehrgutscheine für Speisen und Getränke. Den genauen Umfang stimmen wir je nach Zelt und Paket individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-oktoberfest-2026-4",
+    "event_id": "da0068be-db08-4e4b-91b0-8fa93237191d",
+    "question": "Was kostet ein Oktoberfest-Paket?",
+    "answer": "Die Preise richten sich nach Zelt, Tag (Wochenende/Wochentag), Gruppengrösse und Hotel. Gerne erstellen wir Ihnen ein individuelles Angebot.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-oktoberfest-2026-5",
+    "event_id": "da0068be-db08-4e4b-91b0-8fa93237191d",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Sie erhalten verlässliche Reservierungen, gut gelegene Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-karneval-in-rio-2026-1",
+    "event_id": "0b65638c-9e4c-4cda-9367-3137f275894e",
+    "question": "Wie bekomme ich Karneval in Rio-Tickets?",
+    "answer": "Karneval in Rio-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-karneval-in-rio-2026-2",
+    "event_id": "0b65638c-9e4c-4cda-9367-3137f275894e",
+    "question": "Wo und wann findet Karneval in Rio 2026 statt?",
+    "answer": "Karneval in Rio 2026 findet 13.02.2026 – 21.02.2026 statt – Austragungsort: Sambódromo, Rio de Janeiro. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-karneval-in-rio-2026-3",
+    "event_id": "0b65638c-9e4c-4cda-9367-3137f275894e",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung mit Frühstücksbuffet im First-Class Hotel; Karneval in Rio Ticket für den Sambódromo; Zutritt zum entsprechenden Hospitality-Bereich; Faltin Travel Lanyard. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-karneval-in-rio-2026-4",
+    "event_id": "0b65638c-9e4c-4cda-9367-3137f275894e",
+    "question": "Was kosten Karneval in Rio-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-karneval-in-rio-2026-5",
+    "event_id": "0b65638c-9e4c-4cda-9367-3137f275894e",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Der Karneval in Rio gilt als grösstes Volksfest Brasiliens und zieht jedes Jahr fast 1 Million Menschen in die Cidade Maravilhosa. Zentrum ist der Sambódromo da Marquês de Sapucaí, der 1984 eigens für die Karnevalsparaden gebaut wurde und P Rio de Janeiro ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-karneval-in-rio-2026-6",
+    "event_id": "0b65638c-9e4c-4cda-9367-3137f275894e",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "faq-royal-ascot-2026-1",
+    "event_id": "27dafc76-7d85-4028-877b-9912e1952aac",
+    "question": "Wie bekomme ich Royal Ascot Ladies Day-Tickets?",
+    "answer": "Royal Ascot Ladies Day-Tickets erhalten Sie bei Faltin Travel als Teil eines kompletten Reisepakets inklusive Hotel und persönlicher Betreuung. Senden Sie uns einfach Ihre unverbindliche Anfrage, und wir prüfen die Verfügbarkeit und erstellen Ihnen ein individuelles Angebot.",
+    "sort_order": 1
+  },
+  {
+    "id": "faq-royal-ascot-2026-2",
+    "event_id": "27dafc76-7d85-4028-877b-9912e1952aac",
+    "question": "Wo und wann findet Royal Ascot Ladies Day 2026 statt?",
+    "answer": "Royal Ascot Ladies Day 2026 findet 18.06.2026 statt – Austragungsort: Ascot Racecourse, Ascot. Die genauen Details bestätigen wir Ihnen mit Ihrem persönlichen Angebot.",
+    "sort_order": 2
+  },
+  {
+    "id": "faq-royal-ascot-2026-3",
+    "event_id": "27dafc76-7d85-4028-877b-9912e1952aac",
+    "question": "Was ist im Reisepaket enthalten?",
+    "answer": "Je nach gewähltem Paket sind enthalten: 2x Hotelübernachtung im First-Class Hotel; Frühstücksbuffet; Royal Ascot 2026 Ladies Day Ticket für den Ascot Racecourse; Zutritt zum entsprechenden Hospitality-Bereich. Den genauen Leistungsumfang stimmen wir individuell mit Ihnen ab.",
+    "sort_order": 3
+  },
+  {
+    "id": "faq-royal-ascot-2026-4",
+    "event_id": "27dafc76-7d85-4028-877b-9912e1952aac",
+    "question": "Was kosten Royal Ascot Ladies Day-Tickets und Reisepakete?",
+    "answer": "Die Preise richten sich nach Kategorie, Termin und gewähltem Hotel. Da wir individuell auf Ihre Wünsche eingehen, erstellen wir Ihnen ein massgeschneidertes Angebot mit den aktuellen Konditionen.",
+    "sort_order": 4
+  },
+  {
+    "id": "faq-royal-ascot-2026-5",
+    "event_id": "27dafc76-7d85-4028-877b-9912e1952aac",
+    "question": "Wie reise ich an und wo übernachte ich?",
+    "answer": "Als Ladies' Day gilt traditionell der dritte und bedeutendste Renntag der Royal-Ascot-Woche. Sportlicher Höhepunkt ist der prestigeträchtige Ascot Gold Cup – das wichtigste Galopprennen Grossbritanniens über lange Distanzen. Gesellschaftlic Ascot ist gut per Flug oder Bahn erreichbar. Faltin Travel wählt für Sie gut gelegene Hotels mit guter Anbindung an den Veranstaltungsort; eine frühzeitige Buchung wird empfohlen.",
+    "sort_order": 5
+  },
+  {
+    "id": "faq-royal-ascot-2026-6",
+    "event_id": "27dafc76-7d85-4028-877b-9912e1952aac",
+    "question": "Warum mit Faltin Travel buchen?",
+    "answer": "Als mehrfach ausgezeichneter Spezialist für Sport- und Kulturreisen bieten wir Ihnen verlässliche Tickets, sorgfältig ausgewählte Hotels und persönliche Betreuung aus einer Hand – inklusive Schweizer Reisegarantie.",
+    "sort_order": 6
+  },
+  {
+    "id": "eec795e8-cfb4-4cc7-97ba-c42ddf32a19d",
+    "event_id": "e14db5a4-499e-493f-bfe6-30e53b3319dd",
+    "question": "Wie komme ich an Tickets für die Schweiz-Spiele?",
+    "answer": "Senden Sie uns Ihre unverbindliche Anfrage mit Wunschspiel. Wir prüfen die Verfügbarkeit und erstellen Ihnen ein Komplettangebot mit Ticket, Hotel und Transfers.",
+    "sort_order": 1
+  },
+  {
+    "id": "b37eb9a0-3c18-4127-b14a-325c7f604bf4",
+    "event_id": "e14db5a4-499e-493f-bfe6-30e53b3319dd",
+    "question": "Wo spielt die Schweiz an der WM 2026?",
+    "answer": "Die Gruppenspiele finden in Santa Clara (San Francisco Bay Area), Los Angeles und Vancouver statt – alle an der Westküste Nordamerikas.",
+    "sort_order": 2
+  },
+  {
+    "id": "27f5722e-5b55-48ed-8891-c1ce64707bcc",
+    "event_id": "e14db5a4-499e-493f-bfe6-30e53b3319dd",
+    "question": "Kann ich mehrere Schweiz-Spiele kombinieren?",
+    "answer": "Ja. Die Spielorte liegen entlang der Westküste; wir organisieren gerne eine Rundreise mit allen drei Gruppenspielen inklusive Hotels und Weiterreisen.",
+    "sort_order": 3
+  },
+  {
+    "id": "67fa04bf-997a-45c0-ab0c-f1616dec1dd6",
+    "event_id": "e14db5a4-499e-493f-bfe6-30e53b3319dd",
+    "question": "Was passiert bei einer Qualifikation für die K.-o.-Runde?",
+    "answer": "Wir bieten flexible Verlängerungsoptionen an und sichern Ihnen frühzeitig Tickets für die Runde der letzten 32 und darüber hinaus.",
+    "sort_order": 4
+  },
+  {
+    "id": "479bdb96-1761-4500-ac5a-eea56ca4a496",
+    "event_id": "e4fdbc55-1155-4a12-b148-db206077ae55",
+    "question": "Wie komme ich an Tickets für die Deutschland-Spiele?",
+    "answer": "Senden Sie uns Ihre unverbindliche Anfrage mit Wunschspiel. Wir prüfen die Verfügbarkeit und erstellen Ihnen ein Komplettangebot mit Ticket, Hotel und Transfers.",
+    "sort_order": 1
+  },
+  {
+    "id": "41b17467-ecc2-4911-aa11-64670970d061",
+    "event_id": "e4fdbc55-1155-4a12-b148-db206077ae55",
+    "question": "Wo spielt Deutschland an der WM 2026?",
+    "answer": "Die Gruppenspiele finden in Houston, Toronto und New York/New Jersey statt. Das dritte Gruppenspiel steigt im MetLife Stadium – dem Finalstadion.",
+    "sort_order": 2
+  },
+  {
+    "id": "7cabc81f-5b2e-4f47-b375-b1f576e52950",
+    "event_id": "e4fdbc55-1155-4a12-b148-db206077ae55",
+    "question": "Kann ich mehrere Deutschland-Spiele kombinieren?",
+    "answer": "Ja. Wir organisieren gerne eine Rundreise mit allen drei Gruppenspielen inklusive Inlandsflügen, Hotels und Transfers.",
+    "sort_order": 3
+  },
+  {
+    "id": "8545134c-000a-4c60-8fc3-e6b26395cbd7",
+    "event_id": "e4fdbc55-1155-4a12-b148-db206077ae55",
+    "question": "Was passiert bei einer Qualifikation für die K.-o.-Runde?",
+    "answer": "Wir bieten flexible Verlängerungsoptionen an und sichern Ihnen frühzeitig Tickets für die weiteren Runden bis zum Finale.",
+    "sort_order": 4
+  },
+  {
+    "id": "0ddc7c31-6f08-4be4-ad66-64c6d71002ce",
+    "event_id": "946ff28a-60b8-4008-91c9-a0e068a0d6f3",
+    "question": "Wie komme ich an Tickets für das WM-Finale 2026?",
+    "answer": "Finaltickets sind extrem begehrt. Senden Sie uns frühzeitig Ihre unverbindliche Anfrage – wir prüfen Verfügbarkeiten in allen Kategorien inklusive Hospitality.",
+    "sort_order": 1
+  },
+  {
+    "id": "b5bebd6d-0c8a-49ba-a315-0a60c395e978",
+    "event_id": "946ff28a-60b8-4008-91c9-a0e068a0d6f3",
+    "question": "Wo findet das WM-Finale 2026 statt?",
+    "answer": "Im MetLife Stadium in East Rutherford, New Jersey – rund 15 Kilometer von Manhattan entfernt, mit 82’500 Plätzen das grösste Stadion des Turniers.",
+    "sort_order": 2
+  },
+  {
+    "id": "2d73896f-3f0b-4141-9db0-eb2f9d1a0c4c",
+    "event_id": "946ff28a-60b8-4008-91c9-a0e068a0d6f3",
+    "question": "Sind Hotel und Transfers inklusive?",
+    "answer": "Ja, unsere Finale-Packages enthalten Hotelübernachtungen in New York, Stadiontransfers und persönliche Betreuung vor Ort.",
+    "sort_order": 3
+  },
+  {
+    "id": "56c98a35-6c81-463e-b1b7-a9c893e6bec0",
+    "event_id": "06f08561-80cf-4301-905d-04f565ece73f",
+    "question": "Wie komme ich an FC Bayern Tickets?",
+    "answer": "Heimspiele sind regulär meist ausverkauft. Senden Sie uns Ihre unverbindliche Anfrage mit Wunschspiel – wir sichern Ihnen garantierte Plätze in der gewünschten Kategorie.",
+    "sort_order": 1
+  },
+  {
+    "id": "a6daaa7c-de7d-48b0-97fa-fa1e77673bd3",
+    "event_id": "06f08561-80cf-4301-905d-04f565ece73f",
+    "question": "Sind die Plätze nebeneinander?",
+    "answer": "Ja, bei unseren Buchungen sitzen Sie garantiert zusammen.",
+    "sort_order": 2
+  },
+  {
+    "id": "d93e1529-a6f4-484c-abe8-7603bc3f2335",
+    "event_id": "06f08561-80cf-4301-905d-04f565ece73f",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Münchner Hotels inklusive Frühstück. Auch reine Tickets sind auf Anfrage möglich.",
+    "sort_order": 3
+  },
+  {
+    "id": "485facd8-f3b7-47f5-a1e5-f4b6e9639d79",
+    "event_id": "06f08561-80cf-4301-905d-04f565ece73f",
+    "question": "Kann ich auch Topspiele wie Bayern gegen Dortmund buchen?",
+    "answer": "Ja, gerade für Topspiele lohnt sich eine frühzeitige Anfrage – wir beraten Sie zu Verfügbarkeit und Kategorien.",
+    "sort_order": 4
+  },
+  {
+    "id": "c6832752-1ece-4ee5-927f-07e553e11fd7",
+    "event_id": "4d0b679e-5b6f-405d-876a-728c93a5a30c",
+    "question": "Wie komme ich an BVB Tickets?",
+    "answer": "Senden Sie uns Ihre unverbindliche Anfrage mit Wunschspiel – wir sichern Ihnen garantierte Plätze in der gewünschten Kategorie, auch wenn das Spiel offiziell ausverkauft ist.",
+    "sort_order": 1
+  },
+  {
+    "id": "99e708ed-5453-43e7-90f8-9c37828c9e24",
+    "event_id": "4d0b679e-5b6f-405d-876a-728c93a5a30c",
+    "question": "Kann ich Plätze auf der Südtribüne buchen?",
+    "answer": "Die Gelbe Wand ist Mitgliedern und Dauerkartenbesitzern vorbehalten. Wir bieten Ihnen hervorragende Sitzplätze mit Blick auf die Südtribüne – das Erlebnis inklusive.",
+    "sort_order": 2
+  },
+  {
+    "id": "e1f680ad-3ea5-424b-a337-597e7f47d7ab",
+    "event_id": "4d0b679e-5b6f-405d-876a-728c93a5a30c",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Hotels in Dortmund inklusive Frühstück.",
+    "sort_order": 3
+  },
+  {
+    "id": "fac903ce-6636-4f5a-8439-8b2ab148b226",
+    "event_id": "4d0b679e-5b6f-405d-876a-728c93a5a30c",
+    "question": "Kann ich auch das Revierderby buchen?",
+    "answer": "Ja, für Topspiele wie das Derby gegen Schalke oder Spiele gegen Bayern empfehlen wir eine möglichst frühe Anfrage.",
+    "sort_order": 4
+  },
+  {
+    "id": "79ea2fe4-cdc4-4c41-adf3-cc6eaa041ad4",
+    "event_id": "b81bcd8a-c48c-4c7d-9add-5c0069c5b868",
+    "question": "Wie komme ich an Tickets für den Klassiker?",
+    "answer": "Topspiele sind regulär sofort ausverkauft. Senden Sie uns Ihre unverbindliche Anfrage – wir sichern Ihnen garantierte Plätze in der gewünschten Kategorie, für Hin- oder Rückspiel.",
+    "sort_order": 1
+  },
+  {
+    "id": "9dc9a7da-5c79-4563-a7f8-ecbd3023cd11",
+    "event_id": "b81bcd8a-c48c-4c7d-9add-5c0069c5b868",
+    "question": "Sind die Plätze nebeneinander?",
+    "answer": "Ja, bei unseren Buchungen sitzen Sie garantiert zusammen.",
+    "sort_order": 2
+  },
+  {
+    "id": "5532dbdc-ea1d-402a-b62d-484d4935d01e",
+    "event_id": "b81bcd8a-c48c-4c7d-9add-5c0069c5b868",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Hotels in München bzw. Dortmund inklusive Frühstück. Auch reine Tickets sind auf Anfrage möglich.",
+    "sort_order": 3
+  },
+  {
+    "id": "c55032f8-dd1d-471d-b0c3-83394a824599",
+    "event_id": "b81bcd8a-c48c-4c7d-9add-5c0069c5b868",
+    "question": "Wann stehen die Termine fest?",
+    "answer": "Die DFL veröffentlicht den Spielplan der Saison 2026/27 Ende Juni; die genauen Anstosszeiten folgen einige Wochen vor dem Spieltag. Wir informieren Sie, sobald Ihr Wunschspiel terminiert ist.",
+    "sort_order": 4
+  },
+  {
+    "id": "9ede1f95-1071-4ee1-88cd-696e448cf195",
+    "event_id": "51f3008e-cafb-47da-98d6-11eb3ff18626",
+    "question": "Wie komme ich an Tickets für Bayern gegen Leverkusen?",
+    "answer": "Topspiele sind regulär sofort ausverkauft. Senden Sie uns Ihre unverbindliche Anfrage – wir sichern Ihnen garantierte Plätze in der gewünschten Kategorie, für Hin- oder Rückspiel.",
+    "sort_order": 1
+  },
+  {
+    "id": "5e704fe8-6390-4d3c-9221-bf8579e360a3",
+    "event_id": "51f3008e-cafb-47da-98d6-11eb3ff18626",
+    "question": "Sind die Plätze nebeneinander?",
+    "answer": "Ja, bei unseren Buchungen sitzen Sie garantiert zusammen.",
+    "sort_order": 2
+  },
+  {
+    "id": "b95d0941-5629-4f55-8568-2a22ba560687",
+    "event_id": "51f3008e-cafb-47da-98d6-11eb3ff18626",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Hotels in München bzw. Leverkusen/Köln inklusive Frühstück. Auch reine Tickets sind auf Anfrage möglich.",
+    "sort_order": 3
+  },
+  {
+    "id": "604e3559-305f-4acb-babe-8f0c2f3929e2",
+    "event_id": "51f3008e-cafb-47da-98d6-11eb3ff18626",
+    "question": "Wann stehen die Termine fest?",
+    "answer": "Die DFL veröffentlicht den Spielplan der Saison 2026/27 Ende Juni; die genauen Anstosszeiten folgen einige Wochen vor dem Spieltag. Wir informieren Sie, sobald Ihr Wunschspiel terminiert ist.",
+    "sort_order": 4
+  },
+  {
+    "id": "6727936b-484f-4eba-a4ed-154b242acf22",
+    "event_id": "3075f869-82e1-4c61-b39b-01f0e7216e6e",
+    "question": "Wie komme ich an Tickets für Dortmund gegen Leipzig?",
+    "answer": "Topspiele sind regulär sofort ausverkauft. Senden Sie uns Ihre unverbindliche Anfrage – wir sichern Ihnen garantierte Plätze in der gewünschten Kategorie, für Hin- oder Rückspiel.",
+    "sort_order": 1
+  },
+  {
+    "id": "8a937a93-7a66-41d4-a08d-3c05db7ea9e3",
+    "event_id": "3075f869-82e1-4c61-b39b-01f0e7216e6e",
+    "question": "Sind die Plätze nebeneinander?",
+    "answer": "Ja, bei unseren Buchungen sitzen Sie garantiert zusammen.",
+    "sort_order": 2
+  },
+  {
+    "id": "ea5d8a82-ab85-4daa-807b-21911fc3a3f1",
+    "event_id": "3075f869-82e1-4c61-b39b-01f0e7216e6e",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Hotels in Dortmund bzw. Leipzig inklusive Frühstück. Auch reine Tickets sind auf Anfrage möglich.",
+    "sort_order": 3
+  },
+  {
+    "id": "fe4f737a-1303-41de-9862-65337101defb",
+    "event_id": "3075f869-82e1-4c61-b39b-01f0e7216e6e",
+    "question": "Wann stehen die Termine fest?",
+    "answer": "Die DFL veröffentlicht den Spielplan der Saison 2026/27 Ende Juni; die genauen Anstosszeiten folgen einige Wochen vor dem Spieltag. Wir informieren Sie, sobald Ihr Wunschspiel terminiert ist.",
+    "sort_order": 4
+  },
+  {
+    "id": "5913d9b0-d5cf-41d3-9c47-c66fa12cbb6c",
+    "event_id": "79238bcc-818e-4de9-9225-6721911c3f8a",
+    "question": "Wie komme ich an Tickets für Frankfurt gegen Bayern?",
+    "answer": "Topspiele sind regulär sofort ausverkauft. Senden Sie uns Ihre unverbindliche Anfrage – wir sichern Ihnen garantierte Plätze in der gewünschten Kategorie, für Hin- oder Rückspiel.",
+    "sort_order": 1
+  },
+  {
+    "id": "a82c3045-744c-4971-8c59-a96916b57d9e",
+    "event_id": "79238bcc-818e-4de9-9225-6721911c3f8a",
+    "question": "Sind die Plätze nebeneinander?",
+    "answer": "Ja, bei unseren Buchungen sitzen Sie garantiert zusammen.",
+    "sort_order": 2
+  },
+  {
+    "id": "c787d38c-5c1e-462a-a35c-6761ed9bde57",
+    "event_id": "79238bcc-818e-4de9-9225-6721911c3f8a",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Hotels in Frankfurt bzw. München inklusive Frühstück. Auch reine Tickets sind auf Anfrage möglich.",
+    "sort_order": 3
+  },
+  {
+    "id": "9eaf02bd-d8a2-4226-8a45-47c3eefdc3c7",
+    "event_id": "79238bcc-818e-4de9-9225-6721911c3f8a",
+    "question": "Wann stehen die Termine fest?",
+    "answer": "Die DFL veröffentlicht den Spielplan der Saison 2026/27 Ende Juni; die genauen Anstosszeiten folgen einige Wochen vor dem Spieltag. Wir informieren Sie, sobald Ihr Wunschspiel terminiert ist.",
+    "sort_order": 4
+  },
+  {
+    "id": "0bab7629-f459-4132-86f3-ee9698625228",
+    "event_id": "b7122184-90bf-47c3-a5ec-0ea651a189b8",
+    "question": "Wie komme ich an FC Liverpool Tickets?",
+    "answer": "Heimspiele sind regulär oft ausverkauft. Senden Sie uns Ihre unverbindliche Anfrage mit Wunschspiel – wir sichern Ihnen garantierte Plätze in der gewünschten Kategorie.",
+    "sort_order": 1
+  },
+  {
+    "id": "74fbea8d-428e-46f6-b06c-b08014ae87ed",
+    "event_id": "b7122184-90bf-47c3-a5ec-0ea651a189b8",
+    "question": "Sind die Plätze nebeneinander?",
+    "answer": "Ja, bei unseren Buchungen sitzen Sie garantiert zusammen.",
+    "sort_order": 2
+  },
+  {
+    "id": "d428c54f-9098-4550-ae32-95623ef50229",
+    "event_id": "b7122184-90bf-47c3-a5ec-0ea651a189b8",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Hotels in Liverpool inklusive Frühstück. Auch reine Tickets sind auf Anfrage möglich.",
+    "sort_order": 3
+  },
+  {
+    "id": "5304aa6e-0f18-44ac-8ddf-e9edec75ff7e",
+    "event_id": "b7122184-90bf-47c3-a5ec-0ea651a189b8",
+    "question": "Kann ich auch Topspiele und Derbys buchen?",
+    "answer": "Ja, gerade für Topspiele empfiehlt sich eine möglichst frühe Anfrage – wir beraten Sie zu Verfügbarkeit und Kategorien.",
+    "sort_order": 4
+  },
+  {
+    "id": "d3c24e80-7e7c-42cc-86ae-2c7802525879",
+    "event_id": "febaf74c-3c39-45b2-b3b8-c7165e2aa4c6",
+    "question": "Wie komme ich an FC Arsenal Tickets?",
+    "answer": "Heimspiele sind regulär oft ausverkauft. Senden Sie uns Ihre unverbindliche Anfrage mit Wunschspiel – wir sichern Ihnen garantierte Plätze in der gewünschten Kategorie.",
+    "sort_order": 1
+  },
+  {
+    "id": "00cfe5ad-4211-4760-9926-4ccfafaca2f9",
+    "event_id": "febaf74c-3c39-45b2-b3b8-c7165e2aa4c6",
+    "question": "Sind die Plätze nebeneinander?",
+    "answer": "Ja, bei unseren Buchungen sitzen Sie garantiert zusammen.",
+    "sort_order": 2
+  },
+  {
+    "id": "c4531c4d-d9f8-4276-82a2-3c09fde99489",
+    "event_id": "febaf74c-3c39-45b2-b3b8-c7165e2aa4c6",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Hotels in London inklusive Frühstück. Auch reine Tickets sind auf Anfrage möglich.",
+    "sort_order": 3
+  },
+  {
+    "id": "8fd666e8-442e-426b-b059-6a5ed7e0cb82",
+    "event_id": "febaf74c-3c39-45b2-b3b8-c7165e2aa4c6",
+    "question": "Kann ich auch Topspiele und Derbys buchen?",
+    "answer": "Ja, gerade für Topspiele empfiehlt sich eine möglichst frühe Anfrage – wir beraten Sie zu Verfügbarkeit und Kategorien.",
+    "sort_order": 4
+  },
+  {
+    "id": "6f944636-84c6-4cb6-8d1b-caf4605a7605",
+    "event_id": "67059bdb-30fe-4c4d-96ce-626bbf54d897",
+    "question": "Wie komme ich an Manchester City Tickets?",
+    "answer": "Heimspiele sind regulär oft ausverkauft. Senden Sie uns Ihre unverbindliche Anfrage mit Wunschspiel – wir sichern Ihnen garantierte Plätze in der gewünschten Kategorie.",
+    "sort_order": 1
+  },
+  {
+    "id": "9807e788-2d9b-4f5c-8726-e39669baa299",
+    "event_id": "67059bdb-30fe-4c4d-96ce-626bbf54d897",
+    "question": "Sind die Plätze nebeneinander?",
+    "answer": "Ja, bei unseren Buchungen sitzen Sie garantiert zusammen.",
+    "sort_order": 2
+  },
+  {
+    "id": "723f2915-a7d2-45c8-ba22-467dbde3ea4e",
+    "event_id": "67059bdb-30fe-4c4d-96ce-626bbf54d897",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Hotels in Manchester inklusive Frühstück. Auch reine Tickets sind auf Anfrage möglich.",
+    "sort_order": 3
+  },
+  {
+    "id": "328acf3c-f341-4fe1-80f8-80cf91686c55",
+    "event_id": "67059bdb-30fe-4c4d-96ce-626bbf54d897",
+    "question": "Kann ich auch Topspiele und Derbys buchen?",
+    "answer": "Ja, gerade für Topspiele empfiehlt sich eine möglichst frühe Anfrage – wir beraten Sie zu Verfügbarkeit und Kategorien.",
+    "sort_order": 4
+  },
+  {
+    "id": "c5bc1a35-7829-49a3-b30a-2eb6821a4266",
+    "event_id": "b2285833-c8fb-4fe3-8c0c-7b4c0e4ee274",
+    "question": "Wie komme ich an Manchester United Tickets?",
+    "answer": "Heimspiele sind regulär oft ausverkauft. Senden Sie uns Ihre unverbindliche Anfrage mit Wunschspiel – wir sichern Ihnen garantierte Plätze in der gewünschten Kategorie.",
+    "sort_order": 1
+  },
+  {
+    "id": "4c405d81-933f-461f-a5ee-86de472b76bd",
+    "event_id": "b2285833-c8fb-4fe3-8c0c-7b4c0e4ee274",
+    "question": "Sind die Plätze nebeneinander?",
+    "answer": "Ja, bei unseren Buchungen sitzen Sie garantiert zusammen.",
+    "sort_order": 2
+  },
+  {
+    "id": "890f00f6-a930-42c0-9995-1796ee03bd79",
+    "event_id": "b2285833-c8fb-4fe3-8c0c-7b4c0e4ee274",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Hotels in Manchester inklusive Frühstück. Auch reine Tickets sind auf Anfrage möglich.",
+    "sort_order": 3
+  },
+  {
+    "id": "322eace3-8df2-40f9-ac66-7d88813f3697",
+    "event_id": "b2285833-c8fb-4fe3-8c0c-7b4c0e4ee274",
+    "question": "Kann ich auch Topspiele und Derbys buchen?",
+    "answer": "Ja, gerade für Topspiele empfiehlt sich eine möglichst frühe Anfrage – wir beraten Sie zu Verfügbarkeit und Kategorien.",
+    "sort_order": 4
+  },
+  {
+    "id": "20b5366e-c929-4e20-a35a-3d163dec6e29",
+    "event_id": "d48e6f19-ab1a-40e5-b27a-d5fc9dcc5acb",
+    "question": "Wie komme ich an FC Chelsea Tickets?",
+    "answer": "Heimspiele sind regulär oft ausverkauft. Senden Sie uns Ihre unverbindliche Anfrage mit Wunschspiel – wir sichern Ihnen garantierte Plätze in der gewünschten Kategorie.",
+    "sort_order": 1
+  },
+  {
+    "id": "da767e59-6f00-489c-b901-f9180918c17b",
+    "event_id": "d48e6f19-ab1a-40e5-b27a-d5fc9dcc5acb",
+    "question": "Sind die Plätze nebeneinander?",
+    "answer": "Ja, bei unseren Buchungen sitzen Sie garantiert zusammen.",
+    "sort_order": 2
+  },
+  {
+    "id": "25139b9e-7e63-440f-9d33-7a4a54b98148",
+    "event_id": "d48e6f19-ab1a-40e5-b27a-d5fc9dcc5acb",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Hotels in London inklusive Frühstück. Auch reine Tickets sind auf Anfrage möglich.",
+    "sort_order": 3
+  },
+  {
+    "id": "f7ed950e-74a4-4597-af2c-bad7235d8383",
+    "event_id": "d48e6f19-ab1a-40e5-b27a-d5fc9dcc5acb",
+    "question": "Kann ich auch Topspiele und Derbys buchen?",
+    "answer": "Ja, gerade für Topspiele empfiehlt sich eine möglichst frühe Anfrage – wir beraten Sie zu Verfügbarkeit und Kategorien.",
+    "sort_order": 4
+  },
+  {
+    "id": "14b3b3a2-a5ca-4072-9ff0-bf46b49aad29",
+    "event_id": "d61cdd50-9082-49c0-83d1-4e795e086fbf",
+    "question": "Wie komme ich an Real Madrid Tickets?",
+    "answer": "Heimspiele sind regulär oft ausverkauft. Senden Sie uns Ihre unverbindliche Anfrage mit Wunschspiel – wir sichern Ihnen garantierte Plätze in der gewünschten Kategorie.",
+    "sort_order": 1
+  },
+  {
+    "id": "88f2e49d-eb6f-4fd7-af87-c7891244e427",
+    "event_id": "d61cdd50-9082-49c0-83d1-4e795e086fbf",
+    "question": "Sind die Plätze nebeneinander?",
+    "answer": "Ja, bei unseren Buchungen sitzen Sie garantiert zusammen.",
+    "sort_order": 2
+  },
+  {
+    "id": "43b1f136-252d-4bb6-80bd-8f967b957079",
+    "event_id": "d61cdd50-9082-49c0-83d1-4e795e086fbf",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Hotels in Madrid inklusive Frühstück. Auch reine Tickets sind auf Anfrage möglich.",
+    "sort_order": 3
+  },
+  {
+    "id": "cbf928d2-44fa-49f2-aee4-310ff1bdc66e",
+    "event_id": "d61cdd50-9082-49c0-83d1-4e795e086fbf",
+    "question": "Kann ich auch Topspiele und Derbys buchen?",
+    "answer": "Ja, gerade für Topspiele empfiehlt sich eine möglichst frühe Anfrage – wir beraten Sie zu Verfügbarkeit und Kategorien.",
+    "sort_order": 4
+  },
+  {
+    "id": "4d437710-da8a-4ae5-a918-4bcb1c271e3c",
+    "event_id": "4af6f574-7586-4f41-95fb-7e5155509f3d",
+    "question": "Wie komme ich an FC Barcelona Tickets?",
+    "answer": "Heimspiele sind regulär oft ausverkauft. Senden Sie uns Ihre unverbindliche Anfrage mit Wunschspiel – wir sichern Ihnen garantierte Plätze in der gewünschten Kategorie.",
+    "sort_order": 1
+  },
+  {
+    "id": "b60eba6b-20ab-4e53-bc75-dda2781154df",
+    "event_id": "4af6f574-7586-4f41-95fb-7e5155509f3d",
+    "question": "Sind die Plätze nebeneinander?",
+    "answer": "Ja, bei unseren Buchungen sitzen Sie garantiert zusammen.",
+    "sort_order": 2
+  },
+  {
+    "id": "b31948a5-1c61-4d5a-a03a-50cc95c6e973",
+    "event_id": "4af6f574-7586-4f41-95fb-7e5155509f3d",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Hotels in Barcelona inklusive Frühstück. Auch reine Tickets sind auf Anfrage möglich.",
+    "sort_order": 3
+  },
+  {
+    "id": "16bc70ae-de22-4a38-a666-6627df7b56e3",
+    "event_id": "4af6f574-7586-4f41-95fb-7e5155509f3d",
+    "question": "Kann ich auch Topspiele und Derbys buchen?",
+    "answer": "Ja, gerade für Topspiele empfiehlt sich eine möglichst frühe Anfrage – wir beraten Sie zu Verfügbarkeit und Kategorien.",
+    "sort_order": 4
+  },
+  {
+    "id": "53502962-61da-4b33-83ea-11a48155e763",
+    "event_id": "b4eb1105-bd40-4424-a2e9-18b9cc8ea763",
+    "question": "Wie komme ich an Juventus Turin Tickets?",
+    "answer": "Heimspiele sind regulär oft ausverkauft. Senden Sie uns Ihre unverbindliche Anfrage mit Wunschspiel – wir sichern Ihnen garantierte Plätze in der gewünschten Kategorie.",
+    "sort_order": 1
+  },
+  {
+    "id": "a526f9cb-0b1f-484e-aa6b-b12449a8b6e2",
+    "event_id": "b4eb1105-bd40-4424-a2e9-18b9cc8ea763",
+    "question": "Sind die Plätze nebeneinander?",
+    "answer": "Ja, bei unseren Buchungen sitzen Sie garantiert zusammen.",
+    "sort_order": 2
+  },
+  {
+    "id": "deafe88d-2a63-4dad-a41d-2f067240fcee",
+    "event_id": "b4eb1105-bd40-4424-a2e9-18b9cc8ea763",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Hotels in Turin inklusive Frühstück. Auch reine Tickets sind auf Anfrage möglich.",
+    "sort_order": 3
+  },
+  {
+    "id": "988d4931-4422-4d1c-87a1-53d209f835bf",
+    "event_id": "b4eb1105-bd40-4424-a2e9-18b9cc8ea763",
+    "question": "Kann ich auch Topspiele und Derbys buchen?",
+    "answer": "Ja, gerade für Topspiele empfiehlt sich eine möglichst frühe Anfrage – wir beraten Sie zu Verfügbarkeit und Kategorien.",
+    "sort_order": 4
+  },
+  {
+    "id": "87c3e76d-b578-4584-a792-9bfaf3f62ca5",
+    "event_id": "c8526837-7f33-471b-8588-3e28b6735d09",
+    "question": "Wie komme ich an Inter Mailand Tickets?",
+    "answer": "Heimspiele sind regulär oft ausverkauft. Senden Sie uns Ihre unverbindliche Anfrage mit Wunschspiel – wir sichern Ihnen garantierte Plätze in der gewünschten Kategorie.",
+    "sort_order": 1
+  },
+  {
+    "id": "9ec7961b-e11f-4b49-81e6-ac0d2f5fe953",
+    "event_id": "c8526837-7f33-471b-8588-3e28b6735d09",
+    "question": "Sind die Plätze nebeneinander?",
+    "answer": "Ja, bei unseren Buchungen sitzen Sie garantiert zusammen.",
+    "sort_order": 2
+  },
+  {
+    "id": "1102cd67-d5ef-4f43-b223-5042596a8365",
+    "event_id": "c8526837-7f33-471b-8588-3e28b6735d09",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Hotels in Mailand inklusive Frühstück. Auch reine Tickets sind auf Anfrage möglich.",
+    "sort_order": 3
+  },
+  {
+    "id": "0537d9bc-d870-4d17-86db-bdc1d61ccbc9",
+    "event_id": "c8526837-7f33-471b-8588-3e28b6735d09",
+    "question": "Kann ich auch Topspiele und Derbys buchen?",
+    "answer": "Ja, gerade für Topspiele empfiehlt sich eine möglichst frühe Anfrage – wir beraten Sie zu Verfügbarkeit und Kategorien.",
+    "sort_order": 4
+  },
+  {
+    "id": "5cff782c-07dd-473c-913e-d955e7b291a4",
+    "event_id": "ec0ec6bd-0551-4427-b18a-3ea164eed3c9",
+    "question": "Wie komme ich an AC Mailand Tickets?",
+    "answer": "Heimspiele sind regulär oft ausverkauft. Senden Sie uns Ihre unverbindliche Anfrage mit Wunschspiel – wir sichern Ihnen garantierte Plätze in der gewünschten Kategorie.",
+    "sort_order": 1
+  },
+  {
+    "id": "ea9c774b-3ff6-4431-a55f-5b05c3314e0d",
+    "event_id": "ec0ec6bd-0551-4427-b18a-3ea164eed3c9",
+    "question": "Sind die Plätze nebeneinander?",
+    "answer": "Ja, bei unseren Buchungen sitzen Sie garantiert zusammen.",
+    "sort_order": 2
+  },
+  {
+    "id": "1f643a91-ba0a-4162-b760-d9cbeeb81b37",
+    "event_id": "ec0ec6bd-0551-4427-b18a-3ea164eed3c9",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Hotels in Mailand inklusive Frühstück. Auch reine Tickets sind auf Anfrage möglich.",
+    "sort_order": 3
+  },
+  {
+    "id": "b6310dfa-d2d6-4b63-9088-d2b6f003c29f",
+    "event_id": "ec0ec6bd-0551-4427-b18a-3ea164eed3c9",
+    "question": "Kann ich auch Topspiele und Derbys buchen?",
+    "answer": "Ja, gerade für Topspiele empfiehlt sich eine möglichst frühe Anfrage – wir beraten Sie zu Verfügbarkeit und Kategorien.",
+    "sort_order": 4
+  },
+  {
+    "id": "27e8dbde-e900-437d-a289-a25a0789ca8b",
+    "event_id": "d7920994-7717-4ebd-b9fe-d9d52499882f",
+    "question": "Wie komme ich an Tickets für El Clásico?",
+    "answer": "Derby-Tickets sind regulär praktisch nicht erhältlich. Senden Sie uns Ihre unverbindliche Anfrage – wir sichern Ihnen garantierte Plätze, für Hin- oder Rückspiel.",
+    "sort_order": 1
+  },
+  {
+    "id": "1a2089e6-109e-4c7d-8b85-fbc05146d14a",
+    "event_id": "d7920994-7717-4ebd-b9fe-d9d52499882f",
+    "question": "Sind die Plätze nebeneinander?",
+    "answer": "Ja, bei unseren Buchungen sitzen Sie garantiert zusammen.",
+    "sort_order": 2
+  },
+  {
+    "id": "2ce773ba-0d36-4902-aeb8-b0b2093c70b0",
+    "event_id": "d7920994-7717-4ebd-b9fe-d9d52499882f",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Hotels in Madrid bzw. Barcelona inklusive Frühstück.",
+    "sort_order": 3
+  },
+  {
+    "id": "7eb44e5b-47c1-4880-8ed0-4b302e6bad9c",
+    "event_id": "d7920994-7717-4ebd-b9fe-d9d52499882f",
+    "question": "Wann stehen die Termine fest?",
+    "answer": "Die Spielpläne der neuen Saison erscheinen im Sommer; die genauen Anstosszeiten folgen einige Wochen vor dem Spieltag. Wir informieren Sie, sobald Ihr Wunschspiel terminiert ist.",
+    "sort_order": 4
+  },
+  {
+    "id": "dc65c299-cb3a-459f-bc88-7bfe91a0351b",
+    "event_id": "abd614b0-8917-4399-ae6e-f8a2435099dc",
+    "question": "Wie komme ich an Tickets für North-West-Derby?",
+    "answer": "Derby-Tickets sind regulär praktisch nicht erhältlich. Senden Sie uns Ihre unverbindliche Anfrage – wir sichern Ihnen garantierte Plätze, für Hin- oder Rückspiel.",
+    "sort_order": 1
+  },
+  {
+    "id": "f6fdf231-41ee-4963-b7e1-341984546168",
+    "event_id": "abd614b0-8917-4399-ae6e-f8a2435099dc",
+    "question": "Sind die Plätze nebeneinander?",
+    "answer": "Ja, bei unseren Buchungen sitzen Sie garantiert zusammen.",
+    "sort_order": 2
+  },
+  {
+    "id": "08c8ce1e-f875-474e-9593-8d0e9cab9c70",
+    "event_id": "abd614b0-8917-4399-ae6e-f8a2435099dc",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Hotels in Liverpool bzw. Manchester inklusive Frühstück.",
+    "sort_order": 3
+  },
+  {
+    "id": "89081eb3-bc36-4bb7-96e4-f75fd59ca793",
+    "event_id": "abd614b0-8917-4399-ae6e-f8a2435099dc",
+    "question": "Wann stehen die Termine fest?",
+    "answer": "Die Spielpläne der neuen Saison erscheinen im Sommer; die genauen Anstosszeiten folgen einige Wochen vor dem Spieltag. Wir informieren Sie, sobald Ihr Wunschspiel terminiert ist.",
+    "sort_order": 4
+  },
+  {
+    "id": "eaf8afce-e190-44b6-88bf-0a2447f106cb",
+    "event_id": "c5c78fd8-739f-434e-8ea2-d9cfc7f9bbe4",
+    "question": "Wie komme ich an Tickets für Derby della Madonnina?",
+    "answer": "Derby-Tickets sind regulär praktisch nicht erhältlich. Senden Sie uns Ihre unverbindliche Anfrage – wir sichern Ihnen garantierte Plätze, für Hin- oder Rückspiel.",
+    "sort_order": 1
+  },
+  {
+    "id": "27fa37db-78af-4739-91dc-8d4123a33935",
+    "event_id": "c5c78fd8-739f-434e-8ea2-d9cfc7f9bbe4",
+    "question": "Sind die Plätze nebeneinander?",
+    "answer": "Ja, bei unseren Buchungen sitzen Sie garantiert zusammen.",
+    "sort_order": 2
+  },
+  {
+    "id": "fe376d71-c8c5-4acf-9d84-c7def09c817d",
+    "event_id": "c5c78fd8-739f-434e-8ea2-d9cfc7f9bbe4",
+    "question": "Ist ein Hotel im Package enthalten?",
+    "answer": "Ja, unsere Packages enthalten Übernachtungen in zentral gelegenen Hotels in Mailand inklusive Frühstück.",
+    "sort_order": 3
+  },
+  {
+    "id": "97eab2e7-0487-4121-9251-5bc9afaff2df",
+    "event_id": "c5c78fd8-739f-434e-8ea2-d9cfc7f9bbe4",
+    "question": "Wann stehen die Termine fest?",
+    "answer": "Die Spielpläne der neuen Saison erscheinen im Sommer; die genauen Anstosszeiten folgen einige Wochen vor dem Spieltag. Wir informieren Sie, sobald Ihr Wunschspiel terminiert ist.",
+    "sort_order": 4
   }
 ]

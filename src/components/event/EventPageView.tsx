@@ -4,9 +4,12 @@ import React, { createElement, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin, CalendarDays, ShieldCheck, Ticket, Award, ChevronDown } from 'lucide-react';
-import PackageCard from '@/components/PackageCard';
+import PackageCard, { formatPackagePrice } from '@/components/PackageCard';
 import EventContactForm from '@/components/EventContactForm';
 import LageplanMap from '@/components/LageplanMap';
+import SpielplanSection from '@/components/event/SpielplanSection';
+import SpielorteSection from '@/components/event/SpielorteSection';
+import DuellSection from '@/components/event/DuellSection';
 import type { EventRecord, SeriesRecord, PackageRecord, EventFaqRecord } from '@/lib/eventData';
 
 /** FT-Signatur: dunkles Navy mit weichem blauem Radial-Glow (wie faltintravel.com). */
@@ -198,6 +201,8 @@ export interface EventPageViewProps {
   packages?: PackageRecord[];
   faqs?: EventFaqRecord[];
   pinIcons?: PinIcon[];
+  /** Auto-Querverlinkung: Geschwister-Events derselben Serie (max. 4) für das "Weitere Events"-Modul. */
+  relatedEvents?: Array<{ name: string; href: string; image?: string | null; start_date?: string | null; end_date?: string | null }>;
   /** Admin-Vorschau: macht Elemente anklickbar (Click-to-Edit). */
   editable?: boolean;
 }
@@ -269,6 +274,7 @@ export default function EventPageView({
   packages = [],
   faqs = [],
   pinIcons = [],
+  relatedEvents = [],
   editable = false,
 }: EventPageViewProps) {
   const showAbout       = event.show_about       ?? true;
@@ -276,6 +282,37 @@ export default function EventPageView({
   const showFaqs        = event.show_faqs         ?? true;
   const showSpielplan   = event.show_spielplan    ?? false;
   const spielplan       = event.spielplan         || [];
+  // Spielorte/Vereine-Modul (Karten-Grid; Klick filtert den Spielplan)
+  const spielorte       = (event.spielorte || []).filter((o) => o && o.name);
+  const showSpielorte   = (event.show_spielorte ?? false) && spielorte.length > 0;
+  const spielorteTitle  = event.spielorte_title || 'Spielorte';
+  const [spielorteFilter, setSpielorteFilter] = useState<string | undefined>(undefined);
+  // Anfrage-Verdrahtung: Spielplan → Kontaktformular (Wunschspiel).
+  // Nur sinnvoll, wenn der Spielplan echte buchbare Einheiten enthält (Paarungen, Spiele,
+  // Renn-/Konzerttermine) – NICHT bei Tagesabläufen wie "Einlass/Pause/Konzertende".
+  // Auto-Erkennung, per Event mit spielplan_anfrage (true/false) überschreibbar.
+  const [requestedMatch, setRequestedMatch] = useState<string | undefined>(undefined);
+  const spielplanAnfrageAuto = (() => {
+    if (spielplan.length === 0) return false;
+    if (spielplan.some((r) => (r.round || '').trim())) return true; // Runden gepflegt → echte Spiele
+    const pairingLike = spielplan.filter((r) =>
+      /\svs\.?\s|\s[–-]\s|\bspiel\b|\bmatch\b|\brennen\b|grosser preis|grand prix/i.test(r.matchup || '')
+    );
+    return pairingLike.length >= Math.max(1, Math.ceil(spielplan.length / 3));
+  })();
+  const spielplanAnfrage = event.spielplan_anfrage ?? spielplanAnfrageAuto;
+  const matchOptions = spielplanAnfrage
+    ? spielplan
+        .filter((r) => r.matchup)
+        .map((r) => [r.matchup, r.date && `(${r.date})`].filter(Boolean).join(' '))
+    : [];
+  // Related-Modul (Auto-Querverlinkung innerhalb der Serie)
+  const showRelated = (event.show_related ?? true) && relatedEvents.length > 0;
+  const relatedTitle = event.related_title || 'Das könnte Sie auch interessieren';
+  // Duell-Modul (Head-to-Head)
+  const duell = event.duell || null;
+  const showDuell = (event.show_duell ?? false) && !!duell && !!duell.team_a && !!duell.team_b;
+  const duellTitle = event.duell_title || 'Das Duell';
   const showWissenswertes       = event.show_wissenswertes       ?? false;
   const wissenswertesTitle      = event.wissenswertes_title      || `Wissenswertes zu ${event.name || event.title}`;
   const wissenswertesText       = event.wissenswertes_text       || '';
@@ -329,7 +366,7 @@ export default function EventPageView({
   ).slice(0, 2);
 
   // Modul-Reihenfolge (per Admin/Drag steuerbar). Hero/Nav/CTA bleiben fest.
-  const DEFAULT_MODULE_ORDER = ['leistungen', 'about', 'spielplan', 'wissenswertes', 'stadionplan', 'lageplan', 'ticket_categories', 'packages', 'faq'];
+  const DEFAULT_MODULE_ORDER = ['leistungen', 'about', 'duell', 'spielorte', 'spielplan', 'wissenswertes', 'stadionplan', 'lageplan', 'ticket_categories', 'packages', 'faq', 'related'];
   const moduleOrder = (Array.isArray(event.module_order) && event.module_order.length ? event.module_order : DEFAULT_MODULE_ORDER);
   const orderOf = (key: string) => {
     const i = moduleOrder.indexOf(key);
@@ -339,6 +376,8 @@ export default function EventPageView({
   const anchors = ([
     hasLeistungen   && { key: 'leistungen', label: 'Unsere Leistungen', href: '#unsere-leistungen' },
     showAbout       && { key: 'about', label: 'Überblick', href: '#leistungen' },
+    showDuell       && { key: 'duell', label: duellTitle, href: '#duell' },
+    showSpielorte   && { key: 'spielorte', label: spielorteTitle, href: '#spielorte' },
     showSpielplan   && spielplan.length > 0 && { key: 'spielplan', label: 'Spielplan', href: '#spielplan' },
     showWissenswertes && { key: 'wissenswertes', label: 'Wissenswertes', href: '#wissenswertes' },
     showStadionplan && { key: 'stadionplan', label: 'Stadionplan', href: '#stadionplan' },
@@ -702,41 +741,63 @@ export default function EventPageView({
         </section>
       )}
 
-      {/* ── SPIELPLAN ────────────────────────────────────────────────────────── */}
+      {/* ── DUELL (Head-to-Head) ─────────────────────────────────────────────── */}
+      {showDuell && duell && (
+        <section className="py-14 px-4 scroll-mt-40" id="duell" style={{ ...BLUE_GLOW, order: orderOf('duell') }}>
+          <div className="container mx-auto max-w-4xl">
+            <InlineEditable
+              editable={editable}
+              field="duell_title"
+              singleLine
+              value={event.duell_title || ''}
+              display={duellTitle}
+              placeholder="Das Duell…"
+              as="h2"
+              className="text-3xl md:text-4xl font-extrabold mb-8 leading-tight text-white"
+            />
+            <DuellSection duell={duell} />
+          </div>
+        </section>
+      )}
+
+      {/* ── SPIELORTE / VEREINE (Karten-Grid, Klick filtert Spielplan) ───────── */}
+      {showSpielorte && (
+        <section className="py-14 px-4 bg-white scroll-mt-40" id="spielorte" style={{ order: orderOf('spielorte') }}>
+          <div className="container mx-auto max-w-6xl">
+            <InlineEditable
+              editable={editable}
+              field="spielorte_title"
+              singleLine
+              value={event.spielorte_title || ''}
+              display={spielorteTitle}
+              placeholder="Spielorte…"
+              as="h2"
+              className="text-3xl md:text-4xl font-extrabold mb-3 leading-tight"
+              style={{ color: '#143047' }}
+            />
+            {showSpielplan && spielplan.length > 0 && (
+              <p className="mb-8 text-base text-gray-600">Karte anklicken, um die passenden Termine im Spielplan zu sehen.</p>
+            )}
+            <SpielorteSection
+              items={spielorte}
+              hasSpielplan={showSpielplan && spielplan.length > 0}
+              onSelect={(f) => setSpielorteFilter(f)}
+            />
+          </div>
+        </section>
+      )}
+
+      {/* ── SPIELPLAN (smart: Runden-Filter, Suche, Einklappen) ──────────────── */}
       {showSpielplan && spielplan && spielplan.length > 0 && (
         <section className="py-14 px-4 scroll-mt-40" id="spielplan" style={{ background: '#eef3fb', borderTop: '1px solid #e5e8ed', borderBottom: '1px solid #e5e8ed', order: orderOf('spielplan') }}>
           <div className="container mx-auto max-w-4xl">
             <Editable editable={editable} target="spielplan" as="h2" className="text-3xl md:text-4xl font-extrabold mb-8 leading-tight" style={{ color: '#143047' }}>Spielplan</Editable>
-            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left text-sm">
-                  <thead style={{ background: '#143047' }}>
-                    <tr>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-white/70">Datum</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-white/70">Session</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-white/70">Spielpaarung</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-white/70">Runde</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {spielplan.map((item, idx) => (
-                      <tr key={idx} className="border-t border-gray-100 hover:bg-blue-50/40 transition">
-                        <td className="px-6 py-4 font-bold whitespace-nowrap" style={{ color: '#143047' }}>{item.date}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center rounded-sm px-3 py-1 text-xs font-bold text-white" style={{ background: '#143047' }}>{item.session}</span>
-                        </td>
-                        <td className="px-6 py-4 text-gray-700 whitespace-pre-line leading-relaxed">{item.matchup}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {item.round ? (
-                            <span className="inline-flex items-center rounded-sm bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">{item.round}</span>
-                          ) : <span className="text-gray-400">–</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <SpielplanSection
+              spielplan={spielplan}
+              externalFilter={spielorteFilter}
+              layout={event.spielplan_layout || 'auto'}
+              onRequest={spielplanAnfrage && packages.length === 0 ? setRequestedMatch : undefined}
+            />
           </div>
         </section>
       )}
@@ -801,7 +862,7 @@ export default function EventPageView({
                   <img src={stadionplanImage} alt={event.stadionplan_image_alt || stadionplanTitle} title={event.stadionplan_image_title || undefined} className={`max-h-[500px] w-auto object-contain rounded-lg ${editable ? '' : 'cursor-zoom-in'}`} onClick={openLightbox?.(stadionplanImage)} />
                 </Editable>
               ) : (
-                <div className="flex aspect-video items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 text-gray-400 text-sm">Kein Plan-Bild hinterlegt</div>
+                <div className="flex aspect-video items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 text-gray-400 text-sm">Detaillierter Sitzplan auf Anfrage – wir beraten Sie gerne zu den besten Plätzen.</div>
               )}
               <div className="flex flex-col justify-start">
                 {stadionplanVenueName && (
@@ -859,7 +920,12 @@ export default function EventPageView({
             </p>
 
             {packages.length === 0 && (
-              <EventContactForm eventSlug={event.slug} eventName={event.name || event.title} />
+              <EventContactForm
+                eventSlug={event.slug}
+                eventName={event.name || event.title}
+                matchOptions={matchOptions}
+                selectedMatch={requestedMatch}
+              />
             )}
 
             {packages.length > 1 && (
@@ -886,7 +952,7 @@ export default function EventPageView({
                     )}
                     <div className="font-extrabold text-base leading-tight mb-1">{pkg.title}</div>
                     <div className="text-sm mb-3" style={{ opacity: 0.7 }}>{pkg.short_description?.slice(0, 80)}{(pkg.short_description?.length ?? 0) > 80 ? '…' : ''}</div>
-                    <div className="font-extrabold text-2xl">{Number(pkg.price || 0).toLocaleString('de-DE')} €</div>
+                    <div className="font-extrabold text-2xl">{formatPackagePrice(Number(pkg.price || 0), pkg.currency || undefined)}</div>
                     <div className="text-xs mt-0.5" style={{ opacity: 0.65 }}>pro Person im DZ</div>
                     <div className="mt-4 text-xs font-bold text-center py-2 rounded-lg transition-all group-hover:opacity-90" style={{ background: pkg.popular ? '#d9531e' : '#143047', color: 'white' }}>
                       Details &amp; Buchen →
@@ -913,6 +979,7 @@ export default function EventPageView({
                     reviews={pkg.reviews || undefined}
                     singleSurcharge={pkg.single_supplement || undefined}
                     eventDateRange={eventDateRange || undefined}
+                    currency={pkg.currency || undefined}
                   />
                 </div>
               ))}
@@ -945,6 +1012,44 @@ export default function EventPageView({
                 ))}
               </div>
             )}
+          </div>
+        </section>
+      )}
+
+      {/* ── WEITERE EVENTS (Auto-Querverlinkung innerhalb der Serie) ─────────── */}
+      {showRelated && (
+        <section className="py-14 px-4 bg-white scroll-mt-40" id="weitere-events" style={{ order: orderOf('related') }}>
+          <div className="container mx-auto max-w-6xl">
+            <h2 className="text-3xl md:text-4xl font-extrabold mb-8 leading-tight" style={{ color: '#143047' }}>{relatedTitle}</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {relatedEvents.slice(0, 4).map((rel) => {
+                const range = getEventDateRange(rel.start_date, rel.end_date);
+                return (
+                  <Link
+                    key={rel.href}
+                    href={rel.href}
+                    className="group flex flex-col overflow-hidden rounded-xl bg-white transition-all hover:-translate-y-1 hover:shadow-lg"
+                    style={{ border: '1.5px solid #e5e8ed', boxShadow: '0 2px 8px rgba(20,48,71,0.06)' }}
+                  >
+                    <div className="relative h-36 bg-gray-100">
+                      {rel.image ? (
+                        <Image src={rel.image} alt={rel.name} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                      ) : (
+                        <div className="absolute inset-0" style={BLUE_GLOW} />
+                      )}
+                      <div className="pointer-events-none absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 55%, rgba(20,48,71,0.35))' }} />
+                    </div>
+                    <div className="flex flex-1 flex-col p-4">
+                      <div className="text-sm font-extrabold leading-snug" style={{ color: '#143047' }}>{rel.name}</div>
+                      {range && <div className="mt-1 text-xs font-semibold text-gray-500">{range}</div>}
+                      <div className="mt-auto pt-3 text-xs font-bold transition-colors" style={{ color: '#d9531e' }}>
+                        Zum Event →
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </section>
       )}

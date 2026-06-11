@@ -20,7 +20,8 @@ import {
 
 /* ─── Types ──────────────────────────────────────────────────── */
 type NavLink = { label: string; href: string; desc?: string };
-type NavColumn = { title: string; iconKey: string; items: NavLink[] };
+type NavCard = { label: string; href: string; image?: string; dateLabel?: string; place?: string };
+type NavColumn = { title: string; iconKey: string; href: string; count: number; items: NavLink[]; cards: NavCard[] };
 
 interface MegaItem {
   type: 'mega';
@@ -64,6 +65,9 @@ const ICONS: Record<string, LucideIcon> = {
   trophy: Trophy,
 };
 
+const CAT_COLORS: Record<string, string> = { trophy: '#1a6fa8', tennis: '#16a34a', gauge: '#dc2626', music: '#7c3aed', star: '#d9531e' };
+const catColor = (k: string) => CAT_COLORS[k] || '#184a7b';
+
 /* ─── Navigation definition ──────────────────────────────────── */
 /* Fallback, falls kein dynamisches Menü übergeben wird (Daten nicht ladbar). */
 const FALLBACK_NAV: NavItem[] = [
@@ -83,6 +87,7 @@ function innerColClass(count: number): string {
 export default function NavBar({ menu }: { menu?: NavItem[] }) {
   const NAV = menu && menu.length ? menu : FALLBACK_NAV;
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [activeCol, setActiveCol] = useState<Record<string, string>>({});
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
   const [now, setNow] = useState<number | null>(null);
@@ -474,44 +479,71 @@ export default function NavBar({ menu }: { menu?: NavItem[] }) {
               <div className="container mx-auto px-4 pt-0 pb-6">
                 <div
                   className={`grid rounded-3xl overflow-hidden shadow-2xl ${
-                    hasFeatured ? 'grid-cols-[1fr_300px]' : 'grid-cols-1'
+                    hasFeatured ? 'grid-cols-[1fr_260px]' : 'grid-cols-1'
                   }`}
                   style={{ border: '1px solid rgba(0,0,0,0.08)', background: '#ffffff' }}
                 >
                   {/* Columns area */}
-                  <div className="bg-white p-8">
-                    <div className={`grid gap-10 ${innerColClass(item.columns.length)}`}>
-                      {item.columns.map((col) => (
-                        <div key={col.title}>
-                          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
-                            {(() => { const Icon = ICONS[col.iconKey] || Trophy; return <Icon className="h-4 w-4 text-slate-600" />; })()}
-                            <h3
-                              className="text-[11px] font-bold uppercase tracking-[0.16em]"
-                              style={{ color: '#184a7b' }}
+                  <div className="bg-white p-5">
+                    <div className="grid gap-5" style={{ gridTemplateColumns: '210px 1fr' }}>
+                      <div className="flex flex-col gap-0.5 border-r border-slate-100 pr-3">
+                        {item.columns.map((col) => {
+                          const Icon = ICONS[col.iconKey] || Trophy;
+                          const isActive = (activeCol[item.key] ?? item.columns[0]?.title) === col.title;
+                          return (
+                            <Link
+                              key={col.title}
+                              href={col.href}
+                              onClick={() => setOpenMenu(null)}
+                              onMouseEnter={() => setActiveCol((prev) => ({ ...prev, [item.key]: col.title }))}
+                              className="group flex items-center gap-2.5 rounded-lg px-3 py-2.5 transition-colors hover:bg-slate-50"
+                              style={isActive ? { background: catColor(col.iconKey) + '14' } : undefined}
                             >
-                              {col.title}
-                            </h3>
-                          </div>
-                          <ul className="space-y-1">
-                            {col.items.map((link) => (
-                              <li key={link.href}>
-                                <Link
-                                  href={link.href}
-                                  onClick={() => setOpenMenu(null)}
-                                  className="group flex flex-col rounded-xl px-3 py-2.5 hover:bg-slate-50 transition-colors"
-                                >
-                                  <span className="text-[15px] font-semibold text-slate-800 group-hover:text-[#184a7b] transition-colors">
-                                    {link.label}
-                                  </span>
-                                  {link.desc && (
-                                    <span className="text-xs text-slate-500 mt-0.5">{link.desc}</span>
-                                  )}
+                              <Icon className="h-4 w-4 shrink-0" style={{ color: catColor(col.iconKey) }} />
+                              <span className="flex-1 text-[13.5px] font-medium" style={{ color: '#143047' }}>{col.title}</span>
+                              <span className="text-[11px] text-slate-400">{col.count}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                      {(() => {
+                        const activeTitle = activeCol[item.key] ?? item.columns[0]?.title;
+                        const col = item.columns.find((c) => c.title === activeTitle) ?? item.columns[0];
+                        if (!col) return null;
+                        const Icon = ICONS[col.iconKey] || Trophy;
+                        return (
+                          <div>
+                            <div className="mb-3 flex items-center justify-between">
+                              <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: catColor(col.iconKey) }}>{col.title} · Nächste Events</span>
+                              <Link href={col.href} onClick={() => setOpenMenu(null)} className="inline-flex items-center gap-1 text-[12px] font-semibold" style={{ color: catColor(col.iconKey) }}>
+                                Alle ansehen <ArrowRight className="h-3.5 w-3.5" />
+                              </Link>
+                            </div>
+                            <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
+                              {col.cards.slice(0, 12).map((card) => (
+                                <Link key={card.href} href={card.href} onClick={() => setOpenMenu(null)} className="group overflow-hidden rounded-xl border border-slate-100 transition-all hover:-translate-y-0.5 hover:shadow-md">
+                                  <div className="relative aspect-[16/10] bg-[#143047]">
+                                    {card.image ? (
+                                      <Image src={card.image} alt="" fill className="object-cover transition-transform duration-300 group-hover:scale-105" sizes="(max-width: 1024px) 33vw, 240px" />
+                                    ) : (
+                                      <span className="flex h-full w-full items-center justify-center text-[#3a5f86]"><Icon className="h-7 w-7" /></span>
+                                    )}
+                                  </div>
+                                  <div className="px-3 py-2.5">
+                                    <div className="truncate text-[13px] font-semibold" style={{ color: '#143047' }}>{card.label}</div>
+                                    <div className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-slate-500">
+                                      {card.dateLabel && <CalendarDays className="h-3 w-3 shrink-0" />}
+                                      {card.dateLabel && <span>{card.dateLabel}</span>}
+                                      {card.dateLabel && card.place && <span className="opacity-50">·</span>}
+                                      {card.place && <span className="truncate">{card.place}</span>}
+                                    </div>
+                                  </div>
                                 </Link>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 

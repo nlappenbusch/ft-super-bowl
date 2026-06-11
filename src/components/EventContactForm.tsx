@@ -1,21 +1,31 @@
 'use client';
 
-import { useState } from 'react';
-import { Mail, Phone, User, Send, CheckCircle, CalendarDays } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Mail, Phone, User, Send, CheckCircle, CalendarDays, Ticket } from 'lucide-react';
 
 interface EventContactFormProps {
   eventSlug: string;
   eventName?: string;
   /** Optional: Auswahl aus mehreren Events (z.B. auf der Serien-Seite). */
   events?: { slug: string; name: string }[];
+  /** Optional: Wunschspiel-Auswahl, gespeist aus dem Spielplan-Modul des Events. */
+  matchOptions?: string[];
+  /** Vorbelegtes Wunschspiel (z.B. via "Anfragen"-Button im Spielplan). */
+  selectedMatch?: string;
   /** Überschrift-/Intro-Override */
   title?: string;
   intro?: string;
 }
 
-export default function EventContactForm({ eventSlug, eventName, events, title, intro }: EventContactFormProps) {
+export default function EventContactForm({ eventSlug, eventName, events, matchOptions, selectedMatch, title, intro }: EventContactFormProps) {
   const hasEventChoice = !!(events && events.length > 0);
+  const hasMatchChoice = !!(matchOptions && matchOptions.length > 0);
   const [selectedEvent, setSelectedEvent] = useState<string>(events?.[0]?.slug || eventSlug);
+  const [match, setMatch] = useState<string>(selectedMatch || '');
+  // Externe Vorbelegung (Klick auf "Anfragen" im Spielplan) übernehmen
+  useEffect(() => {
+    if (selectedMatch !== undefined) setMatch(selectedMatch);
+  }, [selectedMatch]);
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -50,7 +60,9 @@ export default function EventContactForm({ eventSlug, eventName, events, title, 
           eventSlug: effectiveSlug,
           packageSlug: null,
           packageId: 'contact-inquiry',
-          packageTitle: `Allgemeine Anfrage – ${effectiveName || effectiveSlug}`,
+          packageTitle: match
+            ? `Anfrage – ${effectiveName || effectiveSlug} – ${match}`
+            : `Allgemeine Anfrage – ${effectiveName || effectiveSlug}`,
           startDate: '',
           numberOfPersons: 1,
           doubleRooms: 0,
@@ -58,7 +70,7 @@ export default function EventContactForm({ eventSlug, eventName, events, title, 
           travelers: [{ firstName: form.firstName, lastName: form.lastName, email: form.email }],
           email: form.email,
           phone: form.phone,
-          message: form.message,
+          message: match ? `Wunschspiel: ${match}\n\n${form.message}`.trim() : form.message,
           totalPrice: 0,
         }),
       });
@@ -139,6 +151,26 @@ export default function EventContactForm({ eventSlug, eventName, events, title, 
             >
               {events!.map((ev) => (
                 <option key={ev.slug} value={ev.slug}>{ev.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        {hasMatchChoice && (
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
+              <Ticket className="inline w-3.5 h-3.5 mr-1 -mt-0.5" /> Wunschspiel / Paarung
+            </label>
+            <select
+              value={match}
+              onChange={(e) => setMatch(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none transition bg-white"
+              style={{ borderColor: match ? '#143047' : '#e5e8ed' }}
+              onFocus={(e) => (e.target.style.borderColor = '#143047')}
+              onBlur={(e) => (e.target.style.borderColor = match ? '#143047' : '#e5e8ed')}
+            >
+              <option value="">Noch unentschieden / allgemeine Anfrage</option>
+              {matchOptions!.map((m) => (
+                <option key={m} value={m}>{m}</option>
               ))}
             </select>
           </div>

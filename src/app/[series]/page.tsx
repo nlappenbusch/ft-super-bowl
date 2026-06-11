@@ -88,6 +88,7 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
         slug: p.slug || p.id,
         title: p.title || '',
         price: Number(p.price || 0),
+        currency: p.currency || undefined,
         popular: Boolean(p.popular),
         shortDescription: p.short_description || '',
         availableSpots: p.available_spots ?? null,
@@ -108,7 +109,6 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
       {seriesFaqs.length > 0 && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(generateFaqPageSchema(seriesFaqs)) }} />
       )}
-      <Breadcrumbs items={crumbs} />
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden" style={{ minHeight: 360 }}>
         {seriesData.hero_image ? (
@@ -156,8 +156,10 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
         </div>
       </section>
 
+      <Breadcrumbs items={crumbs} />
+
       {/* ── INTRO / HIGHLIGHTS (Evergreen-Hub) ───────────────────────────── */}
-      <section className="bg-white px-4 pt-14">
+      <section className="bg-white px-4 pt-6">
         <div className="mx-auto max-w-6xl">
           <div className="mb-9 text-center">
             <h2 className="text-2xl md:text-3xl font-extrabold leading-tight" style={{ color: '#143047' }}>

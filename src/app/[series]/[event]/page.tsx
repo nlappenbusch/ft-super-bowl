@@ -1,7 +1,7 @@
 import { notFound, permanentRedirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import EventLiveEditor from '@/components/event/EventLiveEditor';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import EventLiveEditor from '@/components/event/EventLiveEditor';
 import { generateEventSchema, generateProductSchema, generateFaqPageSchema } from '@/lib/schema';
 import { siteConfig } from '@/lib/siteConfig';
 import { toCategorySlug } from '@/lib/category';
@@ -54,6 +54,18 @@ export default async function EventUnderSeriesPage({ params }: EventPageProps) {
 
   const packages = await getPackagesByEventSlug(event.slug);
   const faqs = await getEventFaqs(event.slug);
+  // Auto-Querverlinkung: andere aktive Events derselben Serie (max. 4)
+  const siblings = series?.slug ? await getEventsBySeriesSlug(series.slug) : [];
+  const relatedEvents = siblings
+    .filter((e) => e.id !== event.id && (e.status ?? 'active') === 'active')
+    .slice(0, 4)
+    .map((e) => ({
+      name: e.name || e.title || e.slug,
+      href: `/${series!.slug}/${e.url_segment || e.slug}`,
+      image: e.hero_image,
+      start_date: e.start_date,
+      end_date: e.end_date,
+    }));
   const showLageplan = event.show_lageplan ?? false;
   const eventPins = (event.lageplan_pins || []) as Array<{ id: string; lat: number; lng: number }>;
   const pinIcons = showLageplan && eventPins.length > 0 ? await getPinIconsList() : [];
@@ -70,6 +82,8 @@ export default async function EventUnderSeriesPage({ params }: EventPageProps) {
       addressRegion: event.location_region || undefined,
       addressCountry: event.location_country || undefined,
     },
+    // Spielplan-Paarungen als strukturierte subEvents (nur zukünftige, parsebare Termine)
+    subEvents: (event.spielplan || []).map((r) => ({ name: r.matchup, date: r.date, venue: r.session, round: r.round })),
   });
   const productSchema = generateProductSchema({
     name: primaryPackage ? `${event.name || event.title} Package - ${primaryPackage.title}` : undefined,
@@ -77,6 +91,8 @@ export default async function EventUnderSeriesPage({ params }: EventPageProps) {
     price: primaryPackage?.price || undefined,
     priceCurrency: primaryPackage?.currency || undefined,
     url: event.base_url ? `${event.base_url}/booking?event=${encodeURIComponent(event.slug)}` : undefined,
+    ratingValue: primaryPackage?.rating || undefined,
+    reviewCount: primaryPackage?.reviews || undefined,
   });
 
   const crumbs = [
@@ -94,7 +110,7 @@ export default async function EventUnderSeriesPage({ params }: EventPageProps) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(generateFaqPageSchema(faqs)) }} />
       )}
       <Breadcrumbs items={crumbs} />
-      <EventLiveEditor event={event} series={series} packages={packages} faqs={faqs} pinIcons={pinIcons} />
+      <EventLiveEditor event={event} series={series} packages={packages} faqs={faqs} pinIcons={pinIcons} relatedEvents={relatedEvents} />
     </>
   );
 }

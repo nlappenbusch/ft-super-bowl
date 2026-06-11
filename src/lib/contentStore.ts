@@ -30,12 +30,45 @@ export interface ContentEventRecord {
   show_packages?: boolean | null;
   show_faqs?: boolean | null;
   show_spielplan?: boolean | null;
+  /** Anfrage pro Spielplan-Eintrag (Dropdown + Buttons): true/false erzwingen, null = Auto-Erkennung (nur bei echten Paarungen/buchbaren Terminen). */
+  spielplan_anfrage?: boolean | null;
+  /** Darstellung des Spielplans: 'karten' (Match-Cards), 'tabelle' oder 'auto' (Default: wenige Paarungen → Karten). */
+  spielplan_layout?: 'tabelle' | 'karten' | 'auto' | null;
   spielplan?: Array<{
     date: string;
     session: string;
     matchup: string;
     round: string;
   }> | null;
+  /** Spielorte/Vereine-Modul: Karten-Grid (z.B. Top-Clubs einer Liga oder WM-Host-Cities), Klick filtert den Spielplan. */
+  show_spielorte?: boolean | null;
+  spielorte_title?: string | null;
+  spielorte?: Array<{
+    name: string;
+    subtitle?: string | null;
+    capacity?: string | null;
+    note?: string | null;
+    /** Suchbegriff, mit dem der Spielplan beim Klick gefiltert wird (Substring-Match). */
+    filter?: string | null;
+  }> | null;
+  /** Duell-Modul (Head-to-Head): zwei Teams, Bilanz und letzte Begegnungen – für Topspiel-/Paarungs-Seiten. */
+  show_duell?: boolean | null;
+  duell_title?: string | null;
+  duell?: {
+    team_a: string;
+    team_b: string;
+    team_a_sub?: string | null;
+    team_b_sub?: string | null;
+    bilanz_basis?: string | null;
+    siege_a?: number | null;
+    remis?: number | null;
+    siege_b?: number | null;
+    letzte?: Array<{ date: string; competition?: string | null; match: string; result: string }> | null;
+    note?: string | null;
+  } | null;
+  /** Related-Modul: automatische Querverlinkung auf Geschwister-Events der Serie. */
+  show_related?: boolean | null;
+  related_title?: string | null;
   show_wissenswertes?: boolean | null;
   wissenswertes_title?: string | null;
   wissenswertes_text?: string | null;

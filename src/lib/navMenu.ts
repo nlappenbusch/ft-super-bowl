@@ -1,15 +1,13 @@
 /**
  * navMenu.ts – baut das Hauptmenü dynamisch aus den echten Serien/Kategorien.
- * Serverseitig aufgerufen (layout.tsx) und als serialisierbare Struktur an die
- * Client-NavBar gereicht. Icons werden als String-Key übergeben (Komponenten
- * lassen sich nicht über die Server→Client-Grenze reichen) und in der NavBar
- * aufgelöst.
+ * Serverseitig (layout.tsx) aufgerufen, serialisierbar an die Client-NavBar.
  */
 import { getSeriesList, getEventsList } from '@/lib/eventData';
 import { toCategorySlug } from '@/lib/category';
 
 export type NavLink = { label: string; href: string; desc?: string };
-export type NavColumn = { title: string; iconKey: string; items: NavLink[] };
+export type NavCard = { label: string; href: string; image?: string; dateLabel?: string; place?: string };
+export type NavColumn = { title: string; iconKey: string; href: string; count: number; items: NavLink[]; cards: NavCard[] };
 export type MegaItem = {
   type: 'mega';
   label: string;
@@ -37,6 +35,10 @@ function parseDate(s?: string | null): Date | null {
 }
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const fmtDate = (d: Date) => `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`;
+const fmtShort = (d: Date) => {
+  const M = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  return `${M[d.getMonth()]} ${d.getFullYear()}`;
+};
 const isoDate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 
 function iconKeyFor(cat: string): string {
@@ -50,10 +52,9 @@ function iconKeyFor(cat: string): string {
 }
 function isKultur(cat: string): boolean {
   const c = cat.toLowerCase();
-  return c.includes('kultur') || c.includes('konzert') || c.includes('oper') || c.includes('klassik');
+  return c.includes('kultur') || c.includes('konzert') || c.includes('oper') || c.includes('klassik') || c.includes('festival');
 }
 
-/** Statischer Fallback, falls keine Daten geladen werden können. */
 export const FALLBACK_NAV: NavItem[] = [
   { type: 'link', label: 'Home', href: '/' },
   { type: 'link', label: 'Kalender', href: '/kalender' },
@@ -77,28 +78,64 @@ export async function buildNavMenu(): Promise<NavItem[]> {
 
   const active = series.filter((s) => (s.status ?? 'active') !== 'archived');
   const seriesById = new Map(active.map((s) => [s.id, s]));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-  const byCat = new Map<string, NavLink[]>();
+  // Serien-Links + Event-Vorschaukarten pro Kategorie sammeln
+  const linksByCat = new Map<string, NavLink[]>();
+  const heroByCat = new Map<string, string>();
   for (const s of active) {
     const cat = (s.category || 'Sonstiges').trim();
-    if (!byCat.has(cat)) byCat.set(cat, []);
-    byCat.get(cat)!.push({ label: s.title, href: `/${s.slug}` });
+    if (!linksByCat.has(cat)) linksByCat.set(cat, []);
+    linksByCat.get(cat)!.push({ label: s.title, href: `/${s.slug}` });
+    if (s.hero_image && !heroByCat.has(cat)) heroByCat.set(cat, s.hero_image);
+  }
+
+  type Tmp = { card: NavCard; future: boolean; key: string };
+  const cardsByCat = new Map<string, Tmp[]>();
+  for (const e of events) {
+    const status = (e as { status?: string }).status;
+    if (status === 'archived' || status === 'draft') continue;
+    const s = e.series_id ? seriesById.get(e.series_id) : null;
+    if (!s) continue;
+    const cat = (s.category || 'Sonstiges').trim();
+    const start = parseDate(e.start_date);
+    const seg = e.url_segment || e.slug;
+    const place = [e.location_city, e.location_country].filter(Boolean).join(', ');
+    const card: NavCard = {
+      label: e.name || e.title || s.title,
+      href: `/${s.slug}/${seg}`,
+      image: e.hero_image || s.hero_image || '',
+      dateLabel: start ? fmtShort(start) : '',
+      place,
+    };
+    const future = start ? start.getTime() >= today.getTime() : false;
+    const key = start ? isoDate(start) : '';
+    if (!cardsByCat.has(cat)) cardsByCat.set(cat, []);
+    cardsByCat.get(cat)!.push({ card, future, key });
+  }
+
+  function buildCol(cat: string): NavColumn {
+    const items = (linksByCat.get(cat) || []).slice().sort((a, b) => a.label.localeCompare(b.label));
+    const count = items.length;
+    items.push({ label: `Alle ${cat}`, href: `/kategorie/${toCategorySlug(cat)}` });
+    const tmp = (cardsByCat.get(cat) || []).slice().sort((a, b) => {
+      if (a.future !== b.future) return a.future ? -1 : 1;       // kommende zuerst
+      if (a.future) return a.key.localeCompare(b.key);            // bald zuerst
+      return b.key.localeCompare(a.key);                          // vergangene: neueste zuerst
+    });
+    const cards = tmp.map((t) => t.card).slice(0, 12);
+    return { title: cat, iconKey: iconKeyFor(cat), href: `/kategorie/${toCategorySlug(cat)}`, count, items, cards };
   }
 
   const sportCols: NavColumn[] = [];
   const kulturCols: NavColumn[] = [];
-  for (const [cat, seriesLinks] of byCat) {
-    const items = seriesLinks.slice().sort((a, b) => a.label.localeCompare(b.label));
-    items.push({ label: `Alle ${cat}`, href: `/kategorie/${toCategorySlug(cat)}` });
-    const col: NavColumn = { title: cat, iconKey: iconKeyFor(cat), items };
-    (isKultur(cat) ? kulturCols : sportCols).push(col);
+  for (const cat of linksByCat.keys()) {
+    (isKultur(cat) ? kulturCols : sportCols).push(buildCol(cat));
   }
-  sportCols.sort((a, b) => a.title.localeCompare(b.title));
-  kulturCols.sort((a, b) => a.title.localeCompare(b.title));
+  sportCols.sort((a, b) => b.count - a.count || a.title.localeCompare(b.title));
+  kulturCols.sort((a, b) => b.count - a.count || a.title.localeCompare(b.title));
 
-  // Kalender-Vorschau (nächste kommende Events) für das interaktive Menü
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
   const upcoming: CalPreview[] = events
     .map((e): CalPreview | null => {
       const status = (e as { status?: string }).status;
@@ -141,7 +178,6 @@ export async function buildNavMenu(): Promise<NavItem[]> {
   });
   menu.push({ type: 'link', label: 'Kontakt', href: '/kontakt' });
 
-  // Featured-Event als Spotlight-Karte im passenden Mega-Menü (wie früher Super Bowl)
   const fe = events.find((e) => (e as { featured?: boolean }).featured);
   if (fe) {
     const s = fe.series_id ? seriesById.get(fe.series_id) : null;

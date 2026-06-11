@@ -61,6 +61,12 @@ interface EventFormState {
   show_packages: boolean;
   show_faqs: boolean;
   show_spielplan: boolean;
+  show_spielorte: boolean;
+  spielorte_title: string;
+  show_duell: boolean;
+  duell_title: string;
+  show_related: boolean;
+  related_title: string;
   spielplan: Array<{
     date: string;
     session: string;
@@ -106,17 +112,20 @@ interface EventFormState {
   featured: boolean;
 }
 
-const DEFAULT_MODULE_ORDER = ['leistungen', 'about', 'spielplan', 'wissenswertes', 'stadionplan', 'lageplan', 'ticket_categories', 'packages', 'faq'];
+const DEFAULT_MODULE_ORDER = ['leistungen', 'about', 'duell', 'spielorte', 'spielplan', 'wissenswertes', 'stadionplan', 'lageplan', 'ticket_categories', 'packages', 'faq', 'related'];
 const MODULE_META: Record<string, { toggle: keyof EventFormState; title: string; desc: string }> = {
   leistungen: { toggle: 'show_leistungen', title: 'Unsere Leistungen', desc: 'Leistungs-Liste mit Bild & CTA' },
   about: { toggle: 'show_about', title: 'Über das Event', desc: 'Erster Absatz / Intro' },
-  spielplan: { toggle: 'show_spielplan', title: 'Spielplan', desc: 'Match Schedule Tabelle' },
+  duell: { toggle: 'show_duell', title: 'Das Duell', desc: 'Head-to-Head: Teams, Bilanz, letzte Begegnungen' },
+  spielorte: { toggle: 'show_spielorte', title: 'Spielorte / Vereine', desc: 'Karten-Grid (Clubs, Host-Cities) - Klick filtert Spielplan' },
+  spielplan: { toggle: 'show_spielplan', title: 'Spielplan', desc: 'Match Schedule Tabelle (mit Filter & Suche)' },
   wissenswertes: { toggle: 'show_wissenswertes', title: 'Wissenswertes', desc: 'Fakten & Akkordeon' },
   stadionplan: { toggle: 'show_stadionplan', title: 'Stadionplan', desc: 'Stadion- / Hallenplan' },
   lageplan: { toggle: 'show_lageplan', title: 'Lageplan', desc: 'Interaktive Karte (Pins)' },
   ticket_categories: { toggle: 'show_ticket_categories', title: 'Unsere Tickets', desc: 'Ticket-Kategorien in Reitern' },
   packages: { toggle: 'show_packages', title: 'Packages', desc: 'Reisepakete & Hotel' },
   faq: { toggle: 'show_faqs', title: 'FAQs', desc: 'Häufige Fragen' },
+  related: { toggle: 'show_related', title: 'Weitere Events', desc: 'Auto-Querverlinkung auf Events derselben Serie' },
 };
 
 interface PinIconOption {
@@ -159,6 +168,12 @@ const emptyForm: EventFormState = {
   show_packages: true,
   show_faqs: true,
   show_spielplan: false,
+  show_spielorte: false,
+  spielorte_title: '',
+  show_duell: false,
+  duell_title: '',
+  show_related: true,
+  related_title: '',
   spielplan: [],
   show_wissenswertes: false,
   wissenswertes_title: '',
@@ -217,6 +232,12 @@ function normalizeEventFormState(event?: Partial<EventFormState> | null): EventF
     show_packages: event?.show_packages ?? true,
     show_faqs: event?.show_faqs ?? true,
     show_spielplan: event?.show_spielplan ?? false,
+    show_spielorte: event?.show_spielorte ?? false,
+    spielorte_title: event?.spielorte_title || '',
+    show_duell: event?.show_duell ?? false,
+    duell_title: event?.duell_title || '',
+    show_related: event?.show_related ?? true,
+    related_title: event?.related_title || '',
     spielplan: event?.spielplan ?? [],
     show_wissenswertes: event?.show_wissenswertes ?? false,
     wissenswertes_title: event?.wissenswertes_title ?? '',
@@ -437,6 +458,12 @@ export default function AdminEventsPage() {
       show_packages: form.show_packages,
       show_faqs: form.show_faqs,
       show_spielplan: form.show_spielplan,
+      show_spielorte: form.show_spielorte,
+      spielorte_title: form.spielorte_title || null,
+      show_duell: form.show_duell,
+      duell_title: form.duell_title || null,
+      show_related: form.show_related,
+      related_title: form.related_title || null,
       spielplan: form.spielplan,
       show_wissenswertes: form.show_wissenswertes,
       wissenswertes_title: form.wissenswertes_title || null,

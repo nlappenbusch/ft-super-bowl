@@ -95,7 +95,7 @@ export default function EventDiscoverCard({ event }: EventDiscoverCardProps) {
             </span>
           </div>
 
-          <div className="mt-auto flex items-end justify-between gap-4 border-t border-white/10 pt-5">
+          <div className="mt-auto flex items-end justify-between gap-4 pt-4">
             {formattedPrice ? (
               <p className="text-blue-100/80 leading-none">
                 <span className="mr-1 text-sm font-medium">ab</span>
