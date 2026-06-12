@@ -288,7 +288,7 @@ function faltin_anfrage_shortcode($atts) {
         : 'Kontaktieren Sie uns direkt — wir erstellen Ihnen ein individuelles Angebot für <strong>' . esc_html($event_name) . '</strong>.';
 
     $mail_icon = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d9531e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>';
-    $check_icon = '<svg class="ft-af-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+    $check_icon = '<svg class="ft-af-check" style="color:#2ecc71 !important" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
 
     ob_start(); ?>
     <div class="ft-af" id="<?php echo esc_attr($id); ?>">
@@ -316,10 +316,10 @@ function faltin_anfrage_shortcode($atts) {
       </div>
       <div class="ft-af-success">
         <?php echo $check_icon; ?>
-        <h3>Vielen Dank für Ihre Anfrage!</h3>
-        <p>Wir haben Ihre Nachricht erhalten und melden uns schnellstmöglich bei Ihnen. Unser Team ist in der Regel innerhalb von 24 Stunden für Sie da.</p>
-        <div class="ft-af-rq" style="display:none"><small>Ihre Anfragenummer</small><strong></strong></div>
-        <p class="ft-af-trust">Eine Bestätigung mit dieser Nummer wurde an Ihre E-Mail gesendet.</p>
+        <h3 style="color:#143047 !important;background:transparent !important;text-shadow:none !important">Vielen Dank für Ihre Anfrage!</h3>
+        <p style="color:#6b7280 !important;background:transparent !important">Wir haben Ihre Nachricht erhalten und melden uns schnellstmöglich bei Ihnen. Unser Team ist in der Regel innerhalb von 24 Stunden für Sie da.</p>
+        <div class="ft-af-rq" style="display:none"><small style="color:rgba(255,255,255,.6) !important;background:transparent !important">Ihre Anfragenummer</small><strong style="color:#fff !important;background:transparent !important">RQ</strong></div>
+        <p class="ft-af-trust" style="color:#9ca3af !important;background:transparent !important">Eine Bestätigung mit dieser Nummer wurde an Ihre E-Mail gesendet.</p>
       </div>
     </div>
     <script>
