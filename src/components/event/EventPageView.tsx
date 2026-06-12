@@ -4,7 +4,7 @@ import React, { createElement, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin, CalendarDays, ShieldCheck, Ticket, Award, ChevronDown } from 'lucide-react';
-import PackageCard, { formatPackagePrice } from '@/components/PackageCard';
+import PackageCardPro, { type PackageProInclude } from '@/components/PackageCardPro';
 import EventContactForm from '@/components/EventContactForm';
 import LageplanMap from '@/components/LageplanMap';
 import SpielplanSection from '@/components/event/SpielplanSection';
@@ -916,74 +916,38 @@ export default function EventPageView({
           <div className="container mx-auto max-w-5xl">
             <h2 className="text-3xl md:text-4xl font-extrabold mb-2 leading-tight text-center" style={{ color: '#143047' }}>Unsere Packages</h2>
             <p className="text-gray-600 text-center mb-10 max-w-2xl mx-auto">
-              Wählen Sie Ihr Package — von einzelnen Spieltagen bis zu exklusiven Halbfinale- und Finale-Kombinationen.
+              Wählen Sie Ihr Package — vom einzelnen Spieltag bis zur exklusiven Finale-Kombination. Alle Pakete inkl. Hotel, VIP-Hospitality &amp; Schweizer Reisegarantie.
             </p>
 
-            {packages.length === 0 && (
+            {packages.length === 0 ? (
               <EventContactForm
                 eventSlug={event.slug}
                 eventName={event.name || event.title}
                 matchOptions={matchOptions}
                 selectedMatch={requestedMatch}
               />
-            )}
-
-            {packages.length > 1 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+            ) : (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
                 {packages.map((pkg) => (
-                  <a
+                  <PackageCardPro
                     key={pkg.id}
-                    href={`#pkg-${pkg.slug || pkg.id}`}
-                    className="group block rounded-xl p-5 transition-all hover:-translate-y-1"
-                    style={{
-                      background: pkg.popular ? '#143047' : 'white',
-                      border: pkg.popular ? '2px solid #143047' : '1.5px solid #e5e8ed',
-                      boxShadow: pkg.popular ? '0 6px 20px rgba(20,48,71,0.18)' : '0 2px 8px rgba(0,0,0,0.06)',
-                      color: pkg.popular ? 'white' : '#143047',
-                    }}
-                  >
-                    {pkg.popular && (
-                      <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#f5c842' }}>★ Empfohlen</div>
-                    )}
-                    {pkg.available_spots && pkg.available_spots <= 10 && (
-                      <div className="text-xs font-bold mb-2" style={{ color: pkg.popular ? '#fca5a5' : '#d9531e' }}>
-                        Nur noch {pkg.available_spots} Plätze
-                      </div>
-                    )}
-                    <div className="font-extrabold text-base leading-tight mb-1">{pkg.title}</div>
-                    <div className="text-sm mb-3" style={{ opacity: 0.7 }}>{pkg.short_description?.slice(0, 80)}{(pkg.short_description?.length ?? 0) > 80 ? '…' : ''}</div>
-                    <div className="font-extrabold text-2xl">{formatPackagePrice(Number(pkg.price || 0), pkg.currency || undefined)}</div>
-                    <div className="text-xs mt-0.5" style={{ opacity: 0.65 }}>pro Person im DZ</div>
-                    <div className="mt-4 text-xs font-bold text-center py-2 rounded-lg transition-all group-hover:opacity-90" style={{ background: pkg.popular ? '#d9531e' : '#143047', color: 'white' }}>
-                      Details &amp; Buchen →
-                    </div>
-                  </a>
-                ))}
-              </div>
-            )}
-
-            <div className="space-y-8">
-              {packages.map((pkg) => (
-                <div key={pkg.id} id={`pkg-${pkg.slug || pkg.id}`} className="scroll-mt-40">
-                  <PackageCard
                     id={pkg.slug || pkg.id}
                     eventSlug={event.slug}
+                    badge={pkg.badge_text || undefined}
+                    title={pkg.title || ''}
+                    shortDescription={pkg.short_description || ''}
+                    hotel={pkg.hotel || undefined}
                     stars={Number(pkg.stars || 0)}
                     nights={Number(pkg.nights || 0)}
                     price={Number(pkg.price || 0)}
-                    title={pkg.title || ''}
-                    description={pkg.short_description || pkg.description || ''}
-                    popular={Boolean(pkg.popular)}
-                    availableSpots={pkg.available_spots || undefined}
-                    rating={pkg.rating || undefined}
-                    reviews={pkg.reviews || undefined}
-                    singleSurcharge={pkg.single_supplement || undefined}
-                    eventDateRange={eventDateRange || undefined}
                     currency={pkg.currency || undefined}
+                    popular={Boolean(pkg.popular)}
+                    availableSpots={pkg.available_spots ?? undefined}
+                    includes={(pkg.package_includes ?? (pkg as unknown as { includes?: PackageProInclude[] }).includes ?? [])}
                   />
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}

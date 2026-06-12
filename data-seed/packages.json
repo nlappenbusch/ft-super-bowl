@@ -200,7 +200,7 @@
         "name": "Zugang zu allen Nebenplätzen",
         "category": "Outside Courts / Annexes",
         "status": "OK",
-        "icon": "ticket",
+        "icon": "map",
         "description": "Freier Zutritt zu den Außenplätzen.",
         "sort_order": 4
       },
@@ -209,7 +209,7 @@
         "name": "Faltin-Reiseset & Schweizer Reisegarantie",
         "category": "Inkl. RG-Magazin & Paris-Reiseführer",
         "status": "OK",
-        "icon": "hospitality",
+        "icon": "gift",
         "description": "Lanyard, Reisebeutel, Kofferanhänger, Tickettasche, detaillierte Reiseinformationen.",
         "sort_order": 5
       }
@@ -280,7 +280,7 @@
         "name": "Zugang zu allen Nebenplätzen",
         "category": "Outside Courts / Annexes",
         "status": "OK",
-        "icon": "ticket",
+        "icon": "map",
         "description": "Freier Zutritt zu den Außenplätzen.",
         "sort_order": 4
       },
@@ -289,7 +289,7 @@
         "name": "Faltin-Reiseset & Schweizer Reisegarantie",
         "category": "Inkl. RG-Magazin & Paris-Reiseführer",
         "status": "OK",
-        "icon": "hospitality",
+        "icon": "gift",
         "description": "Lanyard, Reisebeutel, Kofferanhänger, Tickettasche, detaillierte Reiseinformationen.",
         "sort_order": 5
       }
@@ -360,7 +360,7 @@
         "name": "Zugang zu allen Nebenplätzen",
         "category": "Outside Courts / Annexes",
         "status": "OK",
-        "icon": "ticket",
+        "icon": "map",
         "description": "Freier Zutritt zu den Außenplätzen.",
         "sort_order": 4
       },
@@ -369,7 +369,7 @@
         "name": "Faltin-Reiseset & Schweizer Reisegarantie",
         "category": "Inkl. RG-Magazin & Paris-Reiseführer",
         "status": "OK",
-        "icon": "hospitality",
+        "icon": "gift",
         "description": "Lanyard, Reisebeutel, Kofferanhänger, Tickettasche, detaillierte Reiseinformationen.",
         "sort_order": 5
       }
@@ -440,7 +440,7 @@
         "name": "Zugang zu allen Nebenplätzen",
         "category": "Outside Courts / Annexes",
         "status": "OK",
-        "icon": "ticket",
+        "icon": "map",
         "description": "Freier Zutritt zu den Außenplätzen.",
         "sort_order": 4
       },
@@ -449,7 +449,7 @@
         "name": "Faltin-Reiseset & Schweizer Reisegarantie",
         "category": "Inkl. RG-Magazin & Paris-Reiseführer",
         "status": "OK",
-        "icon": "hospitality",
+        "icon": "gift",
         "description": "Lanyard, Reisebeutel, Kofferanhänger, Tickettasche, detaillierte Reiseinformationen.",
         "sort_order": 5
       }
@@ -520,7 +520,7 @@
         "name": "Zugang zu allen Nebenplätzen",
         "category": "Outside Courts / Annexes",
         "status": "OK",
-        "icon": "ticket",
+        "icon": "map",
         "description": "Freier Zutritt zu den Außenplätzen.",
         "sort_order": 4
       },
@@ -529,7 +529,7 @@
         "name": "Faltin-Reiseset & Schweizer Reisegarantie",
         "category": "Inkl. RG-Magazin & Paris-Reiseführer",
         "status": "OK",
-        "icon": "hospitality",
+        "icon": "gift",
         "description": "Lanyard, Reisebeutel, Kofferanhänger, Tickettasche, detaillierte Reiseinformationen.",
         "sort_order": 5
       }
