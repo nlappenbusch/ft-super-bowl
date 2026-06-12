@@ -235,8 +235,9 @@ function faltin_anfrage_styles() {
 .ft-af-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media(max-width:560px){.ft-af-row{grid-template-columns:1fr}}
 .ft-af-field{margin-bottom:14px}
-.ft-af-field label{display:block;margin:0 0 6px;font-size:12px;font-weight:700;color:#143047!important;letter-spacing:.2px}
-.ft-af-field label span{color:#d9531e}
+.ft-af-field label{display:block!important;margin:0 0 6px!important;padding:0!important;background:transparent!important;background-color:transparent!important;box-shadow:none!important;text-shadow:none!important;font-size:12px!important;font-weight:700;color:#143047!important;letter-spacing:.2px}
+.ft-af-field label span{color:#d9531e!important;background:transparent!important}
+.ft-af h3,.ft-af p,.ft-af label,.ft-af small,.ft-af strong{background:transparent!important;text-shadow:none!important}
 .ft-af input,.ft-af textarea{width:100%;box-sizing:border-box;border:1.5px solid #e5e8ed;border-radius:12px;padding:11px 14px;font-size:14px;color:#143047!important;background:#fff!important;outline:none;transition:border-color .15s;font-family:inherit}
 .ft-af input:focus,.ft-af textarea:focus{border-color:#d9531e}
 .ft-af input::placeholder,.ft-af textarea::placeholder{color:#9ca3af!important}
