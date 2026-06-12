@@ -15,10 +15,13 @@ import {
 
 type CrmStatus = 'new' | 'in_progress' | 'booked' | 'rejected';
 
+interface EmployeeLite { id: string; name: string }
+
 interface Lead {
   id: string;
   email: string;
   phone?: string;
+  assigned_to?: string | null;
   request_number?: string | null;
   package_title?: string;
   event_slug?: string;
@@ -134,8 +137,9 @@ function ErpStats({ leads, invoices }: { leads: Lead[]; invoices: Invoice[] }) {
 
 /* ─── Lead Card ──────────────────────────────────────────────────────── */
 
-function LeadCard({ lead, hasInvoice, onClick }: { lead: Lead; hasInvoice: boolean; onClick: () => void }) {
+function LeadCard({ lead, hasInvoice, onClick, assigneeName }: { lead: Lead; hasInvoice: boolean; onClick: () => void; assigneeName?: string }) {
   const col = COLUMNS.find(c => c.id === lead.status) || COLUMNS[0];
+  const initials = assigneeName ? assigneeName.split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase() : null;
   return (
     <button
       onClick={onClick}
@@ -175,11 +179,22 @@ function LeadCard({ lead, hasInvoice, onClick }: { lead: Lead; hasInvoice: boole
         ) : (
           <span className="text-xs text-gray-300">Anfrage</span>
         )}
-        {hasInvoice && (
-          <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-            <Receipt className="w-3 h-3" /> RE
-          </span>
-        )}
+        <span className="flex items-center gap-1.5">
+          {hasInvoice && (
+            <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+              <Receipt className="w-3 h-3" /> RE
+            </span>
+          )}
+          {initials && (
+            <span
+              title={`Zugewiesen: ${assigneeName}`}
+              className="flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white"
+              style={{ background: '#143047' }}
+            >
+              {initials}
+            </span>
+          )}
+        </span>
       </div>
     </button>
   );
@@ -465,10 +480,12 @@ function DetailDrawer({
   lead,
   onClose,
   onUpdate,
+  employees,
 }: {
   lead: Lead;
   onClose: () => void;
-  onUpdate: (id: string, updates: { status?: CrmStatus; notes?: string }) => Promise<void>;
+  onUpdate: (id: string, updates: { status?: CrmStatus; notes?: string; assigned_to?: string | null }) => Promise<void>;
+  employees: EmployeeLite[];
 }) {
   const [notes, setNotes] = useState(lead.notes || '');
   const [saving, setSaving] = useState(false);
@@ -520,7 +537,7 @@ function DetailDrawer({
           </div>
 
           {/* Status row */}
-          <div className="flex flex-wrap gap-1.5 mb-4">
+          <div className="flex flex-wrap gap-1.5 mb-3">
             {COLUMNS.map(col => (
               <button
                 key={col.id}
@@ -537,6 +554,21 @@ function DetailDrawer({
                 {col.label}
               </button>
             ))}
+          </div>
+
+          {/* Zuweisung */}
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Zugewiesen an</span>
+            <select
+              value={lead.assigned_to || ''}
+              disabled={saving}
+              onChange={(e) => onUpdate(lead.id, { assigned_to: e.target.value || null })}
+              className="rounded-lg border px-2.5 py-1.5 text-xs font-semibold focus:outline-none"
+              style={{ borderColor: '#e5e8ed', color: '#143047' }}
+            >
+              <option value="">Niemand</option>
+              {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+            </select>
           </div>
 
           {/* Tabs */}
@@ -660,9 +692,16 @@ function DetailDrawer({
 export default function CrmPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [employees, setEmployees] = useState<EmployeeLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Lead | null>(null);
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    fetch('/api/admin/team').then(r => r.json()).then(r => {
+      if (r.success) setEmployees((r.data || []).map((e: EmployeeLite) => ({ id: e.id, name: e.name })));
+    }).catch(() => {});
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -695,7 +734,7 @@ export default function CrmPage() {
     return () => { active = false; clearInterval(id); };
   }, [loadData]);
 
-  const handleUpdate = async (id: string, updates: { status?: CrmStatus; notes?: string }) => {
+  const handleUpdate = async (id: string, updates: { status?: CrmStatus; notes?: string; assigned_to?: string | null }) => {
     await fetch(`/api/bookings/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -788,6 +827,7 @@ export default function CrmPage() {
                     lead={lead}
                     hasInvoice={!!invoicesByBooking[lead.id]?.length}
                     onClick={() => setSelected(lead)}
+                    assigneeName={employees.find(e => e.id === lead.assigned_to)?.name}
                   />
                 ))}
               </div>
@@ -801,6 +841,7 @@ export default function CrmPage() {
           lead={selected}
           onClose={() => setSelected(null)}
           onUpdate={handleUpdate}
+          employees={employees}
         />
       )}
     </AdminShell>

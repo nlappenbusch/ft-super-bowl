@@ -56,6 +56,14 @@ export async function GET(req: Request) {
   const sub = (payload.oid as string) || (payload.sub as string) || name;
   const email = (payload.preferred_username as string) || (payload.email as string) || undefined;
 
+  // Mitarbeiter automatisch anlegen/aktualisieren (Userverwaltung /admin/team)
+  try {
+    const { upsertEmployeeOnLogin } = await import('@/lib/staffStore');
+    upsertEmployeeOnLogin({ id: sub, name, email });
+  } catch (e) {
+    console.error('[Auth] Mitarbeiter-Upsert fehlgeschlagen:', e);
+  }
+
   const token = await createSessionToken({ sub, name, email, src: 'microsoft' });
   const res = NextResponse.redirect(`${base}/admin`);
   res.cookies.set(SESSION_COOKIE, token, { httpOnly: true, sameSite: 'lax', secure: isSecureRequest(req), path: '/', maxAge: SESSION_MAX_AGE });

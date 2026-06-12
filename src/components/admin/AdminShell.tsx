@@ -8,6 +8,7 @@ import {
   LayoutDashboard, Inbox, KanbanSquare, Wallet,
   CalendarDays, Layers, Package, HelpCircle, Tag, MapPin,
   Mail, Settings, LogOut, Menu,
+  Users, Timer, Plane, ListTodo,
 } from 'lucide-react';
 import { COLORS } from './ui';
 
@@ -45,6 +46,15 @@ const NAV: NavGroup[] = [
       { href: '/admin/faqs', label: 'FAQs', icon: <HelpCircle className={ICON} /> },
       { href: '/admin/categories', label: 'Kategorien SEO', icon: <Tag className={ICON} /> },
       { href: '/admin/pins', label: 'Lageplan-Icons', icon: <MapPin className={ICON} /> },
+    ],
+  },
+  {
+    label: 'Team',
+    items: [
+      { href: '/admin/team', label: 'Team & User', icon: <Users className={ICON} /> },
+      { href: '/admin/zeit', label: 'Zeiterfassung', icon: <Timer className={ICON} /> },
+      { href: '/admin/urlaub', label: 'Urlaub', icon: <Plane className={ICON} /> },
+      { href: '/admin/aufgaben', label: 'Aufgaben', icon: <ListTodo className={ICON} /> },
     ],
   },
   {

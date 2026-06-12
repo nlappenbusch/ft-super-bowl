@@ -3,6 +3,7 @@ import {
   getAllBookings,
   updateBookingStatus,
   updateBookingNotes,
+  updateBookingAssignee,
   getBookingById,
   getNextRequestNumber,
   insertMessage,
@@ -118,13 +119,16 @@ export async function listBookings() {
   return data || [];
 }
 
-export async function updateBooking(id: string, updates: { status?: string; notes?: string }) {
+export async function updateBooking(id: string, updates: { status?: string; notes?: string; assigned_to?: string | null }) {
   if (!isSupabaseConfigured() || !supabase) {
     if (updates.status && ['new', 'in_progress', 'booked', 'rejected'].includes(updates.status)) {
       updateBookingStatus(id, updates.status as 'new' | 'in_progress' | 'booked' | 'rejected');
     }
     if (updates.notes !== undefined) {
       updateBookingNotes(id, updates.notes);
+    }
+    if (updates.assigned_to !== undefined) {
+      updateBookingAssignee(id, updates.assigned_to);
     }
     return getBookingById(id);
   }
@@ -133,7 +137,8 @@ export async function updateBooking(id: string, updates: { status?: string; note
     .from('booking_requests')
     .update({
       ...(updates.status ? { status: updates.status } : {}),
-      ...(updates.notes !== undefined ? { notes: updates.notes } : {})
+      ...(updates.notes !== undefined ? { notes: updates.notes } : {}),
+      ...(updates.assigned_to !== undefined ? { assigned_to: updates.assigned_to } : {})
     })
     .eq('id', id)
     .select('*')

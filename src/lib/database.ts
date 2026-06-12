@@ -29,7 +29,7 @@ if (!fs.existsSync(dataDir)) {
 }
 
 const dbPath = path.join(dataDir, 'bookings.db');
-const db = new Database(dbPath);
+export const db = new Database(dbPath);
 
 db.pragma('journal_mode = WAL');
 
@@ -131,6 +131,73 @@ export function initDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_booking_messages_booking_id ON booking_messages(booking_id);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_booking_messages_graph_id ON booking_messages(graph_message_id) WHERE graph_message_id IS NOT NULL;
+
+    -- ==================== HR / TEAM ====================
+
+    -- Mitarbeiter: automatisch angelegt beim Microsoft-Login (id = Entra oid)
+    CREATE TABLE IF NOT EXISTS employees (
+      id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      last_login_at TEXT,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL DEFAULT '',
+      role TEXT NOT NULL DEFAULT 'admin' CHECK(role IN ('admin','mitarbeiter')),
+      active INTEGER NOT NULL DEFAULT 1,
+      -- Wochenarbeitszeit: JSON-Array [So,Mo,Di,Mi,Do,Fr,Sa] in Stunden
+      weekly_hours TEXT NOT NULL DEFAULT '[0,8.4,8.4,8.4,8.4,8.4,0]',
+      vacation_days_per_year REAL NOT NULL DEFAULT 25,
+      employment_start TEXT,
+      notes TEXT NOT NULL DEFAULT ''
+    );
+
+    -- Zeiterfassung: Stempeluhr + manuelle Einträge
+    CREATE TABLE IF NOT EXISTS time_entries (
+      id TEXT PRIMARY KEY,
+      employee_id TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      date TEXT NOT NULL,                -- YYYY-MM-DD
+      start_time TEXT NOT NULL,          -- HH:MM
+      end_time TEXT,                     -- HH:MM, NULL = läuft (eingestempelt)
+      break_minutes INTEGER NOT NULL DEFAULT 0,
+      source TEXT NOT NULL DEFAULT 'stamp' CHECK(source IN ('stamp','manual')),
+      note TEXT NOT NULL DEFAULT '',
+      FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
+    );
+
+    -- Urlaub / Abwesenheiten
+    CREATE TABLE IF NOT EXISTS vacation_requests (
+      id TEXT PRIMARY KEY,
+      employee_id TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      start_date TEXT NOT NULL,          -- YYYY-MM-DD
+      end_date TEXT NOT NULL,            -- YYYY-MM-DD (inklusive)
+      days REAL NOT NULL DEFAULT 0,      -- verbrauchte Arbeitstage (ZH-Feiertage exkl.)
+      type TEXT NOT NULL DEFAULT 'urlaub' CHECK(type IN ('urlaub','krankheit','kompensation','sonstiges')),
+      status TEXT NOT NULL DEFAULT 'beantragt' CHECK(status IN ('beantragt','genehmigt','abgelehnt')),
+      comment TEXT NOT NULL DEFAULT '',
+      decided_by TEXT,
+      decided_at TEXT,
+      FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
+    );
+
+    -- Interne Aufgaben (optional mit Bezug auf eine Anfrage)
+    CREATE TABLE IF NOT EXISTS staff_tasks (
+      id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      title TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      assignee_id TEXT,
+      booking_id TEXT,
+      due_date TEXT,
+      priority TEXT NOT NULL DEFAULT 'normal' CHECK(priority IN ('niedrig','normal','hoch')),
+      status TEXT NOT NULL DEFAULT 'offen' CHECK(status IN ('offen','in_arbeit','erledigt')),
+      created_by TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_time_entries_employee_date ON time_entries(employee_id, date);
+    CREATE INDEX IF NOT EXISTS idx_vacation_requests_employee ON vacation_requests(employee_id, start_date);
+    CREATE INDEX IF NOT EXISTS idx_staff_tasks_assignee ON staff_tasks(assignee_id, status);
   `);
 
   // --- Migrationen für bestehende Installationen ---------------------------
@@ -138,6 +205,10 @@ export function initDatabase() {
   const cols = db.prepare(`PRAGMA table_info(booking_requests)`).all() as Array<{ name: string }>;
   if (!cols.some((c) => c.name === 'request_number')) {
     db.exec(`ALTER TABLE booking_requests ADD COLUMN request_number TEXT`);
+  }
+  // RQ-Zuweisung an Mitarbeiter
+  if (!cols.some((c) => c.name === 'assigned_to')) {
+    db.exec(`ALTER TABLE booking_requests ADD COLUMN assigned_to TEXT`);
   }
 
   // RQ-Zähler initialisieren (Start bei 10000 → erste Nummer RQ-10001)
@@ -274,6 +345,12 @@ export function updateBookingStatus(id: string, status: BookingRequest['status']
 export function updateBookingNotes(id: string, notes: string) {
   const stmt = db.prepare('UPDATE booking_requests SET notes = ? WHERE id = ?');
   const result = stmt.run(notes, id);
+  return result.changes > 0;
+}
+
+export function updateBookingAssignee(id: string, assignedTo: string | null) {
+  const stmt = db.prepare('UPDATE booking_requests SET assigned_to = ? WHERE id = ?');
+  const result = stmt.run(assignedTo, id);
   return result.changes > 0;
 }
 

@@ -11,7 +11,8 @@ export async function PATCH(
 
     const updatedBooking = await updateBooking(id, {
       status: body.status,
-      notes: body.notes
+      notes: body.notes,
+      assigned_to: body.assigned_to
     });
 
     if (!updatedBooking) {
