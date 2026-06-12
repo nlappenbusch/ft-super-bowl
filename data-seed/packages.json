@@ -137,23 +137,92 @@
     "active": true
   },
   {
-    "single_supplement": 350,
-    "id": "fo2027-standard",
-    "popular": true,
-    "short_description": "VIP-Erlebnis auf dem Centre Court Philippe-Chatrier inkl. 2 Übernachtungen im Hotel Astoria Paris und exklusivem Hospitality-Zugang.",
-    "title": "French Open 2027 – Hospitality Package",
-    "price": 1315,
-    "description": "Erleben Sie Roland Garros 2027 hautnah! Ihr Package beinhaltet 2 Übernachtungen mit Frühstücksbuffet im renommierten Hotel Astoria Paris (Superior-Doppelzimmer), einen Kat.-1-Sitzplatz auf dem Centre Court Philippe-Chatrier sowie Zutritt zum exklusiven Hospitality-Bereich mit Finger-Food-Buffet & Open Bar über einen separaten VIP-Eingang. Zugang zu allen Nebenplätzen (Outside Courts/Annexes) inklusive. Dazu: Roland-Garros-Magazin & Tageszeitungen, Paris Stadtführer, Faltin Travel Lanyard, Reisebeutel & Kofferanhänger sowie detaillierte Reiseinformationen und Schweizer Reisegarantie.\n\nPreise ab 655 € (Außen-Courts) bzw. ab 1.315 € (Centre Court) pro Person im Doppelzimmer – je nach gewähltem Termin und Spielrunde.",
+    "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
+    "event_slug": "french-open-2027",
+    "currency": "EUR",
+    "stars": 3,
+    "nights": 2,
+    "hotel": "Hotel Astoria 3★ (Paris)",
+    "hotel_images": [],
+    "distances": {
+      "airport": "26 km (CDG)",
+      "stadium": "8 km",
+      "downtown": "1 km (Place de Clichy)"
+    },
+    "room_categories": [
+      "Doppelzimmer Superior",
+      "Einzelzimmer Superior"
+    ],
+    "extension_nights": "Verlängerungsnächte & 4★-Upgrade (Terrass Hotel, +100 €/Nacht) auf Anfrage",
+    "single_supplement": null,
+    "rating": null,
+    "reviews": null,
+    "package_name": "Hospitality-Package",
+    "id": "fo2027-vorrunden",
+    "slug": "fo2027-vorrunden",
+    "popular": false,
     "available_spots": null,
-    "event_slug": "french-open-2027",
-    "slug": "fo2027-standard",
-    "rating": null,
-    "stars": 4,
-    "currency": "EUR",
-    "reviews": null,
-    "nights": 2,
+    "badge_text": "Centre Court · Kat. 1",
+    "title": "French Open 2027 – Hospitality 1.–3. Runde",
+    "price": 1315,
+    "short_description": "VIP auf dem Centre Court Philippe-Chatrier inkl. 2 ÜF im Hotel Astoria – für die Spieltage der 1.–3. Runde.",
+    "description": "Erleben Sie Roland Garros 2027 in der packenden Anfangsphase. Das Package umfasst 2 Übernachtungen mit Frühstück im Hotel Astoria (Superior-DZ), einen Kat.-1-Sitzplatz auf dem Centre Court Philippe-Chatrier sowie exklusiven VIP-Hospitality-Zugang mit Finger-Food-Buffet & Open Bar über einen separaten VIP-Eingang.\n\nPreise pro Person im Doppelzimmer je nach Spieltag:\n• 1. Runde: So 23.05. ab 1.315 € · Mo 24.05. 1.425 € · Di 25.05. 1.675 €\n• 2. Runde: Mi 26.05. 1.785 € · Do 27.05. 1.895 €\n• 3. Runde: Fr 28.05. 2.035 € · Sa 29.05. 1.945 €\n\nAbend-Match-Zuschlag und 4★-Hotelupgrade (Terrass) optional. Bitte gewünschten Spieltag bei der Anfrage angeben.",
+    "includes": [
+      {
+        "type": "ticket",
+        "name": "Kat.-1-Sitzplatz Centre Court Philippe-Chatrier",
+        "category": "Unterrang",
+        "status": "OK",
+        "icon": "ticket",
+        "description": "Erstklassiger Sitzplatz im Unterrang des Centre Court.",
+        "sort_order": 1
+      },
+      {
+        "type": "hotel",
+        "name": "2× Übernachtung mit Frühstück – Hotel Astoria 3★",
+        "category": "Superior-Doppelzimmer",
+        "status": "OK",
+        "icon": "hotel",
+        "description": "Renoviertes Mittelklassehotel nahe Place de Clichy & Montmartre.",
+        "sort_order": 2
+      },
+      {
+        "type": "hospitality",
+        "name": "VIP-Hospitality: Finger-Food-Buffet & Open Bar",
+        "category": "Separater VIP-Eingang",
+        "status": "OK",
+        "icon": "hospitality",
+        "description": "Zutritt zum Roland-Garros-Gelände über einen separaten VIP-Eingang inkl. Bewirtung.",
+        "sort_order": 3
+      },
+      {
+        "type": "ticket",
+        "name": "Zugang zu allen Nebenplätzen",
+        "category": "Outside Courts / Annexes",
+        "status": "OK",
+        "icon": "ticket",
+        "description": "Freier Zutritt zu den Außenplätzen.",
+        "sort_order": 4
+      },
+      {
+        "type": "hospitality",
+        "name": "Faltin-Reiseset & Schweizer Reisegarantie",
+        "category": "Inkl. RG-Magazin & Paris-Reiseführer",
+        "status": "OK",
+        "icon": "hospitality",
+        "description": "Lanyard, Reisebeutel, Kofferanhänger, Tickettasche, detaillierte Reiseinformationen.",
+        "sort_order": 5
+      }
+    ],
+    "active": true
+  },
+  {
     "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
-    "hotel": "Hotel Astoria Paris",
+    "event_slug": "french-open-2027",
+    "currency": "EUR",
+    "stars": 3,
+    "nights": 2,
+    "hotel": "Hotel Astoria 3★ (Paris)",
     "hotel_images": [],
     "distances": {
       "airport": "26 km (CDG)",
@@ -164,62 +233,236 @@
       "Doppelzimmer Superior",
       "Einzelzimmer Superior"
     ],
-    "badge_text": "",
-    "includes": [],
+    "extension_nights": "Verlängerungsnächte & 4★-Upgrade (Terrass Hotel, +100 €/Nacht) auf Anfrage",
+    "single_supplement": null,
+    "rating": null,
+    "reviews": null,
     "package_name": "Hospitality-Package",
-    "active": false
+    "id": "fo2027-achtelfinale",
+    "slug": "fo2027-achtelfinale",
+    "popular": false,
+    "available_spots": null,
+    "badge_text": "Achtelfinale",
+    "title": "French Open 2027 – Hospitality Achtelfinale",
+    "price": 1925,
+    "short_description": "Die Achtelfinals auf dem Centre Court – VIP-Hospitality inkl. 2 ÜF im Hotel Astoria.",
+    "description": "Die K.-o.-Phase beginnt: Achtelfinal-Spannung auf dem Centre Court Philippe-Chatrier. Inklusive 2 Übernachtungen mit Frühstück im Hotel Astoria (Superior-DZ), Kat.-1-Sitzplatz und vollem VIP-Hospitality-Zugang.\n\nPreise pro Person im Doppelzimmer:\n• So 30.05. ab 1.925 €\n• Mo 31.05. 2.525 €\n\nAbend-Match-Zuschlag und 4★-Upgrade (Terrass) optional.",
+    "includes": [
+      {
+        "type": "ticket",
+        "name": "Kat.-1-Sitzplatz Centre Court Philippe-Chatrier",
+        "category": "Unterrang",
+        "status": "OK",
+        "icon": "ticket",
+        "description": "Erstklassiger Sitzplatz im Unterrang des Centre Court.",
+        "sort_order": 1
+      },
+      {
+        "type": "hotel",
+        "name": "2× Übernachtung mit Frühstück – Hotel Astoria 3★",
+        "category": "Superior-Doppelzimmer",
+        "status": "OK",
+        "icon": "hotel",
+        "description": "Renoviertes Mittelklassehotel nahe Place de Clichy & Montmartre.",
+        "sort_order": 2
+      },
+      {
+        "type": "hospitality",
+        "name": "VIP-Hospitality: Finger-Food-Buffet & Open Bar",
+        "category": "Separater VIP-Eingang",
+        "status": "OK",
+        "icon": "hospitality",
+        "description": "Zutritt zum Roland-Garros-Gelände über einen separaten VIP-Eingang inkl. Bewirtung.",
+        "sort_order": 3
+      },
+      {
+        "type": "ticket",
+        "name": "Zugang zu allen Nebenplätzen",
+        "category": "Outside Courts / Annexes",
+        "status": "OK",
+        "icon": "ticket",
+        "description": "Freier Zutritt zu den Außenplätzen.",
+        "sort_order": 4
+      },
+      {
+        "type": "hospitality",
+        "name": "Faltin-Reiseset & Schweizer Reisegarantie",
+        "category": "Inkl. RG-Magazin & Paris-Reiseführer",
+        "status": "OK",
+        "icon": "hospitality",
+        "description": "Lanyard, Reisebeutel, Kofferanhänger, Tickettasche, detaillierte Reiseinformationen.",
+        "sort_order": 5
+      }
+    ],
+    "active": true
   },
   {
-    "single_supplement": 350,
+    "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
+    "event_slug": "french-open-2027",
+    "currency": "EUR",
+    "stars": 3,
+    "nights": 2,
+    "hotel": "Hotel Astoria 3★ (Paris)",
+    "hotel_images": [],
+    "distances": {
+      "airport": "26 km (CDG)",
+      "stadium": "8 km",
+      "downtown": "1 km (Place de Clichy)"
+    },
+    "room_categories": [
+      "Doppelzimmer Superior",
+      "Einzelzimmer Superior"
+    ],
+    "extension_nights": "Verlängerungsnächte & 4★-Upgrade (Terrass Hotel, +100 €/Nacht) auf Anfrage",
+    "single_supplement": null,
+    "rating": null,
+    "reviews": null,
+    "package_name": "Hospitality-Package",
+    "id": "fo2027-viertelfinale",
+    "slug": "fo2027-viertelfinale",
+    "popular": false,
+    "available_spots": null,
+    "badge_text": "Viertelfinale",
+    "title": "French Open 2027 – Hospitality Viertelfinale",
+    "price": 2865,
+    "short_description": "Viertelfinal-Spannung auf dem Centre Court – VIP-Hospitality inkl. 2 ÜF.",
+    "description": "Die besten Acht: Viertelfinal-Tennis der Extraklasse auf dem Centre Court Philippe-Chatrier. Inklusive 2 Übernachtungen mit Frühstück im Hotel Astoria (Superior-DZ), Kat.-1-Sitzplatz und exklusivem VIP-Hospitality-Zugang.\n\nPreise pro Person im Doppelzimmer:\n• Di 01.06. 2.865 €\n• Mi 02.06. 2.865 €\n\nAbend-Match-Zuschlag und 4★-Upgrade (Terrass) optional.",
+    "includes": [
+      {
+        "type": "ticket",
+        "name": "Kat.-1-Sitzplatz Centre Court Philippe-Chatrier",
+        "category": "Unterrang",
+        "status": "OK",
+        "icon": "ticket",
+        "description": "Erstklassiger Sitzplatz im Unterrang des Centre Court.",
+        "sort_order": 1
+      },
+      {
+        "type": "hotel",
+        "name": "2× Übernachtung mit Frühstück – Hotel Astoria 3★",
+        "category": "Superior-Doppelzimmer",
+        "status": "OK",
+        "icon": "hotel",
+        "description": "Renoviertes Mittelklassehotel nahe Place de Clichy & Montmartre.",
+        "sort_order": 2
+      },
+      {
+        "type": "hospitality",
+        "name": "VIP-Hospitality: Finger-Food-Buffet & Open Bar",
+        "category": "Separater VIP-Eingang",
+        "status": "OK",
+        "icon": "hospitality",
+        "description": "Zutritt zum Roland-Garros-Gelände über einen separaten VIP-Eingang inkl. Bewirtung.",
+        "sort_order": 3
+      },
+      {
+        "type": "ticket",
+        "name": "Zugang zu allen Nebenplätzen",
+        "category": "Outside Courts / Annexes",
+        "status": "OK",
+        "icon": "ticket",
+        "description": "Freier Zutritt zu den Außenplätzen.",
+        "sort_order": 4
+      },
+      {
+        "type": "hospitality",
+        "name": "Faltin-Reiseset & Schweizer Reisegarantie",
+        "category": "Inkl. RG-Magazin & Paris-Reiseführer",
+        "status": "OK",
+        "icon": "hospitality",
+        "description": "Lanyard, Reisebeutel, Kofferanhänger, Tickettasche, detaillierte Reiseinformationen.",
+        "sort_order": 5
+      }
+    ],
+    "active": true
+  },
+  {
+    "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
+    "event_slug": "french-open-2027",
+    "currency": "EUR",
+    "stars": 3,
+    "nights": 2,
+    "hotel": "Hotel Astoria 3★ (Paris)",
+    "hotel_images": [],
+    "distances": {
+      "airport": "26 km (CDG)",
+      "stadium": "8 km",
+      "downtown": "1 km (Place de Clichy)"
+    },
+    "room_categories": [
+      "Doppelzimmer Superior",
+      "Einzelzimmer Superior"
+    ],
+    "extension_nights": "Verlängerungsnächte & 4★-Upgrade (Terrass Hotel, +100 €/Nacht) auf Anfrage",
+    "single_supplement": null,
+    "rating": null,
+    "reviews": null,
+    "package_name": "Hospitality-Package",
     "id": "fo2027-halbfinale",
-    "popular": false,
-    "short_description": "Das Halbfinale hautnah erleben – kombiniertes 2-Tage-Package mit Damen-Halbfinale (03.06.) und Herren-Halbfinale Night Session (04.06.).",
-    "title": "French Open 2027 – Halbfinale Package",
-    "price": 3475,
-    "description": "Das ultimative Halbfinale-Erlebnis! Dieses Kombi-Package beinhaltet Tickets für beide Halbfinale auf dem Centre Court Philippe-Chatrier: Damen-Halbfinale am 03.06.2027 und Herren-Halbfinale (Night Session) am 04.06.2027 – kombiniert mit 2 Nächten Hospitality-Unterbringung im Hotel Astoria Paris.\n\nIm Preis inbegriffen: 2× Übernachtung + Frühstück im Superior-DZ, Kat.-1-Sitzplatz Centre Court (beide Tage), exklusiver VIP-Hospitality-Zugang mit Finger-Food-Buffet & Open Bar, Zugang zu allen Außenplätzen, Roland-Garros-Magazin, Paris Stadtführer, Schweizer Reisegarantie und sämtliche Faltin-Travel-Reiseunterlagen.",
-    "available_spots": 8,
-    "event_slug": "french-open-2027",
     "slug": "fo2027-halbfinale",
-    "rating": null,
-    "stars": 4,
-    "currency": "EUR",
-    "reviews": null,
-    "nights": 2,
-    "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
-    "hotel": "Hotel Astoria Paris",
-    "hotel_images": [],
-    "distances": {
-      "airport": "26 km (CDG)",
-      "stadium": "8 km",
-      "downtown": "1 km (Place de Clichy)"
-    },
-    "room_categories": [
-      "Doppelzimmer Superior",
-      "Einzelzimmer Superior"
+    "popular": false,
+    "available_spots": null,
+    "badge_text": "Kombi · 2 Tage",
+    "title": "French Open 2027 – Halbfinal-Package (Kombi)",
+    "price": 5385,
+    "short_description": "Beide Halbfinal-Tage als Kombi: Damen-HF (03.06.) + Herren-HF Day Session (04.06.) inkl. 2 ÜF.",
+    "description": "Das Halbfinal-Wochenende komplett: Kombi-Package mit Tickets für das Damen-Einzel-Halbfinale am 03.06.2027 und das Herren-Einzel-Halbfinale (Day Session) am 04.06.2027 auf dem Centre Court Philippe-Chatrier – inklusive 2 Übernachtungen mit Frühstück im Hotel Astoria und vollem VIP-Hospitality-Zugang an beiden Tagen.\n\nKombipreis: 5.385 € pro Person im Doppelzimmer (nur in Kombination buchbar). 4★-Upgrade (Terrass) optional.",
+    "includes": [
+      {
+        "type": "ticket",
+        "name": "Kat.-1-Sitzplatz Centre Court Philippe-Chatrier",
+        "category": "Unterrang",
+        "status": "OK",
+        "icon": "ticket",
+        "description": "Erstklassiger Sitzplatz im Unterrang des Centre Court.",
+        "sort_order": 1
+      },
+      {
+        "type": "hotel",
+        "name": "2× Übernachtung mit Frühstück – Hotel Astoria 3★",
+        "category": "Superior-Doppelzimmer",
+        "status": "OK",
+        "icon": "hotel",
+        "description": "Renoviertes Mittelklassehotel nahe Place de Clichy & Montmartre.",
+        "sort_order": 2
+      },
+      {
+        "type": "hospitality",
+        "name": "VIP-Hospitality: Finger-Food-Buffet & Open Bar",
+        "category": "Separater VIP-Eingang",
+        "status": "OK",
+        "icon": "hospitality",
+        "description": "Zutritt zum Roland-Garros-Gelände über einen separaten VIP-Eingang inkl. Bewirtung.",
+        "sort_order": 3
+      },
+      {
+        "type": "ticket",
+        "name": "Zugang zu allen Nebenplätzen",
+        "category": "Outside Courts / Annexes",
+        "status": "OK",
+        "icon": "ticket",
+        "description": "Freier Zutritt zu den Außenplätzen.",
+        "sort_order": 4
+      },
+      {
+        "type": "hospitality",
+        "name": "Faltin-Reiseset & Schweizer Reisegarantie",
+        "category": "Inkl. RG-Magazin & Paris-Reiseführer",
+        "status": "OK",
+        "icon": "hospitality",
+        "description": "Lanyard, Reisebeutel, Kofferanhänger, Tickettasche, detaillierte Reiseinformationen.",
+        "sort_order": 5
+      }
     ],
-    "badge_text": "",
-    "includes": [],
-    "package_name": "Hospitality-Package",
-    "active": false
+    "active": true
   },
   {
-    "single_supplement": 350,
-    "id": "fo2027-finale",
-    "popular": false,
-    "short_description": "Der Höhepunkt von Roland Garros! Kombi-Package mit Damen Finale / Herren DBL Finale (05.06.) plus Herren Einzel Finale (06.06.).",
-    "title": "French Open 2027 – Finale Package ⭐",
-    "price": 2395,
-    "description": "Der krönende Abschluss von Roland Garros 2027! Dieses exklusive Finale-Package kombiniert Tickets für das Damen Einzel Finale / Herren Doppel Finale am 05.06.2027 und das Herren Einzel Finale am 06.06.2027 auf dem legendären Centre Court Philippe-Chatrier.\n\nIm Preis inbegriffen: 2× Übernachtung + Frühstück im Superior-DZ, Kat.-1-Sitzplatz Centre Court (beide Finals-Tage), exklusiver VIP-Hospitality-Zugang, Roland-Garros-Magazin, Paris Stadtführer, Schweizer Reisegarantie und alle Faltin-Travel-Reiseunterlagen.\n\nNur wenige Plätze verfügbar – frühzeitige Buchung empfohlen.",
-    "available_spots": 4,
-    "event_slug": "french-open-2027",
-    "slug": "fo2027-finale",
-    "rating": null,
-    "stars": 4,
-    "currency": "EUR",
-    "reviews": null,
-    "nights": 2,
     "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
-    "hotel": "Hotel Astoria Paris",
+    "event_slug": "french-open-2027",
+    "currency": "EUR",
+    "stars": 3,
+    "nights": 2,
+    "hotel": "Hotel Astoria 3★ (Paris)",
     "hotel_images": [],
     "distances": {
       "airport": "26 km (CDG)",
@@ -230,9 +473,67 @@
       "Doppelzimmer Superior",
       "Einzelzimmer Superior"
     ],
-    "badge_text": "",
-    "includes": [],
+    "extension_nights": "Verlängerungsnächte & 4★-Upgrade (Terrass Hotel, +100 €/Nacht) auf Anfrage",
+    "single_supplement": null,
+    "rating": null,
+    "reviews": null,
     "package_name": "Hospitality-Package",
-    "active": false
+    "id": "fo2027-finale",
+    "slug": "fo2027-finale",
+    "popular": true,
+    "available_spots": 6,
+    "badge_text": "Highlight · Kombi",
+    "title": "French Open 2027 – Final-Package (Kombi) ⭐",
+    "price": 6585,
+    "short_description": "Der krönende Abschluss: Damen-Finale (05.06.) + Herren-Finale (06.06.) inkl. 2 ÜF – das Highlight.",
+    "description": "Roland Garros 2027 im großen Finale: Kombi-Package mit Tickets für das Damen-Einzel-Finale am 05.06.2027 und das Herren-Einzel-Finale am 06.06.2027 auf dem legendären Centre Court Philippe-Chatrier – inklusive 2 Übernachtungen mit Frühstück im Hotel Astoria und exklusivem VIP-Hospitality-Zugang.\n\nKombipreis: 6.585 € pro Person im Doppelzimmer (nur in Kombination buchbar). Nur wenige Plätze – frühzeitige Buchung empfohlen. 4★-Upgrade (Terrass) optional.",
+    "includes": [
+      {
+        "type": "ticket",
+        "name": "Kat.-1-Sitzplatz Centre Court Philippe-Chatrier",
+        "category": "Unterrang",
+        "status": "OK",
+        "icon": "ticket",
+        "description": "Erstklassiger Sitzplatz im Unterrang des Centre Court.",
+        "sort_order": 1
+      },
+      {
+        "type": "hotel",
+        "name": "2× Übernachtung mit Frühstück – Hotel Astoria 3★",
+        "category": "Superior-Doppelzimmer",
+        "status": "OK",
+        "icon": "hotel",
+        "description": "Renoviertes Mittelklassehotel nahe Place de Clichy & Montmartre.",
+        "sort_order": 2
+      },
+      {
+        "type": "hospitality",
+        "name": "VIP-Hospitality: Finger-Food-Buffet & Open Bar",
+        "category": "Separater VIP-Eingang",
+        "status": "OK",
+        "icon": "hospitality",
+        "description": "Zutritt zum Roland-Garros-Gelände über einen separaten VIP-Eingang inkl. Bewirtung.",
+        "sort_order": 3
+      },
+      {
+        "type": "ticket",
+        "name": "Zugang zu allen Nebenplätzen",
+        "category": "Outside Courts / Annexes",
+        "status": "OK",
+        "icon": "ticket",
+        "description": "Freier Zutritt zu den Außenplätzen.",
+        "sort_order": 4
+      },
+      {
+        "type": "hospitality",
+        "name": "Faltin-Reiseset & Schweizer Reisegarantie",
+        "category": "Inkl. RG-Magazin & Paris-Reiseführer",
+        "status": "OK",
+        "icon": "hospitality",
+        "description": "Lanyard, Reisebeutel, Kofferanhänger, Tickettasche, detaillierte Reiseinformationen.",
+        "sort_order": 5
+      }
+    ],
+    "active": true
   }
 ]
