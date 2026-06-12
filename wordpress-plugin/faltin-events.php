@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Faltin Travel – Event Shortcodes
- * Description: SEO-freundliche, serverseitig gerenderte Event-Karten aus dem Faltin-Travel-System. Shortcodes: [faltin_events serie="..."] und [faltin_event event="..."].
- * Version: 1.0.0
+ * Description: SEO-freundliche, serverseitig gerenderte Event-Karten + natives Anfrageformular. Shortcodes: [faltin_events serie="..."], [faltin_event event="..."], [faltin_anfrage event="..."].
+ * Version: 1.1.0
  * Author: Faltin Travel AG
  *
  * Die Inhalte werden serverseitig per REST-API geladen (wp_remote_get) und als
@@ -291,7 +291,7 @@ function faltin_anfrage_shortcode($atts) {
     $check_icon = '<svg class="ft-af-check" style="color:#2ecc71 !important" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
 
     ob_start(); ?>
-    <div class="ft-af" id="<?php echo esc_attr($id); ?>">
+    <div class="ft-af" id="<?php echo esc_attr($id); ?>" data-ftv="1.1.0">
       <div class="ft-af-main">
         <div class="ft-af-head">
           <h3><?php echo $mail_icon; ?> <?php echo esc_html($atts['title']); ?></h3>
