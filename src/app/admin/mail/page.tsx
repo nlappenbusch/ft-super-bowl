@@ -38,7 +38,7 @@ export default function MailAdminPage() {
   // Editable form state
   const [form, setForm] = useState({
     tenant_id: '', client_id: '', client_secret: '', mailbox: '', from_name: '',
-    inbound_poll_secret: '', brevo_api_key: '', login_base_url: '',
+    inbound_poll_secret: '', brevo_api_key: '', login_base_url: '', notify_to: '',
   });
 
   const [testTo, setTestTo] = useState('');
@@ -69,6 +69,7 @@ export default function MailAdminPage() {
           from_name: c.data.from_name || 'Faltin Travel',
           inbound_poll_secret: c.data.inbound_poll_secret || '',
           login_base_url: c.data.login_base_url || '',
+          notify_to: c.data.notify_to || '',
           client_secret: '',
           brevo_api_key: '',
         }));
@@ -204,6 +205,7 @@ export default function MailAdminPage() {
                 <InputField label="Postfach (Mailbox)" value={form.mailbox} onChange={(e) => set('mailbox', e.target.value)} placeholder="request@faltintravel.com" />
                 <InputField label="Absendername" value={form.from_name} onChange={(e) => set('from_name', e.target.value)} placeholder="Faltin Travel" />
               </div>
+              <InputField label="Interne Benachrichtigung an (Team)" value={form.notify_to} onChange={(e) => set('notify_to', e.target.value)} placeholder="leer = Postfach selbst (request@…)" />
               <Field
                 label="Inbound-Poll-Secret"
                 hint="Frei wählbares Passwort – schützt NUR unseren Cron-Endpoint /api/inbound/poll. Hat nichts mit Azure/MS Graph zu tun. Einfach generieren lassen."

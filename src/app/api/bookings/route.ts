@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 import { createBooking, listBookings, addMessage } from '@/lib/bookingStore';
 import { getEventBySlug } from '@/lib/eventData';
 import { addContactToBrevoList } from '@/lib/brevo';
-import { sendGraphMail, isGraphConfigured, getMailbox } from '@/lib/graphMailer';
-import { confirmationEmailHtml, confirmationSubject } from '@/lib/emailTemplates';
+import { sendGraphMail, isGraphConfigured, getMailbox, getNotifyTo } from '@/lib/graphMailer';
+import {
+  confirmationEmailHtml, confirmationSubject,
+  internalNotificationHtml, internalNotificationSubject,
+} from '@/lib/emailTemplates';
 
 export async function POST(request: Request) {
   try {
@@ -59,23 +62,21 @@ export async function POST(request: Request) {
       }
     }
 
-    // Bestätigungsmail an den Kunden (via M365 Graph) + Konversations-Log
+    // E-Mails (via M365 Graph): Kundenbestätigung + interne Team-Benachrichtigung
     const requestNumber = (booking as { request_number?: string })?.request_number || '';
+    const customerName = [firstName, lastName].filter(Boolean).join(' ') || undefined;
+    const mail: {
+      customer?: { success: boolean; error?: string };
+      team?: { success: boolean; error?: string };
+    } = {};
+
     if (requestNumber && isGraphConfigured()) {
+      // 1) Bestätigung an den Kunden
       try {
         const subject = confirmationSubject(requestNumber, eventName);
-        const html = confirmationEmailHtml({
-          firstName,
-          requestNumber,
-          eventName,
-          message: body.message || '',
-        });
-        const sendRes = await sendGraphMail({
-          to: body.email,
-          toName: [firstName, lastName].filter(Boolean).join(' ') || undefined,
-          subject,
-          html,
-        });
+        const html = confirmationEmailHtml({ firstName, requestNumber, eventName, message: body.message || '' });
+        const sendRes = await sendGraphMail({ to: body.email, toName: customerName, subject, html });
+        mail.customer = { success: sendRes.success, error: sendRes.error };
         if (sendRes.success) {
           await addMessage({
             booking_id: (booking as { id: string }).id,
@@ -86,9 +87,37 @@ export async function POST(request: Request) {
             body: 'Automatische Bestätigung der Anfrage gesendet.',
             graph_message_id: null,
           });
+        } else {
+          console.error('[Graph] Kundenbestaetigung fehlgeschlagen:', sendRes.error);
         }
       } catch (mailErr) {
-        console.warn('[Graph] Bestätigungsmail fehlgeschlagen (non-fatal):', mailErr);
+        mail.customer = { success: false, error: (mailErr as Error).message };
+        console.error('[Graph] Kundenbestaetigung Exception:', mailErr);
+      }
+
+      // 2) Interne Benachrichtigung ans Team (request@ bzw. notify_to)
+      try {
+        const subject = internalNotificationSubject(requestNumber, eventName);
+        const html = internalNotificationHtml({
+          requestNumber,
+          eventName,
+          packageTitle: body.packageTitle,
+          customerName,
+          email: body.email,
+          phone: body.phone,
+          startDate: body.startDate,
+          numberOfPersons: body.numberOfPersons,
+          doubleRooms: body.doubleRooms,
+          singleRooms: body.singleRooms,
+          totalPrice: body.totalPrice,
+          message: body.message || '',
+        });
+        const teamRes = await sendGraphMail({ to: getNotifyTo(), subject, html });
+        mail.team = { success: teamRes.success, error: teamRes.error };
+        if (!teamRes.success) console.error('[Graph] Team-Benachrichtigung fehlgeschlagen:', teamRes.error);
+      } catch (mailErr) {
+        mail.team = { success: false, error: (mailErr as Error).message };
+        console.error('[Graph] Team-Benachrichtigung Exception:', mailErr);
       }
     }
 
@@ -96,6 +125,7 @@ export async function POST(request: Request) {
       success: true,
       data: booking,
       requestNumber,
+      mail,
       message: 'Buchungsanfrage erfolgreich gespeichert'
     });
 

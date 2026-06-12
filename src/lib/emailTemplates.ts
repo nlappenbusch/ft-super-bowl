@@ -137,6 +137,60 @@ export function confirmationEmailHtml(input: ConfirmationInput): string {
   return layout(inner, `Ihre Anfrage ${input.requestNumber} ist bei uns eingegangen.`);
 }
 
+export interface InternalNotificationInput {
+  requestNumber: string;
+  eventName?: string;
+  packageTitle?: string;
+  customerName?: string;
+  email: string;
+  phone: string;
+  startDate?: string;
+  numberOfPersons?: number;
+  doubleRooms?: number;
+  singleRooms?: number;
+  totalPrice?: number;
+  message?: string;
+  adminUrl?: string;
+}
+
+export function internalNotificationSubject(requestNumber: string, eventName?: string): string {
+  const ev = eventName ? ` – ${eventName}` : '';
+  return `🆕 Neue Anfrage${ev} ${subjectTag(requestNumber)}`;
+}
+
+/** Interne Benachrichtigung ans Team (request@) bei neuer Anfrage. */
+export function internalNotificationHtml(input: InternalNotificationInput): string {
+  const row = (label: string, value?: string | number) =>
+    value === undefined || value === '' || value === null
+      ? ''
+      : `<tr><td style="padding:6px 0;font-size:13px;color:#6b7280;width:42%;">${escapeHtml(label)}</td><td style="padding:6px 0;font-size:14px;font-weight:600;color:${NAVY};">${escapeHtml(String(value))}</td></tr>`;
+  const rooms = [
+    input.doubleRooms ? `${input.doubleRooms}× DZ` : '',
+    input.singleRooms ? `${input.singleRooms}× EZ` : '',
+  ].filter(Boolean).join(' · ');
+  const price = input.totalPrice ? `CHF ${Number(input.totalPrice).toLocaleString('de-CH')}` : '';
+  const adminUrl = input.adminUrl || `${baseUrl()}/admin/crm`;
+  const messageBlock = input.message
+    ? `<tr><td colspan="2" style="padding-top:14px;"><p style="margin:0 0 6px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;">Nachricht des Kunden</p><div style="background:#f5f7fa;border:1px solid #e5e8ed;border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.6;color:#374151;white-space:pre-wrap;">${escapeHtml(input.message)}</div></td></tr>`
+    : '';
+  const inner = `
+    <p style="margin:0 0 4px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;">Neue Buchungsanfrage</p>
+    <h1 style="margin:0 0 18px;font-size:22px;font-weight:800;color:${NAVY};">${escapeHtml(input.eventName || input.packageTitle || 'Anfrage')} <span style="color:${ACCENT};">${escapeHtml(input.requestNumber)}</span></h1>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      ${row('Kunde', input.customerName)}
+      ${row('E-Mail', input.email)}
+      ${row('Telefon', input.phone)}
+      ${row('Paket', input.packageTitle)}
+      ${row('Reisedatum', input.startDate)}
+      ${row('Personen', input.numberOfPersons)}
+      ${row('Zimmer', rooms)}
+      ${row('Richtpreis', price)}
+      ${messageBlock}
+    </table>
+    <p style="margin:22px 0 0;"><a href="${adminUrl}" style="display:inline-block;background:${ACCENT};color:#fff;font-size:14px;font-weight:700;text-decoration:none;padding:11px 22px;border-radius:10px;">Im CRM öffnen →</a></p>`;
+  return layout(inner, `Neue Anfrage ${input.requestNumber} – ${input.customerName || input.email}`);
+}
+
 export interface ReplyInput {
   bodyText: string;
   requestNumber: string;

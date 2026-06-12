@@ -13,6 +13,7 @@ export async function GET() {
       from_name: m.from_name,
       inbound_poll_secret: m.inbound_poll_secret,
       login_base_url: m.login_base_url || '',
+      notify_to: m.notify_to || '',
       has_client_secret: !!(m.client_secret || process.env.GRAPH_CLIENT_SECRET),
       has_brevo: !!(m.brevo_api_key || process.env.BREVO_API_KEY),
       env_fallback: {
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const updates: Partial<MailSettings> = {};
 
-    for (const key of ['tenant_id', 'client_id', 'mailbox', 'from_name', 'inbound_poll_secret', 'login_base_url'] as const) {
+    for (const key of ['tenant_id', 'client_id', 'mailbox', 'from_name', 'inbound_poll_secret', 'login_base_url', 'notify_to'] as const) {
       if (key in body) updates[key] = String(body[key] ?? '');
     }
     // Secrets nur setzen, wenn nicht leer (leer = unverändert lassen)

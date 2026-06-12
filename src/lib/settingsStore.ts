@@ -100,6 +100,7 @@ export interface MailSettings {
   /** Brevo API-Key (Marketing-Listen) */
   brevo_api_key: string;
   login_base_url: string;
+  notify_to: string;
 }
 
 const DEFAULT_SETTINGS: AllSettings = {
@@ -163,6 +164,7 @@ const DEFAULT_SETTINGS: AllSettings = {
     inbound_poll_secret: '',
     brevo_api_key: '',
     login_base_url: '',
+    notify_to: '',
   },
 };
 

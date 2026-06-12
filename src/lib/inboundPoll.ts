@@ -9,7 +9,7 @@
  * Admin-Panel (/api/admin/mail/poll) genutzt.
  * ─────────────────────────────────────────────────────────────────────────────
  */
-import { listInboxMessages, markMessageRead, isGraphConfigured } from './graphMailer';
+import { listInboxMessages, markMessageRead, isGraphConfigured, getMailbox } from './graphMailer';
 import { findBookingByRequestNumber, graphMessageExists, addMessage } from './bookingStore';
 import { parseRequestNumber } from './emailTemplates';
 
@@ -28,11 +28,18 @@ export async function runInboundPoll(): Promise<InboundPollResult> {
   }
 
   const messages = await listInboxMessages(true, 25);
+  const selfAddr = getMailbox().toLowerCase();
   let matched = 0;
   let skipped = 0;
   const unmatched: string[] = [];
 
   for (const m of messages) {
+    // Eigene/interne Mails (Bestätigungen, Team-Benachrichtigungen) überspringen
+    if (m.fromAddress && m.fromAddress.toLowerCase() === selfAddr) {
+      skipped++;
+      await markMessageRead(m.id);
+      continue;
+    }
     const rq = parseRequestNumber(m.subject) || parseRequestNumber(m.bodyPreview);
     if (!rq) {
       unmatched.push(m.subject);

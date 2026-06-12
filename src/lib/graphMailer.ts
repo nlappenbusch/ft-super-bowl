@@ -54,6 +54,12 @@ export function getMailbox(): string {
   return mailConfig().mailbox;
 }
 
+/** Empfänger interner Team-Benachrichtigungen (default = Postfach). */
+export function getNotifyTo(): string {
+  const m = getSettings().mail as { notify_to?: string };
+  return (m.notify_to || '').trim() || mailConfig().mailbox;
+}
+
 export function getFromName(): string {
   return mailConfig().fromName;
 }
