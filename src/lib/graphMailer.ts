@@ -94,7 +94,7 @@ async function getGraphToken(): Promise<string | null> {
 
   if (!res.ok) {
     const txt = await res.text().catch(() => '');
-    console.error('[Graph] Token-Fehler:', res.status, txt);
+    console.error(`[Graph] Token-Fehler (App ${c.clientId}, Tenant ${tenant}):`, res.status, txt);
     return null;
   }
 
@@ -123,8 +123,9 @@ export async function sendGraphMail(
     return { success: false, skipped: true, error: 'Graph nicht konfiguriert' };
   }
 
+  const clientId = mailConfig().clientId;
   const token = await getGraphToken();
-  if (!token) return { success: false, error: 'Kein Graph-Token' };
+  if (!token) return { success: false, error: `Kein Graph-Token (App ${clientId})` };
 
   const mailbox = getMailbox();
 
@@ -155,8 +156,8 @@ export async function sendGraphMail(
   }
 
   const txt = await res.text().catch(() => '');
-  console.error('[Graph] sendMail Fehler:', res.status, txt);
-  return { success: false, error: `${res.status}: ${txt}` };
+  console.error(`[Graph] sendMail Fehler (App ${clientId}, Postfach ${mailbox}):`, res.status, txt);
+  return { success: false, error: `${res.status} (App ${clientId}, Postfach ${mailbox}): ${txt}` };
 }
 
 export interface GraphInboxMessage {
@@ -194,7 +195,7 @@ export async function listInboxMessages(
 
   if (!res.ok) {
     const txt = await res.text().catch(() => '');
-    console.error('[Graph] listInbox Fehler:', res.status, txt);
+    console.error(`[Graph] listInbox Fehler (App ${mailConfig().clientId}, Postfach ${mailbox}):`, res.status, txt);
     return [];
   }
 
