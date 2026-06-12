@@ -6,7 +6,7 @@ services:
       # NEXT_PUBLIC_* werden zur Build-Zeit ins Client-JS eingebacken.
       # Werte kommen aus einer optionalen .env-Datei in diesem Ordner; sonst greifen die Defaults.
       args:
-        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://superbowl.faltintravel.com}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://next.faltintravel.com}
         NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME:-Faltin Travel Sports Events}
         NEXT_PUBLIC_ADMIN_PASSWORD: ${NEXT_PUBLIC_ADMIN_PASSWORD:-faltin-admin-2025}
         NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}

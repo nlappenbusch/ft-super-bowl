@@ -13,7 +13,8 @@ const ACCENT = '#d9531e';
 
 /** Absolute Basis-URL (E-Mails brauchen absolute Bild-URLs). */
 function baseUrl(): string {
-  return (process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url).replace(/\/+$/, '');
+  const m = getSettings().mail as { login_base_url?: string };
+  return (m.login_base_url || process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url).replace(/\/+$/, '');
 }
 
 /** Eindeutiger Betreff-Tag für Threading, z.B. "[RQ-12345]" */
