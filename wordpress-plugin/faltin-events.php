@@ -298,7 +298,7 @@ function faltin_anfrage_shortcode($atts) {
           <p><?php echo $intro; ?></p>
         </div>
         <div class="ft-af-body">
-          <p class="ft-af-error"></p>
+          <p class="ft-af-error" style="color:#dc2626 !important;background:#fef2f2 !important;text-shadow:none !important"></p>
           <?php
           $lbl = 'style="color:#143047 !important;background:transparent !important;text-shadow:none !important;padding:0 !important;display:block !important;margin:0 0 6px !important;font-size:12px !important;font-weight:700 !important"';
           $inp = 'style="color:#143047 !important;background:#fff !important"';

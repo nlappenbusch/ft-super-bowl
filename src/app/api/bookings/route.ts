@@ -8,10 +8,14 @@ import {
   internalNotificationHtml, internalNotificationSubject,
 } from '@/lib/emailTemplates';
 
-/** CORS: erlaubt Anfrage-Formulare auf externen Seiten (WordPress-Shortcode [faltin_anfrage]). */
+/**
+ * CORS: erlaubt das Anfrage-Formular auf WordPress ([faltin_anfrage]).
+ * Werte identisch mit next.config.ts (/api/:path*), damit keine doppelten,
+ * widersprüchlichen Header entstehen.
+ */
 const CORS_HEADERS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Origin': 'https://faltintravel.com',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 

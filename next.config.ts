@@ -72,7 +72,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Access-Control-Allow-Methods',
-            value: 'GET, OPTIONS'
+            value: 'GET, POST, OPTIONS' // POST: Anfrageformular [faltin_anfrage] auf WordPress
           },
           {
             key: 'Access-Control-Allow-Headers',
