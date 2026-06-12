@@ -60,7 +60,10 @@ function layout(innerHtml: string, preheader = ''): string {
         <tr><td style="background:#ffffff;padding:26px 36px 18px;">
           <table role="presentation" width="100%"><tr>
             <td><img src="${baseUrl()}/faltin-logo-email.png" alt="Faltin Travel" height="40" style="display:block;height:40px;width:auto;border:0;outline:none;text-decoration:none;" /></td>
-            <td align="right" style="font-size:12px;color:#9aa6b2;text-transform:uppercase;letter-spacing:1.5px;">Sports&nbsp;Travel</td>
+            <td align="right" style="vertical-align:middle;">
+              <div style="font-size:13px;font-weight:800;color:${NAVY};letter-spacing:0.3px;">Faltin&nbsp;Travel&nbsp;AG</div>
+              <div style="font-size:10px;color:${ACCENT};text-transform:uppercase;letter-spacing:2px;margin-top:3px;">Wir&nbsp;liefern&nbsp;Emotionen</div>
+            </td>
           </tr></table>
         </td></tr>
         <!-- Accent bar -->
