@@ -71,16 +71,16 @@ function faltin_events_styles() {
 .ft-ev-grid.cols-4{grid-template-columns:repeat(4,1fr)}
 @media(max-width:900px){.ft-ev-grid.cols-3,.ft-ev-grid.cols-4{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.ft-ev-grid{grid-template-columns:1fr!important}}
-.ft-ev-card{display:flex;flex-direction:column;background:#fff;border:1px solid #e5e8ed;border-radius:18px;overflow:hidden;box-shadow:0 4px 16px rgba(20,48,71,.08);transition:transform .15s ease,box-shadow .15s ease;text-decoration:none}
+.ft-ev-card{display:flex;flex-direction:column;background:#fff;border:1px solid #e5e8ed;border-radius:18px;overflow:hidden;box-shadow:0 4px 16px rgba(20,48,71,.08);transition:transform .15s ease,box-shadow .15s ease;text-decoration:none!important}
 .ft-ev-card:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(20,48,71,.14)}
 .ft-ev-img{position:relative;aspect-ratio:16/9;background:#143047;overflow:hidden}
 .ft-ev-img img{width:100%;height:100%;object-fit:cover;display:block}
-.ft-ev-date{position:absolute;top:12px;left:12px;background:#d9531e;color:#fff;font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px;letter-spacing:.2px}
+.ft-ev-date{position:absolute;top:12px;left:12px;background:#d9531e;color:#fff!important;font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px;letter-spacing:.2px}
 .ft-ev-body{display:flex;flex-direction:column;flex:1;padding:20px 22px 22px}
-.ft-ev-title{margin:0 0 6px;font-size:19px;line-height:1.3;font-weight:800;color:#143047}
-.ft-ev-loc{margin:0 0 10px;font-size:13px;color:#6b7280}
-.ft-ev-desc{margin:0 0 16px;font-size:14px;line-height:1.6;color:#374151;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.ft-ev-cta{margin-top:auto;align-self:flex-start;background:#d9531e;color:#fff!important;font-size:14px;font-weight:700;padding:10px 22px;border-radius:10px;text-decoration:none;transition:opacity .15s}
+.ft-ev-card .ft-ev-title,.ft-ev-single .ft-ev-title{margin:0 0 6px;font-size:19px;line-height:1.3;font-weight:800;color:#143047!important}
+.ft-ev-card .ft-ev-loc,.ft-ev-single .ft-ev-loc{margin:0 0 10px;font-size:13px;color:#6b7280!important}
+.ft-ev-card .ft-ev-desc,.ft-ev-single .ft-ev-desc{margin:0 0 16px;font-size:14px;line-height:1.6;color:#374151!important;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ft-ev-cta{margin-top:auto;align-self:flex-start;background:#d9531e;color:#fff!important;font-size:14px;font-weight:700;padding:10px 22px;border-radius:10px;text-decoration:none!important;transition:opacity .15s}
 .ft-ev-card:hover .ft-ev-cta{opacity:.9}
 .ft-ev-single{display:grid;grid-template-columns:5fr 4fr;gap:0;background:#fff;border:1px solid #e5e8ed;border-radius:18px;overflow:hidden;box-shadow:0 4px 16px rgba(20,48,71,.08);margin:8px 0}
 @media(max-width:700px){.ft-ev-single{grid-template-columns:1fr}}
@@ -216,3 +216,41 @@ function faltin_event_single_shortcode($atts) {
     return faltin_events_styles() . $inner . faltin_events_jsonld(array($e));
 }
 add_shortcode('faltin_event', 'faltin_event_single_shortcode');
+
+/* ─── Shortcode: Anfrageformular (1:1 das Formular der Faltin-Seite) ─────── */
+
+/**
+ * [faltin_anfrage event="super-bowl-2027" name="Super Bowl LXI 2027"]
+ *
+ * Bindet das Original-Anfrageformular von next.faltintravel.com ein
+ * (identisches Aussehen/Verhalten wie auf unseren Event-Seiten).
+ * Höhe passt sich automatisch an (postMessage-Resize).
+ *
+ * Parameter:
+ *   event   – Event-Slug (Default "allgemeine-anfrage")
+ *   name    – Anzeigename des Events im Formular (optional)
+ *   height  – Start-/Mindesthöhe in px bis das Auto-Resize greift (Default 760)
+ */
+function faltin_anfrage_shortcode($atts) {
+    $atts = shortcode_atts(array(
+        'event' => 'allgemeine-anfrage',
+        'name' => '',
+        'height' => '760',
+        'api_url' => FALTIN_EVENTS_DEFAULT_API,
+    ), $atts, 'faltin_anfrage');
+
+    $src = rtrim($atts['api_url'], '/') . '/embed/anfrage?event=' . rawurlencode($atts['event']);
+    if ($atts['name']) $src .= '&name=' . rawurlencode($atts['name']);
+
+    static $script_done = false;
+    $script = '';
+    if (!$script_done) {
+        $script_done = true;
+        $script = "<script>(function(){window.addEventListener('message',function(e){if(!e.data||typeof e.data.frameHeight!=='number')return;document.querySelectorAll('iframe.ft-anfrage-frame').forEach(function(f){if(f.contentWindow===e.source){f.style.height=(e.data.frameHeight+24)+'px';}});});})();</script>";
+    }
+
+    return '<iframe class="ft-anfrage-frame" src="' . esc_url($src) . '"'
+        . ' style="width:100%;border:none;display:block;min-height:' . esc_attr((int)$atts['height']) . 'px;background:transparent;"'
+        . ' loading="lazy" title="Anfrageformular Faltin Travel"></iframe>' . $script;
+}
+add_shortcode('faltin_anfrage', 'faltin_anfrage_shortcode');
