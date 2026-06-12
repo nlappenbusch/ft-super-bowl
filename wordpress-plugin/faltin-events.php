@@ -299,15 +299,19 @@ function faltin_anfrage_shortcode($atts) {
         </div>
         <div class="ft-af-body">
           <p class="ft-af-error"></p>
+          <?php
+          $lbl = 'style="color:#143047 !important;background:transparent !important;text-shadow:none !important;padding:0 !important;display:block !important;margin:0 0 6px !important;font-size:12px !important;font-weight:700 !important"';
+          $inp = 'style="color:#143047 !important;background:#fff !important"';
+          ?>
           <div class="ft-af-row">
-            <div class="ft-af-field"><label>Vorname</label><input type="text" name="firstName" placeholder="Max" autocomplete="given-name"></div>
-            <div class="ft-af-field"><label>Nachname</label><input type="text" name="lastName" placeholder="Mustermann" autocomplete="family-name"></div>
+            <div class="ft-af-field"><label <?php echo $lbl; ?>>Vorname</label><input <?php echo $inp; ?> type="text" name="firstName" placeholder="Max" autocomplete="given-name"></div>
+            <div class="ft-af-field"><label <?php echo $lbl; ?>>Nachname</label><input <?php echo $inp; ?> type="text" name="lastName" placeholder="Mustermann" autocomplete="family-name"></div>
           </div>
-          <div class="ft-af-field"><label>E-Mail <span>*</span></label><input type="email" name="email" placeholder="max@example.com" autocomplete="email" required></div>
-          <div class="ft-af-field"><label>Telefon <span>*</span></label><input type="tel" name="phone" placeholder="+41 79 123 45 67" autocomplete="tel" required></div>
-          <div class="ft-af-field"><label>Nachricht / Wunsch</label><textarea name="message" placeholder="Ich interessiere mich für… (Reisezeitraum, Personenanzahl, besondere Wünsche)"></textarea></div>
-          <button type="button" class="ft-af-btn">Unverbindlich anfragen</button>
-          <p class="ft-af-trust">✓ Kostenlos &amp; unverbindlich &nbsp;·&nbsp; ✓ Antwort innerhalb 24h &nbsp;·&nbsp; ✓ Schweizer Reisegarantie</p>
+          <div class="ft-af-field"><label <?php echo $lbl; ?>>E-Mail <span style="color:#d9531e !important">*</span></label><input <?php echo $inp; ?> type="email" name="email" placeholder="max@example.com" autocomplete="email" required></div>
+          <div class="ft-af-field"><label <?php echo $lbl; ?>>Telefon <span style="color:#d9531e !important">*</span></label><input <?php echo $inp; ?> type="tel" name="phone" placeholder="+41 79 123 45 67" autocomplete="tel" required></div>
+          <div class="ft-af-field"><label <?php echo $lbl; ?>>Nachricht / Wunsch</label><textarea <?php echo $inp; ?> name="message" placeholder="Ich interessiere mich für… (Reisezeitraum, Personenanzahl, besondere Wünsche)"></textarea></div>
+          <button type="button" class="ft-af-btn" style="color:#fff !important;background:#d9531e !important">Unverbindlich anfragen</button>
+          <p class="ft-af-trust" style="color:#9ca3af !important;background:transparent !important">✓ Kostenlos &amp; unverbindlich &nbsp;·&nbsp; ✓ Antwort innerhalb 24h &nbsp;·&nbsp; ✓ Schweizer Reisegarantie</p>
         </div>
       </div>
       <div class="ft-af-success">
