@@ -52,7 +52,8 @@ export function initDatabase() {
       message TEXT DEFAULT '',
       status TEXT NOT NULL DEFAULT 'new' CHECK(status IN ('new', 'in_progress', 'booked', 'rejected')),
       total_price REAL NOT NULL DEFAULT 0,
-      notes TEXT DEFAULT ''
+      notes TEXT DEFAULT '',
+      assigned_to TEXT
     );
 
     CREATE TABLE IF NOT EXISTS invoices (
@@ -201,15 +202,18 @@ export function initDatabase() {
   `);
 
   // --- Migrationen für bestehende Installationen ---------------------------
-  // request_number nachträglich ergänzen (SQLite kennt kein "ADD COLUMN IF NOT EXISTS")
+  // SQLite kennt kein "ADD COLUMN IF NOT EXISTS"; mehrere Build-Worker können
+  // parallel migrieren → "duplicate column" wird bewusst ignoriert (idempotent).
+  const addColumn = (table: string, ddl: string) => {
+    try {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+    } catch (e) {
+      if (!String(e).includes('duplicate column')) throw e;
+    }
+  };
   const cols = db.prepare(`PRAGMA table_info(booking_requests)`).all() as Array<{ name: string }>;
-  if (!cols.some((c) => c.name === 'request_number')) {
-    db.exec(`ALTER TABLE booking_requests ADD COLUMN request_number TEXT`);
-  }
-  // RQ-Zuweisung an Mitarbeiter
-  if (!cols.some((c) => c.name === 'assigned_to')) {
-    db.exec(`ALTER TABLE booking_requests ADD COLUMN assigned_to TEXT`);
-  }
+  if (!cols.some((c) => c.name === 'request_number')) addColumn('booking_requests', 'request_number TEXT');
+  if (!cols.some((c) => c.name === 'assigned_to')) addColumn('booking_requests', 'assigned_to TEXT');
 
   // RQ-Zähler initialisieren (Start bei 10000 → erste Nummer RQ-10001)
   db.prepare(`INSERT OR IGNORE INTO counters (name, value) VALUES ('request_number', 10000)`).run();
