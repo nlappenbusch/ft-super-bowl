@@ -7,11 +7,20 @@ import {
 import { siteConfig } from '@/lib/siteConfig';
 import { getGraphCredentials, getLoginBaseUrl } from '@/lib/graphMailer';
 
+function resolveBase(req: Request): string {
+  const admin = getLoginBaseUrl();
+  if (admin) return admin;
+  const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
+  const proto = req.headers.get('x-forwarded-proto') || 'https';
+  if (host) return `${proto}://${host}`.replace(/\/+$/, '');
+  return (process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url).replace(/\/+$/, '');
+}
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
-  const base = (getLoginBaseUrl() || siteConfig.url).replace(/\/+$/, '');
+  const base = resolveBase(req);
   const fail = (e: string) => NextResponse.redirect(`${base}/admin/login?error=${e}`);
 
   const jar = await cookies();

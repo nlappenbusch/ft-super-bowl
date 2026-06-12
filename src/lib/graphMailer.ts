@@ -42,7 +42,7 @@ export function getGraphCredentials() {
 /** Basis-URL für den SSO-Redirect: Admin-Setting > NEXT_PUBLIC_SITE_URL. */
 export function getLoginBaseUrl(): string {
   const m = getSettings().mail as { login_base_url?: string };
-  return (m.login_base_url || process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/+$/, '');
+  return (m.login_base_url || '').replace(/\/+$/, '');
 }
 
 export function isGraphConfigured(): boolean {
