@@ -217,40 +217,165 @@ function faltin_event_single_shortcode($atts) {
 }
 add_shortcode('faltin_event', 'faltin_event_single_shortcode');
 
-/* ─── Shortcode: Anfrageformular (1:1 das Formular der Faltin-Seite) ─────── */
+/* ─── Shortcode: Anfrageformular (nativ gerendert, kein iframe) ──────────── */
+
+/** Styles für das Anfrageformular – einmal pro Seite. */
+function faltin_anfrage_styles() {
+    static $done = false;
+    if ($done) return '';
+    $done = true;
+    return '<style>
+.ft-af{max-width:760px;margin:8px auto;border:1.5px solid #e5e8ed;border-radius:18px;overflow:hidden;box-shadow:0 4px 24px rgba(20,48,71,.08);background:#fff;font-family:inherit}
+.ft-af-head{background:#143047;padding:30px 32px 24px}
+.ft-af-head h3{margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:21px;font-weight:800;color:#fff!important}
+.ft-af-head h3 svg{flex:none}
+.ft-af-head p{margin:0;font-size:14px;line-height:1.6;color:rgba(255,255,255,.7)!important}
+.ft-af-head p strong{color:#fff!important}
+.ft-af-body{padding:30px 32px;background:#fff}
+.ft-af-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:560px){.ft-af-row{grid-template-columns:1fr}}
+.ft-af-field{margin-bottom:14px}
+.ft-af-field label{display:block;margin:0 0 6px;font-size:12px;font-weight:700;color:#143047!important;letter-spacing:.2px}
+.ft-af-field label span{color:#d9531e}
+.ft-af input,.ft-af textarea{width:100%;box-sizing:border-box;border:1.5px solid #e5e8ed;border-radius:12px;padding:11px 14px;font-size:14px;color:#143047!important;background:#fff!important;outline:none;transition:border-color .15s;font-family:inherit}
+.ft-af input:focus,.ft-af textarea:focus{border-color:#d9531e}
+.ft-af input::placeholder,.ft-af textarea::placeholder{color:#9ca3af!important}
+.ft-af textarea{min-height:110px;resize:vertical}
+.ft-af-btn{width:100%;border:none;cursor:pointer;background:#d9531e;color:#fff!important;font-size:15px;font-weight:800;padding:14px 20px;border-radius:12px;transition:opacity .15s;font-family:inherit}
+.ft-af-btn:hover{opacity:.92}
+.ft-af-btn:disabled{opacity:.6;cursor:wait}
+.ft-af-trust{margin:14px 0 0;text-align:center;font-size:11.5px;color:#9ca3af!important}
+.ft-af-error{margin:0 0 14px;padding:10px 14px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;font-size:13px;color:#dc2626!important;display:none}
+.ft-af-success{display:none;text-align:center;padding:48px 32px;background:#f5f7fa}
+.ft-af-success h3{margin:0 0 8px;font-size:23px;font-weight:800;color:#143047!important}
+.ft-af-success p{margin:0 auto;max-width:420px;font-size:14px;line-height:1.6;color:#6b7280!important}
+.ft-af-rq{display:inline-flex;flex-direction:column;gap:2px;margin-top:18px;padding:12px 26px;border-radius:12px;background:#143047}
+.ft-af-rq small{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.6)!important}
+.ft-af-rq strong{font-size:20px;font-weight:800;letter-spacing:1px;color:#fff!important}
+.ft-af-check{width:54px;height:54px;margin:0 auto 14px;display:block;color:#2ecc71}
+</style>';
+}
 
 /**
  * [faltin_anfrage event="super-bowl-2027" name="Super Bowl LXI 2027"]
  *
- * Bindet das Original-Anfrageformular von next.faltintravel.com ein
- * (identisches Aussehen/Verhalten wie auf unseren Event-Seiten).
- * Höhe passt sich automatisch an (postMessage-Resize).
+ * Natives Anfrageformular im Design der Faltin-Seite (kein iframe).
+ * Sendet direkt an /api/bookings → CRM, RQ-Nummer, Bestätigungsmail.
  *
  * Parameter:
- *   event   – Event-Slug (Default "allgemeine-anfrage")
- *   name    – Anzeigename des Events im Formular (optional)
- *   height  – Start-/Mindesthöhe in px bis das Auto-Resize greift (Default 760)
+ *   event  – Event-Slug (Default "allgemeine-anfrage")
+ *   name   – Anzeigename des Events im Intro-Text (optional)
+ *   title  – Überschrift-Override
+ *   intro  – Intro-Text-Override
  */
 function faltin_anfrage_shortcode($atts) {
     $atts = shortcode_atts(array(
         'event' => 'allgemeine-anfrage',
         'name' => '',
-        'height' => '760',
+        'title' => 'Jetzt unverbindlich anfragen',
+        'intro' => '',
         'api_url' => FALTIN_EVENTS_DEFAULT_API,
     ), $atts, 'faltin_anfrage');
 
-    $src = rtrim($atts['api_url'], '/') . '/embed/anfrage?event=' . rawurlencode($atts['event']);
-    if ($atts['name']) $src .= '&name=' . rawurlencode($atts['name']);
+    static $instance = 0;
+    $instance++;
+    $id = 'ft-af-' . $instance;
+    $api = rtrim($atts['api_url'], '/') . '/api/bookings';
+    $event_name = $atts['name'] ?: $atts['event'];
+    $intro = $atts['intro']
+        ? esc_html($atts['intro'])
+        : 'Kontaktieren Sie uns direkt — wir erstellen Ihnen ein individuelles Angebot für <strong>' . esc_html($event_name) . '</strong>.';
 
-    static $script_done = false;
-    $script = '';
-    if (!$script_done) {
-        $script_done = true;
-        $script = "<script>(function(){window.addEventListener('message',function(e){if(!e.data||typeof e.data.frameHeight!=='number')return;document.querySelectorAll('iframe.ft-anfrage-frame').forEach(function(f){if(f.contentWindow===e.source){f.style.height=(e.data.frameHeight+24)+'px';}});});})();</script>";
-    }
+    $mail_icon = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d9531e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>';
+    $check_icon = '<svg class="ft-af-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
 
-    return '<iframe class="ft-anfrage-frame" src="' . esc_url($src) . '"'
-        . ' style="width:100%;border:none;display:block;min-height:' . esc_attr((int)$atts['height']) . 'px;background:transparent;"'
-        . ' loading="lazy" title="Anfrageformular Faltin Travel"></iframe>' . $script;
+    ob_start(); ?>
+    <div class="ft-af" id="<?php echo esc_attr($id); ?>">
+      <div class="ft-af-main">
+        <div class="ft-af-head">
+          <h3><?php echo $mail_icon; ?> <?php echo esc_html($atts['title']); ?></h3>
+          <p><?php echo $intro; ?></p>
+        </div>
+        <div class="ft-af-body">
+          <p class="ft-af-error"></p>
+          <div class="ft-af-row">
+            <div class="ft-af-field"><label>Vorname</label><input type="text" name="firstName" placeholder="Max" autocomplete="given-name"></div>
+            <div class="ft-af-field"><label>Nachname</label><input type="text" name="lastName" placeholder="Mustermann" autocomplete="family-name"></div>
+          </div>
+          <div class="ft-af-field"><label>E-Mail <span>*</span></label><input type="email" name="email" placeholder="max@example.com" autocomplete="email" required></div>
+          <div class="ft-af-field"><label>Telefon <span>*</span></label><input type="tel" name="phone" placeholder="+41 79 123 45 67" autocomplete="tel" required></div>
+          <div class="ft-af-field"><label>Nachricht / Wunsch</label><textarea name="message" placeholder="Ich interessiere mich für… (Reisezeitraum, Personenanzahl, besondere Wünsche)"></textarea></div>
+          <button type="button" class="ft-af-btn">Unverbindlich anfragen</button>
+          <p class="ft-af-trust">✓ Kostenlos &amp; unverbindlich &nbsp;·&nbsp; ✓ Antwort innerhalb 24h &nbsp;·&nbsp; ✓ Schweizer Reisegarantie</p>
+        </div>
+      </div>
+      <div class="ft-af-success">
+        <?php echo $check_icon; ?>
+        <h3>Vielen Dank für Ihre Anfrage!</h3>
+        <p>Wir haben Ihre Nachricht erhalten und melden uns schnellstmöglich bei Ihnen. Unser Team ist in der Regel innerhalb von 24 Stunden für Sie da.</p>
+        <div class="ft-af-rq" style="display:none"><small>Ihre Anfragenummer</small><strong></strong></div>
+        <p class="ft-af-trust">Eine Bestätigung mit dieser Nummer wurde an Ihre E-Mail gesendet.</p>
+      </div>
+    </div>
+    <script>
+    (function(){
+      var root = document.getElementById(<?php echo wp_json_encode($id); ?>);
+      if (!root) return;
+      var btn = root.querySelector('.ft-af-btn');
+      var err = root.querySelector('.ft-af-error');
+      var val = function(n){ return (root.querySelector('[name="'+n+'"]').value || '').trim(); };
+      btn.addEventListener('click', function(){
+        err.style.display = 'none';
+        if (!val('email') || !val('phone')) {
+          err.textContent = 'Bitte E-Mail und Telefonnummer angeben.';
+          err.style.display = 'block';
+          return;
+        }
+        btn.disabled = true;
+        btn.textContent = 'Wird gesendet…';
+        fetch(<?php echo wp_json_encode($api); ?>, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventSlug: <?php echo wp_json_encode($atts['event']); ?>,
+            packageSlug: null,
+            packageId: 'contact-inquiry',
+            packageTitle: 'Allgemeine Anfrage – ' + <?php echo wp_json_encode($event_name); ?>,
+            startDate: '',
+            numberOfPersons: 1,
+            doubleRooms: 0,
+            singleRooms: 0,
+            travelers: [{ firstName: val('firstName'), lastName: val('lastName'), email: val('email') }],
+            email: val('email'),
+            phone: val('phone'),
+            message: val('message'),
+            totalPrice: 0
+          })
+        }).then(function(r){ return r.json(); }).then(function(d){
+          if (d.success) {
+            root.querySelector('.ft-af-main').style.display = 'none';
+            var s = root.querySelector('.ft-af-success');
+            s.style.display = 'block';
+            if (d.requestNumber) {
+              var rq = root.querySelector('.ft-af-rq');
+              rq.style.display = 'inline-flex';
+              rq.querySelector('strong').textContent = d.requestNumber;
+            }
+            s.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } else {
+            throw new Error(d.error || 'Fehler');
+          }
+        }).catch(function(e){
+          err.textContent = 'Senden fehlgeschlagen: ' + e.message + ' — bitte erneut versuchen.';
+          err.style.display = 'block';
+        }).finally(function(){
+          btn.disabled = false;
+          btn.textContent = 'Unverbindlich anfragen';
+        });
+      });
+    })();
+    </script>
+    <?php
+    return faltin_anfrage_styles() . ob_get_clean();
 }
 add_shortcode('faltin_anfrage', 'faltin_anfrage_shortcode');

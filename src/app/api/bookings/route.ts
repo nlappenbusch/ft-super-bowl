@@ -8,6 +8,17 @@ import {
   internalNotificationHtml, internalNotificationSubject,
 } from '@/lib/emailTemplates';
 
+/** CORS: erlaubt Anfrage-Formulare auf externen Seiten (WordPress-Shortcode [faltin_anfrage]). */
+const CORS_HEADERS: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -15,7 +26,7 @@ export async function POST(request: Request) {
     if (!body.email || !body.phone || !body.travelers || body.travelers.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Fehlende Pflichtfelder' },
-        { status: 400 }
+        { status: 400, headers: CORS_HEADERS }
       );
     }
 
@@ -127,13 +138,13 @@ export async function POST(request: Request) {
       requestNumber,
       mail,
       message: 'Buchungsanfrage erfolgreich gespeichert'
-    });
+    }, { headers: CORS_HEADERS });
 
   } catch (error) {
     console.error('API error:', error);
     return NextResponse.json(
       { success: false, error: 'Interner Serverfehler: ' + (error as Error).message },
-      { status: 500 }
+      { status: 500, headers: CORS_HEADERS }
     );
   }
 }
