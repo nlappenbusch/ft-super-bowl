@@ -34,6 +34,17 @@ function mailConfig() {
   };
 }
 
+export function getGraphCredentials() {
+  const c = mailConfig();
+  return { tenantId: c.tenantId, clientId: c.clientId, clientSecret: c.clientSecret };
+}
+
+/** Basis-URL für den SSO-Redirect: Admin-Setting > NEXT_PUBLIC_SITE_URL. */
+export function getLoginBaseUrl(): string {
+  const m = getSettings().mail as { login_base_url?: string };
+  return (m.login_base_url || process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/+$/, '');
+}
+
 export function isGraphConfigured(): boolean {
   const c = mailConfig();
   return !!(c.tenantId && c.clientId && c.clientSecret && c.mailbox);

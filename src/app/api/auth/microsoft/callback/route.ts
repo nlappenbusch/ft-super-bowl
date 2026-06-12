@@ -5,21 +5,20 @@ import {
   SESSION_COOKIE, SESSION_MAX_AGE, OAUTH_STATE_COOKIE,
 } from '@/lib/auth';
 import { siteConfig } from '@/lib/siteConfig';
+import { getGraphCredentials, getLoginBaseUrl } from '@/lib/graphMailer';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url).replace(/\/+$/, '');
+  const base = (getLoginBaseUrl() || siteConfig.url).replace(/\/+$/, '');
   const fail = (e: string) => NextResponse.redirect(`${base}/admin/login?error=${e}`);
 
   const jar = await cookies();
   const expected = jar.get(OAUTH_STATE_COOKIE)?.value;
   if (!code || !state || !expected || state !== expected) return fail('state');
 
-  const tenant = process.env.GRAPH_TENANT_ID;
-  const client = process.env.GRAPH_CLIENT_ID;
-  const clientSecret = process.env.GRAPH_CLIENT_SECRET;
+  const { tenantId: tenant, clientId: client, clientSecret } = getGraphCredentials();
   if (!tenant || !client || !clientSecret) return fail('config');
 
   const redirectUri = `${base}/api/auth/microsoft/callback`;

@@ -38,7 +38,7 @@ export default function MailAdminPage() {
   // Editable form state
   const [form, setForm] = useState({
     tenant_id: '', client_id: '', client_secret: '', mailbox: '', from_name: '',
-    inbound_poll_secret: '', brevo_api_key: '',
+    inbound_poll_secret: '', brevo_api_key: '', login_base_url: '',
   });
 
   const [testTo, setTestTo] = useState('');
@@ -68,6 +68,7 @@ export default function MailAdminPage() {
           mailbox: c.data.mailbox || '',
           from_name: c.data.from_name || 'Faltin Travel',
           inbound_poll_secret: c.data.inbound_poll_secret || '',
+          login_base_url: c.data.login_base_url || '',
           client_secret: '',
           brevo_api_key: '',
         }));
@@ -86,6 +87,8 @@ export default function MailAdminPage() {
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const genSecret = () =>
     set('inbound_poll_secret', (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, ''));
+  const redirectUri = `${(form.login_base_url || (typeof window !== 'undefined' ? window.location.origin : '')).replace(/\/+$/, '')}/api/auth/microsoft/callback`;
+  const loginCfg = Boolean((status as Record<string, unknown> | null)?.loginConfigured);
 
   const save = async () => {
     setSaving(true);
@@ -227,6 +230,29 @@ export default function MailAdminPage() {
               </p>
             </div>
           )}
+        </SectionCard>
+
+        <SectionCard title="Microsoft 365 Login (SSO)" description="Damit der „Mit Microsoft 365 anmelden“-Button funktioniert. Nutzt dieselbe App-Registrierung wie der Mailversand." icon={<KeyRound className="h-5 w-5" />}>
+          <div className="grid gap-4">
+            <div className="flex items-center gap-2 text-sm">
+              <span className={`inline-block h-2.5 w-2.5 rounded-full ${loginCfg ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+              <span className="font-semibold" style={{ color: COLORS.navy }}>{loginCfg ? 'SSO-Login aktiv' : 'SSO-Login inaktiv'}</span>
+              {!loginCfg && <span className="text-xs text-gray-500">– Tenant-ID, Client-ID & Client-Secret oben ausfüllen</span>}
+            </div>
+            <InputField label="App-Basis-URL (für Redirect)" value={form.login_base_url} onChange={(e) => set('login_base_url', e.target.value)} placeholder="https://next.faltintravel.com" />
+            <Field label="Redirect-URI – genau so in Azure registrieren" hint="Azure-Portal → App-Registrierung → Authentifizierung → Plattform „Web“ → Umleitungs-URIs.">
+              <div className="flex gap-2">
+                <TextInput readOnly value={redirectUri} className="flex-1 font-mono text-xs" />
+                <Button type="button" variant="secondary" onClick={() => navigator.clipboard?.writeText(redirectUri)}>Kopieren</Button>
+              </div>
+            </Field>
+            <ul className="space-y-1.5 text-xs" style={{ color: '#6b7280' }}>
+              <li>1. Gleiche App-Registrierung wie für den Mailversand verwenden.</li>
+              <li>2. Obige Redirect-URI unter „Authentifizierung → Web“ hinzufügen.</li>
+              <li>3. Delegierte Berechtigungen openid, profile, email (Standard, kein Admin-Consent nötig).</li>
+              <li>4. Speichern – danach können sich alle Nutzer des Tenants per Microsoft 365 anmelden.</li>
+            </ul>
+          </div>
         </SectionCard>
 
         <div className="space-y-6">

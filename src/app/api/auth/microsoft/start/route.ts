@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { OAUTH_STATE_COOKIE, isSecureRequest } from '@/lib/auth';
 import { siteConfig } from '@/lib/siteConfig';
+import { getGraphCredentials, getLoginBaseUrl } from '@/lib/graphMailer';
 
 export async function GET(req: Request) {
-  const tenant = process.env.GRAPH_TENANT_ID;
-  const client = process.env.GRAPH_CLIENT_ID;
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url).replace(/\/+$/, '');
+  const { tenantId: tenant, clientId: client } = getGraphCredentials();
+  const base = (getLoginBaseUrl() || siteConfig.url).replace(/\/+$/, '');
 
   if (!tenant || !client) {
     return NextResponse.redirect(`${base}/admin/login?error=config`);

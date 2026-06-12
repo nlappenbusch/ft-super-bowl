@@ -24,6 +24,7 @@ export default function AdminLoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [from, setFrom] = useState('/admin');
+  const [msConfigured, setMsConfigured] = useState<boolean | null>(null);
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
@@ -31,6 +32,10 @@ export default function AdminLoginPage() {
     if (e) setError(ERRORS[e] || 'Anmeldung fehlgeschlagen.');
     const f = p.get('from');
     if (f && f.startsWith('/admin')) setFrom(f);
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/auth/microsoft/status').then((r) => r.json()).then((d) => setMsConfigured(!!d.configured)).catch(() => setMsConfigured(false));
   }, []);
 
   const submitLocal = async (e: React.FormEvent) => {
@@ -70,14 +75,25 @@ export default function AdminLoginPage() {
           )}
 
           {/* Microsoft 365 */}
-          <a
-            href={`/api/auth/microsoft/start?from=${encodeURIComponent(from)}`}
-            className="flex w-full items-center justify-center gap-3 rounded-lg border px-4 py-3 text-sm font-bold text-gray-800 transition hover:bg-gray-50"
-            style={{ borderColor: '#d8dde4' }}
-          >
-            <svg width="18" height="18" viewBox="0 0 23 23" aria-hidden><rect x="1" y="1" width="10" height="10" fill="#f25022" /><rect x="12" y="1" width="10" height="10" fill="#7fba00" /><rect x="1" y="12" width="10" height="10" fill="#00a4ef" /><rect x="12" y="12" width="10" height="10" fill="#ffb900" /></svg>
-            Mit Microsoft 365 anmelden
-          </a>
+          {msConfigured === false ? (
+            <div
+              className="flex w-full items-center justify-center gap-3 rounded-lg border px-4 py-3 text-sm font-semibold text-gray-400"
+              style={{ borderColor: '#e5e8ed', background: '#f8fafc' }}
+              title="Im Admin unter E-Mail / Microsoft 365 konfigurieren"
+            >
+              <svg width="18" height="18" viewBox="0 0 23 23" aria-hidden><rect x="1" y="1" width="10" height="10" fill="#f25022" /><rect x="12" y="1" width="10" height="10" fill="#7fba00" /><rect x="1" y="12" width="10" height="10" fill="#00a4ef" /><rect x="12" y="12" width="10" height="10" fill="#ffb900" /></svg>
+              Microsoft 365 – noch nicht konfiguriert
+            </div>
+          ) : (
+            <a
+              href={`/api/auth/microsoft/start?from=${encodeURIComponent(from)}`}
+              className="flex w-full items-center justify-center gap-3 rounded-lg border px-4 py-3 text-sm font-bold text-gray-800 transition hover:bg-gray-50"
+              style={{ borderColor: '#d8dde4' }}
+            >
+              <svg width="18" height="18" viewBox="0 0 23 23" aria-hidden><rect x="1" y="1" width="10" height="10" fill="#f25022" /><rect x="12" y="1" width="10" height="10" fill="#7fba00" /><rect x="1" y="12" width="10" height="10" fill="#00a4ef" /><rect x="12" y="12" width="10" height="10" fill="#ffb900" /></svg>
+              Mit Microsoft 365 anmelden
+            </a>
+          )}
 
           <div className="my-6 flex items-center gap-3 text-xs font-semibold uppercase tracking-widest text-gray-400">
             <span className="h-px flex-1 bg-gray-200" /> oder lokal <span className="h-px flex-1 bg-gray-200" />

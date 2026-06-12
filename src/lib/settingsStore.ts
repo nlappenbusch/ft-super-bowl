@@ -99,6 +99,7 @@ export interface MailSettings {
   inbound_poll_secret: string;
   /** Brevo API-Key (Marketing-Listen) */
   brevo_api_key: string;
+  login_base_url: string;
 }
 
 const DEFAULT_SETTINGS: AllSettings = {
@@ -161,6 +162,7 @@ const DEFAULT_SETTINGS: AllSettings = {
     from_name: 'Faltin Travel',
     inbound_poll_secret: '',
     brevo_api_key: '',
+    login_base_url: '',
   },
 };
 
