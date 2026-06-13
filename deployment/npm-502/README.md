@@ -4,7 +4,27 @@ Gebrandete Wartungsseite (Faltin Travel Style) mit direkten Kontaktdaten.
 Wird angezeigt, wenn der App-Server nicht erreichbar ist (z. B. während eines Deployments).
 Die Seite prüft alle 8 Sekunden per HEAD-Request, ob die Site wieder online ist, und lädt dann automatisch neu.
 
-## Einrichtung (NPM auf separatem Server)
+## Schnellste Variante: Install-Script
+
+Beide Dateien auf die NPM-VM kopieren und dort ausführen:
+
+```bash
+scp 502.html install-502-page.sh user@npm-vm:~/
+ssh user@npm-vm
+chmod +x install-502-page.sh
+sudo ./install-502-page.sh
+```
+
+Das Script findet den NPM-Container und das data-Volume automatisch, legt vorher
+ein Backup an (`<npm-data>/backup-ft502-<timestamp>/`), installiert Seite + Snippet
+über `nginx/custom/server_proxy.conf` (gilt für **alle** Proxy Hosts), testet die
+Config mit `nginx -t` und rollt bei Fehlern automatisch zurück. Mehrfach ausführbar –
+bei Updates der 502.html einfach erneut laufen lassen.
+
+Soll die Seite nur für **einen** Host gelten: Script nicht nutzen, sondern manuell
+einrichten (siehe unten, Snippet in den Advanced-Tab des Hosts).
+
+## Manuelle Einrichtung (NPM auf separatem Server)
 
 ### 1. Datei auf den NPM-Server kopieren
 

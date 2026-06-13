@@ -1,0 +1,585 @@
+#!/usr/bin/env bash
+#
+# FT 502-Wartungsseite fuer Nginx Proxy Manager – STANDALONE.
+# Enthaelt die komplette 502.html eingebettet und erzeugt alle Dateien selbst.
+#
+# Auf der NPM-VM ausfuehren:   sudo bash install-502-standalone.sh
+#
+# Macht:
+#   1. Backup aller Dateien, die angefasst werden
+#   2. erzeugt <npm-data>/error-pages/502.html
+#   3. error_page-Snippet -> <npm-data>/nginx/custom/server_proxy.conf
+#      (gilt fuer ALLE Proxy Hosts; Marker-Block, mehrfach ausfuehrbar)
+#   4. nginx -t im Container; bei Fehler: automatisches Rollback
+#
+set -euo pipefail
+die() { echo "FEHLER: $*" >&2; exit 1; }
+
+# --- NPM-Container finden -------------------------------------------
+CID="${NPM_CONTAINER:-}"
+if [ -z "$CID" ]; then
+  CID=$(docker ps --format '{{.ID}} {{.Image}}' | grep -i 'nginx-proxy-manager' | awk 'NR==1{print $1}' || true)
+fi
+[ -n "$CID" ] || die "Kein laufender nginx-proxy-manager Container gefunden. (Override: NPM_CONTAINER=<name> $0)"
+CNAME=$(docker inspect "$CID" --format '{{.Name}}' | sed 's|^/||')
+echo "==> NPM-Container: $CNAME ($CID)"
+
+# --- /data-Volume auf dem Host finden -------------------------------
+DATA=$(docker inspect "$CID" --format '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Source}}{{end}}{{end}}')
+[ -n "$DATA" ] && [ -d "$DATA" ] || die "Konnte das /data-Volume nicht ermitteln."
+echo "==> NPM-Datenverzeichnis: $DATA"
+
+PAGES_DIR="$DATA/error-pages"
+CUSTOM_DIR="$DATA/nginx/custom"
+CONF="$CUSTOM_DIR/server_proxy.conf"
+M_START="# >>> ft-502-page >>>"
+M_END="# <<< ft-502-page <<<"
+
+# --- 1. Backup -------------------------------------------------------
+BK="$DATA/backup-ft502-$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$BK"
+[ -f "$PAGES_DIR/502.html" ] && cp -a "$PAGES_DIR/502.html" "$BK/502.html"
+[ -f "$CONF" ] && cp -a "$CONF" "$BK/server_proxy.conf"
+echo "==> Backup unter: $BK"
+
+rollback() {
+  echo "!! nginx-Test fehlgeschlagen - stelle Backup wieder her..." >&2
+  if [ -f "$BK/server_proxy.conf" ]; then cp -a "$BK/server_proxy.conf" "$CONF"; else rm -f "$CONF"; fi
+  if [ -f "$BK/502.html" ]; then cp -a "$BK/502.html" "$PAGES_DIR/502.html"; fi
+  docker exec "$CID" nginx -s reload >/dev/null 2>&1 || true
+  die "Rollback durchgefuehrt. nginx-Fehler siehe oben."
+}
+
+# --- 2. 502.html erzeugen (eingebettet) ------------------------------
+mkdir -p "$PAGES_DIR"
+cat > "$PAGES_DIR/502.html" <<'FT502_HTML_EOF'
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Wir sind gleich zurück – Faltin Travel AG</title>
+<style>
+  :root {
+    --navy: #0f2742;
+    --navy-deep: #0c2138;
+    --orange: #f14624;
+    --orange-dark: #d63d1f;
+    --orange-bar: #d9531e;
+    --ink: #1f2937;
+    --muted: #5b6b7c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { font-size: 15px; }
+  body {
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    /* FT Blue-Glow Verlauf (wie Kontakt-Hero) */
+    background:
+      radial-gradient(60% 95% at 12% 12%, rgba(58,124,190,0.45), transparent 60%),
+      radial-gradient(55% 85% at 90% 22%, rgba(34,84,143,0.40), transparent 55%),
+      linear-gradient(180deg, #163e63 0%, #0e2842 55%, #0c2138 100%);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    overflow-x: hidden;
+    position: relative;
+  }
+  /* schwebende Glow-Orbs im Hintergrund */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(70px);
+    opacity: .5;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb-1 { width: 420px; height: 420px; left: -120px; top: -100px;
+           background: radial-gradient(circle, rgba(58,124,190,.55), transparent 70%);
+           animation: drift1 16s ease-in-out infinite alternate; }
+  .orb-2 { width: 340px; height: 340px; right: -100px; top: 20%;
+           background: radial-gradient(circle, rgba(241,70,36,.30), transparent 70%);
+           animation: drift2 20s ease-in-out infinite alternate; }
+  .orb-3 { width: 300px; height: 300px; left: 30%; bottom: -140px;
+           background: radial-gradient(circle, rgba(34,84,143,.6), transparent 70%);
+           animation: drift1 24s ease-in-out infinite alternate-reverse; }
+  @keyframes drift1 { from { transform: translate(0,0) scale(1); } to { transform: translate(60px,40px) scale(1.15); } }
+  @keyframes drift2 { from { transform: translate(0,0) scale(1.1); } to { transform: translate(-70px,50px) scale(.95); } }
+
+  .card {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 720px;
+    background: #ffffff;
+    border-radius: 22px;
+    border: 1px solid rgba(255,255,255,.14);
+    box-shadow: 0 30px 80px rgba(4,12,24,.6), 0 0 0 1px rgba(255,255,255,.06);
+    overflow: hidden;
+    animation: rise .6s cubic-bezier(.2,.7,.3,1) both;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(18px) scale(.985); } to { opacity: 1; transform: none; } }
+
+  /* dunkler Hero im FT Blue-Glow */
+  .card-top {
+    position: relative;
+    padding: 2.6rem 2.4rem 2.1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    color: #fff;
+    background:
+      radial-gradient(60% 95% at 12% 12%, rgba(58,124,190,0.45), transparent 60%),
+      radial-gradient(55% 85% at 90% 22%, rgba(34,84,143,0.40), transparent 55%),
+      linear-gradient(180deg, #163e63 0%, #0e2842 55%, #0c2138 100%);
+    overflow: hidden;
+  }
+  /* sanfter Licht-Sweep über den Hero */
+  .card-top::after {
+    content: "";
+    position: absolute;
+    top: 0; left: -60%;
+    width: 45%; height: 100%;
+    background: linear-gradient(105deg, transparent, rgba(255,255,255,.07), transparent);
+    transform: skewX(-18deg);
+    animation: sweep 6s ease-in-out infinite;
+  }
+  @keyframes sweep { 0%, 55% { left: -60%; } 85%, 100% { left: 130%; } }
+
+  .logo {
+    display: block;
+    height: 54px;
+    margin: 0 auto 1.4rem;
+    filter: drop-shadow(0 4px 14px rgba(0,0,0,.35));
+    animation: fadeDown .7s .1s cubic-bezier(.2,.7,.3,1) both;
+  }
+  @keyframes fadeDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    border-radius: 999px;
+    padding: .38rem .95rem;
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #ffd9cf;
+    background: rgba(241,70,36,.16);
+    border: 1px solid rgba(241,70,36,.45);
+    box-shadow: 0 0 18px rgba(241,70,36,.25);
+    margin-bottom: 1.1rem;
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--orange);
+    box-shadow: 0 0 8px rgba(241,70,36,.9);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1);} 50% { opacity: .35; transform: scale(.7);} }
+  h1 {
+    font-size: 1.95rem;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -.01em;
+    text-shadow: 0 2px 12px rgba(0,0,0,.3);
+  }
+  /* oranger Akzent-Balken wie auf der FT-Website */
+  .bar {
+    width: 64px; height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--orange-bar), var(--orange));
+    box-shadow: 0 0 14px rgba(241,70,36,.55);
+    margin: 1rem auto;
+  }
+  .sub { color: rgba(255,255,255,.85); font-size: 1rem; line-height: 1.65; max-width: 34rem; margin: 0 auto; }
+
+  .card-body { padding: 1.9rem 2.4rem 2.2rem; background: linear-gradient(180deg, #ffffff 0%, #faf9f8 100%); }
+  .contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .9rem;
+    margin-bottom: 1.6rem;
+  }
+  @media (max-width: 560px) { .contact-grid { grid-template-columns: 1fr; } .card-top, .card-body { padding-left: 1.4rem; padding-right: 1.4rem; } }
+  a.tile, div.tile {
+    display: flex;
+    align-items: center;
+    gap: .9rem;
+    padding: .95rem 1.1rem;
+    border: 1px solid rgba(15,39,66,.12);
+    border-radius: 14px;
+    text-decoration: none;
+    color: var(--ink);
+    background: #fff;
+    transition: border-color .18s, box-shadow .18s, transform .18s;
+  }
+  a.tile:hover {
+    border-color: var(--orange);
+    box-shadow: 0 10px 26px rgba(241,70,36,.16);
+    transform: translateY(-2px);
+  }
+  a.tile:hover .icon { background: linear-gradient(135deg, var(--orange), var(--orange-dark)); }
+  .tile .icon {
+    flex: none;
+    width: 42px; height: 42px;
+    border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #163e63, #0e2842);
+    color: #fff;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.15);
+    transition: background .18s;
+  }
+  .tile .icon svg { width: 19px; height: 19px; }
+  .tile .label { font-size: .7rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 600; }
+  .tile .value { font-size: .98rem; font-weight: 600; color: var(--navy); }
+  .cta {
+    position: relative;
+    display: block;
+    text-align: center;
+    background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%);
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.02rem;
+    padding: 1rem 1.5rem;
+    border-radius: 13px;
+    text-decoration: none;
+    box-shadow: 0 8px 22px rgba(241,70,36,.35);
+    overflow: hidden;
+    transition: transform .18s, box-shadow .18s;
+    margin-bottom: 1.4rem;
+  }
+  .cta:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(241,70,36,.45); }
+  .cta::after {
+    content: "";
+    position: absolute;
+    top: 0; left: -70%;
+    width: 50%; height: 100%;
+    background: linear-gradient(105deg, transparent, rgba(255,255,255,.35), transparent);
+    transform: skewX(-18deg);
+    animation: sweep 4.5s 1s ease-in-out infinite;
+  }
+  .meta {
+    text-align: center;
+    color: var(--muted);
+    font-size: .82rem;
+    line-height: 1.7;
+  }
+  .meta strong { color: var(--navy); }
+  .retry {
+    margin-top: 1.2rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid rgba(0,0,0,.07);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .55rem;
+    color: var(--muted);
+    font-size: .8rem;
+  }
+  .spinner {
+    width: 13px; height: 13px;
+    border: 2px solid rgba(15,39,66,.18);
+    border-top-color: var(--orange);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .code { color: rgba(91,107,124,.55); font-size: .72rem; margin-top: .5rem; text-align: center; }
+
+  /* Mini-Game */
+  .game-section { margin-bottom: 1.4rem; }
+  .game-toggle {
+    width: 100%;
+    padding: .75rem 1rem;
+    font: inherit;
+    font-size: .88rem;
+    font-weight: 600;
+    color: var(--navy);
+    background: transparent;
+    border: 1.5px dashed rgba(15,39,66,.25);
+    border-radius: 13px;
+    cursor: pointer;
+    transition: border-color .18s, color .18s, background .18s;
+  }
+  .game-toggle:hover { border-color: var(--orange); color: var(--orange-dark); background: rgba(241,70,36,.04); }
+  #gameBox { margin-top: .8rem; }
+  #gc {
+    display: block;
+    width: 100%;
+    height: 170px;
+    border-radius: 14px;
+    background:
+      radial-gradient(60% 95% at 12% 12%, rgba(58,124,190,0.45), transparent 60%),
+      radial-gradient(55% 85% at 90% 22%, rgba(34,84,143,0.40), transparent 55%),
+      linear-gradient(180deg, #163e63 0%, #0e2842 60%, #0c2138 100%);
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+  }
+  .game-hud {
+    display: flex;
+    justify-content: space-between;
+    margin-top: .45rem;
+    font-size: .76rem;
+    color: var(--muted);
+  }
+  .game-hud b { color: var(--navy); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .orb, .card-top::after, .cta::after { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <main class="card">
+    <div class="card-top">
+      <img class="logo" src="data:image/png;base64,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" alt="Faltin Travel AG">
+      <div class="badge"><span class="dot"></span>Kurze Wartung</div>
+      <h1>Wir sind gleich zurück.</h1>
+      <div class="bar"></div>
+      <p class="sub">Unsere Website wird gerade aktualisiert und ist in wenigen Augenblicken wieder erreichbar. In dringenden Fällen sind wir direkt für Sie da:</p>
+    </div>
+    <div class="card-body">
+      <div class="contact-grid">
+        <a class="tile" href="tel:+41447002277">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+          <span><span class="label">Telefon</span><br><span class="value">+41 44 700 22 77</span></span>
+        </a>
+        <a class="tile" href="tel:+41447403327">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+          <span><span class="label">Telefon 2</span><br><span class="value">+41 44 740 33 27</span></span>
+        </a>
+        <a class="tile" href="mailto:info@faltintravel.com?subject=Dringende%20Anfrage%20(Website%20in%20Wartung)">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg></span>
+          <span><span class="label">E-Mail</span><br><span class="value">info@faltintravel.com</span></span>
+        </a>
+        <div class="tile">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
+          <span><span class="label">Erreichbar</span><br><span class="value">Mo – Fr, 08:00 – 18:00 Uhr</span></span>
+        </div>
+      </div>
+      <a class="cta" href="mailto:info@faltintravel.com?subject=Dringende%20Anfrage%20(Website%20in%20Wartung)&body=Guten%20Tag%0A%0AIch%20habe%20ein%20dringendes%20Anliegen%3A%0A%0A%0AName%3A%0ATelefon%3A%0A">Notfall-Nachricht per E-Mail senden</a>
+      <div class="game-section">
+        <div id="gameBox">
+          <canvas id="gc" height="170"></canvas>
+          <div class="game-hud">
+            <span>Leertaste / Tippen = Springen</span>
+            <span>Score <b id="gScore">0</b> &nbsp;·&nbsp; Best <b id="gBest">0</b></span>
+          </div>
+        </div>
+      </div>
+      <p class="meta"><strong>Faltin Travel AG</strong> · Riedthofstrasse 172 · CH-8105 Regensdorf</p>
+      <div class="retry"><span class="spinner"></span><span id="retryText">Die Seite prüft automatisch, ob wir wieder online sind &hellip;</span></div>
+      <p class="code">Fehlercode 502 &middot; Bad Gateway</p>
+    </div>
+  </main>
+<script>
+(function () {
+  var delay = 8000;
+  function check() {
+    fetch(window.location.origin + "/?npm502=" + Date.now(), { method: "HEAD", cache: "no-store" })
+      .then(function (r) {
+        if (r.ok) { window.location.replace("/"); }
+        else { setTimeout(check, delay); }
+      })
+      .catch(function () { setTimeout(check, delay); });
+  }
+  setTimeout(check, delay);
+})();
+
+/* ── Mini-Game: Touchdown-Run ───────────────────────────── */
+(function () {
+  var cv = document.getElementById("gc"),
+      elScore = document.getElementById("gScore"),
+      elBest = document.getElementById("gBest"),
+      ctx = cv.getContext("2d");
+
+  var H = 170, GROUND = H - 26, DPR = Math.min(window.devicePixelRatio || 1, 2);
+  var state = "idle", W, ball, obs, speed, score, best = 0, last = 0, spawnIn = 0;
+
+  try { best = parseInt(localStorage.getItem("ft502best") || "0", 10) || 0; } catch (e) {}
+  elBest.textContent = best;
+
+  function resize() {
+    W = cv.clientWidth || 600;
+    cv.width = W * DPR;
+    cv.height = H * DPR;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    draw();
+  }
+
+  function reset() {
+    ball = { x: 64, y: GROUND, vy: 0, r: 13, rot: 0 };
+    obs = [];
+    speed = 250;
+    score = 0;
+    spawnIn = .4;
+    elScore.textContent = "0";
+  }
+
+  function jump() {
+    if (state === "running") {
+      if (ball.y >= GROUND - 1) ball.vy = -560;
+    } else { // idle oder gameover -> (neu) starten
+      reset();
+      state = "running";
+      last = performance.now();
+      requestAnimationFrame(loop);
+    }
+  }
+
+  function spawn() {
+    var h = 32 + Math.random() * 30;
+    obs.push({ x: W + 20, w: 13, h: h, passed: false });
+    spawnIn = (.9 + Math.random() * .9) * (260 / speed);
+  }
+
+  function loop(now) {
+    if (state !== "running") return;
+    var dt = Math.min((now - last) / 1000, .05);
+    last = now;
+
+    ball.vy += 1750 * dt;
+    ball.y += ball.vy * dt;
+    ball.rot += speed * dt / ball.r;
+    if (ball.y > GROUND) { ball.y = GROUND; ball.vy = 0; }
+
+    spawnIn -= dt;
+    if (spawnIn <= 0) spawn();
+
+    for (var i = obs.length - 1; i >= 0; i--) {
+      var o = obs[i];
+      o.x -= speed * dt;
+      if (!o.passed && o.x + o.w < ball.x - ball.r) {
+        o.passed = true;
+        score++;
+        speed += 7;
+        elScore.textContent = score;
+      }
+      if (o.x + o.w < -30) obs.splice(i, 1);
+      // Kollision: Kreis vs. Rechteck
+      var cx = Math.max(o.x, Math.min(ball.x, o.x + o.w)),
+          cy = Math.max(GROUND - o.h, Math.min(ball.y - ball.r, GROUND)),
+          dx = ball.x - cx, dy = (ball.y - ball.r) - cy;
+      if (dx * dx + dy * dy < (ball.r - 2) * (ball.r - 2)) {
+        state = "over";
+        if (score > best) {
+          best = score;
+          elBest.textContent = best;
+          try { localStorage.setItem("ft502best", best); } catch (e) {}
+        }
+      }
+    }
+    draw();
+    if (state === "running") requestAnimationFrame(loop);
+    else draw();
+  }
+
+  function football(x, y, r, rot) {
+    ctx.save();
+    ctx.translate(x, y - r);
+    ctx.rotate(Math.sin(rot) * .25);
+    ctx.fillStyle = "#f14624";
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 1.25, r * .85, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(-r * .55, 0); ctx.lineTo(r * .55, 0); ctx.stroke();
+    for (var i = -1; i <= 1; i++) {
+      ctx.beginPath(); ctx.moveTo(i * r * .3, -r * .22); ctx.lineTo(i * r * .3, r * .22); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    // Spielfeld-Linien
+    ctx.strokeStyle = "rgba(255,255,255,.18)";
+    ctx.lineWidth = 1;
+    for (var lx = (W % 90); lx < W; lx += 90) {
+      ctx.beginPath(); ctx.moveTo(lx, GROUND + 4); ctx.lineTo(lx, GROUND + 16); ctx.stroke();
+    }
+    ctx.strokeStyle = "rgba(255,255,255,.45)";
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, GROUND + 2); ctx.lineTo(W, GROUND + 2); ctx.stroke();
+    // Hindernisse: kleine Goalposts
+    obs && obs.forEach(function (o) {
+      ctx.fillStyle = "#ffd9cf";
+      ctx.fillRect(o.x, GROUND - o.h, o.w, o.h);
+      ctx.fillStyle = "rgba(255,255,255,.85)";
+      ctx.fillRect(o.x - 4, GROUND - o.h, o.w + 8, 5);
+    });
+    if (ball) football(ball.x, ball.y, ball.r, ball.rot);
+    // Overlays
+    ctx.fillStyle = "rgba(255,255,255,.92)";
+    ctx.textAlign = "center";
+    if (state === "idle") {
+      ctx.font = "600 15px 'Segoe UI', sans-serif";
+      ctx.fillText("Tippen oder Leertaste zum Starten", W / 2, H / 2 - 6);
+      football(W / 2, H / 2 + 34, 13, 0);
+    } else if (state === "over") {
+      ctx.font = "800 22px 'Segoe UI', sans-serif";
+      ctx.fillText("Tackled! 🏈", W / 2, H / 2 - 14);
+      ctx.font = "600 13px 'Segoe UI', sans-serif";
+      ctx.fillText("Score: " + score + "  ·  Tippen für Revanche", W / 2, H / 2 + 10);
+    }
+  }
+
+  cv.addEventListener("pointerdown", function (e) { e.preventDefault(); jump(); });
+  window.addEventListener("keydown", function (e) {
+    if (e.code === "Space" || e.code === "ArrowUp") { e.preventDefault(); jump(); }
+  });
+  window.addEventListener("resize", resize);
+  resize(); // Game ist immer sichtbar – direkt zeichnen
+})();
+</script>
+</body>
+</html>
+FT502_HTML_EOF
+chmod 644 "$PAGES_DIR/502.html"
+echo "==> erzeugt: $PAGES_DIR/502.html ($(wc -c < "$PAGES_DIR/502.html") Bytes)"
+
+# --- 3. Snippet in server_proxy.conf (Marker-Block, idempotent) ------
+mkdir -p "$CUSTOM_DIR"
+TMP=$(mktemp)
+if [ -f "$CONF" ]; then
+  awk -v s="$M_START" -v e="$M_END" '
+    index($0,s){skip=1; next}
+    index($0,e){skip=0; next}
+    !skip{print}
+  ' "$CONF" > "$TMP"
+else
+  : > "$TMP"
+fi
+cat >> "$TMP" <<SNIPPET_EOF
+$M_START
+# FT-Wartungsseite bei 502/503/504 (z.B. waehrend Deployment)
+proxy_intercept_errors on;
+error_page 502 503 504 @ft_maintenance;
+location @ft_maintenance {
+    root /data/error-pages;
+    rewrite ^ /502.html break;
+    add_header Cache-Control "no-store" always;
+}
+$M_END
+SNIPPET_EOF
+mv "$TMP" "$CONF"
+chmod 644 "$CONF"
+echo "==> Snippet geschrieben: $CONF"
+
+# --- 4. Testen & laden -----------------------------------------------
+docker exec "$CID" nginx -t || rollback
+docker exec "$CID" nginx -s reload
+echo ""
+echo "OK - fertig. Gilt fuer ALLE Proxy Hosts dieses NPM."
+echo "    Test: App-Container stoppen und Domain aufrufen."
+echo "    Rueckbau: ft-502-Markerblock aus $CONF entfernen + reload, oder Backup: $BK"
