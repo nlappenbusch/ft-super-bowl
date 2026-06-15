@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck (Gate)
+        run: npx tsc --noEmit
+
+      - name: Lint (informativ – blockiert nicht)
+        continue-on-error: true
+        run: npx eslint src
+
+      - name: Build (Gate)
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: npm run build
