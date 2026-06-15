@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import AdminShell from '@/components/admin/AdminShell';
 import { COLORS, SectionCard, Spinner, Badge, Button, EmptyState } from '@/components/admin/ui';
-import { Activity, RefreshCw, ShieldAlert, ShieldCheck, PackageCheck, Sparkles } from 'lucide-react';
+import { Activity, RefreshCw, ShieldAlert, ShieldCheck, PackageCheck, Sparkles, FileDown } from 'lucide-react';
 
 type HealthStatus = 'ok' | 'warn' | 'down';
 interface HealthItem { key: string; label: string; status: HealthStatus; detail: string }
@@ -124,6 +124,9 @@ export default function StatusPage() {
               Scan: {when(report.generatedAt)}{ageHours !== null && ageHours > 24 ? ' · veraltet' : ''}
             </span>
           )}
+          <Button variant="secondary" onClick={() => window.open('/api/admin/status/report', '_blank')}>
+            <FileDown className="h-4 w-4" /> PDF-Report
+          </Button>
           <Button variant="accent" onClick={runScan} disabled={scanning}>
             {scanning ? <Spinner className="h-4 w-4 border-white" /> : <RefreshCw className="h-4 w-4" />} Jetzt prüfen
           </Button>
