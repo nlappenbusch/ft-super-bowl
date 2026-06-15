@@ -10,7 +10,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import fs from 'fs';
 import path from 'path';
-import type { HealthReport, StatusReport } from './statusCheck';
+import type { HealthReport, StatusReport, VersionRow } from './statusCheck';
 
 type RGB = [number, number, number];
 const NAVY: RGB = [20, 48, 71];
@@ -150,7 +150,7 @@ export function buildStatusReportPdf(health: HealthReport | null, report: Status
     [`${nCrit + nHigh}`, 'kritisch / hoch', DANGER],
     [`${vulns.length}`, 'Schwachstellen gesamt', WARN],
     [`${nOutdated}`, `veraltete Pakete (${nMajor} Major)`, NAVY],
-    ['~1–1,5 Std', 'bis Risiko niedrig', OK],
+    [riskHigh ? '~1–1,5 Std' : 'NIEDRIG', riskHigh ? 'bis Risiko niedrig' : 'Gesamtrisiko', OK],
   ];
   const kw = (W - 2 * M - 3 * 4) / 4;
   kpis.forEach((k, i) => {
@@ -163,7 +163,13 @@ export function buildStatusReportPdf(health: HealthReport | null, report: Status
   });
   y += 26;
   para('Die Plattform ist betrieblich stabil: Anwendung, Datenbank, M365-Mailversand, Inbound-Poll und das persistente Daten-Volume laufen. Architektur und Betrieb sind solide (CI-Gate, App-only-Graph, getrennter Seed-Mechanismus, persistentes Volume).');
-  para(`Handlungsbedarf besteht bei der Software-Aktualität. Next.js (${latestOf('next') !== '–' ? versions.find((v) => v.name === 'next')?.installed : '16.1.6'}) und jsPDF weisen zusammen ${vulns.length} bekannte Schwachstellen auf (${nCrit} kritisch, ${nHigh} hoch, ${nMod} mittel, ${nLow} niedrig). Alle sind durch Versions-Upgrades behoben. Empfehlung: sicherheitskritische Updates (Welle 1) sofort, der Rest geplant in zwei weiteren Wellen.`);
+  if (vulns.length > 0) {
+    para(`Handlungsbedarf bei der Software-Aktualität: ${vulns.length} bekannte Schwachstellen (${nCrit} kritisch, ${nHigh} hoch, ${nMod} mittel, ${nLow} niedrig), alle durch Versions-Upgrades behebbar. Empfehlung: sicherheitskritische Updates sofort, der Rest geplant.`);
+  } else if (nOutdated > 0) {
+    para(`Aus Sicherheitssicht kein Handlungsbedarf: 0 bekannte Schwachstellen. Offen sind nur ${nOutdated} optionale Versions-Update${nOutdated === 1 ? '' : 's'}${nMajor > 0 ? ` (davon ${nMajor} Major)` : ''} – siehe Maßnahmenplan, ohne Zeitdruck.`);
+  } else {
+    para('Voll aktuell: keine bekannten Schwachstellen und alle beobachteten Pakete auf dem neuesten Stand. Kein Handlungsbedarf.');
+  }
 
   // ── KAPITEL: Betriebs-Health ─────────────────────────────────────────────
   sectionTitle('1 · Betriebs-Health (Audit)');
@@ -204,7 +210,10 @@ export function buildStatusReportPdf(health: HealthReport | null, report: Status
     doc.text(b[0], x + sw / 2, y + 13, { align: 'center' });
   });
   y += 22;
-  para('Kritische und hohe Befunde (mittel/niedrig sind ausschließlich Next.js und werden durch dasselbe Upgrade mitbehoben):', { size: 9.5, bold: true, gap: 1 });
+  if (vulns.length === 0) {
+    para('Keine offenen Schwachstellen in den beobachteten Paketen.', { size: 9.5, bold: true, color: OK });
+  } else {
+  para('Kritische und hohe Befunde (mittel/niedrig werden durch dieselben Upgrades mitbehoben):', { size: 9.5, bold: true, gap: 1 });
   const ch = vulns.filter((v) => /CRIT|HIGH/.test((v.severity || '').toUpperCase()))
     .sort((a, b) => (a.severity.toUpperCase().includes('CRIT') ? 0 : 1) - (b.severity.toUpperCase().includes('CRIT') ? 0 : 1));
   const fix = (pkg: string) => latestOf(pkg);
@@ -222,7 +231,8 @@ export function buildStatusReportPdf(health: HealthReport | null, report: Status
     },
   });
   y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4;
-  para('Einordnung: Die Next.js-Befunde betreffen die öffentlich erreichbare App direkt (Middleware-/Proxy-Bypass, SSRF, mehrere DoS) und sind daher prioritär. Die jsPDF-Befunde setzen weitgehend bösartige Eingaben/Dateien voraus; da die App PDFs ausschließlich aus vertrauenswürdigen internen Daten erzeugt (Rechnungen, dieser Report), ist die praktische Angriffsfläche geringer – das Upgrade ist dennoch klar empfohlen (1 kritischer Befund).');
+  para('Einordnung: Schwachstellen in öffentlich erreichbaren Komponenten haben Vorrang. Alle Funde sind durch die im Maßnahmenplan genannten Versions-Upgrades behoben.');
+  }
 
   // ── KAPITEL: Versionsübersicht ───────────────────────────────────────────
   newChapter();
@@ -247,7 +257,7 @@ export function buildStatusReportPdf(health: HealthReport | null, report: Status
   // ── KAPITEL: Maßnahmenplan ───────────────────────────────────────────────
   newChapter();
   sectionTitle('4 · Maßnahmenplan (Step-by-Step)');
-  para('Drei Wellen nach Dringlichkeit. Jeder Schritt folgt dem etablierten Flow: feature/fix-Branch -> PR -> CI grün -> Merge nach main -> Auto-Deploy -> /admin/status gegenchecken.', { size: 8, color: MUT, gap: 3 });
+  para('Nach Dringlichkeit gruppiert (dynamisch aus dem aktuellen Scan). Jeder Schritt folgt dem etablierten Flow: feature/fix-Branch -> PR -> CI grün -> Merge nach main -> Auto-Deploy -> /admin/status gegenchecken.', { size: 8, color: MUT, gap: 3 });
 
   type Step = { title: string; effort: string; risk: string; steps: string[]; note?: string };
   const waveHeader = (title: string, badge: string, color: RGB) => {
@@ -288,62 +298,76 @@ export function buildStatusReportPdf(health: HealthReport | null, report: Status
     y += 4;
   };
 
-  waveHeader('Welle 1 — Sofort (Sicherheit)', 'PRIO 1', DANGER);
-  item({ title: `Next.js -> ${latestOf('next')} (+ eslint-config-next)`, effort: '30–45 Min', risk: 'niedrig',
-    steps: ['In package.json next und eslint-config-next auf die aktuelle 16.x anheben.', 'npm install, dann npm run build und npx tsc --noEmit.', 'Smoke-Test: Startseite, Anfrageformular (Mailversand), Admin-Login.', 'Branch -> PR -> CI grün -> Merge -> Deploy; danach /admin/status prüfen.'],
-    note: `Behebt alle ${vulns.filter((v) => v.package === 'next').length} Next.js-Befunde. Minor-Sprung in 16.x – geringes Breaking-Risiko.` }, DANGER);
-  item({ title: `jsPDF -> ${latestOf('jspdf')}`, effort: '20–30 Min', risk: 'niedrig',
-    steps: ['jspdf in package.json anheben, npm install.', 'Rechnungs-PDF testweise erzeugen und Layout/AutoTable prüfen.', 'Deploy wie oben.'],
-    note: `Behebt ${vulns.filter((v) => v.package === 'jspdf').length} jsPDF-Befunde inkl. 1 kritischem (HTML-Injection).` }, DANGER);
-  item({ title: `React & React-DOM -> ${latestOf('react')} (mitnehmen)`, effort: '~10 Min', risk: 'niedrig',
-    steps: ['react und react-dom anheben (reiner Patch), npm install, build.', 'Im selben Deploy ausliefern.'] }, DANGER);
-
-  waveHeader('Welle 2 — Diese Woche (Wartung)', 'PRIO 2', WARN);
-  item({ title: 'Minor-/Patch-Updates gebündelt', effort: '1–2 Std', risk: 'niedrig–mittel',
-    steps: ['better-sqlite3 anheben (nativer Rebuild im Docker-Build; DB-Smoke-Test).', '@supabase/supabase-js, date-fns, react-hook-form aktualisieren.', 'tailwindcss und jspdf-autotable aktualisieren.', 'Ein Sammel-Branch; nach npm install build + visuelle Stichprobe (Formulare, Styles, Rechnungstabellen).'],
-    note: 'Funktional unkritisch; einziger Aufpasser ist das native Modul better-sqlite3 (wird im Image ohnehin neu gebaut).' }, WARN);
-
-  waveHeader('Welle 3 — Geplant (Major-Upgrades)', 'PRIO 3', NAVY);
-  item({ title: 'lucide-react (Major)', effort: '1–2 Std', risk: 'mittel',
-    steps: ['Changelog auf umbenannte/entfernte Icons prüfen.', 'Icon-Importe gegen die neue Version abgleichen, fehlende ersetzen.', 'Visuelle Kontrolle Admin + Website.'] }, NAVY);
-  item({ title: 'TypeScript (Major) & ESLint (Major)', effort: '1,5–3 Std', risk: 'mittel',
-    steps: ['typescript anheben, npx tsc --noEmit, neue Typfehler beheben.', 'ESLint + Flat-Config prüfen (CI-Lint ist ohnehin non-blocking).'] }, NAVY);
-  item({ title: 'Node 20 -> 22 LTS', effort: '30–60 Min', risk: 'niedrig–mittel',
-    steps: ['Docker-Base auf node:22-alpine, native Module neu bauen, Smoke-Test.'],
-    note: 'Node 20 ist noch gewartet, aber 22 ist das aktuelle LTS – mittelfristig einplanen.' }, NAVY);
+  const outdated = versions.filter((v) => v.state === 'patch' || v.state === 'minor' || v.state === 'major');
+  if (outdated.length === 0) {
+    para('Keine ausstehenden Updates – alle beobachteten Pakete sind aktuell. Kein Handlungsbedarf.', { bold: true, color: OK });
+  } else {
+    const isSec = (n: string) => vulns.some((v) => v.package === n) || ['next', 'eslint-config-next', 'jspdf', 'jspdf-autotable', 'react', 'react-dom'].includes(n);
+    const sec = outdated.filter((v) => isSec(v.name));
+    const majors = outdated.filter((v) => !isSec(v.name) && v.state === 'major');
+    const minors = outdated.filter((v) => !isSec(v.name) && v.state !== 'major');
+    const cmd = (v: VersionRow) => (v.name === 'node' ? 'Dockerfile-Base-Image auf die neue Node-LTS setzen' : `npm install ${v.name}@${v.latest}`);
+    const noteOf = (v: VersionRow) => (v.name === 'better-sqlite3' ? 'Natives Modul – Rebuild im Docker-Build, danach DB-Smoke-Test.' : v.name === 'node' ? 'Native Module werden neu gebaut; Smoke-Test nach Deploy.' : undefined);
+    const renderWave = (title: string, badge: string, color: RGB, list: VersionRow[]) => {
+      if (list.length === 0) return;
+      waveHeader(title, badge, color);
+      list.forEach((v) => item({
+        title: `${v.name} ${v.installed} -> ${v.latest}`,
+        effort: v.state === 'major' ? '0,5–2 Std' : 'gering',
+        risk: v.state === 'major' ? 'mittel' : 'niedrig',
+        steps: [cmd(v), 'npm run build + npx tsc --noEmit, dann Branch -> PR -> CI grün -> Merge -> Deploy.'],
+        note: noteOf(v),
+      }, color));
+    };
+    renderWave('Welle 1 — Sofort (Sicherheit)', 'PRIO 1', DANGER, sec);
+    renderWave('Welle 2 — Wartung (Minor/Patch)', 'PRIO 2', WARN, minors);
+    renderWave('Welle 3 — Geplant (Major-Upgrades)', 'PRIO 3', NAVY, majors);
+  }
 
   // ── KAPITEL: Aufwand & Bewertung ─────────────────────────────────────────
   newChapter();
   sectionTitle('5 · Aufwand & Gesamtbewertung');
+  const outdatedAll = versions.filter((v) => v.state === 'patch' || v.state === 'minor' || v.state === 'major');
+  const isSec2 = (n: string) => vulns.some((v) => v.package === n) || ['next', 'eslint-config-next', 'jspdf', 'jspdf-autotable', 'react', 'react-dom'].includes(n);
+  const secC = outdatedAll.filter((v) => isSec2(v.name)).length;
+  const majC = outdatedAll.filter((v) => !isSec2(v.name) && v.state === 'major').length;
+  const minC = outdatedAll.filter((v) => !isSec2(v.name) && v.state !== 'major').length;
+  const effRows: string[][] = [];
+  if (secC) effRows.push(['1', `Sicherheit (${secC} Paket${secC === 1 ? '' : 'e'})`, 'gering', 'niedrig', 'sofort']);
+  if (minC) effRows.push(['2', `Wartung – Minor/Patch (${minC})`, 'gering', 'niedrig', 'diese Woche']);
+  if (majC) effRows.push(['3', `Majors (${majC})`, '0,5–2 Std/Paket', 'mittel', 'geplant']);
+  if (effRows.length === 0) effRows.push(['—', 'Alle Pakete aktuell – keine offenen Maßnahmen', '—', '—', '—']);
   autoTable(doc, {
     startY: y, margin: { left: M, right: M, top: CONTENT_TOP, bottom: CONTENT_BOTTOM },
     head: [['Welle', 'Inhalt', 'Aufwand', 'Risiko', 'Zeitpunkt']],
-    body: [
-      ['1', 'Sicherheit: Next.js, jsPDF, React', '1–1,5 Std', 'niedrig', 'sofort'],
-      ['2', 'Wartung: 6 Minor/Patch-Updates', '1–2 Std', 'niedrig–mittel', 'diese Woche'],
-      ['3', 'Majors: lucide, TypeScript, ESLint, Node', '4–6 Std', 'mittel', 'geplant'],
-      ['=', 'Gesamt', '~6–10 Std', '—', 'über 2–4 Wochen'],
-    ],
+    body: effRows,
     theme: 'grid',
     styles: { fontSize: 8.5, cellPadding: 2.6, lineColor: STROKE, lineWidth: 0.2, textColor: INK, valign: 'middle' },
     headStyles: { fillColor: NAVY, textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' },
-    columnStyles: { 0: { cellWidth: 14, fontStyle: 'bold', halign: 'center' }, 2: { cellWidth: 26, fontStyle: 'bold' }, 3: { cellWidth: 30 }, 4: { cellWidth: 30 } },
-    didParseCell: (d) => { if (d.section === 'body' && d.row.index === 3) d.cell.styles.fillColor = [238, 242, 247]; },
+    columnStyles: { 0: { cellWidth: 14, fontStyle: 'bold', halign: 'center' }, 2: { cellWidth: 30, fontStyle: 'bold' }, 3: { cellWidth: 26 }, 4: { cellWidth: 30 } },
   });
   y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
 
-  // Bewertungs-Bänder
-  ensure(30);
-  setFill(DANGER); doc.roundedRect(M, y, W - 2 * M, 13, 1.5, 1.5, 'F');
-  setText([255, 255, 255]); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('Jetzt', M + 5, y + 5.5);
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
-  doc.text('Risiko ERHÖHT – offene kritische/hohe Schwachstellen in öffentlich erreichbarer Software.', M + 28, y + 5.5);
-  y += 13 + 3;
-  setFill(OK); doc.roundedRect(M, y, W - 2 * M, 13, 1.5, 1.5, 'F');
-  setText([255, 255, 255]); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('Nach Welle 1', M + 5, y + 5.5);
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
-  doc.text('Risiko NIEDRIG – betrieblich stabil, aktuelle Sicherheitspatches eingespielt.', M + 35, y + 5.5);
-  y += 13 + 8;
+  // Bewertungs-Band(er) – dynamisch
+  ensure(20);
+  if (riskHigh) {
+    setFill(DANGER); doc.roundedRect(M, y, W - 2 * M, 13, 1.5, 1.5, 'F');
+    setText([255, 255, 255]); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('Jetzt', M + 5, y + 5.5);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+    doc.text('Risiko ERHÖHT – offene kritische/hohe Schwachstellen in öffentlich erreichbarer Software.', M + 28, y + 5.5);
+    y += 16;
+    setFill(OK); doc.roundedRect(M, y, W - 2 * M, 13, 1.5, 1.5, 'F');
+    setText([255, 255, 255]); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('Nach Fix', M + 5, y + 5.5);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+    doc.text('Risiko NIEDRIG – betrieblich stabil, aktuelle Sicherheitspatches eingespielt.', M + 32, y + 5.5);
+    y += 21;
+  } else {
+    setFill(OK); doc.roundedRect(M, y, W - 2 * M, 13, 1.5, 1.5, 'F');
+    setText([255, 255, 255]); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('Status', M + 5, y + 5.5);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+    doc.text(`Risiko NIEDRIG – betrieblich stabil, keine offenen Schwachstellen${outdatedAll.length ? `; ${outdatedAll.length} optionale Update(s) offen.` : '.'}`, M + 30, y + 5.5);
+    y += 21;
+  }
 
   sectionTitle('Methodik & Quellen');
   para('Installierte Versionen aus package-lock.json. Aktuelle Versionen: npm-Registry (registry.npmjs.org) und nodejs.org/dist. Schwachstellen: OSV.dev (Open Source Vulnerabilities, Google) je installierter Version, Schweregrade nach GHSA/Hersteller. Health-Status: Live-Signale dieser Plattform. Stand der Daten: ' + today + '. Werte sind eine Momentaufnahme – die Live-Version steht unter Admin -> System -> Status.', { size: 8, color: MUT });
