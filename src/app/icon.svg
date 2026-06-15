@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Faltin Travel">
+  <defs>
+    <linearGradient id="ftbg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#173a55"/>
+      <stop offset="1" stop-color="#0f2336"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#ftbg)"/>
+  <!-- F-Monogramm: Stamm + mittlerer Balken weiss, oberer Balken im Akzent-Orange -->
+  <rect x="150" y="120" width="70" height="272" rx="12" fill="#ffffff"/>
+  <rect x="150" y="224" width="170" height="60" rx="12" fill="#ffffff"/>
+  <rect x="150" y="120" width="212" height="64" rx="12" fill="#d9531e"/>
+</svg>
