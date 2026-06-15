@@ -141,6 +141,16 @@ export interface EventRecord {
   module_order?: string[] | null;
   /** Hervorgehoben (Featured) – Spotlight im Kalender / auf der Startseite. */
   featured?: boolean | null;
+  /** Auto-Antwort: eigene Bestätigungsmail (statt Standard) bei Anfrage zu diesem Event. */
+  auto_reply_enabled?: boolean | null;
+  /** Betreff der Auto-Antwort (leer = Default "Ihre unverbindliche Anfrage zu …"). */
+  auto_reply_subject?: string | null;
+  /** Nachrichtentext der Auto-Antwort (wird ins Markendesign gepackt). */
+  auto_reply_message?: string | null;
+  /** Gespeicherter Dateiname der angehängten PDF (data/uploads/auto-reply/). */
+  auto_reply_pdf?: string | null;
+  /** Anzeigename der PDF (wird als Anhang-Name in der Mail genutzt). */
+  auto_reply_pdf_name?: string | null;
 }
 
 export interface SeriesRecord {

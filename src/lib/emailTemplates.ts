@@ -141,6 +141,46 @@ export function confirmationEmailHtml(input: ConfirmationInput): string {
   return layout(inner, `Ihre Anfrage ${input.requestNumber} ist bei uns eingegangen.`);
 }
 
+/** Default-Betreff der Auto-Antwort, wenn im Event keiner gepflegt ist. */
+export function autoReplySubjectDefault(eventName?: string, requestNumber?: string): string {
+  const ev = eventName ? ` zu ${eventName}` : '';
+  const tag = requestNumber ? ` ${subjectTag(requestNumber)}` : '';
+  return `Ihre unverbindliche Anfrage${ev}${tag}`;
+}
+
+export interface AutoReplyInput {
+  /** Frei definierbarer Nachrichtentext (Plaintext mit Zeilenumbrüchen). */
+  message: string;
+  firstName?: string;
+  eventName?: string;
+  requestNumber?: string;
+}
+
+/**
+ * Markenkonforme Hülle für die per-Event definierbare Auto-Antwort.
+ * Der Admin-Text wird escaped und Zeilenumbrüche → <br>.
+ */
+export function autoReplyHtml(input: AutoReplyInput): string {
+  const greeting = input.firstName ? `Hallo ${escapeHtml(input.firstName)},` : 'Guten Tag,';
+  const bodyHtml = escapeHtml(input.message || '').replace(/\n/g, '<br>');
+  const rqBlock = input.requestNumber
+    ? `<p style="margin:22px 0 0;font-size:13px;line-height:1.6;color:#6b7280;">
+         Ihre Anfragenummer lautet <strong style="color:${NAVY};">${escapeHtml(input.requestNumber)}</strong> –
+         Sie finden sie auch im Betreff. Bitte antworten Sie einfach auf diese E-Mail.
+       </p>`
+    : '';
+
+  const inner = `
+    <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#374151;">${greeting}</p>
+    <div style="font-size:15px;line-height:1.7;color:#374151;">${bodyHtml}</div>
+    ${rqBlock}
+    <p style="margin:24px 0 0;font-size:15px;line-height:1.7;color:#374151;">
+      Herzliche Grüße<br><strong style="color:${NAVY};">Ihr Faltin Travel Team</strong>
+    </p>`;
+
+  return layout(inner, (input.message || '').slice(0, 120));
+}
+
 export interface InternalNotificationInput {
   requestNumber: string;
   eventName?: string;

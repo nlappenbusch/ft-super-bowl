@@ -6,8 +6,10 @@ import { sendGraphMail, isGraphConfigured, getMailbox, getNotifyTo } from '@/lib
 import {
   confirmationEmailHtml, confirmationSubject,
   internalNotificationHtml, internalNotificationSubject,
+  autoReplyHtml, autoReplySubjectDefault, subjectTag,
 } from '@/lib/emailTemplates';
 import { linkBookingToCustomer } from '@/lib/customerStore';
+import { readAutoReplyPdfBase64 } from '@/lib/autoReplyStore';
 
 /**
  * CORS: erlaubt das Anfrage-Formular auf WordPress ([faltin_anfrage]).
@@ -97,11 +99,41 @@ export async function POST(request: Request) {
     } = {};
 
     if (requestNumber && isGraphConfigured()) {
-      // 1) Bestätigung an den Kunden
+      // 1) Bestätigung an den Kunden – per-Event Auto-Antwort (mit PDF) hat Vorrang,
+      //    sonst die Standard-Bestätigung.
       try {
-        const subject = confirmationSubject(requestNumber, eventName);
-        const html = confirmationEmailHtml({ firstName, requestNumber, eventName, message: body.message || '' });
-        const sendRes = await sendGraphMail({ to: body.email, toName: customerName, subject, html });
+        const useAutoReply = !!(event?.auto_reply_enabled && (event.auto_reply_message || '').trim());
+
+        let subject: string;
+        let html: string;
+        let attachments: { name: string; contentType: string; contentBytes: string }[] | undefined;
+        let pdfAttached = false;
+
+        if (useAutoReply) {
+          subject = (event!.auto_reply_subject || '').trim() || autoReplySubjectDefault(eventName, requestNumber);
+          // RQ-Tag fürs Threading anhängen, falls nicht bereits im Custom-Betreff enthalten.
+          if (!/RQ-\d/i.test(subject)) subject = `${subject} ${subjectTag(requestNumber)}`;
+          html = autoReplyHtml({ message: event!.auto_reply_message || '', firstName, eventName, requestNumber });
+
+          if (event!.auto_reply_pdf) {
+            const pdf = await readAutoReplyPdfBase64(event!.auto_reply_pdf);
+            if (pdf) {
+              attachments = [{
+                name: event!.auto_reply_pdf_name || 'Angebot.pdf',
+                contentType: 'application/pdf',
+                contentBytes: pdf.base64,
+              }];
+              pdfAttached = true;
+            } else {
+              console.warn('[AutoReply] PDF nicht gefunden:', event!.auto_reply_pdf);
+            }
+          }
+        } else {
+          subject = confirmationSubject(requestNumber, eventName);
+          html = confirmationEmailHtml({ firstName, requestNumber, eventName, message: body.message || '' });
+        }
+
+        const sendRes = await sendGraphMail({ to: body.email, toName: customerName, subject, html, attachments });
         mail.customer = { success: sendRes.success, error: sendRes.error };
         if (sendRes.success) {
           await addMessage({
@@ -110,7 +142,9 @@ export async function POST(request: Request) {
             from_email: getMailbox(),
             to_email: body.email,
             subject,
-            body: 'Automatische Bestätigung der Anfrage gesendet.',
+            body: useAutoReply
+              ? `Automatische Event-Antwort gesendet${pdfAttached ? ' (mit PDF-Anhang)' : ''}.`
+              : 'Automatische Bestätigung der Anfrage gesendet.',
             graph_message_id: null,
           });
         } else {

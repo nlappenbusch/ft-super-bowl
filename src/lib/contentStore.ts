@@ -114,6 +114,11 @@ export interface ContentEventRecord {
   first_paragraph_image_3_title?: string | null;
   module_order?: string[] | null;
   featured?: boolean | null;
+  auto_reply_enabled?: boolean | null;
+  auto_reply_subject?: string | null;
+  auto_reply_message?: string | null;
+  auto_reply_pdf?: string | null;
+  auto_reply_pdf_name?: string | null;
 }
 
 export interface ContentPackageInclude {
