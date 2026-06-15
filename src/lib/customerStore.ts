@@ -16,7 +16,12 @@ import './database';
 
 const dbPath = path.join(process.cwd(), 'data', 'bookings.db');
 const db = new Database(dbPath);
-db.pragma('journal_mode = WAL');
+db.pragma('busy_timeout = 15000');
+// Schreibende Initialisierung (WAL-Switch, Schema, Backfill) NUR zur Laufzeit ausführen –
+// NICHT während `next build`: der Build sammelt Page-Daten mit mehreren Parallel-Workern,
+// die sonst gleichzeitig auf die frische DB schreiben → "database is locked" (SQLITE_BUSY).
+const IS_BUILD = process.env.NEXT_PHASE === 'phase-production-build';
+if (!IS_BUILD) db.pragma('journal_mode = WAL');
 
 function normEmail(email: string): string {
   return (email || '').trim().toLowerCase();
@@ -65,7 +70,7 @@ function ensureSchema() {
     /* ignore */
   }
 }
-ensureSchema();
+if (!IS_BUILD) ensureSchema();
 
 export interface Customer {
   id: string;
@@ -345,4 +350,4 @@ export function backfillCustomers(): { linked: number } {
   }
   return { linked };
 }
-backfillCustomers();
+if (!IS_BUILD) backfillCustomers();

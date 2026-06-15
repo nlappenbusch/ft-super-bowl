@@ -30,8 +30,14 @@ if (!fs.existsSync(dataDir)) {
 
 const dbPath = path.join(dataDir, 'bookings.db');
 export const db = new Database(dbPath);
+db.pragma('busy_timeout = 15000');
 
-db.pragma('journal_mode = WAL');
+// Schreibende Initialisierung (WAL-Switch) nur zur Laufzeit, NICHT während `next build`:
+// der Build sammelt Page-Daten mit mehreren Parallel-Workern → sonst "database is locked".
+const IS_BUILD_PHASE = process.env.NEXT_PHASE === 'phase-production-build';
+if (!IS_BUILD_PHASE) {
+  db.pragma('journal_mode = WAL');
+}
 
 export function initDatabase() {
   db.exec(`
@@ -276,7 +282,10 @@ export function initDatabase() {
   db.prepare(`INSERT OR IGNORE INTO counters (name, value) VALUES ('request_number', 10000)`).run();
 }
 
-initDatabase();
+// Tabellen/Migrationen nur zur Laufzeit anlegen, nicht während `next build` (Parallel-Worker-Race).
+if (!IS_BUILD_PHASE) {
+  initDatabase();
+}
 
 /**
  * Liefert die nächste fortlaufende Anfragenummer im Format "RQ-12345".
