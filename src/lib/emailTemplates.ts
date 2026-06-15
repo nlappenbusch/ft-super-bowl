@@ -213,20 +213,14 @@ export function autoReplyHtml(input: AutoReplyInput): string {
     : `<p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#374151;">${formalGreeting(r)}</p>`;
 
   const bodyHtml = rendered.replace(/\n/g, '<br>');
-  const rqBlock = input.requestNumber
-    ? `<p style="margin:22px 0 0;font-size:13px;line-height:1.6;color:#6b7280;">
-         Ihre Anfragenummer lautet <strong style="color:${NAVY};">${escapeHtml(input.requestNumber)}</strong> –
-         Sie finden sie auch im Betreff. Bitte antworten Sie einfach auf diese E-Mail.
-       </p>`
-    : '';
 
+  // Bewusst minimal: nur (optionale) Anrede + der Admin-Text im Marken-Rahmen.
+  // KEINE automatische Anfragenummer-Zeile und KEINE Grußformel – die Nachricht ist
+  // vollständig vom Admin gepflegt (vermeidet doppelten/überflüssigen Text).
+  // Die Anfragenummer steht weiterhin im Betreff (Threading).
   const inner = `
     ${greetingHtml}
-    <div style="font-size:15px;line-height:1.7;color:#374151;">${bodyHtml}</div>
-    ${rqBlock}
-    <p style="margin:24px 0 0;font-size:15px;line-height:1.7;color:#374151;">
-      Herzliche Grüße<br><strong style="color:${NAVY};">Ihr Faltin Travel Team</strong>
-    </p>`;
+    <div style="font-size:15px;line-height:1.7;color:#374151;">${bodyHtml}</div>`;
 
   return layout(inner, (input.message || '').slice(0, 120));
 }
