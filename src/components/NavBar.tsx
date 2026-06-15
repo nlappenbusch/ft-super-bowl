@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
   ChevronDown,
   X,
+  Search,
   Menu,
   ArrowRight,
   CalendarDays,
@@ -93,8 +94,24 @@ export default function NavBar({ menu }: { menu?: NavItem[] }) {
   const [now, setNow] = useState<number | null>(null);
   const headerRef = useRef<HTMLElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [search, setSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setNow(Date.now()); }, []);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    setOpenMenu(null);
+    const t = setTimeout(() => searchRef.current?.focus(), 60);
+    return () => clearTimeout(t);
+  }, [searchOpen]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setSearchOpen(false); setOpenMenu(null); } };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -134,6 +151,32 @@ export default function NavBar({ menu }: { menu?: NavItem[] }) {
   const megaItems = NAV.filter((item): item is MegaItem => item.type === 'mega');
   const calendarItem = NAV.find((item): item is CalendarItem => item.type === 'calendar');
 
+  /* Globaler Such-Index über alle Kategorien + Events */
+  const searchIndex = useMemo(() => {
+    const events: Array<NavCard & { category: string; iconKey: string }> = [];
+    const cats: Array<{ title: string; href: string; iconKey: string; count: number }> = [];
+    const seenE = new Set<string>();
+    const seenC = new Set<string>();
+    for (const m of megaItems) {
+      for (const col of m.columns) {
+        if (!seenC.has(col.title)) { seenC.add(col.title); cats.push({ title: col.title, href: col.href, iconKey: col.iconKey, count: col.count }); }
+        for (const card of col.cards) {
+          if (seenE.has(card.href)) continue;
+          seenE.add(card.href);
+          events.push({ ...card, category: col.title, iconKey: col.iconKey });
+        }
+      }
+    }
+    return { events, cats };
+  }, [megaItems]);
+
+  const q = search.trim().toLowerCase();
+  const sCats = q ? searchIndex.cats.filter((c) => c.title.toLowerCase().includes(q)) : searchIndex.cats;
+  const sEvents = q
+    ? searchIndex.events.filter((e) => `${e.label} ${e.place || ''} ${e.category}`.toLowerCase().includes(q)).slice(0, 24)
+    : [];
+  const closeSearch = () => { setSearchOpen(false); setSearch(''); setOpenMenu(null); };
+
   const cd = (startISO: string): string => {
     if (now === null) return '';
     const d = new Date(`${startISO}T00:00:00`);
@@ -148,11 +191,11 @@ export default function NavBar({ menu }: { menu?: NavItem[] }) {
   return (
     <>
       {/* Dimmed backdrop behind mega menus */}
-      {openMenu && (
+      {(openMenu || searchOpen) && (
         <div
           className="fixed inset-0 z-40 bg-black/50"
           style={{ backdropFilter: 'blur(2px)' }}
-          onClick={() => setOpenMenu(null)}
+          onClick={() => { setOpenMenu(null); setSearchOpen(false); }}
         />
       )}
 
@@ -189,7 +232,46 @@ export default function NavBar({ menu }: { menu?: NavItem[] }) {
 
           {/* Nav items */}
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-            {NAV.map((item) => {
+            {/* Live-Suche (Mobile) */}
+            <div className="mb-2 px-1">
+              <div className="flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2.5">
+                <Search className="h-4 w-4 text-white/50" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Events suchen…"
+                  className="flex-1 bg-transparent text-sm text-white placeholder-white/40 outline-none"
+                />
+                {search && <button onClick={() => setSearch('')} aria-label="Leeren"><X className="h-4 w-4 text-white/50" /></button>}
+              </div>
+            </div>
+            {q && (
+              <div className="mb-3 space-y-1">
+                {sCats.length > 0 && (
+                  <div className="mb-1 flex flex-wrap gap-1.5 px-1">
+                    {sCats.map((c) => (
+                      <Link key={c.title} href={c.href} onClick={() => { setMobileOpen(false); setSearch(''); }} className="rounded-full px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: catColor(c.iconKey) }}>
+                        {c.title}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+                {sEvents.length === 0 ? (
+                  <div className="px-3 py-6 text-center text-sm text-white/40">Nichts gefunden.</div>
+                ) : sEvents.map((card) => (
+                  <Link key={card.href} href={card.href} onClick={() => { setMobileOpen(false); setSearch(''); }} className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/10">
+                    <span className="h-9 w-12 shrink-0 overflow-hidden rounded-lg bg-white/10">
+                      {card.image && <Image src={card.image} alt="" width={48} height={36} className="h-full w-full object-cover" />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-white">{card.label}</span>
+                      <span className="block truncate text-xs text-white/50">{card.category}{card.place ? ` · ${card.place}` : ''}</span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+            {!q && NAV.map((item) => {
               if (item.type === 'mega') {
                 const expanded = mobileExpanded === item.key;
                 return (
@@ -428,8 +510,17 @@ export default function NavBar({ menu }: { menu?: NavItem[] }) {
               })}
             </nav>
 
+            {/* Live-Suche */}
+            <button
+              onClick={() => setSearchOpen((o) => !o)}
+              className="hidden min-[960px]:flex items-center gap-2 shrink-0 rounded-xl border border-white/20 bg-white/10 px-3.5 py-2 text-[13px] font-semibold text-white/90 transition hover:bg-white/20"
+              aria-label="Events suchen"
+            >
+              <Search className="h-4 w-4" /> Suchen
+            </button>
+
             {/* Right: trust badge */}
-            <div className="hidden min-[960px]:flex items-center shrink-0 min-[960px]:ml-12">
+            <div className="hidden min-[960px]:flex items-center shrink-0 min-[960px]:ml-4">
               <a
                 href="https://www.garantiefonds.ch/teilnehmer/teilnehmer-am-garantiefonds"
                 target="_blank"
@@ -592,6 +683,92 @@ export default function NavBar({ menu }: { menu?: NavItem[] }) {
             </div>
           );
         })}
+
+        {/* ── Live-Suche-Panel (Desktop) ── */}
+        <div
+          className="absolute left-0 right-0 z-50 hidden min-[960px]:block"
+          style={{
+            top: '100%',
+            opacity: searchOpen ? 1 : 0,
+            pointerEvents: searchOpen ? 'auto' : 'none',
+            transform: searchOpen ? 'translateY(0)' : 'translateY(-4px)',
+            transition: 'opacity 180ms ease, transform 180ms ease',
+          }}
+          onMouseEnter={cancelClose}
+        >
+          <div className="container mx-auto px-4 pb-6">
+            <div className="overflow-hidden rounded-3xl shadow-2xl" style={{ border: '1px solid rgba(0,0,0,0.08)', background: '#fff' }}>
+              <div className="flex items-center gap-3 border-b px-5 py-4" style={{ borderColor: '#eef1f4' }}>
+                <Search className="h-5 w-5 shrink-0" style={{ color: '#184a7b' }} />
+                <input
+                  ref={searchRef}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Event, Stadt oder Kategorie suchen…"
+                  className="flex-1 bg-transparent text-base outline-none"
+                  style={{ color: '#143047' }}
+                />
+                <button onClick={closeSearch} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100" aria-label="Suche schliessen">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="max-h-[70vh] overflow-y-auto p-5">
+                {sCats.length > 0 && (
+                  <>
+                    <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Kategorien</div>
+                    <div className="mb-5 flex flex-wrap gap-2">
+                      {sCats.map((c) => {
+                        const Icon = ICONS[c.iconKey] || Trophy;
+                        return (
+                          <Link key={c.title} href={c.href} onClick={closeSearch} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold transition hover:opacity-90" style={{ background: catColor(c.iconKey) + '14', color: catColor(c.iconKey) }}>
+                            <Icon className="h-3.5 w-3.5" /> {c.title} <span className="opacity-60">{c.count}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+                {q ? (
+                  <>
+                    <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Events ({sEvents.length})</div>
+                    {sEvents.length === 0 ? (
+                      <div className="py-8 text-center text-sm text-slate-400">Nichts gefunden für „{search}". Versuch&apos;s mit einem anderen Begriff.</div>
+                    ) : (
+                      <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
+                        {sEvents.map((card) => {
+                          const Icon = ICONS[card.iconKey] || Trophy;
+                          return (
+                            <Link key={card.href} href={card.href} onClick={closeSearch} className="group overflow-hidden rounded-xl border border-slate-100 transition-all hover:-translate-y-0.5 hover:shadow-md">
+                              <div className="relative aspect-[16/10] bg-[#143047]">
+                                {card.image ? (
+                                  <Image src={card.image} alt="" fill className="object-cover transition-transform duration-300 group-hover:scale-105" sizes="240px" />
+                                ) : (
+                                  <span className="flex h-full w-full items-center justify-center text-[#3a5f86]"><Icon className="h-7 w-7" /></span>
+                                )}
+                                <span className="absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: catColor(card.iconKey) }}>{card.category}</span>
+                              </div>
+                              <div className="px-3 py-2.5">
+                                <div className="truncate text-[13px] font-semibold" style={{ color: '#143047' }}>{card.label}</div>
+                                <div className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-slate-500">
+                                  {card.dateLabel && <CalendarDays className="h-3 w-3 shrink-0" />}
+                                  {card.dateLabel && <span>{card.dateLabel}</span>}
+                                  {card.dateLabel && card.place && <span className="opacity-50">·</span>}
+                                  {card.place && <span className="truncate">{card.place}</span>}
+                                </div>
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-sm text-slate-400">Tipp: Tippe z. B. „Tennis", „München" oder „Finale" — die Treffer erscheinen sofort.</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* ── Kalender-Dropdown ── */}
         {calendarItem && (
