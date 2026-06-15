@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import AiModuleButton from '@/components/admin/AiModuleButton';
 import {
   CalendarDays,
   ImageIcon,
@@ -1198,6 +1199,9 @@ export default function AdminEventsPage() {
                   description="Pflegen Sie hier die allgemeinen Fakten und den anklappbaren Textbereich (Akkordeon) für das Event."
                 >
                   <div className="grid gap-4">
+                    <div className="flex justify-end">
+                      <AiModuleButton moduleKey="wissenswertes" eventName={form.name || form.title} currentContent={form.wissenswertes_accordion_text} onApply={(d) => { const v = d.wissenswertes_accordion_text; if (typeof v === 'string') updateField('wissenswertes_accordion_text', v); }} />
+                    </div>
                     <InputField
                       label="Überschrift"
                       type="text"
@@ -1311,6 +1315,9 @@ export default function AdminEventsPage() {
                   description="Leistungs-/Inklusiv-Liste mit Bild und Anfrage-Button (dunkles Modul auf der Event-Seite)."
                 >
                   <div className="grid gap-4">
+                    <div className="flex justify-end">
+                      <AiModuleButton moduleKey="leistungen" eventName={form.name || form.title} currentContent={form.leistungen_items.join('\n')} onApply={(d) => { const v = d.leistungen_items; if (Array.isArray(v)) updateField('leistungen_items', v.map((x) => String(x))); }} />
+                    </div>
                     <InputField
                       id="ev-f-leistungen_title"
                       label="Titel"
@@ -1345,6 +1352,9 @@ export default function AdminEventsPage() {
                   description="Ticket-/Hospitality-Kategorien als Reiter – jede mit Leistungs-Liste und optionalem Schlusstext."
                 >
                   <div className="grid gap-4">
+                    <div className="flex justify-end">
+                      <AiModuleButton moduleKey="ticket_categories" eventName={form.name || form.title} onApply={(d) => { const v = d.ticket_categories; if (Array.isArray(v)) updateField('ticket_categories', v.map((c) => { const o = c as { name?: unknown; items?: unknown; note?: unknown }; return { name: String(o.name ?? ''), items: Array.isArray(o.items) ? o.items.map((x) => String(x)) : [], note: String(o.note ?? '') }; })); }} />
+                    </div>
                     <InputField
                       label="Titel"
                       value={form.ticket_categories_title}

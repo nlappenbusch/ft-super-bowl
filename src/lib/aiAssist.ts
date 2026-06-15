@@ -1,11 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * aiAssist.ts
- * ─────────────────────────────────────────────────────────────────────────────
  * KI-Redaktions-Engine (Anthropic Messages API).
  * Konfiguration kommt aus den Admin-Settings (getSettings().ai) mit ENV-Fallback.
- * Unterstützt optionalen Screenshot (Bild) als Zusatzkontext.
- * ─────────────────────────────────────────────────────────────────────────────
+ * Unterstuetzt optionalen Screenshot (Bild) als Zusatzkontext.
  */
 import { getSettings } from './settingsStore';
 
@@ -22,9 +20,7 @@ export function isAiConfigured(): boolean {
 }
 
 export interface AiImage {
-  /** base64 ohne data:-Präfix */
   data: string;
-  /** z.B. image/png, image/jpeg */
   mediaType: string;
 }
 
@@ -34,7 +30,6 @@ export interface AiCallResult {
   error?: string;
 }
 
-/** Roher Aufruf der Anthropic Messages API (optional multimodal). */
 export async function anthropicMessage(opts: {
   system: string;
   userText: string;
@@ -42,7 +37,7 @@ export async function anthropicMessage(opts: {
   maxTokens?: number;
 }): Promise<AiCallResult> {
   const { apiKey, model } = getAiConfig();
-  if (!apiKey) return { ok: false, error: 'Kein Anthropic API-Key konfiguriert (Admin → KI).' };
+  if (!apiKey) return { ok: false, error: 'Kein Anthropic API-Key konfiguriert (Admin -> KI).' };
 
   const content: any[] = [];
   if (opts.image?.data) {
@@ -84,7 +79,6 @@ export async function anthropicMessage(opts: {
   }
 }
 
-/** Extrahiert das erste JSON-Objekt aus einer Modell-Antwort (toleriert ```json Fences). */
 export function parseJsonLoose(text: string): any | null {
   if (!text) return null;
   let t = text.trim();
@@ -100,22 +94,19 @@ export function parseJsonLoose(text: string): any | null {
   }
 }
 
-/* ─── Modul-Registry: welche Felder ein Modul hat + wie es befüllt wird ─────── */
-
 export interface ModuleSpec {
   key: string;
   label: string;
-  /** Beschreibung des Ziel-JSON-Schemas für das Modell */
   schema: string;
 }
 
 export const MODULE_SPECS: ModuleSpec[] = [
-  { key: 'intro', label: 'Intro-Text', schema: '{ "intro_text": string (2-4 Sätze, einladend, sachlich-werblich) }' },
-  { key: 'highlights', label: 'Highlights', schema: '{ "highlights": string[] (4-6 prägnante Stichpunkte, je < 12 Wörter) }' },
+  { key: 'intro', label: 'Intro-Text', schema: '{ "intro_text": string (2-4 Saetze, einladend, sachlich-werblich) }' },
+  { key: 'highlights', label: 'Highlights', schema: '{ "highlights": string[] (4-6 praegnante Stichpunkte, je unter 12 Woerter) }' },
   { key: 'seo', label: 'SEO-Text', schema: '{ "seo_text": string (1 Absatz, keyword-reich, faktisch) }' },
   { key: 'leistungen', label: 'Unsere Leistungen', schema: '{ "leistungen_items": string[] (Leistungen/Inklusivleistungen als Stichpunkte) }' },
-  { key: 'ticket_categories', label: 'Ticket-Kategorien', schema: '{ "ticket_categories": [{ "name": string (z.B. "Kategorie 1"), "items": string[] (Inklusivleistungen je Kategorie), "note": string (1-2 Sätze Beschreibung der Kategorie) }] (1-3 Kategorien, von günstig zu Premium) }' },
-  { key: 'wissenswertes', label: 'Wissenswertes (Accordion)', schema: '{ "wissenswertes_accordion_text": string (mehrere Absätze mit \\n\\n getrennt; praktische Infos: Anreise, Hotel, Tipps) }' },
+  { key: 'ticket_categories', label: 'Ticket-Kategorien', schema: 'JSON-Form: { "ticket_categories": [{ "name": string, "items": string[], "note": string }] }. 2-3 Kategorien von guenstig (Einstieg) zu Premium (VIP/Hospitality). WICHTIG: Jede Kategorie muss sich INHALTLICH klar unterscheiden - hoehere Kategorien bedeuten bessere Sitzplatz-Lage, mehr Hospitality und mehr Extras. Wiederhole NICHT in jeder Kategorie dieselbe identische Liste. Stelle pro Kategorie das jeweils Besondere voran (Sitzplatz-Lage zuerst, dann die dazu passenden Extras). items = 4-7 praegnante Stichpunkte je Kategorie; note = 1-2 Saetze zum USP/Charakter der Kategorie. Nenne ausschliesslich das echte Venue des Events.' },
+  { key: 'wissenswertes', label: 'Wissenswertes (Accordion)', schema: '{ "wissenswertes_accordion_text": string (mehrere Absaetze durch Leerzeile getrennt; praktische Infos: Anreise, Hotel, Tipps) }' },
   { key: 'faq', label: 'FAQ', schema: '{ "faqs": [{ "question": string, "answer": string }] (4-6 sinnvolle FAQ) }' },
 ];
 
@@ -123,13 +114,10 @@ export function getModuleSpec(key: string): ModuleSpec | undefined {
   return MODULE_SPECS.find((m) => m.key === key);
 }
 
-/**
- * Importiert/erzeugt Inhalt für ein Modul aus Quelltext (+ optional Screenshot + Anweisung).
- * Gibt das geparste Ziel-JSON zurück.
- */
 export async function generateModuleContent(opts: {
   moduleKey: string;
   eventName?: string;
+  eventContext?: string;
   sourceText?: string;
   instruction?: string;
   currentContent?: string;
@@ -139,18 +127,20 @@ export async function generateModuleContent(opts: {
   if (!spec) return { ok: false, error: `Unbekanntes Modul: ${opts.moduleKey}` };
 
   const system =
-    'Du bist Redaktions-Assistent für Faltin Travel, einen Schweizer Sportreisen-Veranstalter. ' +
-    'Du schreibst auf Deutsch (Sie-Form), markenkonform, sachlich-werblich, ohne Übertreibung und ohne erfundene Fakten/Preise. ' +
-    'Wenn Quelldaten vorliegen, nutze ausschließlich diese; erfinde keine konkreten Zahlen, Daten oder Garantien. ' +
-    'Antworte AUSSCHLIESSLICH mit gültigem JSON nach dem vorgegebenen Schema – kein Fließtext drumherum.';
+    'Du bist Redaktions-Assistent fuer Faltin Travel, einen Schweizer Sportreisen-Veranstalter. ' +
+    'Du schreibst auf Deutsch (Sie-Form), markenkonform, sachlich-werblich, ohne Uebertreibung und ohne erfundene Fakten/Preise. ' +
+    'Wenn Quelldaten vorliegen, nutze ausschliesslich diese; erfinde keine konkreten Zahlen, Daten oder Garantien. ' +
+    'Verwende ausschliesslich den tatsaechlichen Veranstaltungsort/das Venue des genannten Events; erfinde niemals andere Stadien, Hallen oder Staedte. ' +
+    'Antworte AUSSCHLIESSLICH mit gueltigem JSON nach dem vorgegebenen Schema - kein Fliesstext drumherum.';
 
   const parts: string[] = [];
-  parts.push(`Aufgabe: Befülle das Modul "${spec.label}" für das Event "${opts.eventName || 'Sport-Event'}".`);
+  parts.push(`Aufgabe: Befuelle das Modul "${spec.label}" fuer das Event "${opts.eventName || 'Sport-Event'}".`);
+  if (opts.eventContext) parts.push(`Event-Kontext (verbindlich, nicht abweichen):\n${opts.eventContext}`);
   parts.push(`Ziel-JSON-Schema:\n${spec.schema}`);
-  if (opts.instruction) parts.push(`Zusätzliche Anweisung des Redakteurs:\n${opts.instruction}`);
-  if (opts.currentContent) parts.push(`Aktueller Inhalt (zur Verbesserung/Berücksichtigung):\n${opts.currentContent}`);
-  if (opts.sourceText) parts.push(`Quelltext der Webseite (Basis für den Inhalt):\n"""\n${opts.sourceText}\n"""`);
-  if (opts.image) parts.push('Zusätzlich ist ein Screenshot der Quellseite als Bild beigefügt – nutze ihn für Kontext, Struktur und Tonalität.');
+  if (opts.instruction) parts.push(`Zusaetzliche Anweisung des Redakteurs:\n${opts.instruction}`);
+  if (opts.currentContent) parts.push(`Aktueller Inhalt (zur Verbesserung/Beruecksichtigung):\n${opts.currentContent}`);
+  if (opts.sourceText) parts.push(`Quelltext der Webseite (Basis fuer den Inhalt):\n"""\n${opts.sourceText}\n"""`);
+  if (opts.image) parts.push('Zusaetzlich ist ein Screenshot der Quellseite als Bild beigefuegt - nutze ihn fuer Kontext, Struktur und Tonalitaet.');
   parts.push('Gib jetzt das JSON aus.');
 
   const res = await anthropicMessage({
@@ -162,6 +152,6 @@ export async function generateModuleContent(opts: {
   if (!res.ok) return { ok: false, error: res.error };
 
   const data = parseJsonLoose(res.text || '');
-  if (!data) return { ok: false, error: 'Antwort war kein gültiges JSON.', raw: res.text };
+  if (!data) return { ok: false, error: 'Antwort war kein gueltiges JSON.', raw: res.text };
   return { ok: true, data, raw: res.text };
 }
