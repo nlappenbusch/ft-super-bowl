@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Search, X, LayoutGrid, Table2, CalendarDays, MapPin, Send } from 'lucide-react';
+import { LayoutGrid, Table2, CalendarDays, MapPin, Send, ChevronDown } from 'lucide-react';
 
 export interface SpielplanRow {
   date: string;
@@ -72,6 +72,15 @@ export default function SpielplanSection({
     return seen;
   }, [spielplan]);
 
+  const sessions = useMemo(() => {
+    const seen: string[] = [];
+    for (const r of spielplan) {
+      const v = (r.session || '').trim();
+      if (v && !seen.includes(v)) seen.push(v);
+    }
+    return seen.sort((a, b) => a.localeCompare(b, 'de'));
+  }, [spielplan]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return spielplan.filter((r) => {
@@ -84,7 +93,7 @@ export default function SpielplanSection({
   const hasActiveFilter = query.trim() !== '' || round !== '';
   const collapsible = !hasActiveFilter && filtered.length > COLLAPSE_THRESHOLD;
   const visible = collapsible && !expanded ? filtered.slice(0, COLLAPSED_ROWS) : filtered;
-  const showSearch = spielplan.length > 12;
+  const showVenueFilter = sessions.length > 1;
   const showRoundChips = rounds.length >= 2;
 
   return (
@@ -112,7 +121,7 @@ export default function SpielplanSection({
       )}
 
       {/* Filterleiste */}
-      {(showSearch || showRoundChips) && (
+      {(showVenueFilter || showRoundChips) && (
         <div className="mb-6 space-y-3">
           {showRoundChips && (
             <div className="flex flex-wrap gap-2">
@@ -141,27 +150,22 @@ export default function SpielplanSection({
               ))}
             </div>
           )}
-          {showSearch && (
+          {showVenueFilter && (
             <div className="relative max-w-sm">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                value={query}
+              <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <select
+                value={sessions.find((s) => s === query || (!!query && s.toLowerCase().includes(query.toLowerCase()))) ?? ''}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Verein, Stadt oder Stadion suchen…"
-                className="w-full rounded-lg border bg-white py-2.5 pl-9 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-[#d9531e]"
+                className="w-full appearance-none rounded-lg border bg-white py-2.5 pl-9 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-[#d9531e]"
                 style={{ borderColor: '#d4dbe5', color: '#143047' }}
-              />
-              {query && (
-                <button
-                  type="button"
-                  onClick={() => setQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                  aria-label="Suche zurücksetzen"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
+                aria-label="Spielort filtern"
+              >
+                <option value="">Alle Spielorte</option>
+                {sessions.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             </div>
           )}
           {hasActiveFilter && (
