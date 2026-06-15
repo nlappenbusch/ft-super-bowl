@@ -6,6 +6,12 @@ import { siteConfig } from '@/lib/siteConfig';
 // Domain-agnostisch: nutzt NEXT_PUBLIC_SITE_URL (siehe siteConfig), Fallback faltintravel.com
 const BASE = siteConfig.url.replace(/\/+$/, '');
 
+// WICHTIG: zur Laufzeit generieren, nicht zur Build-Zeit. Sonst werden Events/Serien aus dem
+// persistenten data/-Volume nicht gelesen (der Build kennt nur die Fallback-Seed-Daten) und die
+// Sitemap enthält nur einen Bruchteil der Seiten.
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
