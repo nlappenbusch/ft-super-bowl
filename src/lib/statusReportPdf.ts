@@ -26,7 +26,7 @@ const ZEBRA: RGB = [247, 249, 251];
 const STROKE: RGB = [219, 225, 232];
 
 const W = 210, H = 297, M = 18;
-const CONTENT_TOP = 26, CONTENT_BOTTOM = 20;
+const CONTENT_TOP = 34, CONTENT_BOTTOM = 20;
 
 function sevColor(s: string): RGB {
   const u = (s || '').toUpperCase();
