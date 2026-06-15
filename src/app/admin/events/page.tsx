@@ -1049,7 +1049,7 @@ export default function AdminEventsPage() {
                           onChange={(event) => updateField('auto_reply_message', event.target.value)}
                           rows={8}
                           placeholder={'Vielen Dank für Ihre unverbindliche Anfrage …\n\nIm Anhang finden Sie unsere aktuellen Angebote.\n\nGerne melden wir uns persönlich bei Ihnen.'}
-                          hint="Platzhalter: {{anrede}} = „Sehr geehrte/r Herr/Frau“, {{vorname}}, {{nachname}}. Beispiel-Begrüßung: „{{anrede}} {{nachname}},“. Lässt du die Begrüßung weg, setzen wir automatisch eine geschlechtskorrekte Anrede davor. Wird ins Faltin-Markendesign gesetzt."
+                          hint="Die Nachricht wird 1:1 im Faltin-Rahmen (Logo/Footer) versendet – inkl. deiner eigenen Grußformel. Kein Zusatztext, keine extra Anfragenummer-Zeile (die steht im Betreff). Platzhalter: {{anrede}} = „Sehr geehrte/r Herr/Frau“, {{vorname}}, {{nachname}} (z. B. „{{anrede}} {{nachname}},“). Schreibst du gar keine Begrüßung, ergänzen wir automatisch eine geschlechtskorrekte."
                         />
                       </div>
 
