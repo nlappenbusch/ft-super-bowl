@@ -10,6 +10,12 @@ jobs:
     runs-on: [self-hosted, Linux, X64, docker-prod-01]
     
     steps:
+      - name: Heal Docker build cache
+        run: |
+          echo "Pruning dangling Docker build cache (fix für 'parent snapshot does not exist')..."
+          docker builder prune -f || true
+          docker image prune -f || true
+
       - name: Deploy to Production
         run: |
           echo "Starting deployment..."
