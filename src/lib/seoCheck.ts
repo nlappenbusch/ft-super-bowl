@@ -12,9 +12,12 @@ import path from 'path';
 import { getSettings } from './settingsStore';
 import { siteConfig } from './siteConfig';
 import { isAiConfigured, anthropicMessage } from './aiAssist';
+import { getEventsList, getSeriesList } from './eventData';
+import { toCategorySlug } from './category';
 
 const REPORT_PATH = path.join(process.cwd(), 'data', 'seo-report.json');
-const MAX_PAGES = 30;
+const MAX_PAGES = 120;
+const MAX_LINK_CHECKS = 80;
 
 export type CheckStatus = 'ok' | 'warn' | 'fail' | 'info';
 export type CheckCat = 'onpage' | 'technik' | 'structured' | 'geo';
@@ -32,6 +35,8 @@ export interface SeoReport {
   pages: SeoPage[];
   site: SeoCheck[];
   jsonldTypes: string[];
+  brokenLinks: { url: string; status: number }[];
+  coverage: { sitemap: number; content: number; scanned: number };
   ai: { generatedAt: string; text: string } | null;
   errors: string[];
   summary: { pages: number; ok: number; warn: number; fail: number; checks: number };
@@ -103,7 +108,7 @@ function textWordCount(html: string): number {
   return (txt.match(/\b[\wäöüÄÖÜß-]{2,}\b/g) || []).length;
 }
 
-interface PageAnalysis { page: SeoPage; jsonld: string[]; title: string | null; desc: string | null }
+interface PageAnalysis { page: SeoPage; jsonld: string[]; title: string | null; desc: string | null; links: string[] }
 
 async function analyzePage(fetchUrl: string, displayUrl: string, label: string): Promise<PageAnalysis> {
   const r = await fetchRes(fetchUrl);
@@ -111,7 +116,7 @@ async function analyzePage(fetchUrl: string, displayUrl: string, label: string):
   const add = (key: string, lbl: string, status: CheckStatus, detail: string, cat: CheckCat) => checks.push({ key, label: lbl, status, detail, cat });
   if (!r.ok) {
     add('reachable', 'Erreichbarkeit', 'fail', `HTTP ${r.status || '—'}`, 'technik');
-    return { page: { url: displayUrl, label, score: 0, checks }, jsonld: [], title: null, desc: null };
+    return { page: { url: displayUrl, label, score: 0, checks }, jsonld: [], title: null, desc: null, links: [] };
   }
   const html = r.body;
   const pagePath = (() => { try { return new URL(displayUrl).pathname; } catch { return displayUrl; } })();
@@ -168,8 +173,10 @@ async function analyzePage(fetchUrl: string, displayUrl: string, label: string):
   // Content-Tiefe + interne Links
   const words = textWordCount(html);
   add('content', 'Inhaltstiefe', words >= 250 ? 'ok' : words >= 100 ? 'warn' : 'warn', `~${words} Wörter`, 'onpage');
-  const links = (html.match(/<a\b[^>]+href=["'](\/[^"'#]*|https?:\/\/[^"']*faltintravel[^"']*)["']/gi) || []).length;
-  add('links', 'Interne Verlinkung', links >= 3 ? 'ok' : 'info', `${links} interne Links`, 'onpage');
+  const linkSet = new Set<string>();
+  { const re = /<a\b[^>]+href=["']([^"'#]+)["']/gi; let mm: RegExpExecArray | null;
+    while ((mm = re.exec(html))) { const href = mm[1]; if (href.startsWith('/') && !href.startsWith('//')) linkSet.add(href.split('?')[0]); else if (/^https?:\/\/[^/]*faltintravel/i.test(href)) { try { linkSet.add(new URL(href).pathname); } catch { /* */ } } } }
+  add('links', 'Interne Verlinkung', linkSet.size >= 3 ? 'ok' : 'info', `${linkSet.size} interne Links`, 'onpage');
 
   // Mixed Content
   const httpAssets = (html.match(/(?:src|href)=["']http:\/\/[^"']+/gi) || []).filter((s) => !/http:\/\/(127\.0\.0\.1|localhost)/.test(s));
@@ -186,20 +193,40 @@ async function analyzePage(fetchUrl: string, displayUrl: string, label: string):
   if (isOffer) add('geo_facts', 'GEO: Fakten im HTML', hasPrice ? 'ok' : 'warn', hasPrice ? 'Preis/Angebot serverseitig sichtbar' : 'keine Preis-Fakten im SSR-HTML', 'geo');
   add('semantic', 'GEO: Semantik', /<main[\s>]/i.test(html) || /<article[\s>]/i.test(html) ? 'ok' : 'warn', /<main[\s>]/i.test(html) ? '<main>/<article> vorhanden' : 'kein <main>/<article>', 'geo');
 
-  return { page: { url: displayUrl, label, score: scoreOf(checks), checks }, jsonld: types, title, desc };
+  return { page: { url: displayUrl, label, score: scoreOf(checks), checks }, jsonld: types, title, desc, links: [...linkSet] };
 }
 
-async function getTargets(pub: string, internal: string): Promise<ScanTarget[]> {
+/** Alle bekannten Content-URLs aus dem Datenmodell (wie die Sitemap, aber unabhängig davon). */
+async function buildContentPaths(): Promise<string[]> {
+  const paths = new Set<string>(['/', '/kalender', '/ueber-uns', '/kontakt', '/booking', '/agb', '/impressum', '/datenschutz']);
+  try {
+    const [series, events] = await Promise.all([getSeriesList(), getEventsList()]);
+    const active = series.filter((s) => (s.status ?? 'active') !== 'archived');
+    const slugById = new Map(series.map((s) => [s.id, s.slug]));
+    new Set(active.map((s) => toCategorySlug(s.category || 'sonstiges'))).forEach((c) => paths.add(`/kategorie/${c}`));
+    active.forEach((s) => paths.add(`/${s.slug}`));
+    for (const e of events) {
+      const ss = e.series_id ? slugById.get(e.series_id) : undefined;
+      const seg = e.url_segment || e.slug;
+      paths.add(ss ? `/${ss}/${seg}` : `/events/${e.slug}`);
+    }
+  } catch { /* */ }
+  return [...paths];
+}
+
+async function getTargets(pub: string, internal: string): Promise<{ targets: ScanTarget[]; sitemapCount: number; contentCount: number }> {
   const sm = await fetchRes(`${internal}/sitemap.xml`);
   const locs: string[] = [];
   if (sm.ok) { const re = /<loc>([^<]+)<\/loc>/gi; let m: RegExpExecArray | null; while ((m = re.exec(sm.body))) locs.push(m[1].trim()); }
-  const uniq = Array.from(new Set(locs.length ? locs : [pub]));
-  const targets: ScanTarget[] = uniq.map((loc) => {
-    let p = '/'; try { p = new URL(loc).pathname || '/'; } catch { p = loc.startsWith('/') ? loc : '/'; }
-    return { fetchUrl: internal + p, displayUrl: loc.startsWith('http') ? loc : pub + p, label: p === '/' ? 'Startseite' : p };
-  });
+  const contentPaths = await buildContentPaths();
+  const byPath = new Map<string, ScanTarget>();
+  const addPath = (p: string) => { if (!byPath.has(p)) byPath.set(p, { fetchUrl: internal + p, displayUrl: pub + p, label: p === '/' ? 'Startseite' : p }); };
+  contentPaths.forEach(addPath);
+  for (const loc of locs) { let p = '/'; try { p = new URL(loc).pathname || '/'; } catch { p = loc; } addPath(p); }
+  if (byPath.size === 0) addPath('/');
+  const targets = [...byPath.values()];
   targets.sort((a, b) => (a.label === 'Startseite' ? -1 : b.label === 'Startseite' ? 1 : 0));
-  return targets.slice(0, MAX_PAGES);
+  return { targets: targets.slice(0, MAX_PAGES), sitemapCount: locs.length, contentCount: contentPaths.length };
 }
 
 async function siteChecks(internal: string): Promise<SeoCheck[]> {
@@ -274,15 +301,17 @@ export async function runSeoScan(withAi = true): Promise<SeoReport> {
   const internal = internalBase();
   const errors: string[] = [];
 
-  const targets = await getTargets(pub, internal);
+  const { targets, sitemapCount, contentCount } = await getTargets(pub, internal);
   const pages: SeoPage[] = [];
   const allJsonld = new Set<string>();
   const titleMap = new Map<string, string[]>();
   const descMap = new Map<string, string[]>();
+  const linkAcc = new Set<string>();
   for (const tg of targets) {
     try {
       const a = await analyzePage(tg.fetchUrl, tg.displayUrl, tg.label);
       pages.push(a.page);
+      a.links.forEach((l) => linkAcc.add(l));
       a.jsonld.forEach((t) => allJsonld.add(t));
       if (a.title) { const k = a.title.trim().toLowerCase(); titleMap.set(k, [...(titleMap.get(k) || []), tg.label]); }
       if (a.desc) { const k = a.desc.trim().toLowerCase(); descMap.set(k, [...(descMap.get(k) || []), tg.label]); }
@@ -296,6 +325,18 @@ export async function runSeoScan(withAi = true): Promise<SeoReport> {
   const dupDescs = [...descMap.values()].filter((v) => v.length > 1).length;
   site.push({ key: 'dup_title', label: 'Eindeutige Titles', status: dupTitles ? 'warn' : 'ok', detail: dupTitles ? `${dupTitles} doppelte Title-Gruppen` : 'alle eindeutig', cat: 'onpage' });
   site.push({ key: 'dup_desc', label: 'Eindeutige Descriptions', status: dupDescs ? 'warn' : 'ok', detail: dupDescs ? `${dupDescs} doppelte Description-Gruppen` : 'alle eindeutig', cat: 'onpage' });
+
+  // Sitemap-Abdeckung: bekannte Content-URLs vs. Sitemap-Einträge
+  const missingInSitemap = Math.max(0, contentCount - sitemapCount);
+  site.push({ key: 'sitemap_coverage', label: 'Sitemap-Abdeckung', status: missingInSitemap > 0 ? 'warn' : 'ok', detail: missingInSitemap > 0 ? `${sitemapCount}/${contentCount} Content-URLs in der Sitemap (${missingInSitemap} fehlen)` : `alle ${contentCount} Content-URLs enthalten`, cat: 'technik' });
+
+  // Broken-Link-Check (interne Links, gekappt)
+  const linkList = [...linkAcc].slice(0, MAX_LINK_CHECKS);
+  const brokenLinks: { url: string; status: number }[] = [];
+  for (const lp of linkList) {
+    try { const lr = await fetchRes(internal + lp, 6000); if (lr.status >= 400) brokenLinks.push({ url: pub + lp, status: lr.status }); } catch { /* */ }
+  }
+  site.push({ key: 'broken_links', label: 'Interne Links erreichbar', status: brokenLinks.length ? 'fail' : 'ok', detail: brokenLinks.length ? `${brokenLinks.length} defekt von ${linkList.length} geprüft` : `${linkList.length} geprüft, alle ok`, cat: 'technik' });
 
   const categories = catScores(pages, site);
   const siteScore = scoreOf(site);
@@ -314,7 +355,9 @@ export async function runSeoScan(withAi = true): Promise<SeoReport> {
 
   const partial: Omit<SeoReport, 'ai'> = {
     generatedAt: new Date().toISOString(), durationMs: Date.now() - t0, baseUrl: pub,
-    score, categories, strengths, pages, site, jsonldTypes: Array.from(allJsonld), errors, summary,
+    score, categories, strengths, pages, site, jsonldTypes: Array.from(allJsonld),
+    brokenLinks, coverage: { sitemap: sitemapCount, content: contentCount, scanned: pages.length },
+    errors, summary,
   };
   let ai: SeoReport['ai'] = null;
   if (withAi) { try { ai = await aiRecommendation(partial); } catch (e) { errors.push(`KI: ${(e as Error).message}`); } }
