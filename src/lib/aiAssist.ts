@@ -114,6 +114,7 @@ export const MODULE_SPECS: ModuleSpec[] = [
   { key: 'highlights', label: 'Highlights', schema: '{ "highlights": string[] (4-6 prägnante Stichpunkte, je < 12 Wörter) }' },
   { key: 'seo', label: 'SEO-Text', schema: '{ "seo_text": string (1 Absatz, keyword-reich, faktisch) }' },
   { key: 'leistungen', label: 'Unsere Leistungen', schema: '{ "leistungen_items": string[] (Leistungen/Inklusivleistungen als Stichpunkte) }' },
+  { key: 'ticket_categories', label: 'Ticket-Kategorien', schema: '{ "ticket_categories": [{ "name": string (z.B. "Kategorie 1"), "items": string[] (Inklusivleistungen je Kategorie), "note": string (1-2 Sätze Beschreibung der Kategorie) }] (1-3 Kategorien, von günstig zu Premium) }' },
   { key: 'wissenswertes', label: 'Wissenswertes (Accordion)', schema: '{ "wissenswertes_accordion_text": string (mehrere Absätze mit \\n\\n getrennt; praktische Infos: Anreise, Hotel, Tipps) }' },
   { key: 'faq', label: 'FAQ', schema: '{ "faqs": [{ "question": string, "answer": string }] (4-6 sinnvolle FAQ) }' },
 ];
