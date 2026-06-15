@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Ticket, Hotel, Wine, MapPin, Bus, Gift, Check, Star, ArrowRight } from 'lucide-react';
+import { useState } from 'react';
+import { Ticket, Hotel, Wine, MapPin, Bus, Gift, Check, Star, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 
 export interface PackageProInclude {
   name: string;
@@ -47,6 +48,7 @@ export default function PackageCardPro({
   id, eventSlug, badge, title, shortDescription, hotel, stars = 0, nights = 0,
   price, currency, popular, availableSpots, includes = [],
 }: PackageProProps) {
+  const [open, setOpen] = useState(false);
   const lowSpots = typeof availableSpots === 'number' && availableSpots > 0 && availableSpots <= 10;
   const href = `/booking?${eventSlug ? `event=${encodeURIComponent(eventSlug)}&` : ''}package=${encodeURIComponent(id)}&persons=2`;
 
@@ -92,7 +94,18 @@ export default function PackageCardPro({
       {includes.length > 0 && (
         <>
           <div className="my-3 border-t" style={{ borderColor: '#eef2f7' }} />
-          <ul className="flex flex-col gap-[7px] text-[12.5px]" style={{ color: '#33404d' }}>
+          {/* Mobile: Leistungen einklappbar (Vorschau spart Scrollen) */}
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            className="mb-1.5 flex items-center gap-1 text-[12px] font-bold sm:hidden"
+            style={{ color: NAVY }}
+            aria-expanded={open}
+          >
+            {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            {open ? 'Leistungen ausblenden' : `Leistungen anzeigen (${includes.length})`}
+          </button>
+          <ul className={`${open ? 'flex' : 'hidden'} flex-col gap-[7px] text-[12.5px] sm:flex`} style={{ color: '#33404d' }}>
             {includes.slice(0, 5).map((inc, i) => (
               <li key={i} className="flex items-center gap-[7px]">
                 <IncludeIcon k={inc.icon || inc.type} />
