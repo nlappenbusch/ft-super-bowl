@@ -13,6 +13,39 @@ import { listInboxMessages, markMessageRead, isGraphConfigured, getMailbox } fro
 import { findBookingByRequestNumber, graphMessageExists, addMessage } from './bookingStore';
 import { parseRequestNumber } from './emailTemplates';
 
+/**
+ * Entfernt den zitierten Original-Verlauf aus einer eingehenden Antwort, sodass
+ * im CRM nur der neue Text des Kunden steht (nicht die komplette mitzitierte Mail).
+ * Schneidet beim frühesten bekannten Zitat-Marker (Apple Mail, Outlook, Gmail,
+ * Thunderbird, "Am … schrieb", "On … wrote", "Von: … Gesendet:" usw.).
+ */
+export function stripQuotedReply(raw: string): string {
+  if (!raw) return raw;
+  const markers: RegExp[] = [
+    /<blockquote/i,
+    /<div[^>]*id=["']?divRplyFwdMsg/i,
+    /<div[^>]*id=["']?appendonsend/i,
+    /<div[^>]*class=["']?gmail_quote/i,
+    /<div[^>]*class=["']?moz-cite-prefix/i,
+    /-----\s*Ursprüngliche Nachricht\s*-----/i,
+    /-----\s*Original Message\s*-----/i,
+    /\bAm\s+\d{1,2}\.\s*\d{1,2}\.\s*\d{4}.{0,60}?schrieb\b/i,
+    /\bOn\s+.{0,80}?\bwrote:/i,
+    /<b>\s*Von:\s*<\/b>/i,
+    /\bVon:\s*.{0,120}?\bGesendet:/i,
+  ];
+  let cut = -1;
+  for (const re of markers) {
+    const mm = raw.match(re);
+    if (mm && mm.index !== undefined && (cut === -1 || mm.index < cut)) cut = mm.index;
+  }
+  if (cut <= 0) return raw;
+  let head = raw.slice(0, cut).replace(/(\s|<br\s*\/?>|<div>\s*<\/div>|&nbsp;| )+$/i, '');
+  const textOnly = head.replace(/<[^>]+>/g, '').replace(/&nbsp;| /g, ' ').trim();
+  // Falls vor dem Zitat praktisch nichts steht (reine Weiterleitung), Original behalten.
+  return textOnly.length < 1 ? raw : head;
+}
+
 export interface InboundPollResult {
   success: boolean;
   configured: boolean;
@@ -64,7 +97,7 @@ export async function runInboundPoll(): Promise<InboundPollResult> {
       from_email: m.fromAddress,
       to_email: '',
       subject: m.subject,
-      body: m.bodyHtml || m.bodyPreview,
+      body: stripQuotedReply(m.bodyHtml || m.bodyPreview),
       graph_message_id: m.id,
     });
     await markMessageRead(m.id);
