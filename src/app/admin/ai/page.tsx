@@ -5,7 +5,7 @@ import AdminShell from '@/components/admin/AdminShell';
 import {
   COLORS, SectionCard, InputField, Button, Field, SelectInput, TextArea, Spinner, Badge,
 } from '@/components/admin/ui';
-import { Sparkles, Save, Wand2, Link2, Image as ImageIcon, X } from 'lucide-react';
+import { Sparkles, Save, Wand2, Link2, Image as ImageIcon, X, Eye } from 'lucide-react';
 
 interface ModuleOpt { key: string; label: string }
 
@@ -28,6 +28,9 @@ export default function AiAdminPage() {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
   const [resultErr, setResultErr] = useState<string | null>(null);
+  const [fetching, setFetching] = useState(false);
+  const [preview, setPreview] = useState<{ title: string; chars: number; text: string } | null>(null);
+  const [status, setStatus] = useState('');
 
   const flash = (ok: boolean, msg: string) => { setToast({ ok, msg }); setTimeout(() => setToast(null), 5000); };
 
@@ -69,8 +72,20 @@ export default function AiAdminPage() {
     reader.readAsDataURL(f);
   };
 
+  const doFetch = async () => {
+    if (!sourceUrl.trim()) return;
+    setFetching(true); setPreview(null);
+    try {
+      const res = await fetch('/api/admin/ai/fetch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: sourceUrl }) });
+      const d = await res.json();
+      if (d.success) setPreview({ title: d.title, chars: d.chars, text: d.preview });
+      else flash(false, d.error || 'Abruf fehlgeschlagen.');
+    } catch { flash(false, 'Verbindungsfehler.'); } finally { setFetching(false); }
+  };
+
   const run = async () => {
     setRunning(true); setResult(null); setResultErr(null);
+    setStatus(sourceUrl ? 'Seite wird abgerufen & von der KI analysiert…' : 'KI schreibt…');
     try {
       const res = await fetch('/api/admin/ai/import', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -83,7 +98,7 @@ export default function AiAdminPage() {
       const d = await res.json();
       if (d.success) setResult(d.data);
       else setResultErr(d.error || 'Fehlgeschlagen.');
-    } catch { setResultErr('Verbindungsfehler.'); } finally { setRunning(false); }
+    } catch { setResultErr('Verbindungsfehler.'); } finally { setRunning(false); setStatus(''); }
   };
 
   return (
@@ -113,7 +128,13 @@ export default function AiAdminPage() {
         <SectionCard title="Anthropic-Konfiguration" description="Messages-API-Key (sk-ant-…) – wird serverseitig in settings.json gespeichert." icon={<Save className="h-5 w-5" />}
           actions={<Button variant="accent" size="sm" onClick={save} disabled={saving}>{saving ? <Spinner className="h-4 w-4 border-white" /> : <Save className="h-4 w-4" />} Speichern</Button>}>
           <div className="grid gap-4">
-            <InputField label="Modell" value={model} onChange={(e) => setModel(e.target.value)} placeholder="claude-sonnet-4-6" />
+            <Field label="Modell" hint="Sonnet = empfohlen (ausgewogen). Opus = höchste Qualität. Haiku = schnell & günstig.">
+              <SelectInput value={model} onChange={(e) => setModel(e.target.value)}>
+                <option value="claude-sonnet-4-6">Claude Sonnet 4.6 — empfohlen (ausgewogen)</option>
+                <option value="claude-opus-4-6">Claude Opus 4.6 — höchste Qualität</option>
+                <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 — schnell & günstig</option>
+              </SelectInput>
+            </Field>
             <InputField label="Anthropic API-Key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)}
               placeholder={hasKey ? '•••••••• (gesetzt – leer lassen = unverändert)' : 'sk-ant-api03-…'} />
             <p className="text-xs" style={{ color: '#9ca3af' }}>
@@ -139,8 +160,23 @@ export default function AiAdminPage() {
                 <Link2 className="h-4 w-4 text-gray-400" />
                 <input value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://faltintravel.com/…"
                   className="flex-1 rounded-lg border px-3 py-2 text-sm text-gray-900" style={{ borderColor: '#d8dde4' }} />
+                <Button variant="secondary" size="sm" onClick={doFetch} disabled={fetching || !sourceUrl.trim()}>
+                  {fetching ? <Spinner className="h-4 w-4" /> : <Eye className="h-4 w-4" />} Abrufen
+                </Button>
               </div>
             </Field>
+            {preview && (
+              <div className="rounded-lg border p-3" style={{ borderColor: '#cbd5e1', background: '#f8fafc' }}>
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold" style={{ color: COLORS.navy }}>
+                    <Eye className="mr-1 -mt-0.5 inline h-3.5 w-3.5" /> Gefetchter Inhalt: {preview.title || '(ohne Titel)'}
+                  </span>
+                  <span className="text-[11px] text-gray-400">{preview.chars.toLocaleString('de-DE')} Zeichen</span>
+                </div>
+                <div className="max-h-40 overflow-auto whitespace-pre-wrap text-xs leading-relaxed text-gray-600">{preview.text}{preview.chars > preview.text.length ? ' …' : ''}</div>
+                <div className="mt-1.5 text-[11px] text-gray-400">Diesen Text bekommt die KI als Quelle.</div>
+              </div>
+            )}
             <Field label="Anweisung (optional)" hint="z.B. kürzer und knackiger – oder: ergänze 5 FAQ zu Anreise und Hotel">
               <TextArea value={instruction} onChange={(e) => setInstruction(e.target.value)} rows={2} placeholder="Freie Anweisung an die KI…" />
             </Field>
@@ -161,6 +197,7 @@ export default function AiAdminPage() {
             <Button variant="accent" onClick={run} disabled={running || !configured}>
               {running ? <Spinner className="h-4 w-4 border-white" /> : <Sparkles className="h-4 w-4" />} Inhalt generieren
             </Button>
+            {running && status && <p className="text-xs" style={{ color: '#7c3aed' }}>{status}</p>}
             {!configured && <p className="text-xs" style={{ color: '#b45309' }}>Bitte zuerst einen API-Key speichern.</p>}
           </div>
         </SectionCard>
