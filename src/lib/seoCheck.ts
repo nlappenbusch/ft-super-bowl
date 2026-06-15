@@ -50,6 +50,16 @@ function baseUrl(): string {
   return (m.login_base_url || process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url || 'https://next.faltintravel.com').replace(/\/+$/, '');
 }
 
+/**
+ * Interne Basis-URL: Der Container scannt sich selbst über localhost. Die öffentliche
+ * Domain ist von innen oft nicht erreichbar (kein Hairpin-NAT) → sonst HTTP 0.
+ */
+function internalBase(): string {
+  return `http://127.0.0.1:${process.env.PORT || 3000}`;
+}
+
+interface ScanTarget { fetchUrl: string; displayUrl: string; label: string }
+
 async function fetchText(url: string, timeoutMs = 9000): Promise<{ ok: boolean; status: number; body: string; ctype: string }> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -102,12 +112,12 @@ function extractJsonLdTypes(html: string): string[] {
 }
 
 /** Analysiert eine einzelne Seite. */
-async function analyzePage(url: string, label: string): Promise<{ page: SeoPage; jsonld: string[] }> {
-  const r = await fetchText(url);
+async function analyzePage(fetchUrl: string, displayUrl: string, label: string): Promise<{ page: SeoPage; jsonld: string[] }> {
+  const r = await fetchText(fetchUrl);
   const checks: SeoCheck[] = [];
   if (!r.ok) {
     checks.push({ key: 'reachable', label: 'Erreichbarkeit', status: 'fail', detail: `HTTP ${r.status || '—'}` });
-    return { page: { url, label, score: 0, checks }, jsonld: [] };
+    return { page: { url: displayUrl, label, score: 0, checks }, jsonld: [] };
   }
   const html = r.body;
 
@@ -173,27 +183,26 @@ async function analyzePage(url: string, label: string): Promise<{ page: SeoPage;
       : { key: 'geo_facts', label: 'GEO: Fakten im HTML', status: 'warn', detail: 'keine Preis-Fakten im SSR-HTML (nur clientseitig?)' });
   }
 
-  return { page: { url, label, score: scoreOf(checks), checks }, jsonld };
+  return { page: { url: displayUrl, label, score: scoreOf(checks), checks }, jsonld };
 }
 
-/** URLs aus der Sitemap (gekappt auf MAX_PAGES, Startseite zuerst). */
-async function getUrls(base: string): Promise<string[]> {
-  const sm = await fetchText(`${base}/sitemap.xml`);
-  const urls: string[] = [];
+/** Scan-Ziele aus der Sitemap: intern fetchen, öffentlich anzeigen (gekappt auf MAX_PAGES). */
+async function getTargets(pub: string, internal: string): Promise<ScanTarget[]> {
+  const sm = await fetchText(`${internal}/sitemap.xml`);
+  const locs: string[] = [];
   if (sm.ok) {
     const re = /<loc>([^<]+)<\/loc>/gi;
     let m: RegExpExecArray | null;
-    while ((m = re.exec(sm.body))) urls.push(m[1].trim());
+    while ((m = re.exec(sm.body))) locs.push(m[1].trim());
   }
-  const uniq = Array.from(new Set(urls.length ? urls : [base]));
-  // Startseite zuerst, dann Rest; auf MAX_PAGES kappen
-  uniq.sort((a, b) => (a === base ? -1 : b === base ? 1 : 0));
-  return uniq.slice(0, MAX_PAGES);
-}
-
-function labelFromUrl(u: string, base: string): string {
-  const p = u.replace(base, '') || '/';
-  return p === '/' ? 'Startseite' : p;
+  const uniq = Array.from(new Set(locs.length ? locs : [pub]));
+  const targets: ScanTarget[] = uniq.map((loc) => {
+    let p = '/';
+    try { p = new URL(loc).pathname || '/'; } catch { p = loc.startsWith('/') ? loc : '/'; }
+    return { fetchUrl: internal + p, displayUrl: loc.startsWith('http') ? loc : pub + p, label: p === '/' ? 'Startseite' : p };
+  });
+  targets.sort((a, b) => (a.label === 'Startseite' ? -1 : b.label === 'Startseite' ? 1 : 0));
+  return targets.slice(0, MAX_PAGES);
 }
 
 async function siteChecks(base: string, errors: string[]): Promise<SeoCheck[]> {
@@ -240,24 +249,25 @@ async function aiRecommendation(report: Omit<SeoReport, 'ai'>): Promise<{ genera
 
 export async function runSeoScan(withAi = true): Promise<SeoReport> {
   const t0 = Date.now();
-  const base = baseUrl();
+  const pub = baseUrl();
+  const internal = internalBase();
   const errors: string[] = [];
 
-  const urls = await getUrls(base);
+  const targets = await getTargets(pub, internal);
   const pages: SeoPage[] = [];
   const allJsonld = new Set<string>();
-  // sequenziell mit kleinem Limit, um den eigenen Server nicht zu fluten
-  for (const u of urls) {
+  // sequenziell, um den eigenen Server nicht zu fluten
+  for (const tg of targets) {
     try {
-      const { page, jsonld } = await analyzePage(u, labelFromUrl(u, base));
+      const { page, jsonld } = await analyzePage(tg.fetchUrl, tg.displayUrl, tg.label);
       pages.push(page);
       jsonld.forEach((t) => allJsonld.add(t));
     } catch (e) {
-      errors.push(`${u}: ${(e as Error).message}`);
+      errors.push(`${tg.displayUrl}: ${(e as Error).message}`);
     }
   }
 
-  const site = await siteChecks(base, errors);
+  const site = await siteChecks(internal, errors);
 
   // Gesamt-Score: Mittel aus Seiten-Scores + Site-Checks
   const siteScore = scoreOf(site);
@@ -275,7 +285,7 @@ export async function runSeoScan(withAi = true): Promise<SeoReport> {
   const partial: Omit<SeoReport, 'ai'> = {
     generatedAt: new Date().toISOString(),
     durationMs: Date.now() - t0,
-    baseUrl: base,
+    baseUrl: pub,
     score,
     pages,
     site,
