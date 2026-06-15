@@ -60,6 +60,7 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=DEIN_GOOGLE_MAPS_KEY
 NEXT_PUBLIC_SITE_NAME=Faltin Travel Sports Events
 
 # Laufzeit (Server-seitig) – Mail optional, sonst im Admin-Panel pflegbar
+AUTH_SECRET=ein-langes-zufaelliges-geheimnis
 GRAPH_TENANT_ID=
 GRAPH_CLIENT_ID=
 GRAPH_CLIENT_SECRET=

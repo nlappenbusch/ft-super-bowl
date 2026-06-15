@@ -77,6 +77,13 @@ export interface SiteSettings {
   admin_password: string;
 }
 
+export interface AiSettings {
+  /** Anthropic Messages API-Key (sk-ant-...) */
+  anthropic_api_key: string;
+  /** Modell-ID, z.B. claude-sonnet-4-6 */
+  model: string;
+}
+
 export interface AllSettings {
   company: CompanySettings;
   bank: BankSettings;
@@ -84,6 +91,7 @@ export interface AllSettings {
   event: EventSettings;
   site: SiteSettings;
   mail: MailSettings;
+  ai: AiSettings;
   updated_at?: string;
 }
 
@@ -166,6 +174,10 @@ const DEFAULT_SETTINGS: AllSettings = {
     login_base_url: '',
     notify_to: '',
   },
+  ai: {
+    anthropic_api_key: '',
+    model: 'claude-sonnet-4-6',
+  },
 };
 
 function ensureDataDir() {
@@ -191,6 +203,7 @@ export function getSettings(): AllSettings {
       event: { ...DEFAULT_SETTINGS.event, ...parsed.event },
       site: { ...DEFAULT_SETTINGS.site, ...parsed.site },
       mail: { ...DEFAULT_SETTINGS.mail, ...parsed.mail },
+      ai: { ...DEFAULT_SETTINGS.ai, ...parsed.ai },
       updated_at: parsed.updated_at,
     };
   } catch {
@@ -208,6 +221,7 @@ export function saveSettings(updates: Partial<AllSettings>): AllSettings {
     event: { ...current.event, ...(updates.event || {}) },
     site: { ...current.site, ...(updates.site || {}) },
     mail: { ...current.mail, ...(updates.mail || {}) },
+    ai: { ...current.ai, ...(updates.ai || {}) },
     updated_at: new Date().toISOString(),
   };
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(merged, null, 2), 'utf-8');

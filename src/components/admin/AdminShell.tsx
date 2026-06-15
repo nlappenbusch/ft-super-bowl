@@ -8,8 +8,7 @@ import {
   LayoutDashboard, Inbox, KanbanSquare, Wallet,
   CalendarDays, Layers, Package, HelpCircle, Tag, MapPin,
   Mail, Settings, LogOut, Menu,
-  Users, Timer, Plane, ListTodo,
-} from 'lucide-react';
+  Users, Timer, Plane, ListTodo, Trophy, Sparkles } from 'lucide-react';
 import { COLORS } from './ui';
 
 async function doLogout() {
@@ -46,6 +45,7 @@ const NAV: NavGroup[] = [
       { href: '/admin/faqs', label: 'FAQs', icon: <HelpCircle className={ICON} /> },
       { href: '/admin/categories', label: 'Kategorien SEO', icon: <Tag className={ICON} /> },
       { href: '/admin/pins', label: 'Lageplan-Icons', icon: <MapPin className={ICON} /> },
+      { href: '/admin/tippspiel', label: 'WM-Tippspiel', icon: <Trophy className={ICON} /> },
     ],
   },
   {
@@ -61,6 +61,7 @@ const NAV: NavGroup[] = [
     label: 'System',
     items: [
       { href: '/admin/mail', label: 'E-Mail / M365', icon: <Mail className={ICON} /> },
+      { href: '/admin/ai', label: 'KI-Redaktion', icon: <Sparkles className={ICON} /> },
       { href: '/admin/settings', label: 'Einstellungen', icon: <Settings className={ICON} /> },
     ],
   },

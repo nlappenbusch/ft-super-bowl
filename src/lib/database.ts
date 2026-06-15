@@ -199,6 +199,63 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_time_entries_employee_date ON time_entries(employee_id, date);
     CREATE INDEX IF NOT EXISTS idx_vacation_requests_employee ON vacation_requests(employee_id, start_date);
     CREATE INDEX IF NOT EXISTS idx_staff_tasks_assignee ON staff_tasks(assignee_id, status);
+
+    -- Externe Nutzer des WM-Tippspiels
+    CREATE TABLE IF NOT EXISTS tippspiel_users (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL UNIQUE,
+      display_name TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      last_login_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_tippspiel_users_email ON tippspiel_users(email);
+
+    CREATE TABLE IF NOT EXISTS tippspiel_magic_tokens (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      expires_at INTEGER NOT NULL,
+      used_at INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS tippspiel_tips (
+      user_id TEXT NOT NULL,
+      match_id INTEGER NOT NULL,
+      home_score INTEGER NOT NULL,
+      away_score INTEGER NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, match_id),
+      FOREIGN KEY (user_id) REFERENCES tippspiel_users(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS tippspiel_results (
+      match_id INTEGER PRIMARY KEY,
+      home_score INTEGER NOT NULL,
+      away_score INTEGER NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS tippspiel_groups (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      invite_code TEXT NOT NULL UNIQUE,
+      owner_id TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (owner_id) REFERENCES tippspiel_users(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS tippspiel_group_members (
+      group_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      joined_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (group_id, user_id),
+      FOREIGN KEY (group_id) REFERENCES tippspiel_groups(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES tippspiel_users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_tippspiel_tips_user ON tippspiel_tips(user_id);
+    CREATE INDEX IF NOT EXISTS idx_tippspiel_group_members_user ON tippspiel_group_members(user_id);
   `);
 
   // --- Migrationen für bestehende Installationen ---------------------------

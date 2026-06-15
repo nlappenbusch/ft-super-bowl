@@ -1,0 +1,69 @@
+.tip-register-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  border-radius: 5px;
+  padding: 8px 11px;
+  color: white !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+}
+
+.tip-register-button:hover {
+  background: #d9531e !important;
+  border-color: #d9531e !important;
+}
+
+.tip-auth-error {
+  color: #b42318 !important;
+  background: #fff0ed;
+  border-radius: 5px;
+  padding: 8px 10px;
+  font-size: 10px !important;
+}
+
+.tip-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+  padding: 12px 15px;
+  border-left: 4px solid #d9531e;
+  border-radius: 6px;
+  background: white;
+  box-shadow: 0 6px 18px rgba(20, 48, 71, 0.08);
+  color: #143047;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tip-notice button {
+  border: 0;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.tip-empty {
+  margin: 14px 4px;
+  color: #7b8791;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.tip-footer-link {
+  color: #aebac5;
+  text-decoration: none;
+}
+
+@media (max-width: 600px) {
+  .tip-register-button {
+    padding: 7px 9px;
+  }
+
+  .tip-register-button svg {
+    display: none;
+  }
+}

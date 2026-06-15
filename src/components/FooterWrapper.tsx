@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation';
 import Footer from './Footer';
 
-const EXCLUDED_PREFIXES = ['/admin', '/embed', '/wordpress-preview', '/shortcode-test'];
+const EXCLUDED_PREFIXES = ['/admin', '/embed', '/wordpress-preview', '/shortcode-test', '/tippspiel'];
 
 export default function FooterWrapper() {
   const pathname = usePathname();

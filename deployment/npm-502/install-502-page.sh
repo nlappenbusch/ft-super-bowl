@@ -97,4 +97,4 @@ echo ""
 echo "✔ Fertig. Gilt fuer ALLE Proxy Hosts dieses NPM."
 echo "  Test: App-Container stoppen und Domain aufrufen."
 echo "  Entfernen: Block zwischen den ft-502-Markern aus $CONF loeschen + reload,"
-echo "  oder Backup zurueckspiele
+echo "  oder Backup zurueckspielen: $BK"
