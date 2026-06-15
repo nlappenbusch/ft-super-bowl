@@ -84,6 +84,17 @@ export interface AiSettings {
   model: string;
 }
 
+export interface GithubSettings {
+  /** Personal Access Token (repo-Schreibrechte) – für Auto-Fix-PRs. Leer = deaktiviert. */
+  token: string;
+  /** Repo-Owner, z.B. "nlappenbusch" */
+  owner: string;
+  /** Repo-Name, z.B. "ft-super-bowl" */
+  repo: string;
+  /** Ziel-Branch für PRs */
+  base_branch: string;
+}
+
 export interface AllSettings {
   company: CompanySettings;
   bank: BankSettings;
@@ -92,6 +103,7 @@ export interface AllSettings {
   site: SiteSettings;
   mail: MailSettings;
   ai: AiSettings;
+  github: GithubSettings;
   updated_at?: string;
 }
 
@@ -177,6 +189,12 @@ const DEFAULT_SETTINGS: AllSettings = {
   ai: {
     anthropic_api_key: '',
     model: 'claude-sonnet-4-6',
+  },
+  github: {
+    token: '',
+    owner: 'nlappenbusch',
+    repo: 'ft-super-bowl',
+    base_branch: 'main',
   },
 };
 

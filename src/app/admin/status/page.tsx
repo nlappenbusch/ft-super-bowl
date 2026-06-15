@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import AdminShell from '@/components/admin/AdminShell';
 import { COLORS, SectionCard, Spinner, Badge, Button, EmptyState } from '@/components/admin/ui';
-import { Activity, RefreshCw, ShieldAlert, ShieldCheck, PackageCheck, Sparkles, FileDown } from 'lucide-react';
+import { Activity, RefreshCw, ShieldAlert, ShieldCheck, PackageCheck, Sparkles, FileDown, Wrench, GitPullRequest, Download, KeyRound, CheckCircle2 } from 'lucide-react';
 
 type HealthStatus = 'ok' | 'warn' | 'down';
 interface HealthItem { key: string; label: string; status: HealthStatus; detail: string }
@@ -12,6 +12,9 @@ type VersionState = 'current' | 'patch' | 'minor' | 'major' | 'unknown';
 interface VersionRow { name: string; installed: string; latest: string; state: VersionState; source: string }
 interface VulnRow { package: string; version: string; id: string; cve: string; severity: string; summary: string; url: string }
 interface StatusReport { generatedAt: string; durationMs: number; versions: VersionRow[]; vulnerabilities: VulnRow[]; ai: { generatedAt: string; text: string } | null; errors: string[] }
+interface FixItem { name: string; from: string; to: string; type: string; dev: boolean; security: boolean }
+interface FixPlan { scope: string; items: FixItem[]; summary: { total: number; security: number; major: number; minor: number; patch: number }; nodeHint: string | null }
+interface GithubCfg { configured: boolean; owner: string; repo: string; base: string }
 
 const DOT: Record<HealthStatus, string> = { ok: '#16a34a', warn: '#d97706', down: '#dc2626' };
 const STATE_BADGE: Record<VersionState, { tone: 'ok' | 'info' | 'warn' | 'danger' | 'muted'; label: string }> = {
@@ -70,6 +73,24 @@ export default function StatusPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
+  // Auto-Fix
+  const [fixScope, setFixScope] = useState<'security' | 'minor' | 'all'>('all');
+  const [plan, setPlan] = useState<FixPlan | null>(null);
+  const [github, setGithub] = useState<GithubCfg | null>(null);
+  const [fixAi, setFixAi] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [prLoading, setPrLoading] = useState(false);
+  const [prResult, setPrResult] = useState<{ url?: string; error?: string } | null>(null);
+  const [token, setToken] = useState('');
+  const [savingToken, setSavingToken] = useState(false);
+
+  const loadFixPlan = useCallback(async (scope: 'security' | 'minor' | 'all') => {
+    setFixAi(null); setPrResult(null);
+    try {
+      const res = await fetch(`/api/admin/status/fix-plan?scope=${scope}`).then((r) => r.json());
+      if (res.success) { setPlan(res.plan); setGithub(res.github); }
+    } catch { /* ignore */ }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,6 +108,32 @@ export default function StatusPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadFixPlan(fixScope); }, [fixScope, loadFixPlan, report]);
+
+  const loadFixAi = async () => {
+    setAiLoading(true);
+    try {
+      const res = await fetch(`/api/admin/status/fix-plan?scope=${fixScope}&ai=1`).then((r) => r.json());
+      if (res.success) setFixAi(res.ai || 'Keine KI-Hinweise (Key fehlt?).');
+    } finally { setAiLoading(false); }
+  };
+  const createPr = async () => {
+    if (!confirm(`GitHub-PR mit ${plan?.summary.total ?? 0} Updates anlegen (Branch + Pull Request)? Es wird nichts gemergt/deployt – das machst du nach CI-Grün selbst.`)) return;
+    setPrLoading(true); setPrResult(null);
+    try {
+      const res = await fetch('/api/admin/status/fix-pr', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scope: fixScope }) }).then((r) => r.json());
+      setPrResult(res.success ? { url: res.url } : { error: res.error });
+    } catch (e) { setPrResult({ error: (e as Error).message }); }
+    finally { setPrLoading(false); }
+  };
+  const saveToken = async () => {
+    setSavingToken(true);
+    try {
+      const res = await fetch('/api/admin/status/github', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) }).then((r) => r.json());
+      if (res.success) { setToken(''); const g = await fetch('/api/admin/status/github').then((r) => r.json()); setGithub((prev) => prev ? { ...prev, configured: !!g.data?.has_token } : prev); }
+      else alert('Speichern fehlgeschlagen: ' + (res.error || ''));
+    } finally { setSavingToken(false); }
+  };
 
   const runScan = async () => {
     setScanning(true);
@@ -224,6 +271,119 @@ export default function StatusPage() {
                 {refreshing ? 'Report wird im Hintergrund erstellt – in ~1 Min. erneut laden.' : 'Noch keine KI-Empfehlung. Mit „Jetzt prüfen“ erzeugen (nutzt den Anthropic-Key aus KI-Redaktion).'}
               </p>
             )}
+          </SectionCard>
+
+          {/* AUTO-FIX */}
+          <SectionCard
+            title="Auto-Fix"
+            description="Bereitet die Updates vor (Prod kann sich nicht selbst updaten): Upgrade-Skript & aktualisierte package.json zum Download – oder direkt ein GitHub-PR. CI baut & deployt erst nach deinem Merge."
+            icon={<Wrench className="h-5 w-5" />}
+          >
+            <div className="grid gap-4">
+              {/* Umfang */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold" style={{ color: COLORS.navy }}>Umfang:</span>
+                {([['security', 'Nur Sicherheit'], ['minor', '+ Minor/Patch'], ['all', 'Alles inkl. Major']] as const).map(([k, lbl]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setFixScope(k)}
+                    className="rounded-full border px-3 py-1 text-xs font-semibold transition"
+                    style={fixScope === k
+                      ? { background: COLORS.navy, color: '#fff', borderColor: COLORS.navy }
+                      : { background: '#fff', color: COLORS.navy, borderColor: COLORS.stroke }}
+                  >
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+
+              {!plan ? (
+                <p className="text-sm text-gray-500">Plan wird geladen …</p>
+              ) : plan.summary.total === 0 ? (
+                <EmptyState icon={<CheckCircle2 className="h-6 w-6" />} title="Nichts zu tun." description="Im gewählten Umfang sind keine Updates verfügbar." />
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <Badge tone="navy">{plan.summary.total} Updates</Badge>
+                    {plan.summary.security > 0 && <Badge tone="danger">{plan.summary.security} Sicherheit</Badge>}
+                    {plan.summary.major > 0 && <Badge tone="warn">{plan.summary.major} Major</Badge>}
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <tbody>
+                        {plan.items.map((it) => (
+                          <tr key={it.name} className="border-t" style={{ borderColor: COLORS.stroke }}>
+                            <td className="py-1.5 pr-3 font-semibold" style={{ color: COLORS.navy }}>
+                              {it.security && <span title="sicherheitsrelevant">🔒 </span>}{it.name}{it.dev && <span className="text-gray-400"> (dev)</span>}
+                            </td>
+                            <td className="py-1.5 pr-3 text-gray-500">{it.from} → {it.to}</td>
+                            <td className="py-1.5"><Badge tone={it.type === 'major' ? 'danger' : it.type === 'minor' ? 'warn' : 'info'}>{it.type}</Badge></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {plan.nodeHint && <p className="text-xs text-gray-500">ℹ {plan.nodeHint}</p>}
+
+                  {/* Aktionen: Download + KI */}
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="secondary" onClick={() => window.open(`/api/admin/status/fix-plan?scope=${fixScope}&format=script`, '_blank')}>
+                      <Download className="h-4 w-4" /> Upgrade-Skript (.sh)
+                    </Button>
+                    <Button variant="secondary" onClick={() => window.open(`/api/admin/status/fix-plan?scope=${fixScope}&format=pkg`, '_blank')}>
+                      <Download className="h-4 w-4" /> package.json
+                    </Button>
+                    <Button variant="secondary" onClick={loadFixAi} disabled={aiLoading}>
+                      {aiLoading ? <Spinner className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />} KI-Hinweise
+                    </Button>
+                  </div>
+                  {fixAi && (
+                    <div className="rounded-xl border p-3 text-sm leading-relaxed text-gray-700" style={{ borderColor: COLORS.stroke, background: '#f7f9fb' }} dangerouslySetInnerHTML={{ __html: mdToHtml(fixAi) }} />
+                  )}
+
+                  {/* GitHub-PR */}
+                  <div className="rounded-xl border p-3" style={{ borderColor: COLORS.stroke }}>
+                    <div className="mb-2 flex items-center gap-2 text-sm font-semibold" style={{ color: COLORS.navy }}>
+                      <GitPullRequest className="h-4 w-4" /> Automatischer GitHub-PR
+                    </div>
+                    {github?.configured ? (
+                      <div className="flex flex-col gap-2">
+                        <div className="text-xs text-gray-500">Ziel: {github.owner}/{github.repo} · Branch aus {github.base}. Es wird nur ein PR erstellt – Merge & Deploy entscheidest du.</div>
+                        <div>
+                          <Button variant="accent" onClick={createPr} disabled={prLoading}>
+                            {prLoading ? <Spinner className="h-4 w-4 border-white" /> : <GitPullRequest className="h-4 w-4" />} GitHub-PR erstellen
+                          </Button>
+                        </div>
+                        {prResult?.url && (
+                          <a href={prResult.url} target="_blank" rel="noreferrer" className="text-sm font-semibold underline" style={{ color: COLORS.accent }}>✓ PR erstellt – öffnen ({prResult.url.split('/').pop()})</a>
+                        )}
+                        {prResult?.error && <p className="text-sm" style={{ color: COLORS.danger }}>Fehler: {prResult.error}</p>}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        <div className="text-xs text-gray-500">Noch kein GitHub-Token hinterlegt. Personal Access Token (Repo-Schreibrechte) eingeben, um PRs direkt aus dem Admin zu erstellen.</div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="inline-flex items-center gap-1 text-gray-400"><KeyRound className="h-4 w-4" /></span>
+                          <input
+                            type="password"
+                            value={token}
+                            onChange={(e) => setToken(e.target.value)}
+                            placeholder="ghp_… (wird verschlüsselt in den Settings gespeichert)"
+                            className="min-w-[260px] flex-1 rounded-lg border px-3 py-2 text-sm"
+                            style={{ borderColor: COLORS.stroke }}
+                          />
+                          <Button variant="secondary" onClick={saveToken} disabled={savingToken || !token.trim()}>
+                            {savingToken ? <Spinner className="h-4 w-4" /> : <KeyRound className="h-4 w-4" />} Speichern
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </SectionCard>
 
           {report?.errors && report.errors.length > 0 && (
