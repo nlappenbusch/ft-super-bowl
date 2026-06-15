@@ -241,6 +241,17 @@ export async function listInboxMessages(
   }));
 }
 
+/** Health-Check fürs M365/Graph: Ist es konfiguriert und lässt sich ein Token holen? */
+export async function graphHealth(): Promise<{ configured: boolean; tokenOk: boolean; error?: string }> {
+  if (!isGraphConfigured()) return { configured: false, tokenOk: false };
+  try {
+    const token = await getGraphToken();
+    return { configured: true, tokenOk: !!token, error: token ? undefined : 'Kein Token erhalten' };
+  } catch (e) {
+    return { configured: true, tokenOk: false, error: (e as Error).message };
+  }
+}
+
 export async function markMessageRead(messageId: string): Promise<void> {
   if (!isGraphConfigured()) return;
   const token = await getGraphToken();
