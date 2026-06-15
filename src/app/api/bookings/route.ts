@@ -7,6 +7,7 @@ import {
   confirmationEmailHtml, confirmationSubject,
   internalNotificationHtml, internalNotificationSubject,
 } from '@/lib/emailTemplates';
+import { linkBookingToCustomer } from '@/lib/customerStore';
 
 /**
  * CORS: erlaubt das Anfrage-Formular auf WordPress ([faltin_anfrage]).
@@ -53,6 +54,16 @@ export async function POST(request: Request) {
     const firstTraveler = Array.isArray(body.travelers) ? body.travelers[0] : null;
     const firstName = firstTraveler?.firstName || firstTraveler?.first_name || body.email.split('@')[0];
     const lastName = firstTraveler?.lastName || firstTraveler?.last_name || '';
+
+    // Kunde herleiten/verknüpfen (E-Mail = eindeutige ID)
+    try {
+      linkBookingToCustomer((booking as { id: string }).id, body.email, {
+        name: [firstName, lastName].filter(Boolean).join(' ') || undefined,
+        phone: body.phone,
+      });
+    } catch (custErr) {
+      console.warn('[Customer] Verknuepfung fehlgeschlagen (non-fatal):', custErr);
+    }
 
     // Event laden (für Brevo-Liste + Event-Name in der Mail)
     let event: Awaited<ReturnType<typeof getEventBySlug>> = null;

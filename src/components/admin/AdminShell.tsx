@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Inbox, KanbanSquare, Wallet,
   CalendarDays, Layers, Package, HelpCircle, Tag, MapPin,
   Mail, Settings, LogOut, Menu,
-  Users, Timer, Plane, ListTodo, Trophy, Sparkles } from 'lucide-react';
+  Users, Timer, Plane, ListTodo, Trophy, Sparkles, Contact } from 'lucide-react';
 import { COLORS } from './ui';
 
 async function doLogout() {
@@ -33,6 +33,7 @@ const NAV: NavGroup[] = [
     items: [
       { href: '/admin/buchungen', label: 'Buchungen', icon: <Inbox className={ICON} /> },
       { href: '/admin/crm', label: 'CRM', icon: <KanbanSquare className={ICON} /> },
+      { href: '/admin/kunden', label: 'Kunden', icon: <Contact className={ICON} /> },
       { href: '/admin/finanzen', label: 'Finanzen', icon: <Wallet className={ICON} /> },
     ],
   },
