@@ -27,6 +27,7 @@ export default function EventContactForm({ eventSlug, eventName, events, matchOp
     if (selectedMatch !== undefined) setMatch(selectedMatch);
   }, [selectedMatch]);
   const [form, setForm] = useState({
+    salutation: '',
     firstName: '',
     lastName: '',
     email: '',
@@ -67,7 +68,10 @@ export default function EventContactForm({ eventSlug, eventName, events, matchOp
           numberOfPersons: 1,
           doubleRooms: 0,
           singleRooms: 0,
-          travelers: [{ firstName: form.firstName, lastName: form.lastName, email: form.email }],
+          travelers: [{ salutation: form.salutation, firstName: form.firstName, lastName: form.lastName, email: form.email }],
+          salutation: form.salutation,
+          firstName: form.firstName,
+          lastName: form.lastName,
           email: form.email,
           phone: form.phone,
           message: match ? `Wunschspiel: ${match}\n\n${form.message}`.trim() : form.message,
@@ -175,6 +179,24 @@ export default function EventContactForm({ eventSlug, eventName, events, matchOp
             </select>
           </div>
         )}
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">
+            <User className="inline w-3.5 h-3.5 mr-1 -mt-0.5" /> Anrede
+          </label>
+          <select
+            value={form.salutation}
+            onChange={(e) => setForm((f) => ({ ...f, salutation: e.target.value }))}
+            className="w-full border rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none transition bg-white"
+            style={{ borderColor: '#e5e8ed' }}
+            onFocus={(e) => (e.target.style.borderColor = '#143047')}
+            onBlur={(e) => (e.target.style.borderColor = '#e5e8ed')}
+          >
+            <option value="">Keine Angabe</option>
+            <option value="herr">Herr</option>
+            <option value="frau">Frau</option>
+            <option value="divers">Divers</option>
+          </select>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">

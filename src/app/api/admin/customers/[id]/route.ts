@@ -19,7 +19,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ success: true, data: getCustomer(id) });
     }
 
-    const fields = ['name', 'company', 'phone', 'street', 'zip', 'city', 'country', 'notes'] as const;
+    const fields = ['salutation', 'name', 'company', 'phone', 'street', 'zip', 'city', 'country', 'notes'] as const;
     const updates: CustomerUpdate = {};
     for (const f of fields) {
       if (f in body) updates[f] = String(body[f] ?? '');

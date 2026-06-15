@@ -361,6 +361,17 @@ export default function AdminEventsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [pdfUploading, setPdfUploading] = useState(false);
 
+  function insertAutoReplyToken(token: string) {
+    const el = document.getElementById('ev-f-autoreply-msg') as HTMLTextAreaElement | null;
+    const cur = form.auto_reply_message || '';
+    if (!el) { updateField('auto_reply_message', cur + token); return; }
+    const start = el.selectionStart ?? cur.length;
+    const end = el.selectionEnd ?? cur.length;
+    const next = cur.slice(0, start) + token + cur.slice(end);
+    updateField('auto_reply_message', next);
+    requestAnimationFrame(() => { el.focus(); const p = start + token.length; el.setSelectionRange(p, p); });
+  }
+
   async function handleAutoReplyPdfUpload(file: File) {
     setPdfUploading(true);
     try {
@@ -1012,14 +1023,35 @@ export default function AdminEventsPage() {
                         hint="Leer lassen = Standard-Betreff. Die Anfragenummer [RQ-…] wird automatisch fürs Threading angehängt."
                       />
 
-                      <TextAreaField
-                        label="Nachricht"
-                        value={form.auto_reply_message}
-                        onChange={(event) => updateField('auto_reply_message', event.target.value)}
-                        rows={8}
-                        placeholder={'Vielen Dank für Ihre unverbindliche Anfrage …\n\nIm Anhang finden Sie unsere aktuellen Angebote.\n\nGerne melden wir uns persönlich bei Ihnen.'}
-                        hint="Reiner Text, Zeilenumbrüche bleiben erhalten. Wird automatisch ins Faltin-Markendesign (Logo/Header/Footer) gesetzt. Anrede & Grußformel ergänzt das System."
-                      />
+                      <div>
+                        <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-semibold" style={{ color: COLORS.navy }}>Platzhalter einfügen:</span>
+                          {[
+                            { t: '{{anrede}}', l: 'Anrede' },
+                            { t: '{{vorname}}', l: 'Vorname' },
+                            { t: '{{nachname}}', l: 'Nachname' },
+                          ].map((tok) => (
+                            <button
+                              key={tok.t}
+                              type="button"
+                              onClick={() => insertAutoReplyToken(tok.t)}
+                              className="rounded-full border px-2.5 py-1 text-xs font-semibold transition hover:opacity-80"
+                              style={{ borderColor: COLORS.accent, color: COLORS.accent, background: '#fff7f3' }}
+                            >
+                              + {tok.l}
+                            </button>
+                          ))}
+                        </div>
+                        <TextAreaField
+                          id="ev-f-autoreply-msg"
+                          label="Nachricht"
+                          value={form.auto_reply_message}
+                          onChange={(event) => updateField('auto_reply_message', event.target.value)}
+                          rows={8}
+                          placeholder={'Vielen Dank für Ihre unverbindliche Anfrage …\n\nIm Anhang finden Sie unsere aktuellen Angebote.\n\nGerne melden wir uns persönlich bei Ihnen.'}
+                          hint="Platzhalter: {{anrede}} = „Sehr geehrte/r Herr/Frau“, {{vorname}}, {{nachname}}. Beispiel-Begrüßung: „{{anrede}} {{nachname}},“. Lässt du die Begrüßung weg, setzen wir automatisch eine geschlechtskorrekte Anrede davor. Wird ins Faltin-Markendesign gesetzt."
+                        />
+                      </div>
 
                       <div className="rounded-xl border px-3 py-3" style={{ borderColor: COLORS.stroke }}>
                         <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: COLORS.navy }}>

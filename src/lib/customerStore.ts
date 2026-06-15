@@ -28,6 +28,7 @@ function ensureSchema() {
       id TEXT PRIMARY KEY,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      salutation TEXT DEFAULT '',
       name TEXT DEFAULT '',
       company TEXT DEFAULT '',
       phone TEXT DEFAULT '',
@@ -54,6 +55,15 @@ function ensureSchema() {
   } catch {
     /* booking_requests evtl. noch nicht da – wird beim ersten Booking nachgezogen */
   }
+  // salutation an bestehende customers-Tabelle nachziehen (Migration)
+  try {
+    const ccols = db.prepare(`PRAGMA table_info(customers)`).all() as Array<{ name: string }>;
+    if (ccols.length && !ccols.some((c) => c.name === 'salutation')) {
+      db.exec(`ALTER TABLE customers ADD COLUMN salutation TEXT DEFAULT ''`);
+    }
+  } catch {
+    /* ignore */
+  }
 }
 ensureSchema();
 
@@ -61,6 +71,7 @@ export interface Customer {
   id: string;
   created_at: string;
   updated_at: string;
+  salutation: string;
   name: string;
   company: string;
   phone: string;
@@ -94,21 +105,23 @@ export function findCustomerIdByEmail(email: string): string | null {
  */
 export function upsertCustomerByEmail(
   email: string,
-  data?: { name?: string; phone?: string }
+  data?: { name?: string; phone?: string; salutation?: string }
 ): string {
   const e = normEmail(email);
   if (!e) throw new Error('E-Mail fehlt');
 
   const existingId = findCustomerIdByEmail(e);
   if (existingId) {
-    if (data?.name || data?.phone) {
-      const cur = db.prepare(`SELECT name, phone FROM customers WHERE id = ?`).get(existingId) as
-        | { name: string; phone: string }
+    if (data?.name || data?.phone || data?.salutation) {
+      const cur = db.prepare(`SELECT salutation, name, phone FROM customers WHERE id = ?`).get(existingId) as
+        | { salutation: string; name: string; phone: string }
         | undefined;
       if (cur) {
+        const salutation = cur.salutation?.trim() ? cur.salutation : data?.salutation || '';
         const name = cur.name?.trim() ? cur.name : data?.name || '';
         const phone = cur.phone?.trim() ? cur.phone : data?.phone || '';
-        db.prepare(`UPDATE customers SET name = ?, phone = ?, updated_at = datetime('now') WHERE id = ?`).run(
+        db.prepare(`UPDATE customers SET salutation = ?, name = ?, phone = ?, updated_at = datetime('now') WHERE id = ?`).run(
+          salutation,
           name,
           phone,
           existingId
@@ -120,8 +133,8 @@ export function upsertCustomerByEmail(
 
   const id = crypto.randomUUID();
   db.prepare(
-    `INSERT INTO customers (id, name, phone) VALUES (?, ?, ?)`
-  ).run(id, data?.name || '', data?.phone || '');
+    `INSERT INTO customers (id, salutation, name, phone) VALUES (?, ?, ?, ?)`
+  ).run(id, data?.salutation || '', data?.name || '', data?.phone || '');
   db.prepare(
     `INSERT INTO customer_emails (email, customer_id, is_primary) VALUES (?, ?, 1)`
   ).run(e, id);
@@ -132,7 +145,7 @@ export function upsertCustomerByEmail(
 export function linkBookingToCustomer(
   bookingId: string,
   email: string,
-  data?: { name?: string; phone?: string }
+  data?: { name?: string; phone?: string; salutation?: string }
 ): string | null {
   const e = normEmail(email);
   if (!e || !bookingId) return null;
@@ -240,10 +253,10 @@ export function getCustomer(id: string): CustomerDetail | null {
   return { ...c, emails, bookings, invoices };
 }
 
-export type CustomerUpdate = Partial<Pick<Customer, 'name' | 'company' | 'phone' | 'street' | 'zip' | 'city' | 'country' | 'notes'>>;
+export type CustomerUpdate = Partial<Pick<Customer, 'salutation' | 'name' | 'company' | 'phone' | 'street' | 'zip' | 'city' | 'country' | 'notes'>>;
 
 export function updateCustomer(id: string, updates: CustomerUpdate): CustomerDetail | null {
-  const fields = ['name', 'company', 'phone', 'street', 'zip', 'city', 'country', 'notes'] as const;
+  const fields = ['salutation', 'name', 'company', 'phone', 'street', 'zip', 'city', 'country', 'notes'] as const;
   const sets: string[] = [];
   const vals: unknown[] = [];
   for (const f of fields) {
