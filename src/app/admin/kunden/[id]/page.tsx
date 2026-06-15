@@ -11,7 +11,7 @@ interface CEmail { email: string; is_primary: number }
 interface CBooking { id: string; request_number: string | null; package_title: string; start_date: string; status: string; total_price: number; created_at: string; email: string }
 interface CInvoice { id: string; invoice_number: string; total_amount: number; paid_amount: number; status: string; invoice_date: string }
 interface Detail {
-  id: string; name: string; company: string; phone: string;
+  id: string; salutation: string; name: string; company: string; phone: string;
   street: string; zip: string; city: string; country: string; notes: string;
   emails: CEmail[]; bookings: CBooking[]; invoices: CInvoice[];
 }
@@ -46,7 +46,7 @@ export default function KundenakteePage() {
       if (res.success) {
         setC(res.data);
         setForm({
-          name: res.data.name, company: res.data.company, phone: res.data.phone,
+          salutation: res.data.salutation, name: res.data.name, company: res.data.company, phone: res.data.phone,
           street: res.data.street, zip: res.data.zip, city: res.data.city, country: res.data.country, notes: res.data.notes,
         });
       }
@@ -113,6 +113,21 @@ export default function KundenakteePage() {
         <SectionCard title="Stammdaten & Rechnungsadresse" icon={<MapPin className="h-5 w-5" />}
           actions={<Button variant="accent" size="sm" onClick={save} disabled={saving}>{saving ? <Spinner className="h-4 w-4 border-white" /> : <Save className="h-4 w-4" />} Speichern</Button>}>
           <div className="grid gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Field label="Anrede">
+                <select
+                  value={form.salutation || ''}
+                  onChange={(e) => set('salutation', e.target.value)}
+                  className="w-full rounded-lg border bg-white px-3 py-2 text-sm"
+                  style={{ borderColor: COLORS.stroke, color: COLORS.navy }}
+                >
+                  <option value="">Keine Angabe</option>
+                  <option value="herr">Herr</option>
+                  <option value="frau">Frau</option>
+                  <option value="divers">Divers</option>
+                </select>
+              </Field>
+            </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <InputField label="Name" value={form.name || ''} onChange={(e) => set('name', e.target.value)} />
               <InputField label="Firma" value={form.company || ''} onChange={(e) => set('company', e.target.value)} />

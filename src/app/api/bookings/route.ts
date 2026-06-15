@@ -54,14 +54,17 @@ export async function POST(request: Request) {
     });
 
     const firstTraveler = Array.isArray(body.travelers) ? body.travelers[0] : null;
-    const firstName = firstTraveler?.firstName || firstTraveler?.first_name || body.email.split('@')[0];
-    const lastName = firstTraveler?.lastName || firstTraveler?.last_name || '';
+    // Hauptbucher/Kontakt hat Vorrang vor erstem Reisenden.
+    const firstName = body.firstName || firstTraveler?.firstName || firstTraveler?.first_name || body.email.split('@')[0];
+    const lastName = body.lastName || firstTraveler?.lastName || firstTraveler?.last_name || '';
+    const salutation = body.salutation || firstTraveler?.salutation || '';
 
     // Kunde herleiten/verknüpfen (E-Mail = eindeutige ID)
     try {
       linkBookingToCustomer((booking as { id: string }).id, body.email, {
         name: [firstName, lastName].filter(Boolean).join(' ') || undefined,
         phone: body.phone,
+        salutation: salutation || undefined,
       });
     } catch (custErr) {
       console.warn('[Customer] Verknuepfung fehlgeschlagen (non-fatal):', custErr);
@@ -113,7 +116,7 @@ export async function POST(request: Request) {
           subject = (event!.auto_reply_subject || '').trim() || autoReplySubjectDefault(eventName, requestNumber);
           // RQ-Tag fürs Threading anhängen, falls nicht bereits im Custom-Betreff enthalten.
           if (!/RQ-\d/i.test(subject)) subject = `${subject} ${subjectTag(requestNumber)}`;
-          html = autoReplyHtml({ message: event!.auto_reply_message || '', firstName, eventName, requestNumber });
+          html = autoReplyHtml({ message: event!.auto_reply_message || '', firstName, lastName, salutation, eventName, requestNumber });
 
           if (event!.auto_reply_pdf) {
             const pdf = await readAutoReplyPdfBase64(event!.auto_reply_pdf);
@@ -130,7 +133,7 @@ export async function POST(request: Request) {
           }
         } else {
           subject = confirmationSubject(requestNumber, eventName);
-          html = confirmationEmailHtml({ firstName, requestNumber, eventName, message: body.message || '' });
+          html = confirmationEmailHtml({ firstName, lastName, salutation, requestNumber, eventName, message: body.message || '' });
         }
 
         const sendRes = await sendGraphMail({ to: body.email, toName: customerName, subject, html, attachments });

@@ -45,6 +45,44 @@ function escapeHtml(s: string): string {
     .replace(/>/g, '&gt;');
 }
 
+export interface RecipientInfo {
+  salutation?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+}
+
+/**
+ * Geschlechtskorrekte, förmliche Begrüßung (HTML-escaped, inkl. Komma).
+ * Herr/Frau + Nachname → "Sehr geehrter/e …"; sonst neutral "Guten Tag [Vorname],".
+ */
+export function formalGreeting(r: RecipientInfo): string {
+  const s = (r.salutation || '').trim().toLowerCase();
+  const last = (r.lastName || '').trim();
+  if (s === 'herr') return last ? `Sehr geehrter Herr ${escapeHtml(last)},` : 'Sehr geehrter Herr,';
+  if (s === 'frau') return last ? `Sehr geehrte Frau ${escapeHtml(last)},` : 'Sehr geehrte Frau,';
+  const first = (r.firstName || '').trim();
+  if (first) return `Guten Tag ${escapeHtml(first)},`;
+  return 'Guten Tag,';
+}
+
+/**
+ * Ersetzt Platzhalter in bereits HTML-escaptem Text:
+ *   {{anrede}}   → "Sehr geehrter Herr" / "Sehr geehrte Frau" / "Sehr geehrte Damen und Herren"
+ *   {{vorname}}  → Vorname
+ *   {{nachname}} → Nachname
+ * Räumt überflüssige Leerzeichen vor Satzzeichen auf (Fallback ohne Nachname).
+ */
+export function renderRecipientTokens(escapedText: string, r: RecipientInfo): string {
+  const s = (r.salutation || '').trim().toLowerCase();
+  const anrede = s === 'herr' ? 'Sehr geehrter Herr' : s === 'frau' ? 'Sehr geehrte Frau' : 'Sehr geehrte Damen und Herren';
+  return escapedText
+    .replace(/\{\{\s*anrede\s*\}\}/gi, anrede)
+    .replace(/\{\{\s*vorname\s*\}\}/gi, escapeHtml((r.firstName || '').trim()))
+    .replace(/\{\{\s*nachname\s*\}\}/gi, escapeHtml((r.lastName || '').trim()))
+    .replace(/ +([,.;:!?])/g, '$1')
+    .replace(/[ \t]{2,}/g, ' ');
+}
+
 /** Gemeinsames Grundgerüst (Header + Footer) */
 function layout(innerHtml: string, preheader = ''): string {
   const c = getSettings().company;
@@ -88,6 +126,8 @@ function layout(innerHtml: string, preheader = ''): string {
 
 export interface ConfirmationInput {
   firstName?: string;
+  lastName?: string;
+  salutation?: string | null;
   requestNumber: string;
   eventName?: string;
   message?: string;
@@ -95,7 +135,7 @@ export interface ConfirmationInput {
 
 /** Fancy Bestätigungsmail an den Kunden ("Vielen Dank für Ihre Anfrage") */
 export function confirmationEmailHtml(input: ConfirmationInput): string {
-  const greeting = input.firstName ? `Hallo ${escapeHtml(input.firstName)},` : 'Guten Tag,';
+  const greeting = formalGreeting({ salutation: input.salutation, firstName: input.firstName, lastName: input.lastName });
   const ev = input.eventName ? escapeHtml(input.eventName) : 'Ihrem Wunsch-Event';
 
   const messageBlock = input.message
@@ -148,21 +188,31 @@ export function autoReplySubjectDefault(eventName?: string, requestNumber?: stri
   return `Ihre unverbindliche Anfrage${ev}${tag}`;
 }
 
-export interface AutoReplyInput {
-  /** Frei definierbarer Nachrichtentext (Plaintext mit Zeilenumbrüchen). */
+export interface AutoReplyInput extends RecipientInfo {
+  /** Frei definierbarer Nachrichtentext (Plaintext mit Zeilenumbrüchen, Platzhalter erlaubt). */
   message: string;
-  firstName?: string;
   eventName?: string;
   requestNumber?: string;
 }
 
 /**
  * Markenkonforme Hülle für die per-Event definierbare Auto-Antwort.
- * Der Admin-Text wird escaped und Zeilenumbrüche → <br>.
+ * - Platzhalter {{anrede}}/{{vorname}}/{{nachname}} werden ersetzt.
+ * - Beginnt der Text bereits mit einer Begrüßung (z.B. via {{anrede}}), wird KEINE
+ *   automatische Anrede vorangestellt; sonst setzen wir eine geschlechtskorrekte davor.
  */
 export function autoReplyHtml(input: AutoReplyInput): string {
-  const greeting = input.firstName ? `Hallo ${escapeHtml(input.firstName)},` : 'Guten Tag,';
-  const bodyHtml = escapeHtml(input.message || '').replace(/\n/g, '<br>');
+  const r: RecipientInfo = { salutation: input.salutation, firstName: input.firstName, lastName: input.lastName };
+  const rendered = renderRecipientTokens(escapeHtml(input.message || ''), r);
+
+  // Eigene Begrüßung erkennen (erste nicht-leere Zeile)
+  const firstLine = rendered.replace(/^\s+/, '').slice(0, 40).toLowerCase();
+  const hasOwnGreeting = /^(sehr geehrt|hallo|guten (tag|morgen|abend)|liebe|moin|servus|hi[\s,]|hey[\s,])/.test(firstLine);
+  const greetingHtml = hasOwnGreeting
+    ? ''
+    : `<p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#374151;">${formalGreeting(r)}</p>`;
+
+  const bodyHtml = rendered.replace(/\n/g, '<br>');
   const rqBlock = input.requestNumber
     ? `<p style="margin:22px 0 0;font-size:13px;line-height:1.6;color:#6b7280;">
          Ihre Anfragenummer lautet <strong style="color:${NAVY};">${escapeHtml(input.requestNumber)}</strong> –
@@ -171,7 +221,7 @@ export function autoReplyHtml(input: AutoReplyInput): string {
     : '';
 
   const inner = `
-    <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#374151;">${greeting}</p>
+    ${greetingHtml}
     <div style="font-size:15px;line-height:1.7;color:#374151;">${bodyHtml}</div>
     ${rqBlock}
     <p style="margin:24px 0 0;font-size:15px;line-height:1.7;color:#374151;">
