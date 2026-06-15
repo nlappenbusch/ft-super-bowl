@@ -131,6 +131,9 @@ export default function NavBar({ menu }: { menu?: NavItem[] }) {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  // Suche beim Wechsel/Schliessen des Mega-Menüs leeren
+  useEffect(() => { setSearch(''); }, [openMenu]);
+
   const toggleMenu = useCallback((key: string) => {
     setOpenMenu(prev => (prev === key ? null : key));
   }, []);
@@ -510,15 +513,6 @@ export default function NavBar({ menu }: { menu?: NavItem[] }) {
               })}
             </nav>
 
-            {/* Live-Suche */}
-            <button
-              onClick={() => setSearchOpen((o) => !o)}
-              className="hidden min-[960px]:flex items-center gap-2 shrink-0 rounded-xl border border-white/20 bg-white/10 px-3.5 py-2 text-[13px] font-semibold text-white/90 transition hover:bg-white/20"
-              aria-label="Events suchen"
-            >
-              <Search className="h-4 w-4" /> Suchen
-            </button>
-
             {/* Right: trust badge */}
             <div className="hidden min-[960px]:flex items-center shrink-0 min-[960px]:ml-4">
               <a
@@ -576,66 +570,136 @@ export default function NavBar({ menu }: { menu?: NavItem[] }) {
                 >
                   {/* Columns area */}
                   <div className="bg-white p-5">
-                    <div className="grid gap-5" style={{ gridTemplateColumns: '210px 1fr' }}>
-                      <div className="flex flex-col gap-0.5 border-r border-slate-100 pr-3">
-                        {item.columns.map((col) => {
-                          const Icon = ICONS[col.iconKey] || Trophy;
-                          const isActive = (activeCol[item.key] ?? item.columns[0]?.title) === col.title;
-                          return (
-                            <Link
-                              key={col.title}
-                              href={col.href}
-                              onClick={() => setOpenMenu(null)}
-                              onMouseEnter={() => setActiveCol((prev) => ({ ...prev, [item.key]: col.title }))}
-                              className="group flex items-center gap-2.5 rounded-lg px-3 py-2.5 transition-colors hover:bg-slate-50"
-                              style={isActive ? { background: catColor(col.iconKey) + '14' } : undefined}
-                            >
-                              <Icon className="h-4 w-4 shrink-0" style={{ color: catColor(col.iconKey) }} />
-                              <span className="flex-1 text-[13.5px] font-medium" style={{ color: '#143047' }}>{col.title}</span>
-                              <span className="text-[11px] text-slate-400">{col.count}</span>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                      {(() => {
-                        const activeTitle = activeCol[item.key] ?? item.columns[0]?.title;
-                        const col = item.columns.find((c) => c.title === activeTitle) ?? item.columns[0];
-                        if (!col) return null;
-                        const Icon = ICONS[col.iconKey] || Trophy;
-                        return (
-                          <div>
-                            <div className="mb-3 flex items-center justify-between">
-                              <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: catColor(col.iconKey) }}>{col.title} · Nächste Events</span>
-                              <Link href={col.href} onClick={() => setOpenMenu(null)} className="inline-flex items-center gap-1 text-[12px] font-semibold" style={{ color: catColor(col.iconKey) }}>
-                                Alle ansehen <ArrowRight className="h-3.5 w-3.5" />
-                              </Link>
-                            </div>
-                            <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
-                              {col.cards.slice(0, 12).map((card) => (
-                                <Link key={card.href} href={card.href} onClick={() => setOpenMenu(null)} className="group overflow-hidden rounded-xl border border-slate-100 transition-all hover:-translate-y-0.5 hover:shadow-md">
-                                  <div className="relative aspect-[16/10] bg-[#143047]">
-                                    {card.image ? (
-                                      <Image src={card.image} alt="" fill className="object-cover transition-transform duration-300 group-hover:scale-105" sizes="(max-width: 1024px) 33vw, 240px" />
-                                    ) : (
-                                      <span className="flex h-full w-full items-center justify-center text-[#3a5f86]"><Icon className="h-7 w-7" /></span>
-                                    )}
-                                  </div>
-                                  <div className="px-3 py-2.5">
-                                    <div className="truncate text-[13px] font-semibold" style={{ color: '#143047' }}>{card.label}</div>
-                                    <div className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-slate-500">
-                                      {card.dateLabel && <CalendarDays className="h-3 w-3 shrink-0" />}
-                                      {card.dateLabel && <span>{card.dateLabel}</span>}
-                                      {card.dateLabel && card.place && <span className="opacity-50">·</span>}
-                                      {card.place && <span className="truncate">{card.place}</span>}
-                                    </div>
-                                  </div>
-                                </Link>
-                              ))}
-                            </div>
+                    {(() => {
+                      const qMega = search.trim().toLowerCase();
+                      const seenH = new Set<string>();
+                      const flat = item.columns
+                        .flatMap((col) => col.cards.map((c) => ({ ...c, category: col.title, ck: col.iconKey })))
+                        .filter((c) => (seenH.has(c.href) ? false : (seenH.add(c.href), true)));
+                      const matched = qMega
+                        ? flat.filter((c) => `${c.label} ${c.place || ''} ${c.category}`.toLowerCase().includes(qMega)).slice(0, 12)
+                        : [];
+                      const cols = qMega
+                        ? item.columns.filter((col) => col.title.toLowerCase().includes(qMega) || col.cards.some((c) => `${c.label} ${c.place || ''}`.toLowerCase().includes(qMega)))
+                        : item.columns;
+                      return (
+                        <>
+                          {/* Live-Suchfeld über den Kategorien */}
+                          <div className="mb-4 flex items-center gap-2 rounded-xl border px-3 py-2.5" style={{ borderColor: '#e2e8f0', background: '#f8fafc' }}>
+                            <Search className="h-4 w-4 shrink-0 text-slate-400" />
+                            <input
+                              value={search}
+                              onChange={(e) => setSearch(e.target.value)}
+                              placeholder={`In ${item.label} suchen – Event, Stadt, Kategorie…`}
+                              className="flex-1 bg-transparent text-sm outline-none"
+                              style={{ color: '#143047' }}
+                              autoComplete="off"
+                            />
+                            {search && (
+                              <button type="button" onClick={() => setSearch('')} aria-label="Suche leeren" className="text-slate-400 hover:text-slate-600">
+                                <X className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
-                        );
-                      })()}
-                    </div>
+                          <div className="grid gap-5" style={{ gridTemplateColumns: '210px 1fr' }}>
+                            <div className="flex flex-col gap-0.5 border-r border-slate-100 pr-3">
+                              {cols.length === 0 ? (
+                                <div className="px-3 py-4 text-xs text-slate-400">Keine Kategorie passt.</div>
+                              ) : cols.map((col) => {
+                                const Icon = ICONS[col.iconKey] || Trophy;
+                                const isActive = !qMega && (activeCol[item.key] ?? item.columns[0]?.title) === col.title;
+                                return (
+                                  <Link
+                                    key={col.title}
+                                    href={col.href}
+                                    onClick={() => setOpenMenu(null)}
+                                    onMouseEnter={() => setActiveCol((prev) => ({ ...prev, [item.key]: col.title }))}
+                                    className="group flex items-center gap-2.5 rounded-lg px-3 py-2.5 transition-colors hover:bg-slate-50"
+                                    style={isActive ? { background: catColor(col.iconKey) + '14' } : undefined}
+                                  >
+                                    <Icon className="h-4 w-4 shrink-0" style={{ color: catColor(col.iconKey) }} />
+                                    <span className="flex-1 text-[13.5px] font-medium" style={{ color: '#143047' }}>{col.title}</span>
+                                    <span className="text-[11px] text-slate-400">{col.count}</span>
+                                  </Link>
+                                );
+                              })}
+                            </div>
+                            {qMega ? (
+                              <div>
+                                <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">{matched.length} Treffer für „{search}"</div>
+                                {matched.length === 0 ? (
+                                  <div className="py-8 text-center text-sm text-slate-400">Nichts gefunden. Versuch&apos;s mit einem anderen Begriff.</div>
+                                ) : (
+                                  <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
+                                    {matched.map((card) => {
+                                      const Icon = ICONS[card.ck] || Trophy;
+                                      return (
+                                        <Link key={card.href} href={card.href} onClick={() => setOpenMenu(null)} className="group overflow-hidden rounded-xl border border-slate-100 transition-all hover:-translate-y-0.5 hover:shadow-md">
+                                          <div className="relative aspect-[16/10] bg-[#143047]">
+                                            {card.image ? (
+                                              <Image src={card.image} alt="" fill className="object-cover transition-transform duration-300 group-hover:scale-105" sizes="240px" />
+                                            ) : (
+                                              <span className="flex h-full w-full items-center justify-center text-[#3a5f86]"><Icon className="h-7 w-7" /></span>
+                                            )}
+                                            <span className="absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ background: catColor(card.ck) }}>{card.category}</span>
+                                          </div>
+                                          <div className="px-3 py-2.5">
+                                            <div className="truncate text-[13px] font-semibold" style={{ color: '#143047' }}>{card.label}</div>
+                                            <div className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-slate-500">
+                                              {card.dateLabel && <CalendarDays className="h-3 w-3 shrink-0" />}
+                                              {card.dateLabel && <span>{card.dateLabel}</span>}
+                                              {card.dateLabel && card.place && <span className="opacity-50">·</span>}
+                                              {card.place && <span className="truncate">{card.place}</span>}
+                                            </div>
+                                          </div>
+                                        </Link>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (() => {
+                              const activeTitle = activeCol[item.key] ?? item.columns[0]?.title;
+                              const col = item.columns.find((c) => c.title === activeTitle) ?? item.columns[0];
+                              if (!col) return null;
+                              const Icon = ICONS[col.iconKey] || Trophy;
+                              return (
+                                <div>
+                                  <div className="mb-3 flex items-center justify-between">
+                                    <span className="text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: catColor(col.iconKey) }}>{col.title} · Nächste Events</span>
+                                    <Link href={col.href} onClick={() => setOpenMenu(null)} className="inline-flex items-center gap-1 text-[12px] font-semibold" style={{ color: catColor(col.iconKey) }}>
+                                      Alle ansehen <ArrowRight className="h-3.5 w-3.5" />
+                                    </Link>
+                                  </div>
+                                  <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
+                                    {col.cards.slice(0, 12).map((card) => (
+                                      <Link key={card.href} href={card.href} onClick={() => setOpenMenu(null)} className="group overflow-hidden rounded-xl border border-slate-100 transition-all hover:-translate-y-0.5 hover:shadow-md">
+                                        <div className="relative aspect-[16/10] bg-[#143047]">
+                                          {card.image ? (
+                                            <Image src={card.image} alt="" fill className="object-cover transition-transform duration-300 group-hover:scale-105" sizes="(max-width: 1024px) 33vw, 240px" />
+                                          ) : (
+                                            <span className="flex h-full w-full items-center justify-center text-[#3a5f86]"><Icon className="h-7 w-7" /></span>
+                                          )}
+                                        </div>
+                                        <div className="px-3 py-2.5">
+                                          <div className="truncate text-[13px] font-semibold" style={{ color: '#143047' }}>{card.label}</div>
+                                          <div className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-slate-500">
+                                            {card.dateLabel && <CalendarDays className="h-3 w-3 shrink-0" />}
+                                            {card.dateLabel && <span>{card.dateLabel}</span>}
+                                            {card.dateLabel && card.place && <span className="opacity-50">·</span>}
+                                            {card.place && <span className="truncate">{card.place}</span>}
+                                          </div>
+                                        </div>
+                                      </Link>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {/* Featured spotlight card */}
