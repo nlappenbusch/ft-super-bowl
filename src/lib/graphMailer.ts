@@ -106,6 +106,15 @@ async function getGraphToken(): Promise<string | null> {
   return json.access_token;
 }
 
+export interface MailAttachment {
+  /** Anzeigename inkl. Endung, z.B. "Angebot French Open 2027.pdf" */
+  name: string;
+  /** MIME-Typ, z.B. "application/pdf" */
+  contentType: string;
+  /** Datei-Inhalt als Base64 (ohne data:-Präfix) */
+  contentBytes: string;
+}
+
 export interface SendMailInput {
   to: string;
   toName?: string;
@@ -113,6 +122,8 @@ export interface SendMailInput {
   html: string;
   /** Optional Plaintext-Variante (sonst aus HTML grob abgeleitet) */
   text?: string;
+  /** Optionale Datei-Anhänge (Graph fileAttachment, inline base64, je < ~3 MB) */
+  attachments?: MailAttachment[];
 }
 
 export async function sendGraphMail(
@@ -129,7 +140,7 @@ export async function sendGraphMail(
 
   const mailbox = getMailbox();
 
-  const message = {
+  const message: Record<string, unknown> = {
     subject: input.subject,
     body: { contentType: 'HTML', content: input.html },
     toRecipients: [
@@ -141,6 +152,15 @@ export async function sendGraphMail(
       },
     ],
   };
+
+  if (input.attachments && input.attachments.length > 0) {
+    message.attachments = input.attachments.map((a) => ({
+      '@odata.type': '#microsoft.graph.fileAttachment',
+      name: a.name,
+      contentType: a.contentType,
+      contentBytes: a.contentBytes,
+    }));
+  }
 
   const res = await fetch(`${GRAPH_BASE}/users/${encodeURIComponent(mailbox)}/sendMail`, {
     method: 'POST',

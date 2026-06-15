@@ -13,7 +13,9 @@ import {
   Layers,
   Trash2,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Mail,
+  Paperclip
 } from 'lucide-react';
 import AdminShell from '@/components/admin/AdminShell';
 import AdminImageField from '@/components/admin/AdminImageField';
@@ -111,6 +113,11 @@ interface EventFormState {
   ticket_categories: Array<{ name: string; items: string[]; note: string }>;
   module_order: string[];
   featured: boolean;
+  auto_reply_enabled: boolean;
+  auto_reply_subject: string;
+  auto_reply_message: string;
+  auto_reply_pdf: string;
+  auto_reply_pdf_name: string;
 }
 
 const DEFAULT_MODULE_ORDER = ['leistungen', 'about', 'duell', 'spielorte', 'spielplan', 'wissenswertes', 'stadionplan', 'lageplan', 'ticket_categories', 'packages', 'faq', 'related'];
@@ -199,7 +206,12 @@ const emptyForm: EventFormState = {
   ticket_categories_intro: '',
   ticket_categories: [],
   module_order: [...DEFAULT_MODULE_ORDER],
-  featured: false
+  featured: false,
+  auto_reply_enabled: false,
+  auto_reply_subject: '',
+  auto_reply_message: '',
+  auto_reply_pdf: '',
+  auto_reply_pdf_name: ''
 };
 
 function normalizeEventFormState(event?: Partial<EventFormState> | null): EventFormState {
@@ -276,7 +288,12 @@ function normalizeEventFormState(event?: Partial<EventFormState> | null): EventF
     module_order: (event?.module_order as string[] | undefined)?.length
       ? (event!.module_order as string[])
       : [...DEFAULT_MODULE_ORDER],
-    featured: !!(event?.featured)
+    featured: !!(event?.featured),
+    auto_reply_enabled: (event as Partial<EventFormState> | null | undefined)?.auto_reply_enabled ?? false,
+    auto_reply_subject: (event as Partial<EventFormState> | null | undefined)?.auto_reply_subject ?? '',
+    auto_reply_message: (event as Partial<EventFormState> | null | undefined)?.auto_reply_message ?? '',
+    auto_reply_pdf: (event as Partial<EventFormState> | null | undefined)?.auto_reply_pdf ?? '',
+    auto_reply_pdf_name: (event as Partial<EventFormState> | null | undefined)?.auto_reply_pdf_name ?? ''
   };
 }
 
@@ -342,6 +359,24 @@ export default function AdminEventsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [pdfUploading, setPdfUploading] = useState(false);
+
+  async function handleAutoReplyPdfUpload(file: File) {
+    setPdfUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      if (form.slug) fd.append('eventSlug', form.slug);
+      const res = await fetch('/api/admin/auto-reply', { method: 'POST', body: fd });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Upload fehlgeschlagen');
+      setForm((prev) => ({ ...prev, auto_reply_pdf: json.data.file, auto_reply_pdf_name: json.data.name }));
+    } catch (e) {
+      alert('PDF-Upload fehlgeschlagen: ' + (e as Error).message);
+    } finally {
+      setPdfUploading(false);
+    }
+  }
   const [pinIcons, setPinIcons] = useState<PinIconOption[]>([]);
   const dragModuleKey = useRef<string | null>(null);
 
@@ -498,7 +533,12 @@ export default function AdminEventsPage() {
         .map((c) => ({ name: c.name.trim(), items: c.items.map((i) => i.trim()).filter(Boolean), note: c.note.trim() }))
         .filter((c) => c.name || c.items.length),
       module_order: form.module_order,
-      featured: form.featured
+      featured: form.featured,
+      auto_reply_enabled: form.auto_reply_enabled,
+      auto_reply_subject: form.auto_reply_subject.trim() || null,
+      auto_reply_message: form.auto_reply_message.trim() || null,
+      auto_reply_pdf: form.auto_reply_pdf || null,
+      auto_reply_pdf_name: form.auto_reply_pdf_name || null
     };
 
     const response = await fetch(`/api/admin/events${form.id ? `/${form.id}` : ''}`, {
@@ -945,6 +985,76 @@ export default function AdminEventsPage() {
                       {previewCtaLabel}
                     </div>
                   </div>
+                </div>
+              </SectionCard>
+
+              <SectionCard
+                icon={<Mail className="h-5 w-5" />}
+                title="Automatische Antwort"
+                description="Statt der Standard-Bestätigung wird bei einer Anfrage zu diesem Event eine eigene Nachricht (optional mit PDF-Anhang) an den Kunden gesendet. Ist der Schalter aus oder kein Text gepflegt, gilt die Standard-Bestätigung."
+              >
+                <div className="grid gap-4">
+                  <div className="flex items-center justify-between gap-4 rounded-xl border px-3 py-3" style={{ borderColor: COLORS.stroke }}>
+                    <div>
+                      <div className="text-sm font-semibold" style={{ color: COLORS.navy }}>Eigene Auto-Antwort aktiv</div>
+                      <div className="text-xs" style={{ color: COLORS.textMuted }}>An: Anfragesteller · Absender: request@ · CRM-Threading bleibt erhalten</div>
+                    </div>
+                    <Toggle checked={form.auto_reply_enabled} onChange={(v) => updateField('auto_reply_enabled', v)} />
+                  </div>
+
+                  {form.auto_reply_enabled && (
+                    <>
+                      <InputField
+                        label="Betreff"
+                        value={form.auto_reply_subject}
+                        onChange={(event) => updateField('auto_reply_subject', event.target.value)}
+                        placeholder={`Ihre unverbindliche Anfrage zu ${form.name || 'dem Event'}`}
+                        hint="Leer lassen = Standard-Betreff. Die Anfragenummer [RQ-…] wird automatisch fürs Threading angehängt."
+                      />
+
+                      <TextAreaField
+                        label="Nachricht"
+                        value={form.auto_reply_message}
+                        onChange={(event) => updateField('auto_reply_message', event.target.value)}
+                        rows={8}
+                        placeholder={'Vielen Dank für Ihre unverbindliche Anfrage …\n\nIm Anhang finden Sie unsere aktuellen Angebote.\n\nGerne melden wir uns persönlich bei Ihnen.'}
+                        hint="Reiner Text, Zeilenumbrüche bleiben erhalten. Wird automatisch ins Faltin-Markendesign (Logo/Header/Footer) gesetzt. Anrede & Grußformel ergänzt das System."
+                      />
+
+                      <div className="rounded-xl border px-3 py-3" style={{ borderColor: COLORS.stroke }}>
+                        <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: COLORS.navy }}>
+                          <Paperclip className="h-4 w-4" /> PDF-Anhang (optional, max. 3 MB)
+                        </div>
+                        {form.auto_reply_pdf ? (
+                          <div className="mt-2 flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm" style={{ background: '#f0fdf4', color: COLORS.navy }}>
+                            <span className="truncate">📎 {form.auto_reply_pdf_name || form.auto_reply_pdf}</span>
+                            <button
+                              type="button"
+                              className="shrink-0 text-xs font-semibold underline"
+                              style={{ color: COLORS.danger }}
+                              onClick={() => setForm((prev) => ({ ...prev, auto_reply_pdf: '', auto_reply_pdf_name: '' }))}
+                            >
+                              Entfernen
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="mt-2 text-xs" style={{ color: COLORS.textMuted }}>Noch keine PDF hinterlegt.</div>
+                        )}
+                        <input
+                          type="file"
+                          accept="application/pdf,.pdf"
+                          disabled={pdfUploading}
+                          className="mt-3 block w-full text-sm"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleAutoReplyPdfUpload(f);
+                            e.target.value = '';
+                          }}
+                        />
+                        {pdfUploading && <div className="mt-2 text-xs" style={{ color: COLORS.accent }}>PDF wird hochgeladen …</div>}
+                      </div>
+                    </>
+                  )}
                 </div>
               </SectionCard>
 
