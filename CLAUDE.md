@@ -63,3 +63,6 @@ Laufzeit-Lesen: `src/lib/contentStore.ts` (`findPackagesByEvent` etc.). Buchunge
 - `npm run dev` — lokaler Dev-Server
 - `npm run build` — Production-Build (wie Prod)
 - `npx tsc --noEmit` — Typecheck
+
+## Roadmap / Backlog
+- **GEO / KI-Lesbarkeit** (offen, hoch): Paket-/Preis-Fakten serverseitig rendern (oder JSON-LD `Product`/`Offer`), strukturierte Daten breit ausspielen (`Event`, `Product`/`Offer`, `FAQPage`, `BreadcrumbList`), `llms.txt` ergänzen, FAQ & SEO-Texte konsequent pflegen. Details: `docs/backlog/geo-ai-readability.md`.
