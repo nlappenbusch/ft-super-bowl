@@ -2,7 +2,12 @@
  * pg.ts — PostgreSQL-Verbindung (Phase 1: bereitgestellt, aber nur aktiv, wenn DB_BACKEND=postgres).
  * Bewusst roh (node-postgres) wie zuvor better-sqlite3 — kein schwerer ORM.
  */
-import { Pool } from 'pg';
+import { Pool, types } from 'pg';
+
+// bigint (int8, oid 20) und numeric (oid 1700) als JS-Zahlen liefern statt als String,
+// damit der App-Code (der von SQLite Zahlen gewohnt ist) unverändert funktioniert.
+types.setTypeParser(20, (v) => (v === null ? null : parseInt(v, 10)));
+types.setTypeParser(1700, (v) => (v === null ? null : parseFloat(v)));
 
 /** Ist Postgres als Backend aktiv? (Default: sqlite) */
 export function pgEnabled(): boolean {
