@@ -59,6 +59,9 @@ services:
       - POSTGRES_DB=faltin
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # WAL-Archiv für Databasus-Agent (PITR). Gleicher Pfad in Container UND Host,
+      # damit archive_command 1:1 passt und der Host-Agent die Dateien liest.
+      - /opt/databasus/wal-queue:/opt/databasus/wal-queue
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U faltin -d faltin"]
       interval: 30s

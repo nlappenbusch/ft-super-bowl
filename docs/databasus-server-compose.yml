@@ -1,0 +1,11 @@
+# Databasus Control-Plane (Backup-Server) — auf dem Docker-Host nach /opt/databasus/docker-compose.yml
+# Sicher: Port nur lokal gebunden (127.0.0.1) -> Zugriff per SSH-Tunnel, NICHT öffentlich.
+services:
+  databasus:
+    container_name: databasus
+    image: databasus/databasus:latest
+    ports:
+      - "127.0.0.1:4005:4005"   # nur lokal erreichbar -> per SSH-Tunnel öffnen
+    volumes:
+      - ./databasus-data:/databasus-data
+    restart: unless-stopped
