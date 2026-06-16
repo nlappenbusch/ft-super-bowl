@@ -32,9 +32,16 @@ services:
       - INBOUND_POLL_SECRET=${INBOUND_POLL_SECRET:-}
       # DB-Backend (Phase 1: bleibt sqlite -> keine Verhaltensaenderung). Umschalten spaeter auf "postgres".
       - DB_BACKEND=${DB_BACKEND:-sqlite}
+      # Diskrete PG-Parameter (robust gegen Sonderzeichen im Passwort, z. B. "/").
+      - PGHOST=db
+      - PGPORT=5432
+      - POSTGRES_USER=faltin
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-faltin}
+      - POSTGRES_DB=faltin
+      # DATABASE_URL bleibt fuer Kompatibilitaet, wird aber nicht mehr zum Verbinden genutzt.
       - DATABASE_URL=postgresql://faltin:${POSTGRES_PASSWORD:-faltin}@db:5432/faltin
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

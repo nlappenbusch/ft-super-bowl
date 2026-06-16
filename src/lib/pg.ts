@@ -17,8 +17,14 @@ export function pgEnabled(): boolean {
 let pool: Pool | null = null;
 export function getPool(): Pool {
   if (!pool) {
+    // Diskrete Parameter statt connectionString: ein Passwort mit URL-Sonderzeichen
+    // (z. B. "/", "@", ":") bricht sonst das URL-Parsing ("Invalid URL").
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      host: process.env.PGHOST || 'db',
+      port: Number(process.env.PGPORT || 5432),
+      user: process.env.POSTGRES_USER || 'faltin',
+      password: process.env.POSTGRES_PASSWORD || 'faltin',
+      database: process.env.POSTGRES_DB || 'faltin',
       max: 10,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 8_000,
