@@ -30,9 +30,34 @@ services:
       - GRAPH_FROM_NAME=${GRAPH_FROM_NAME:-Faltin Travel}
       - BREVO_API_KEY=${BREVO_API_KEY:-}
       - INBOUND_POLL_SECRET=${INBOUND_POLL_SECRET:-}
+      # DB-Backend (Phase 1: bleibt sqlite -> keine Verhaltensaenderung). Umschalten spaeter auf "postgres".
+      - DB_BACKEND=${DB_BACKEND:-sqlite}
+      - DATABASE_URL=postgresql://faltin:${POSTGRES_PASSWORD:-faltin}@db:5432/faltin
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # PostgreSQL (Phase 1: laeuft mit, wird aber noch NICHT genutzt, solange DB_BACKEND=sqlite).
+  # Kein oeffentlicher Port -> nur intern im Compose-Netz als "db:5432" erreichbar.
+  db:
+    image: postgres:16-alpine
+    container_name: super-bowl-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=faltin
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-faltin}
+      - POSTGRES_DB=faltin
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U faltin -d faltin"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  pgdata:
