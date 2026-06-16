@@ -1,4 +1,5 @@
-import { db } from './database';
+import { dbGet, dbRun } from './dbq';
+import './database';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { getGraphCredentials } from './graphMailer';
 import { cookies } from 'next/headers';
@@ -42,12 +43,12 @@ function createToken(email: string, purpose: TokenPayload['purpose'], maxAge: nu
   return `${body}.${signature(body)}`;
 }
 
-export function createMagicLinkToken(email: string): string {
+export async function createMagicLinkToken(email: string): Promise<string> {
   const normalized = email.trim().toLowerCase();
   const jti = randomBytes(24).toString('base64url');
   const expiresAt = Math.floor(Date.now() / 1000) + MAGIC_LINK_MAX_AGE;
-  db.prepare(`DELETE FROM tippspiel_magic_tokens WHERE expires_at < ? OR used_at IS NOT NULL`).run(Math.floor(Date.now() / 1000));
-  db.prepare(`INSERT INTO tippspiel_magic_tokens (id, email, expires_at) VALUES (?, ?, ?)`).run(jti, normalized, expiresAt);
+  await dbRun(`DELETE FROM tippspiel_magic_tokens WHERE expires_at < ? OR used_at IS NOT NULL`, [Math.floor(Date.now() / 1000)]);
+  await dbRun(`INSERT INTO tippspiel_magic_tokens (id, email, expires_at) VALUES (?, ?, ?)`, [jti, normalized, expiresAt]);
   return createToken(normalized, 'magic-link', MAGIC_LINK_MAX_AGE, jti);
 }
 
@@ -70,13 +71,13 @@ export function verifyTippspielToken(token: string | null | undefined, purpose: 
   }
 }
 
-export function consumeMagicLinkToken(token: string | null | undefined): TokenPayload | null {
+export async function consumeMagicLinkToken(token: string | null | undefined): Promise<TokenPayload | null> {
   const payload = verifyTippspielToken(token, 'magic-link');
   if (!payload?.jti) return null;
-  const result = db.prepare(`
+  const result = await dbRun(`
     UPDATE tippspiel_magic_tokens SET used_at = ?
     WHERE id = ? AND email = ? AND used_at IS NULL AND expires_at >= ?
-  `).run(Math.floor(Date.now() / 1000), payload.jti, payload.email, Math.floor(Date.now() / 1000));
+  `, [Math.floor(Date.now() / 1000), payload.jti, payload.email, Math.floor(Date.now() / 1000)]);
   return result.changes === 1 ? payload : null;
 }
 
@@ -88,25 +89,25 @@ export type TippspielUser = {
   last_login_at: string;
 };
 
-export function upsertTippspielUser(email: string): TippspielUser {
+export async function upsertTippspielUser(email: string): Promise<TippspielUser> {
   const normalized = email.trim().toLowerCase();
   const defaultName = normalized.split('@')[0].slice(0, 60);
-  db.prepare(`
+  await dbRun(`
     INSERT INTO tippspiel_users (id, email, display_name, created_at, last_login_at)
     VALUES (?, ?, ?, datetime('now'), datetime('now'))
     ON CONFLICT(email) DO UPDATE SET last_login_at = datetime('now')
-  `).run(crypto.randomUUID(), normalized, defaultName);
-  return db.prepare(`SELECT id, email, display_name, created_at, last_login_at FROM tippspiel_users WHERE email = ?`).get(normalized) as TippspielUser;
+  `, [crypto.randomUUID(), normalized, defaultName]);
+  return (await dbGet<TippspielUser>(`SELECT id, email, display_name, created_at, last_login_at FROM tippspiel_users WHERE email = ?`, [normalized]))!;
 }
 
-export function getTippspielUserByEmail(email: string): TippspielUser | null {
-  return (db.prepare(`SELECT id, email, display_name, created_at, last_login_at FROM tippspiel_users WHERE email = ?`).get(email) as TippspielUser | undefined) || null;
+export async function getTippspielUserByEmail(email: string): Promise<TippspielUser | null> {
+  return (await dbGet<TippspielUser>(`SELECT id, email, display_name, created_at, last_login_at FROM tippspiel_users WHERE email = ?`, [email])) || null;
 }
 
 export async function getTippspielSession(): Promise<{ token: TokenPayload; user: TippspielUser } | null> {
   const jar = await cookies();
   const token = verifyTippspielToken(jar.get(TIPPSPIEL_SESSION_COOKIE)?.value, 'session');
   if (!token) return null;
-  const user = getTippspielUserByEmail(token.email);
+  const user = await getTippspielUserByEmail(token.email);
   return user ? { token, user } : null;
 }

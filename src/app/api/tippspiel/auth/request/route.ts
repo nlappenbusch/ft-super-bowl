@@ -24,7 +24,8 @@ export async function POST(request: Request) {
   }
 
   const origin = getLoginBaseUrl() || process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
-  const link = `${origin}/api/tippspiel/auth/callback?token=${encodeURIComponent(createMagicLinkToken(normalized))}${joinCode ? `&join=${encodeURIComponent(joinCode)}` : ''}`;
+  const magicToken = await createMagicLinkToken(normalized);
+  const link = `${origin}/api/tippspiel/auth/callback?token=${encodeURIComponent(magicToken)}${joinCode ? `&join=${encodeURIComponent(joinCode)}` : ''}`;
   const result = await sendGraphMail({
     to: normalized,
     subject: 'Dein Anmeldelink zum Faltin Travel WM-Tippspiel',

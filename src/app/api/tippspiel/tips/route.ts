@@ -5,7 +5,7 @@ import { getTips, saveTips, type StoredTip } from '@/lib/tippspielStore';
 export async function GET() {
   const session = await getTippspielSession();
   if (!session) return NextResponse.json({ success: false, error: 'Bitte zuerst anmelden.' }, { status: 401 });
-  return NextResponse.json({ success: true, tips: getTips(session.user.id) });
+  return NextResponse.json({ success: true, tips: await getTips(session.user.id) });
 }
 
 export async function POST(request: Request) {
@@ -19,5 +19,5 @@ export async function POST(request: Request) {
   if (tips.some((tip) => !Number.isInteger(tip.match_id) || !Number.isInteger(tip.home_score) || !Number.isInteger(tip.away_score))) {
     return NextResponse.json({ success: false, error: 'Ungültige Tipps.' }, { status: 400 });
   }
-  return NextResponse.json({ success: true, tips: saveTips(session.user.id, tips) });
+  return NextResponse.json({ success: true, tips: await saveTips(session.user.id, tips) });
 }

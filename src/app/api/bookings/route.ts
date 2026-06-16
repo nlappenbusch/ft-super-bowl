@@ -61,7 +61,7 @@ export async function POST(request: Request) {
 
     // Kunde herleiten/verknüpfen (E-Mail = eindeutige ID)
     try {
-      linkBookingToCustomer((booking as { id: string }).id, body.email, {
+      await linkBookingToCustomer((booking as { id: string }).id, body.email, {
         name: [firstName, lastName].filter(Boolean).join(' ') || undefined,
         phone: body.phone,
         salutation: salutation || undefined,

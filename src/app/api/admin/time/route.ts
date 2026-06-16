@@ -21,18 +21,19 @@ export async function GET(req: Request) {
   if (!empId) {
     return NextResponse.json({ success: false, error: 'Kein Mitarbeiterprofil (lokaler Admin) – employee-Parameter angeben' }, { status: 400 });
   }
-  const employee = getEmployee(empId);
+  const employee = await getEmployee(empId);
   if (!employee) return NextResponse.json({ success: false, error: 'Mitarbeiter nicht gefunden' }, { status: 404 });
 
   const month = url.searchParams.get('month') || new Date().toISOString().slice(0, 7);
   const { from, to } = monthRange(month);
-  const summary = timeSummary(employee, from, to);
+  const summary = await timeSummary(employee, from, to);
+  const running = await getRunningEntry(employee.id);
   return NextResponse.json({
     success: true,
     data: {
       employee: { id: employee.id, name: employee.name },
       month,
-      running: getRunningEntry(employee.id),
+      running,
       ...summary,
     },
   });
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
   if (!employeeId || !body.date || !body.start_time || !body.end_time) {
     return NextResponse.json({ success: false, error: 'date, start_time, end_time (und ggf. employee_id) erforderlich' }, { status: 400 });
   }
-  const entry = addManualEntry({
+  const entry = await addManualEntry({
     employee_id: employeeId,
     date: body.date,
     start_time: body.start_time,

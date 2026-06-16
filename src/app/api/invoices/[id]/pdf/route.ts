@@ -14,7 +14,7 @@ export async function GET(
   try {
     const { id } = await params;
     
-    const invoice = getInvoiceById(id);
+    const invoice = await getInvoiceById(id);
     if (!invoice) {
       return NextResponse.json(
         { success: false, error: 'Rechnung nicht gefunden' },
@@ -22,8 +22,8 @@ export async function GET(
       );
     }
 
-    const items = getInvoiceItems(id);
-    const booking = getBookingById(invoice.booking_id);
+    const items = await getInvoiceItems(id);
+    const booking = await getBookingById(invoice.booking_id);
 
     if (!booking) {
       return NextResponse.json(

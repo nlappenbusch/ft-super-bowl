@@ -2,75 +2,17 @@
  * customerStore.ts
  * ─────────────────────────────────────────────────────────────────────────────
  * Kundenstamm (CRM). Eindeutige Herleitung über die E-Mail-Adresse.
- * - customers: Stammsatz mit Adressdaten (für Rechnungsstellung).
- * - customer_emails: alle E-Mails eines Kunden (Primary + Aliase nach Merge).
- * - booking_requests.customer_id: Verknüpfung Anfrage/Buchung -> Kunde.
- *
- * Eigene better-sqlite3-Verbindung auf dieselbe data/bookings.db.
- * `import './database'` stellt sicher, dass booking_requests existiert.
+ * Läuft über die Backend-Abstraktion `dbq` (SQLite ODER Postgres je nach DB_BACKEND).
+ * Das Schema (customers / customer_emails / booking_requests.customer_id) wird in
+ * database.initDatabase() bzw. ensurePgSchema() angelegt.
  * ─────────────────────────────────────────────────────────────────────────────
  */
-import Database from 'better-sqlite3';
-import path from 'path';
 import './database';
-
-const dbPath = path.join(process.cwd(), 'data', 'bookings.db');
-const db = new Database(dbPath);
-db.pragma('busy_timeout = 15000');
-// Schreibende Initialisierung (WAL-Switch, Schema, Backfill) NUR zur Laufzeit ausführen –
-// NICHT während `next build`: der Build sammelt Page-Daten mit mehreren Parallel-Workern,
-// die sonst gleichzeitig auf die frische DB schreiben → "database is locked" (SQLITE_BUSY).
-const IS_BUILD = process.env.NEXT_PHASE === 'phase-production-build';
-if (!IS_BUILD) db.pragma('journal_mode = WAL');
+import { dbGet, dbAll, dbRun, withTx } from './dbq';
 
 function normEmail(email: string): string {
   return (email || '').trim().toLowerCase();
 }
-
-function ensureSchema() {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS customers (
-      id TEXT PRIMARY KEY,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      salutation TEXT DEFAULT '',
-      name TEXT DEFAULT '',
-      company TEXT DEFAULT '',
-      phone TEXT DEFAULT '',
-      street TEXT DEFAULT '',
-      zip TEXT DEFAULT '',
-      city TEXT DEFAULT '',
-      country TEXT DEFAULT '',
-      notes TEXT DEFAULT ''
-    );
-    CREATE TABLE IF NOT EXISTS customer_emails (
-      email TEXT PRIMARY KEY,
-      customer_id TEXT NOT NULL,
-      is_primary INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-    CREATE INDEX IF NOT EXISTS idx_customer_emails_cid ON customer_emails(customer_id);
-  `);
-  // customer_id an booking_requests ergänzen (falls noch nicht vorhanden)
-  try {
-    const cols = db.prepare(`PRAGMA table_info(booking_requests)`).all() as Array<{ name: string }>;
-    if (cols.length && !cols.some((c) => c.name === 'customer_id')) {
-      db.exec(`ALTER TABLE booking_requests ADD COLUMN customer_id TEXT`);
-    }
-  } catch {
-    /* booking_requests evtl. noch nicht da – wird beim ersten Booking nachgezogen */
-  }
-  // salutation an bestehende customers-Tabelle nachziehen (Migration)
-  try {
-    const ccols = db.prepare(`PRAGMA table_info(customers)`).all() as Array<{ name: string }>;
-    if (ccols.length && !ccols.some((c) => c.name === 'salutation')) {
-      db.exec(`ALTER TABLE customers ADD COLUMN salutation TEXT DEFAULT ''`);
-    }
-  } catch {
-    /* ignore */
-  }
-}
-if (!IS_BUILD) ensureSchema();
 
 export interface Customer {
   id: string;
@@ -95,41 +37,34 @@ export interface CustomerEmail {
 }
 
 /** Findet die customer_id zu einer E-Mail (oder null). */
-export function findCustomerIdByEmail(email: string): string | null {
+export async function findCustomerIdByEmail(email: string): Promise<string | null> {
   const e = normEmail(email);
   if (!e) return null;
-  const row = db.prepare(`SELECT customer_id FROM customer_emails WHERE email = ?`).get(e) as
-    | { customer_id: string }
-    | undefined;
+  const row = await dbGet<{ customer_id: string }>(`SELECT customer_id FROM customer_emails WHERE email = ?`, [e]);
   return row?.customer_id ?? null;
 }
 
-/**
- * Legt einen Kunden zur E-Mail an oder liefert den bestehenden.
- * Füllt leere Stammfelder (name/phone) opportunistisch nach.
- */
-export function upsertCustomerByEmail(
+/** Legt einen Kunden zur E-Mail an oder liefert den bestehenden. */
+export async function upsertCustomerByEmail(
   email: string,
   data?: { name?: string; phone?: string; salutation?: string }
-): string {
+): Promise<string> {
   const e = normEmail(email);
   if (!e) throw new Error('E-Mail fehlt');
 
-  const existingId = findCustomerIdByEmail(e);
+  const existingId = await findCustomerIdByEmail(e);
   if (existingId) {
     if (data?.name || data?.phone || data?.salutation) {
-      const cur = db.prepare(`SELECT salutation, name, phone FROM customers WHERE id = ?`).get(existingId) as
-        | { salutation: string; name: string; phone: string }
-        | undefined;
+      const cur = await dbGet<{ salutation: string; name: string; phone: string }>(
+        `SELECT salutation, name, phone FROM customers WHERE id = ?`, [existingId]
+      );
       if (cur) {
         const salutation = cur.salutation?.trim() ? cur.salutation : data?.salutation || '';
         const name = cur.name?.trim() ? cur.name : data?.name || '';
         const phone = cur.phone?.trim() ? cur.phone : data?.phone || '';
-        db.prepare(`UPDATE customers SET salutation = ?, name = ?, phone = ?, updated_at = datetime('now') WHERE id = ?`).run(
-          salutation,
-          name,
-          phone,
-          existingId
+        await dbRun(
+          `UPDATE customers SET salutation = ?, name = ?, phone = ?, updated_at = datetime('now') WHERE id = ?`,
+          [salutation, name, phone, existingId]
         );
       }
     }
@@ -137,26 +72,22 @@ export function upsertCustomerByEmail(
   }
 
   const id = crypto.randomUUID();
-  db.prepare(
-    `INSERT INTO customers (id, salutation, name, phone) VALUES (?, ?, ?, ?)`
-  ).run(id, data?.salutation || '', data?.name || '', data?.phone || '');
-  db.prepare(
-    `INSERT INTO customer_emails (email, customer_id, is_primary) VALUES (?, ?, 1)`
-  ).run(e, id);
+  await dbRun(`INSERT INTO customers (id, salutation, name, phone) VALUES (?, ?, ?, ?)`, [id, data?.salutation || '', data?.name || '', data?.phone || '']);
+  await dbRun(`INSERT INTO customer_emails (email, customer_id, is_primary) VALUES (?, ?, 1)`, [e, id]);
   return id;
 }
 
 /** Verknüpft eine bestehende Buchung mit (ggf. neuem) Kunden anhand der E-Mail. */
-export function linkBookingToCustomer(
+export async function linkBookingToCustomer(
   bookingId: string,
   email: string,
   data?: { name?: string; phone?: string; salutation?: string }
-): string | null {
+): Promise<string | null> {
   const e = normEmail(email);
   if (!e || !bookingId) return null;
-  const cid = upsertCustomerByEmail(e, data);
+  const cid = await upsertCustomerByEmail(e, data);
   try {
-    db.prepare(`UPDATE booking_requests SET customer_id = ? WHERE id = ?`).run(cid, bookingId);
+    await dbRun(`UPDATE booking_requests SET customer_id = ? WHERE id = ?`, [cid, bookingId]);
   } catch {
     /* ignore */
   }
@@ -171,27 +102,28 @@ export interface CustomerListRow extends Customer {
   revenue: number;
 }
 
-export function listCustomers(search?: string): CustomerListRow[] {
-  const customers = db.prepare(`SELECT * FROM customers ORDER BY updated_at DESC`).all() as Customer[];
-  const result: CustomerListRow[] = customers.map((c) => {
-    const emails = (db.prepare(`SELECT email, is_primary FROM customer_emails WHERE customer_id = ? ORDER BY is_primary DESC`).all(c.id) as Array<{ email: string; is_primary: number }>);
-    const stats = db
-      .prepare(
-        `SELECT COUNT(*) AS cnt,
-                SUM(CASE WHEN status = 'booked' THEN 1 ELSE 0 END) AS booked,
-                SUM(CASE WHEN status = 'booked' THEN total_price ELSE 0 END) AS revenue
-         FROM booking_requests WHERE customer_id = ?`
-      )
-      .get(c.id) as { cnt: number; booked: number; revenue: number };
-    return {
+export async function listCustomers(search?: string): Promise<CustomerListRow[]> {
+  const customers = await dbAll<Customer>(`SELECT * FROM customers ORDER BY updated_at DESC`);
+  const result: CustomerListRow[] = [];
+  for (const c of customers) {
+    const emails = await dbAll<{ email: string; is_primary: number }>(
+      `SELECT email, is_primary FROM customer_emails WHERE customer_id = ? ORDER BY is_primary DESC`, [c.id]
+    );
+    const stats = await dbGet<{ cnt: number; booked: number; revenue: number }>(
+      `SELECT COUNT(*) AS cnt,
+              SUM(CASE WHEN status = 'booked' THEN 1 ELSE 0 END) AS booked,
+              SUM(CASE WHEN status = 'booked' THEN total_price ELSE 0 END) AS revenue
+       FROM booking_requests WHERE customer_id = ?`, [c.id]
+    );
+    result.push({
       ...c,
       primary_email: emails.find((x) => x.is_primary)?.email || emails[0]?.email || '',
       emails: emails.map((x) => x.email),
-      requests_count: stats?.cnt || 0,
-      bookings_count: stats?.booked || 0,
-      revenue: stats?.revenue || 0,
-    };
-  });
+      requests_count: Number(stats?.cnt) || 0,
+      bookings_count: Number(stats?.booked) || 0,
+      revenue: Number(stats?.revenue) || 0,
+    });
+  }
 
   if (search && search.trim()) {
     const q = search.trim().toLowerCase();
@@ -233,25 +165,21 @@ export interface CustomerDetail extends Customer {
   invoices: CustomerInvoice[];
 }
 
-export function getCustomer(id: string): CustomerDetail | null {
-  const c = db.prepare(`SELECT * FROM customers WHERE id = ?`).get(id) as Customer | undefined;
+export async function getCustomer(id: string): Promise<CustomerDetail | null> {
+  const c = await dbGet<Customer>(`SELECT * FROM customers WHERE id = ?`, [id]);
   if (!c) return null;
-  const emails = db.prepare(`SELECT * FROM customer_emails WHERE customer_id = ? ORDER BY is_primary DESC, created_at ASC`).all(id) as CustomerEmail[];
-  const bookings = db
-    .prepare(
-      `SELECT id, request_number, package_title, start_date, status, total_price, created_at, email
-       FROM booking_requests WHERE customer_id = ? ORDER BY created_at DESC`
-    )
-    .all(id) as CustomerBooking[];
+  const emails = await dbAll<CustomerEmail>(`SELECT * FROM customer_emails WHERE customer_id = ? ORDER BY is_primary DESC, created_at ASC`, [id]);
+  const bookings = await dbAll<CustomerBooking>(
+    `SELECT id, request_number, package_title, start_date, status, total_price, created_at, email
+     FROM booking_requests WHERE customer_id = ? ORDER BY created_at DESC`, [id]
+  );
   let invoices: CustomerInvoice[] = [];
   try {
-    invoices = db
-      .prepare(
-        `SELECT i.id, i.invoice_number, i.booking_id, i.total_amount, i.paid_amount, i.status, i.invoice_date
-         FROM invoices i JOIN booking_requests b ON i.booking_id = b.id
-         WHERE b.customer_id = ? ORDER BY i.invoice_date DESC`
-      )
-      .all(id) as CustomerInvoice[];
+    invoices = await dbAll<CustomerInvoice>(
+      `SELECT i.id, i.invoice_number, i.booking_id, i.total_amount, i.paid_amount, i.status, i.invoice_date
+       FROM invoices i JOIN booking_requests b ON i.booking_id = b.id
+       WHERE b.customer_id = ? ORDER BY i.invoice_date DESC`, [id]
+    );
   } catch {
     invoices = [];
   }
@@ -260,7 +188,7 @@ export function getCustomer(id: string): CustomerDetail | null {
 
 export type CustomerUpdate = Partial<Pick<Customer, 'salutation' | 'name' | 'company' | 'phone' | 'street' | 'zip' | 'city' | 'country' | 'notes'>>;
 
-export function updateCustomer(id: string, updates: CustomerUpdate): CustomerDetail | null {
+export async function updateCustomer(id: string, updates: CustomerUpdate): Promise<CustomerDetail | null> {
   const fields = ['salutation', 'name', 'company', 'phone', 'street', 'zip', 'city', 'country', 'notes'] as const;
   const sets: string[] = [];
   const vals: unknown[] = [];
@@ -272,37 +200,31 @@ export function updateCustomer(id: string, updates: CustomerUpdate): CustomerDet
   }
   if (sets.length) {
     sets.push(`updated_at = datetime('now')`);
-    db.prepare(`UPDATE customers SET ${sets.join(', ')} WHERE id = ?`).run(...vals, id);
+    await dbRun(`UPDATE customers SET ${sets.join(', ')} WHERE id = ?`, [...vals, id]);
   }
   return getCustomer(id);
 }
 
-export function addEmailToCustomer(customerId: string, email: string): void {
+export async function addEmailToCustomer(customerId: string, email: string): Promise<void> {
   const e = normEmail(email);
   if (!e) return;
-  const existing = findCustomerIdByEmail(e);
+  const existing = await findCustomerIdByEmail(e);
   if (existing && existing !== customerId) {
     throw new Error('E-Mail gehört bereits zu einem anderen Kunden – bitte mergen.');
   }
-  db.prepare(`INSERT OR IGNORE INTO customer_emails (email, customer_id, is_primary) VALUES (?, ?, 0)`).run(e, customerId);
+  await dbRun(`INSERT OR IGNORE INTO customer_emails (email, customer_id, is_primary) VALUES (?, ?, 0)`, [e, customerId]);
 }
 
-/**
- * Führt zwei Kunden zusammen. targetId bleibt bestehen, sourceId wird aufgelöst.
- * Buchungen & E-Mails wandern auf target; leere Stammfelder von target werden aus source gefüllt.
- */
-export function mergeCustomers(targetId: string, sourceId: string): CustomerDetail | null {
+/** Führt zwei Kunden zusammen. targetId bleibt bestehen, sourceId wird aufgelöst. */
+export async function mergeCustomers(targetId: string, sourceId: string): Promise<CustomerDetail | null> {
   if (targetId === sourceId) return getCustomer(targetId);
-  const target = db.prepare(`SELECT * FROM customers WHERE id = ?`).get(targetId) as Customer | undefined;
-  const source = db.prepare(`SELECT * FROM customers WHERE id = ?`).get(sourceId) as Customer | undefined;
+  const target = await dbGet<Customer>(`SELECT * FROM customers WHERE id = ?`, [targetId]);
+  const source = await dbGet<Customer>(`SELECT * FROM customers WHERE id = ?`, [sourceId]);
   if (!target || !source) throw new Error('Kunde(n) nicht gefunden');
 
-  const tx = db.transaction(() => {
-    // Buchungen umhängen
-    db.prepare(`UPDATE booking_requests SET customer_id = ? WHERE customer_id = ?`).run(targetId, sourceId);
-    // E-Mails umhängen (als Aliase, is_primary = 0)
-    db.prepare(`UPDATE customer_emails SET customer_id = ?, is_primary = 0 WHERE customer_id = ?`).run(targetId, sourceId);
-    // Leere Felder von target aus source füllen
+  await withTx(async (q) => {
+    await q.run(`UPDATE booking_requests SET customer_id = ? WHERE customer_id = ?`, [targetId, sourceId]);
+    await q.run(`UPDATE customer_emails SET customer_id = ?, is_primary = 0 WHERE customer_id = ?`, [targetId, sourceId]);
     const fillable = ['name', 'company', 'phone', 'street', 'zip', 'city', 'country'] as const;
     const sets: string[] = [];
     const vals: unknown[] = [];
@@ -316,21 +238,19 @@ export function mergeCustomers(targetId: string, sourceId: string): CustomerDeta
     sets.push(`notes = ?`);
     vals.push(mergedNotes);
     sets.push(`updated_at = datetime('now')`);
-    db.prepare(`UPDATE customers SET ${sets.join(', ')} WHERE id = ?`).run(...vals, targetId);
-    // Quelle entfernen
-    db.prepare(`DELETE FROM customers WHERE id = ?`).run(sourceId);
+    await q.run(`UPDATE customers SET ${sets.join(', ')} WHERE id = ?`, [...vals, targetId]);
+    await q.run(`DELETE FROM customers WHERE id = ?`, [sourceId]);
   });
-  tx();
   return getCustomer(targetId);
 }
 
 /** Backfill: bestehende Buchungen ohne customer_id den Kunden zuordnen (idempotent). */
-export function backfillCustomers(): { linked: number } {
+export async function backfillCustomers(): Promise<{ linked: number }> {
   let linked = 0;
   try {
-    const rows = db
-      .prepare(`SELECT id, email, travelers FROM booking_requests WHERE customer_id IS NULL OR customer_id = ''`)
-      .all() as Array<{ id: string; email: string; travelers: string }>;
+    const rows = await dbAll<{ id: string; email: string; travelers: string }>(
+      `SELECT id, email, travelers FROM booking_requests WHERE customer_id IS NULL OR customer_id = ''`
+    );
     for (const r of rows) {
       if (!r.email) continue;
       let name = '';
@@ -342,7 +262,7 @@ export function backfillCustomers(): { linked: number } {
       } catch {
         /* ignore */
       }
-      linkBookingToCustomer(r.id, r.email, { name });
+      await linkBookingToCustomer(r.id, r.email, { name });
       linked++;
     }
   } catch {
@@ -350,4 +270,3 @@ export function backfillCustomers(): { linked: number } {
   }
   return { linked };
 }
-if (!IS_BUILD) backfillCustomers();

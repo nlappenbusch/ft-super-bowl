@@ -5,7 +5,7 @@ import { listStaffTasks, createStaffTask } from '@/lib/staffStore';
 /** GET ?assignee=<id>&status=<status>&booking=<id> → Aufgabenliste. */
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const tasks = listStaffTasks({
+  const tasks = await listStaffTasks({
     assignee_id: url.searchParams.get('assignee') || undefined,
     status: url.searchParams.get('status') || undefined,
     booking_id: url.searchParams.get('booking') || undefined,
@@ -20,6 +20,6 @@ export async function POST(req: Request) {
 
   const body = await req.json();
   if (!body.title) return NextResponse.json({ success: false, error: 'title erforderlich' }, { status: 400 });
-  const task = createStaffTask({ ...body, created_by: ctx.session.name });
+  const task = await createStaffTask({ ...body, created_by: ctx.session.name });
   return NextResponse.json({ success: true, data: task });
 }

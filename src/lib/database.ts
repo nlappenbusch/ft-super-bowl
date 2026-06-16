@@ -1,7 +1,14 @@
-import Database from 'better-sqlite3';
-import path from 'path';
-import fs from 'fs';
+/**
+ * database.ts — Buchungen, CRM-Nachrichten, Rechnungen, Ausgaben.
+ * Läuft über die Backend-Abstraktion `dbq` (SQLite ODER Postgres je nach DB_BACKEND).
+ * Alle Funktionen sind async (auch im SQLite-Modus), damit ein Flip von DB_BACKEND
+ * keine Signaturänderung erfordert.
+ */
+import { sqlite, dbGet, dbAll, dbRun, ensurePgSchema, db } from './dbq';
+import { pgEnabled } from './pg';
 import type { BookingRequest, BookingMessage, Traveler } from './supabase';
+
+export { db };
 
 interface BookingRow {
   id: string;
@@ -23,24 +30,11 @@ interface BookingRow {
   notes: string;
 }
 
-const dataDir = path.join(process.cwd(), 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-
-const dbPath = path.join(dataDir, 'bookings.db');
-export const db = new Database(dbPath);
-db.pragma('busy_timeout = 15000');
-
-// Schreibende Initialisierung (WAL-Switch) nur zur Laufzeit, NICHT während `next build`:
-// der Build sammelt Page-Daten mit mehreren Parallel-Workern → sonst "database is locked".
 const IS_BUILD_PHASE = process.env.NEXT_PHASE === 'phase-production-build';
-if (!IS_BUILD_PHASE) {
-  db.pragma('journal_mode = WAL');
-}
 
+/** Legt das komplette SQLite-Schema an (nur im SQLite-Modus relevant). */
 export function initDatabase() {
-  db.exec(`
+  sqlite.exec(`
     CREATE TABLE IF NOT EXISTS booking_requests (
       id TEXT PRIMARY KEY,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -59,7 +53,8 @@ export function initDatabase() {
       status TEXT NOT NULL DEFAULT 'new' CHECK(status IN ('new', 'in_progress', 'booked', 'rejected')),
       total_price REAL NOT NULL DEFAULT 0,
       notes TEXT DEFAULT '',
-      assigned_to TEXT
+      assigned_to TEXT,
+      customer_id TEXT
     );
 
     CREATE TABLE IF NOT EXISTS invoices (
@@ -116,13 +111,11 @@ export function initDatabase() {
       UPDATE booking_requests SET updated_at = datetime('now') WHERE id = OLD.id;
     END;
 
-    -- Fortlaufende Zähler (z.B. RQ-Anfragenummer)
     CREATE TABLE IF NOT EXISTS counters (
       name TEXT PRIMARY KEY,
       value INTEGER NOT NULL
     );
 
-    -- E-Mail-Konversation pro Anfrage (CRM)
     CREATE TABLE IF NOT EXISTS booking_messages (
       id TEXT PRIMARY KEY,
       booking_id TEXT NOT NULL,
@@ -139,9 +132,30 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_booking_messages_booking_id ON booking_messages(booking_id);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_booking_messages_graph_id ON booking_messages(graph_message_id) WHERE graph_message_id IS NOT NULL;
 
-    -- ==================== HR / TEAM ====================
+    -- ==================== CRM-Kundenstamm ====================
+    CREATE TABLE IF NOT EXISTS customers (
+      id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      salutation TEXT DEFAULT '',
+      name TEXT DEFAULT '',
+      company TEXT DEFAULT '',
+      phone TEXT DEFAULT '',
+      street TEXT DEFAULT '',
+      zip TEXT DEFAULT '',
+      city TEXT DEFAULT '',
+      country TEXT DEFAULT '',
+      notes TEXT DEFAULT ''
+    );
+    CREATE TABLE IF NOT EXISTS customer_emails (
+      email TEXT PRIMARY KEY,
+      customer_id TEXT NOT NULL,
+      is_primary INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_customer_emails_cid ON customer_emails(customer_id);
 
-    -- Mitarbeiter: automatisch angelegt beim Microsoft-Login (id = Entra oid)
+    -- ==================== HR / TEAM ====================
     CREATE TABLE IF NOT EXISTS employees (
       id TEXT PRIMARY KEY,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -150,35 +164,32 @@ export function initDatabase() {
       email TEXT NOT NULL DEFAULT '',
       role TEXT NOT NULL DEFAULT 'admin' CHECK(role IN ('admin','mitarbeiter')),
       active INTEGER NOT NULL DEFAULT 1,
-      -- Wochenarbeitszeit: JSON-Array [So,Mo,Di,Mi,Do,Fr,Sa] in Stunden
       weekly_hours TEXT NOT NULL DEFAULT '[0,8.4,8.4,8.4,8.4,8.4,0]',
       vacation_days_per_year REAL NOT NULL DEFAULT 25,
       employment_start TEXT,
       notes TEXT NOT NULL DEFAULT ''
     );
 
-    -- Zeiterfassung: Stempeluhr + manuelle Einträge
     CREATE TABLE IF NOT EXISTS time_entries (
       id TEXT PRIMARY KEY,
       employee_id TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      date TEXT NOT NULL,                -- YYYY-MM-DD
-      start_time TEXT NOT NULL,          -- HH:MM
-      end_time TEXT,                     -- HH:MM, NULL = läuft (eingestempelt)
+      date TEXT NOT NULL,
+      start_time TEXT NOT NULL,
+      end_time TEXT,
       break_minutes INTEGER NOT NULL DEFAULT 0,
       source TEXT NOT NULL DEFAULT 'stamp' CHECK(source IN ('stamp','manual')),
       note TEXT NOT NULL DEFAULT '',
       FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
     );
 
-    -- Urlaub / Abwesenheiten
     CREATE TABLE IF NOT EXISTS vacation_requests (
       id TEXT PRIMARY KEY,
       employee_id TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      start_date TEXT NOT NULL,          -- YYYY-MM-DD
-      end_date TEXT NOT NULL,            -- YYYY-MM-DD (inklusive)
-      days REAL NOT NULL DEFAULT 0,      -- verbrauchte Arbeitstage (ZH-Feiertage exkl.)
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      days REAL NOT NULL DEFAULT 0,
       type TEXT NOT NULL DEFAULT 'urlaub' CHECK(type IN ('urlaub','krankheit','kompensation','sonstiges')),
       status TEXT NOT NULL DEFAULT 'beantragt' CHECK(status IN ('beantragt','genehmigt','abgelehnt')),
       comment TEXT NOT NULL DEFAULT '',
@@ -187,7 +198,6 @@ export function initDatabase() {
       FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
     );
 
-    -- Interne Aufgaben (optional mit Bezug auf eine Anfrage)
     CREATE TABLE IF NOT EXISTS staff_tasks (
       id TEXT PRIMARY KEY,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -206,7 +216,6 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_vacation_requests_employee ON vacation_requests(employee_id, start_date);
     CREATE INDEX IF NOT EXISTS idx_staff_tasks_assignee ON staff_tasks(assignee_id, status);
 
-    -- Externe Nutzer des WM-Tippspiels
     CREATE TABLE IF NOT EXISTS tippspiel_users (
       id TEXT PRIMARY KEY,
       email TEXT NOT NULL UNIQUE,
@@ -264,78 +273,66 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_tippspiel_group_members_user ON tippspiel_group_members(user_id);
   `);
 
-  // --- Migrationen für bestehende Installationen ---------------------------
-  // SQLite kennt kein "ADD COLUMN IF NOT EXISTS"; mehrere Build-Worker können
-  // parallel migrieren → "duplicate column" wird bewusst ignoriert (idempotent).
+  // --- Migrationen für bestehende SQLite-Installationen ---
   const addColumn = (table: string, ddl: string) => {
     try {
-      db.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+      sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
     } catch (e) {
       if (!String(e).includes('duplicate column')) throw e;
     }
   };
-  const cols = db.prepare(`PRAGMA table_info(booking_requests)`).all() as Array<{ name: string }>;
+  const cols = sqlite.prepare(`PRAGMA table_info(booking_requests)`).all() as Array<{ name: string }>;
   if (!cols.some((c) => c.name === 'request_number')) addColumn('booking_requests', 'request_number TEXT');
   if (!cols.some((c) => c.name === 'assigned_to')) addColumn('booking_requests', 'assigned_to TEXT');
+  if (!cols.some((c) => c.name === 'customer_id')) addColumn('booking_requests', 'customer_id TEXT');
+  const ccols = sqlite.prepare(`PRAGMA table_info(customers)`).all() as Array<{ name: string }>;
+  if (ccols.length && !ccols.some((c) => c.name === 'salutation')) addColumn('customers', "salutation TEXT DEFAULT ''");
 
-  // RQ-Zähler initialisieren (Start bei 10000 → erste Nummer RQ-10001)
-  db.prepare(`INSERT OR IGNORE INTO counters (name, value) VALUES ('request_number', 10000)`).run();
+  sqlite.prepare(`INSERT OR IGNORE INTO counters (name, value) VALUES ('request_number', 10000)`).run();
 }
 
-// Tabellen/Migrationen nur zur Laufzeit anlegen, nicht während `next build` (Parallel-Worker-Race).
+// Initialisierung nur zur Laufzeit (nicht während `next build`).
 if (!IS_BUILD_PHASE) {
-  initDatabase();
+  if (pgEnabled()) {
+    void ensurePgSchema();
+  } else {
+    initDatabase();
+  }
 }
 
-/**
- * Liefert die nächste fortlaufende Anfragenummer im Format "RQ-12345".
- * Atomar via Transaktion (better-sqlite3 ist synchron/serialisiert).
- */
-export function getNextRequestNumber(): string {
-  const tx = db.transaction(() => {
-    db.prepare(`UPDATE counters SET value = value + 1 WHERE name = 'request_number'`).run();
-    const row = db.prepare(`SELECT value FROM counters WHERE name = 'request_number'`).get() as { value: number };
-    return row.value;
-  });
-  const value = tx();
-  return `RQ-${value}`;
+/** Nächste fortlaufende Anfragenummer "RQ-12345" (atomar via UPDATE … RETURNING). */
+export async function getNextRequestNumber(): Promise<string> {
+  const row = await dbGet<{ value: number }>(
+    `UPDATE counters SET value = value + 1 WHERE name = ? RETURNING value`,
+    ['request_number']
+  );
+  return `RQ-${row?.value ?? Date.now()}`;
 }
 
-export function insertBooking(booking: Omit<BookingRequest, 'id' | 'created_at' | 'updated_at'>) {
+export async function insertBooking(booking: Omit<BookingRequest, 'id' | 'created_at' | 'updated_at'>) {
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
+  const requestNumber = (booking as { request_number?: string }).request_number || (await getNextRequestNumber());
 
-  const requestNumber = (booking as { request_number?: string }).request_number || getNextRequestNumber();
-
-  const stmt = db.prepare(`
-    INSERT INTO booking_requests (
+  await dbRun(
+    `INSERT INTO booking_requests (
       id, created_at, updated_at, request_number, package_id, package_title, start_date,
       number_of_persons, double_rooms, single_rooms, travelers,
       email, phone, message, status, total_price, notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  stmt.run(
-    id, now, now, requestNumber,
-    booking.package_id,
-    booking.package_title,
-    booking.start_date,
-    booking.number_of_persons,
-    booking.double_rooms,
-    booking.single_rooms,
-    booking.travelers,
-    booking.email,
-    booking.phone,
-    booking.message,
-    booking.status,
-    booking.total_price,
-    booking.notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id, now, now, requestNumber,
+      booking.package_id, booking.package_title, booking.start_date,
+      booking.number_of_persons, booking.double_rooms, booking.single_rooms,
+      booking.travelers, booking.email, booking.phone, booking.message,
+      booking.status, booking.total_price, booking.notes,
+    ]
   );
 
   return { id, created_at: now, updated_at: now, request_number: requestNumber, ...booking };
 }
 
-// ==================== MESSAGE (CRM-Konversation) FUNCTIONS ====================
+// ==================== MESSAGE (CRM) ====================
 
 interface MessageRow {
   id: string;
@@ -349,88 +346,68 @@ interface MessageRow {
   graph_message_id: string | null;
 }
 
-export function insertMessage(
-  msg: Omit<BookingMessage, 'id' | 'created_at'>
-): BookingMessage {
+export async function insertMessage(msg: Omit<BookingMessage, 'id' | 'created_at'>): Promise<BookingMessage> {
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
-  db.prepare(`
-    INSERT INTO booking_messages (id, booking_id, created_at, direction, from_email, to_email, subject, body, graph_message_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    id, msg.booking_id, now, msg.direction,
-    msg.from_email, msg.to_email, msg.subject, msg.body,
-    msg.graph_message_id || null
+  await dbRun(
+    `INSERT INTO booking_messages (id, booking_id, created_at, direction, from_email, to_email, subject, body, graph_message_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, msg.booking_id, now, msg.direction, msg.from_email, msg.to_email, msg.subject, msg.body, msg.graph_message_id || null]
   );
   return { id, created_at: now, ...msg };
 }
 
-export function getMessagesByBooking(bookingId: string): BookingMessage[] {
-  const rows = db
-    .prepare(`SELECT * FROM booking_messages WHERE booking_id = ? ORDER BY created_at ASC`)
-    .all(bookingId) as MessageRow[];
+export async function getMessagesByBooking(bookingId: string): Promise<BookingMessage[]> {
+  const rows = await dbAll<MessageRow>(
+    `SELECT * FROM booking_messages WHERE booking_id = ? ORDER BY created_at ASC`,
+    [bookingId]
+  );
   return rows as BookingMessage[];
 }
 
-export function findBookingByRequestNumber(requestNumber: string): BookingRequest | undefined {
-  const row = db
-    .prepare(`SELECT * FROM booking_requests WHERE request_number = ?`)
-    .get(requestNumber) as BookingRow | undefined;
+export async function findBookingByRequestNumber(requestNumber: string): Promise<BookingRequest | undefined> {
+  const row = await dbGet<BookingRow>(`SELECT * FROM booking_requests WHERE request_number = ?`, [requestNumber]);
   if (!row) return undefined;
   return { ...row, travelers: JSON.parse(row.travelers) as Traveler[] };
 }
 
-export function messageExistsByGraphId(graphId: string): boolean {
-  const row = db
-    .prepare(`SELECT 1 FROM booking_messages WHERE graph_message_id = ? LIMIT 1`)
-    .get(graphId);
+export async function messageExistsByGraphId(graphId: string): Promise<boolean> {
+  const row = await dbGet(`SELECT 1 AS ok FROM booking_messages WHERE graph_message_id = ? LIMIT 1`, [graphId]);
   return !!row;
 }
 
-export function getAllBookings(): BookingRequest[] {
-  const stmt = db.prepare('SELECT * FROM booking_requests ORDER BY created_at DESC');
-  const rows = stmt.all() as BookingRow[];
-  return rows.map(row => ({
-    ...row,
-    travelers: JSON.parse(row.travelers) as Traveler[]
-  }));
+export async function getAllBookings(): Promise<BookingRequest[]> {
+  const rows = await dbAll<BookingRow>('SELECT * FROM booking_requests ORDER BY created_at DESC');
+  return rows.map((row) => ({ ...row, travelers: JSON.parse(row.travelers) as Traveler[] }));
 }
 
-export function getBookingById(id: string): BookingRequest | undefined {
-  const stmt = db.prepare('SELECT * FROM booking_requests WHERE id = ?');
-  const row = stmt.get(id) as BookingRow | undefined;
+export async function getBookingById(id: string): Promise<BookingRequest | undefined> {
+  const row = await dbGet<BookingRow>('SELECT * FROM booking_requests WHERE id = ?', [id]);
   if (!row) return undefined;
-  return {
-    ...row,
-    travelers: JSON.parse(row.travelers) as Traveler[]
-  };
+  return { ...row, travelers: JSON.parse(row.travelers) as Traveler[] };
 }
 
-export function updateBookingStatus(id: string, status: BookingRequest['status']) {
-  const stmt = db.prepare('UPDATE booking_requests SET status = ? WHERE id = ?');
-  const result = stmt.run(status, id);
-  return result.changes > 0;
+export async function updateBookingStatus(id: string, status: BookingRequest['status']) {
+  const { changes } = await dbRun('UPDATE booking_requests SET status = ? WHERE id = ?', [status, id]);
+  return changes > 0;
 }
 
-export function updateBookingNotes(id: string, notes: string) {
-  const stmt = db.prepare('UPDATE booking_requests SET notes = ? WHERE id = ?');
-  const result = stmt.run(notes, id);
-  return result.changes > 0;
+export async function updateBookingNotes(id: string, notes: string) {
+  const { changes } = await dbRun('UPDATE booking_requests SET notes = ? WHERE id = ?', [notes, id]);
+  return changes > 0;
 }
 
-export function updateBookingAssignee(id: string, assignedTo: string | null) {
-  const stmt = db.prepare('UPDATE booking_requests SET assigned_to = ? WHERE id = ?');
-  const result = stmt.run(assignedTo, id);
-  return result.changes > 0;
+export async function updateBookingAssignee(id: string, assignedTo: string | null) {
+  const { changes } = await dbRun('UPDATE booking_requests SET assigned_to = ? WHERE id = ?', [assignedTo, id]);
+  return changes > 0;
 }
 
-export function deleteBooking(id: string) {
-  const stmt = db.prepare('DELETE FROM booking_requests WHERE id = ?');
-  const result = stmt.run(id);
-  return result.changes > 0;
+export async function deleteBooking(id: string) {
+  const { changes } = await dbRun('DELETE FROM booking_requests WHERE id = ?', [id]);
+  return changes > 0;
 }
 
-// ==================== INVOICE FUNCTIONS ====================
+// ==================== INVOICE ====================
 
 export interface Invoice {
   id: string;
@@ -454,130 +431,90 @@ export interface InvoiceItem {
   total_price: number;
 }
 
-export function generateInvoiceNumber(): string {
+export async function generateInvoiceNumber(): Promise<string> {
   const year = new Date().getFullYear();
-  const stmt = db.prepare(`
-    SELECT invoice_number FROM invoices
-    WHERE invoice_number LIKE ?
-    ORDER BY invoice_number DESC
-    LIMIT 1
-  `);
-  const lastInvoice = stmt.get(`RE-${year}-%`) as { invoice_number: string } | undefined;
-  if (!lastInvoice) {
-    return `RE-${year}-0001`;
-  }
+  const lastInvoice = await dbGet<{ invoice_number: string }>(
+    `SELECT invoice_number FROM invoices WHERE invoice_number LIKE ? ORDER BY invoice_number DESC LIMIT 1`,
+    [`RE-${year}-%`]
+  );
+  if (!lastInvoice) return `RE-${year}-0001`;
   const lastNumber = parseInt(lastInvoice.invoice_number.split('-')[2]);
   const newNumber = (lastNumber + 1).toString().padStart(4, '0');
   return `RE-${year}-${newNumber}`;
 }
 
-export function createInvoice(
+export async function createInvoice(
   bookingId: string,
   items: Omit<InvoiceItem, 'id' | 'invoice_id'>[],
   dueInDays: number = 14,
   notes: string = ''
-): Invoice {
+): Promise<Invoice> {
   const invoiceId = crypto.randomUUID();
-  const invoiceNumber = generateInvoiceNumber();
+  const invoiceNumber = await generateInvoiceNumber();
   const now = new Date().toISOString();
   const invoiceDate = now;
   const dueDate = new Date(Date.now() + dueInDays * 24 * 60 * 60 * 1000).toISOString();
   const totalAmount = items.reduce((sum, item) => sum + item.total_price, 0);
 
-  const invoiceStmt = db.prepare(`
-    INSERT INTO invoices (
-      id, invoice_number, booking_id, created_at, invoice_date, due_date,
-      total_amount, paid_amount, status, notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  invoiceStmt.run(
-    invoiceId, invoiceNumber, bookingId, now, invoiceDate, dueDate,
-    totalAmount, 0, 'open', notes || ''
+  await dbRun(
+    `INSERT INTO invoices (id, invoice_number, booking_id, created_at, invoice_date, due_date, total_amount, paid_amount, status, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [invoiceId, invoiceNumber, bookingId, now, invoiceDate, dueDate, totalAmount, 0, 'open', notes || '']
   );
 
-  const itemStmt = db.prepare(`
-    INSERT INTO invoice_items (id, invoice_id, description, quantity, unit_price, total_price)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
-
-  items.forEach(item => {
-    const itemId = crypto.randomUUID();
-    itemStmt.run(
-      itemId, invoiceId, item.description, item.quantity, item.unit_price, item.total_price
+  for (const item of items) {
+    await dbRun(
+      `INSERT INTO invoice_items (id, invoice_id, description, quantity, unit_price, total_price) VALUES (?, ?, ?, ?, ?, ?)`,
+      [crypto.randomUUID(), invoiceId, item.description, item.quantity, item.unit_price, item.total_price]
     );
-  });
+  }
 
   return {
-    id: invoiceId,
-    invoice_number: invoiceNumber,
-    booking_id: bookingId,
-    created_at: now,
-    invoice_date: invoiceDate,
-    due_date: dueDate,
-    total_amount: totalAmount,
-    paid_amount: 0,
-    status: 'open',
-    notes: ''
+    id: invoiceId, invoice_number: invoiceNumber, booking_id: bookingId,
+    created_at: now, invoice_date: invoiceDate, due_date: dueDate,
+    total_amount: totalAmount, paid_amount: 0, status: 'open', notes: '',
   };
 }
 
-export function getAllInvoices(): Invoice[] {
-  const stmt = db.prepare('SELECT * FROM invoices ORDER BY created_at DESC');
-  return stmt.all() as Invoice[];
+export async function getAllInvoices(): Promise<Invoice[]> {
+  return dbAll<Invoice>('SELECT * FROM invoices ORDER BY created_at DESC');
 }
 
-export function getInvoiceById(id: string): Invoice | undefined {
-  const stmt = db.prepare('SELECT * FROM invoices WHERE id = ?');
-  return stmt.get(id) as Invoice | undefined;
+export async function getInvoiceById(id: string): Promise<Invoice | undefined> {
+  return dbGet<Invoice>('SELECT * FROM invoices WHERE id = ?', [id]);
 }
 
-export function getInvoicesByBookingId(bookingId: string): Invoice[] {
-  const stmt = db.prepare('SELECT * FROM invoices WHERE booking_id = ? ORDER BY created_at DESC');
-  return stmt.all(bookingId) as Invoice[];
+export async function getInvoicesByBookingId(bookingId: string): Promise<Invoice[]> {
+  return dbAll<Invoice>('SELECT * FROM invoices WHERE booking_id = ? ORDER BY created_at DESC', [bookingId]);
 }
 
-export function getInvoiceItems(invoiceId: string): InvoiceItem[] {
-  const stmt = db.prepare('SELECT * FROM invoice_items WHERE invoice_id = ?');
-  return stmt.all(invoiceId) as InvoiceItem[];
+export async function getInvoiceItems(invoiceId: string): Promise<InvoiceItem[]> {
+  return dbAll<InvoiceItem>('SELECT * FROM invoice_items WHERE invoice_id = ?', [invoiceId]);
 }
 
-export function updateInvoiceStatus(id: string, status: Invoice['status']) {
-  const stmt = db.prepare('UPDATE invoices SET status = ? WHERE id = ?');
-  const result = stmt.run(status, id);
-  return result.changes > 0;
+export async function updateInvoiceStatus(id: string, status: Invoice['status']) {
+  const { changes } = await dbRun('UPDATE invoices SET status = ? WHERE id = ?', [status, id]);
+  return changes > 0;
 }
 
-export function recordPayment(invoiceId: string, amount: number) {
-  const invoice = getInvoiceById(invoiceId);
+export async function recordPayment(invoiceId: string, amount: number) {
+  const invoice = await getInvoiceById(invoiceId);
   if (!invoice) return false;
 
   const newPaidAmount = invoice.paid_amount + amount;
   let newStatus: Invoice['status'] = 'open';
+  if (newPaidAmount >= invoice.total_amount) newStatus = 'paid';
+  else if (newPaidAmount > 0) newStatus = 'partial';
 
-  if (newPaidAmount >= invoice.total_amount) {
-    newStatus = 'paid';
-  } else if (newPaidAmount > 0) {
-    newStatus = 'partial';
-  }
-
-  const stmt = db.prepare('UPDATE invoices SET paid_amount = ?, status = ? WHERE id = ?');
-  const result = stmt.run(newPaidAmount, newStatus, invoiceId);
-  return result.changes > 0;
+  const { changes } = await dbRun('UPDATE invoices SET paid_amount = ?, status = ? WHERE id = ?', [newPaidAmount, newStatus, invoiceId]);
+  return changes > 0;
 }
 
-// ==================== EXPENSE FUNCTIONS ====================
+// ==================== EXPENSE ====================
 
 export type ExpenseCategory =
-  | 'hotel'
-  | 'tickets'
-  | 'transfer'
-  | 'flug'
-  | 'catering'
-  | 'personal'
-  | 'marketing'
-  | 'gebuehren'
-  | 'sonstiges';
+  | 'hotel' | 'tickets' | 'transfer' | 'flug' | 'catering'
+  | 'personal' | 'marketing' | 'gebuehren' | 'sonstiges';
 
 export interface Expense {
   id: string;
@@ -594,7 +531,7 @@ export interface Expense {
 
 export type ExpenseInput = Omit<Expense, 'id' | 'created_at'>;
 
-export function createExpense(input: Partial<ExpenseInput>): Expense {
+export async function createExpense(input: Partial<ExpenseInput>): Promise<Expense> {
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   const row: Expense = {
@@ -610,56 +547,42 @@ export function createExpense(input: Partial<ExpenseInput>): Expense {
     notes: input.notes || '',
   };
 
-  const stmt = db.prepare(`
-    INSERT INTO expenses (
-      id, created_at, expense_date, event_slug, booking_id,
-      category, description, vendor, amount, notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  stmt.run(
-    row.id, row.created_at, row.expense_date, row.event_slug, row.booking_id,
-    row.category, row.description, row.vendor, row.amount, row.notes
+  await dbRun(
+    `INSERT INTO expenses (id, created_at, expense_date, event_slug, booking_id, category, description, vendor, amount, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [row.id, row.created_at, row.expense_date, row.event_slug, row.booking_id, row.category, row.description, row.vendor, row.amount, row.notes]
   );
-
   return row;
 }
 
-export function getAllExpenses(filter?: { eventSlug?: string; bookingId?: string }): Expense[] {
+export async function getAllExpenses(filter?: { eventSlug?: string; bookingId?: string }): Promise<Expense[]> {
   if (filter?.bookingId) {
-    return db.prepare('SELECT * FROM expenses WHERE booking_id = ? ORDER BY expense_date DESC').all(filter.bookingId) as Expense[];
+    return dbAll<Expense>('SELECT * FROM expenses WHERE booking_id = ? ORDER BY expense_date DESC', [filter.bookingId]);
   }
   if (filter?.eventSlug) {
-    return db.prepare('SELECT * FROM expenses WHERE event_slug = ? ORDER BY expense_date DESC').all(filter.eventSlug) as Expense[];
+    return dbAll<Expense>('SELECT * FROM expenses WHERE event_slug = ? ORDER BY expense_date DESC', [filter.eventSlug]);
   }
-  return db.prepare('SELECT * FROM expenses ORDER BY expense_date DESC').all() as Expense[];
+  return dbAll<Expense>('SELECT * FROM expenses ORDER BY expense_date DESC');
 }
 
-export function getExpenseById(id: string): Expense | undefined {
-  return db.prepare('SELECT * FROM expenses WHERE id = ?').get(id) as Expense | undefined;
+export async function getExpenseById(id: string): Promise<Expense | undefined> {
+  return dbGet<Expense>('SELECT * FROM expenses WHERE id = ?', [id]);
 }
 
-export function updateExpense(id: string, updates: Partial<ExpenseInput>): boolean {
-  const existing = getExpenseById(id);
+export async function updateExpense(id: string, updates: Partial<ExpenseInput>): Promise<boolean> {
+  const existing = await getExpenseById(id);
   if (!existing) return false;
   const merged = { ...existing, ...updates };
-  const stmt = db.prepare(`
-    UPDATE expenses SET
-      expense_date = ?, event_slug = ?, booking_id = ?,
-      category = ?, description = ?, vendor = ?, amount = ?, notes = ?
-    WHERE id = ?
-  `);
-  const result = stmt.run(
-    merged.expense_date, merged.event_slug, merged.booking_id,
-    merged.category, merged.description, merged.vendor, Number(merged.amount) || 0, merged.notes,
-    id
+  const { changes } = await dbRun(
+    `UPDATE expenses SET expense_date = ?, event_slug = ?, booking_id = ?, category = ?, description = ?, vendor = ?, amount = ?, notes = ? WHERE id = ?`,
+    [merged.expense_date, merged.event_slug, merged.booking_id, merged.category, merged.description, merged.vendor, Number(merged.amount) || 0, merged.notes, id]
   );
-  return result.changes > 0;
+  return changes > 0;
 }
 
-export function deleteExpense(id: string): boolean {
-  const result = db.prepare('DELETE FROM expenses WHERE id = ?').run(id);
-  return result.changes > 0;
+export async function deleteExpense(id: string): Promise<boolean> {
+  const { changes } = await dbRun('DELETE FROM expenses WHERE id = ?', [id]);
+  return changes > 0;
 }
 
 export default db;

@@ -8,9 +8,10 @@ export async function GET(req: Request) {
   // (auch bei Sessions, die vor dem Team-Modul erstellt wurden).
   await getSessionEmployee();
   const year = parseInt(new URL(req.url).searchParams.get('year') || '', 10) || new Date().getFullYear();
-  const employees = listEmployees(true).map((e) => ({
+  const list = await listEmployees(true);
+  const employees = await Promise.all(list.map(async (e) => ({
     ...e,
-    vacation: vacationBalance(e, year),
-  }));
+    vacation: await vacationBalance(e, year),
+  })));
   return NextResponse.json({ success: true, data: employees });
 }

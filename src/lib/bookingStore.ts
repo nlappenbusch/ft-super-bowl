@@ -122,13 +122,13 @@ export async function listBookings() {
 export async function updateBooking(id: string, updates: { status?: string; notes?: string; assigned_to?: string | null }) {
   if (!isSupabaseConfigured() || !supabase) {
     if (updates.status && ['new', 'in_progress', 'booked', 'rejected'].includes(updates.status)) {
-      updateBookingStatus(id, updates.status as 'new' | 'in_progress' | 'booked' | 'rejected');
+      await updateBookingStatus(id, updates.status as 'new' | 'in_progress' | 'booked' | 'rejected');
     }
     if (updates.notes !== undefined) {
-      updateBookingNotes(id, updates.notes);
+      await updateBookingNotes(id, updates.notes);
     }
     if (updates.assigned_to !== undefined) {
-      updateBookingAssignee(id, updates.assigned_to);
+      await updateBookingAssignee(id, updates.assigned_to);
     }
     return getBookingById(id);
   }

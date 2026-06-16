@@ -9,7 +9,7 @@ export async function GET() {
   if (!ctx.employee) {
     return NextResponse.json({ success: true, data: { running: null, hasProfile: false } });
   }
-  return NextResponse.json({ success: true, data: { running: getRunningEntry(ctx.employee.id), hasProfile: true } });
+  return NextResponse.json({ success: true, data: { running: await getRunningEntry(ctx.employee.id), hasProfile: true } });
 }
 
 /** POST { action: 'in' | 'out', break_minutes? } – Stempeluhr für den eigenen Account. */
@@ -21,10 +21,10 @@ export async function POST(req: Request) {
   }
   const body = await req.json().catch(() => ({}));
   if (body.action === 'in') {
-    return NextResponse.json({ success: true, data: stampIn(ctx.employee.id) });
+    return NextResponse.json({ success: true, data: await stampIn(ctx.employee.id) });
   }
   if (body.action === 'out') {
-    const entry = stampOut(ctx.employee.id, Number(body.break_minutes) || 0);
+    const entry = await stampOut(ctx.employee.id, Number(body.break_minutes) || 0);
     if (!entry) return NextResponse.json({ success: false, error: 'Nicht eingestempelt' }, { status: 400 });
     return NextResponse.json({ success: true, data: entry });
   }

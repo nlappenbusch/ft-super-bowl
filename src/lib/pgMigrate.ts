@@ -7,6 +7,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { getPool } from './pg';
+import { applyPgSchemaEnhancements } from './dbq';
 
 function pgType(sqliteType: string): string {
   const t = (sqliteType || '').toUpperCase();
@@ -67,5 +68,12 @@ export async function migrateSqliteToPg(sqlitePath?: string): Promise<MigrateRes
     }
   }
   sqlite.close();
+  // Schema-Ergänzungen (Defaults, Unique-Constraints, Indizes, updated_at-Trigger)
+  // direkt nach dem Kopieren anwenden, damit das pg-Schema vor dem Umschalten korrekt ist.
+  try {
+    await applyPgSchemaEnhancements();
+  } catch (e) {
+    errors.push(`schema-enhancements: ${(e as Error).message}`);
+  }
   return { tables: out, errors, durationMs: Date.now() - t0 };
 }

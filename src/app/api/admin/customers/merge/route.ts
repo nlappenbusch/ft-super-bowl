@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     if (!targetId || !sourceId) {
       return NextResponse.json({ success: false, error: 'targetId und sourceId erforderlich' }, { status: 400 });
     }
-    const merged = mergeCustomers(String(targetId), String(sourceId));
+    const merged = await mergeCustomers(String(targetId), String(sourceId));
     return NextResponse.json({ success: true, data: merged });
   } catch (error) {
     return NextResponse.json({ success: false, error: (error as Error).message }, { status: 400 });

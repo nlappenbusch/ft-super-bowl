@@ -5,7 +5,7 @@ import { updateEmployee, type EmployeeUpdate } from '@/lib/staffStore';
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = (await req.json()) as EmployeeUpdate;
-  const updated = updateEmployee(id, {
+  const updated = await updateEmployee(id, {
     role: body.role,
     active: body.active,
     weekly_hours: body.weekly_hours,

@@ -3,12 +3,12 @@ import { consumeMagicLinkToken, createTippspielSessionToken, TIPPSPIEL_SESSION_C
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const payload = consumeMagicLinkToken(url.searchParams.get('token'));
+  const payload = await consumeMagicLinkToken(url.searchParams.get('token'));
   if (!payload) {
     return NextResponse.redirect(new URL('/tippspiel?login=invalid', url.origin));
   }
 
-  upsertTippspielUser(payload.email);
+  await upsertTippspielUser(payload.email);
   const joinCode = url.searchParams.get('join');
   const target = new URL('/tippspiel?login=success', url.origin);
   if (joinCode && /^[A-Za-z0-9_-]{6,40}$/.test(joinCode)) target.searchParams.set('join', joinCode);

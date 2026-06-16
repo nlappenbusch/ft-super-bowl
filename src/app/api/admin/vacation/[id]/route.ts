@@ -12,14 +12,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (body.status !== 'genehmigt' && body.status !== 'abgelehnt') {
     return NextResponse.json({ success: false, error: "status muss 'genehmigt' oder 'abgelehnt' sein" }, { status: 400 });
   }
-  const updated = decideVacation(id, body.status, ctx.session.name);
+  const updated = await decideVacation(id, body.status, ctx.session.name);
   if (!updated) return NextResponse.json({ success: false, error: 'Antrag nicht gefunden' }, { status: 404 });
   return NextResponse.json({ success: true, data: updated });
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const ok = deleteVacationRequest(id);
+  const ok = await deleteVacationRequest(id);
   if (!ok) return NextResponse.json({ success: false, error: 'Antrag nicht gefunden' }, { status: 404 });
   return NextResponse.json({ success: true });
 }

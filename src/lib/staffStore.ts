@@ -2,11 +2,11 @@
  * staffStore.ts
  * ─────────────────────────────────────────────────────────────────────────────
  * Mitarbeiter, Zeiterfassung, Urlaub & interne Tasks.
- * Mitarbeiter werden beim Microsoft-Login automatisch angelegt (id = Entra oid).
- * Soll-Zeiten & Urlaubsverbrauch berücksichtigen die Feiertage des Kantons ZH.
+ * Läuft über die Backend-Abstraktion `dbq` (SQLite ODER Postgres je nach DB_BACKEND).
  * ─────────────────────────────────────────────────────────────────────────────
  */
-import { db } from './database';
+import { dbGet, dbAll, dbRun } from './dbq';
+import './database';
 import {
   WeeklyHours, DEFAULT_WEEKLY_HOURS,
   targetHoursForDate, workingDaysBetween, zhHolidays,
@@ -45,28 +45,28 @@ function rowToEmployee(r: EmployeeRow): Employee {
 }
 
 /** Upsert beim Microsoft-Login: legt Mitarbeiter an bzw. aktualisiert Name/E-Mail/Login-Zeit. */
-export function upsertEmployeeOnLogin(input: { id: string; name: string; email?: string }): Employee {
+export async function upsertEmployeeOnLogin(input: { id: string; name: string; email?: string }): Promise<Employee> {
   const now = new Date().toISOString();
-  db.prepare(`
+  await dbRun(`
     INSERT INTO employees (id, name, email, last_login_at)
     VALUES (?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
       email = CASE WHEN excluded.email != '' THEN excluded.email ELSE employees.email END,
       last_login_at = excluded.last_login_at
-  `).run(input.id, input.name, input.email || '', now);
-  return getEmployee(input.id)!;
+  `, [input.id, input.name, input.email || '', now]);
+  return (await getEmployee(input.id))!;
 }
 
-export function getEmployee(id: string): Employee | null {
-  const r = db.prepare('SELECT * FROM employees WHERE id = ?').get(id) as EmployeeRow | undefined;
+export async function getEmployee(id: string): Promise<Employee | null> {
+  const r = await dbGet<EmployeeRow>('SELECT * FROM employees WHERE id = ?', [id]);
   return r ? rowToEmployee(r) : null;
 }
 
-export function listEmployees(includeInactive = true): Employee[] {
-  const rows = db.prepare(
-    `SELECT * FROM employees ${includeInactive ? '' : 'WHERE active = 1'} ORDER BY name COLLATE NOCASE`
-  ).all() as EmployeeRow[];
+export async function listEmployees(includeInactive = true): Promise<Employee[]> {
+  const rows = await dbAll<EmployeeRow>(
+    `SELECT * FROM employees ${includeInactive ? '' : 'WHERE active = 1'} ORDER BY lower(name)`
+  );
   return rows.map(rowToEmployee);
 }
 
@@ -80,15 +80,15 @@ export interface EmployeeUpdate {
   name?: string;
 }
 
-export function updateEmployee(id: string, u: EmployeeUpdate): Employee | null {
-  const cur = getEmployee(id);
+export async function updateEmployee(id: string, u: EmployeeUpdate): Promise<Employee | null> {
+  const cur = await getEmployee(id);
   if (!cur) return null;
-  db.prepare(`
+  await dbRun(`
     UPDATE employees SET
       role = ?, active = ?, weekly_hours = ?, vacation_days_per_year = ?,
       employment_start = ?, notes = ?, name = ?
     WHERE id = ?
-  `).run(
+  `, [
     u.role ?? cur.role,
     (u.active ?? cur.active) ? 1 : 0,
     JSON.stringify(u.weekly_hours ?? cur.weekly_hours),
@@ -97,7 +97,7 @@ export function updateEmployee(id: string, u: EmployeeUpdate): Employee | null {
     u.notes ?? cur.notes,
     u.name ?? cur.name,
     id,
-  );
+  ]);
   return getEmployee(id);
 }
 
@@ -128,45 +128,43 @@ export function entryHours(e: TimeEntry): number {
 }
 
 function nowLocal(): { date: string; time: string } {
-  // Schweizer Lokalzeit (Server kann UTC laufen)
   const fmt = new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'Europe/Zurich', year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit',
   });
-  const s = fmt.format(new Date()); // "YYYY-MM-DD HH:MM"
+  const s = fmt.format(new Date());
   const [date, time] = s.split(' ');
   return { date, time };
 }
 
 /** Offener (laufender) Stempel-Eintrag eines Mitarbeiters. */
-export function getRunningEntry(employeeId: string): TimeEntry | null {
-  const r = db.prepare(
-    `SELECT * FROM time_entries WHERE employee_id = ? AND end_time IS NULL ORDER BY date DESC, start_time DESC LIMIT 1`
-  ).get(employeeId) as TimeEntry | undefined;
+export async function getRunningEntry(employeeId: string): Promise<TimeEntry | null> {
+  const r = await dbGet<TimeEntry>(
+    `SELECT * FROM time_entries WHERE employee_id = ? AND end_time IS NULL ORDER BY date DESC, start_time DESC LIMIT 1`,
+    [employeeId]
+  );
   return r || null;
 }
 
-export function stampIn(employeeId: string): TimeEntry {
-  const running = getRunningEntry(employeeId);
+export async function stampIn(employeeId: string): Promise<TimeEntry> {
+  const running = await getRunningEntry(employeeId);
   if (running) return running;
   const { date, time } = nowLocal();
   const id = crypto.randomUUID();
-  db.prepare(`
+  await dbRun(`
     INSERT INTO time_entries (id, employee_id, date, start_time, end_time, source)
     VALUES (?, ?, ?, ?, NULL, 'stamp')
-  `).run(id, employeeId, date, time);
-  return db.prepare('SELECT * FROM time_entries WHERE id = ?').get(id) as TimeEntry;
+  `, [id, employeeId, date, time]);
+  return (await dbGet<TimeEntry>('SELECT * FROM time_entries WHERE id = ?', [id]))!;
 }
 
-export function stampOut(employeeId: string, breakMinutes = 0): TimeEntry | null {
-  const running = getRunningEntry(employeeId);
+export async function stampOut(employeeId: string, breakMinutes = 0): Promise<TimeEntry | null> {
+  const running = await getRunningEntry(employeeId);
   if (!running) return null;
   const { date, time } = nowLocal();
-  // Über Mitternacht: Eintrag endet 23:59, Rest wird nicht automatisch aufgeteilt
   const end = date === running.date ? time : '23:59';
-  db.prepare('UPDATE time_entries SET end_time = ?, break_minutes = ? WHERE id = ?')
-    .run(end, breakMinutes, running.id);
-  return db.prepare('SELECT * FROM time_entries WHERE id = ?').get(running.id) as TimeEntry;
+  await dbRun('UPDATE time_entries SET end_time = ?, break_minutes = ? WHERE id = ?', [end, breakMinutes, running.id]);
+  return (await dbGet<TimeEntry>('SELECT * FROM time_entries WHERE id = ?', [running.id]))!;
 }
 
 export interface TimeEntryInput {
@@ -178,36 +176,36 @@ export interface TimeEntryInput {
   note?: string;
 }
 
-export function addManualEntry(input: TimeEntryInput): TimeEntry {
+export async function addManualEntry(input: TimeEntryInput): Promise<TimeEntry> {
   const id = crypto.randomUUID();
-  db.prepare(`
+  await dbRun(`
     INSERT INTO time_entries (id, employee_id, date, start_time, end_time, break_minutes, source, note)
     VALUES (?, ?, ?, ?, ?, ?, 'manual', ?)
-  `).run(id, input.employee_id, input.date, input.start_time, input.end_time,
-    input.break_minutes || 0, input.note || '');
-  return db.prepare('SELECT * FROM time_entries WHERE id = ?').get(id) as TimeEntry;
+  `, [id, input.employee_id, input.date, input.start_time, input.end_time, input.break_minutes || 0, input.note || '']);
+  return (await dbGet<TimeEntry>('SELECT * FROM time_entries WHERE id = ?', [id]))!;
 }
 
-export function updateTimeEntry(id: string, u: Partial<TimeEntryInput>): TimeEntry | null {
-  const cur = db.prepare('SELECT * FROM time_entries WHERE id = ?').get(id) as TimeEntry | undefined;
+export async function updateTimeEntry(id: string, u: Partial<TimeEntryInput>): Promise<TimeEntry | null> {
+  const cur = await dbGet<TimeEntry>('SELECT * FROM time_entries WHERE id = ?', [id]);
   if (!cur) return null;
-  db.prepare(`
+  await dbRun(`
     UPDATE time_entries SET date = ?, start_time = ?, end_time = ?, break_minutes = ?, note = ? WHERE id = ?
-  `).run(
+  `, [
     u.date ?? cur.date, u.start_time ?? cur.start_time, u.end_time ?? cur.end_time,
     u.break_minutes ?? cur.break_minutes, u.note ?? cur.note, id,
+  ]);
+  return (await dbGet<TimeEntry>('SELECT * FROM time_entries WHERE id = ?', [id])) ?? null;
+}
+
+export async function deleteTimeEntry(id: string): Promise<boolean> {
+  return (await dbRun('DELETE FROM time_entries WHERE id = ?', [id])).changes > 0;
+}
+
+export async function listTimeEntries(employeeId: string, fromIso: string, toIso: string): Promise<TimeEntry[]> {
+  return dbAll<TimeEntry>(
+    `SELECT * FROM time_entries WHERE employee_id = ? AND date >= ? AND date <= ? ORDER BY date, start_time`,
+    [employeeId, fromIso, toIso]
   );
-  return db.prepare('SELECT * FROM time_entries WHERE id = ?').get(id) as TimeEntry;
-}
-
-export function deleteTimeEntry(id: string): boolean {
-  return db.prepare('DELETE FROM time_entries WHERE id = ?').run(id).changes > 0;
-}
-
-export function listTimeEntries(employeeId: string, fromIso: string, toIso: string): TimeEntry[] {
-  return db.prepare(
-    `SELECT * FROM time_entries WHERE employee_id = ? AND date >= ? AND date <= ? ORDER BY date, start_time`
-  ).all(employeeId, fromIso, toIso) as TimeEntry[];
 }
 
 export interface TimeSummary {
@@ -220,9 +218,8 @@ export interface TimeSummary {
 }
 
 /** Monats-/Zeitraumübersicht: Soll (Wochenplan minus ZH-Feiertage) vs. Ist. */
-export function timeSummary(employee: Employee, fromIso: string, toIso: string): TimeSummary {
-  const entries = listTimeEntries(employee.id, fromIso, toIso);
-  // Soll nur bis heute rechnen, sonst ist der laufende Monat immer tiefrot
+export async function timeSummary(employee: Employee, fromIso: string, toIso: string): Promise<TimeSummary> {
+  const entries = await listTimeEntries(employee.id, fromIso, toIso);
   const today = nowLocal().date;
   const effectiveTo = toIso > today ? today : toIso;
   let target = 0;
@@ -234,11 +231,10 @@ export function timeSummary(employee: Employee, fromIso: string, toIso: string):
       d.setUTCDate(d.getUTCDate() + 1);
     }
   }
-  // Genehmigter Urlaub im Zeitraum gilt als erfüllte Soll-Zeit → Soll reduzieren
-  const vacs = db.prepare(`
+  const vacs = await dbAll<VacationRequest>(`
     SELECT * FROM vacation_requests
     WHERE employee_id = ? AND status = 'genehmigt' AND start_date <= ? AND end_date >= ?
-  `).all(employee.id, effectiveTo, fromIso) as VacationRequest[];
+  `, [employee.id, effectiveTo, fromIso]);
   for (const v of vacs) {
     const from = v.start_date > fromIso ? v.start_date : fromIso;
     const to = v.end_date < effectiveTo ? v.end_date : effectiveTo;
@@ -278,57 +274,56 @@ export interface VacationRequest {
   decided_at: string | null;
 }
 
-export function createVacationRequest(input: {
+export async function createVacationRequest(input: {
   employee_id: string; start_date: string; end_date: string;
   type?: VacationRequest['type']; comment?: string;
-}): VacationRequest | null {
-  const emp = getEmployee(input.employee_id);
+}): Promise<VacationRequest | null> {
+  const emp = await getEmployee(input.employee_id);
   if (!emp || input.end_date < input.start_date) return null;
   const days = workingDaysBetween(input.start_date, input.end_date, emp.weekly_hours);
   const id = crypto.randomUUID();
-  db.prepare(`
+  await dbRun(`
     INSERT INTO vacation_requests (id, employee_id, start_date, end_date, days, type, comment)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(id, input.employee_id, input.start_date, input.end_date, days,
-    input.type || 'urlaub', input.comment || '');
-  return db.prepare('SELECT * FROM vacation_requests WHERE id = ?').get(id) as VacationRequest;
+  `, [id, input.employee_id, input.start_date, input.end_date, days, input.type || 'urlaub', input.comment || '']);
+  return (await dbGet<VacationRequest>('SELECT * FROM vacation_requests WHERE id = ?', [id])) ?? null;
 }
 
-export function decideVacation(id: string, status: 'genehmigt' | 'abgelehnt', decidedBy: string): VacationRequest | null {
-  const r = db.prepare('SELECT * FROM vacation_requests WHERE id = ?').get(id) as VacationRequest | undefined;
+export async function decideVacation(id: string, status: 'genehmigt' | 'abgelehnt', decidedBy: string): Promise<VacationRequest | null> {
+  const r = await dbGet<VacationRequest>('SELECT * FROM vacation_requests WHERE id = ?', [id]);
   if (!r) return null;
-  db.prepare(`UPDATE vacation_requests SET status = ?, decided_by = ?, decided_at = ? WHERE id = ?`)
-    .run(status, decidedBy, new Date().toISOString(), id);
-  return db.prepare('SELECT * FROM vacation_requests WHERE id = ?').get(id) as VacationRequest;
+  await dbRun(`UPDATE vacation_requests SET status = ?, decided_by = ?, decided_at = ? WHERE id = ?`, [status, decidedBy, new Date().toISOString(), id]);
+  return (await dbGet<VacationRequest>('SELECT * FROM vacation_requests WHERE id = ?', [id])) ?? null;
 }
 
-export function deleteVacationRequest(id: string): boolean {
-  return db.prepare('DELETE FROM vacation_requests WHERE id = ?').run(id).changes > 0;
+export async function deleteVacationRequest(id: string): Promise<boolean> {
+  return (await dbRun('DELETE FROM vacation_requests WHERE id = ?', [id])).changes > 0;
 }
 
-export function listVacations(year: number, employeeId?: string): VacationRequest[] {
+export async function listVacations(year: number, employeeId?: string): Promise<VacationRequest[]> {
   const from = `${year}-01-01`, to = `${year}-12-31`;
   if (employeeId) {
-    return db.prepare(
-      `SELECT * FROM vacation_requests WHERE employee_id = ? AND end_date >= ? AND start_date <= ? ORDER BY start_date`
-    ).all(employeeId, from, to) as VacationRequest[];
+    return dbAll<VacationRequest>(
+      `SELECT * FROM vacation_requests WHERE employee_id = ? AND end_date >= ? AND start_date <= ? ORDER BY start_date`,
+      [employeeId, from, to]
+    );
   }
-  return db.prepare(
-    `SELECT * FROM vacation_requests WHERE end_date >= ? AND start_date <= ? ORDER BY start_date`
-  ).all(from, to) as VacationRequest[];
+  return dbAll<VacationRequest>(
+    `SELECT * FROM vacation_requests WHERE end_date >= ? AND start_date <= ? ORDER BY start_date`,
+    [from, to]
+  );
 }
 
 export interface VacationBalance {
   year: number;
   entitlement: number;
-  used: number;      // genehmigte Urlaubstage
-  pending: number;   // beantragte, noch nicht entschiedene
-  remaining: number; // entitlement - used
+  used: number;
+  pending: number;
+  remaining: number;
 }
 
-export function vacationBalance(employee: Employee, year: number): VacationBalance {
-  const vacs = listVacations(year, employee.id).filter((v) => v.type === 'urlaub');
-  // Nur den Anteil im Jahr zählen (Anträge über Jahresgrenze)
+export async function vacationBalance(employee: Employee, year: number): Promise<VacationBalance> {
+  const vacs = (await listVacations(year, employee.id)).filter((v) => v.type === 'urlaub');
   const part = (v: VacationRequest) => {
     const from = v.start_date < `${year}-01-01` ? `${year}-01-01` : v.start_date;
     const to = v.end_date > `${year}-12-31` ? `${year}-12-31` : v.end_date;
@@ -345,17 +340,17 @@ export function vacationBalance(employee: Employee, year: number): VacationBalan
 }
 
 /** Daten für den gemeinsamen Jahresplaner: alle Mitarbeiter, Abwesenheiten, ZH-Feiertage. */
-export function vacationPlanner(year: number) {
-  const employees = listEmployees(false);
-  return {
-    year,
-    holidays: zhHolidays(year),
-    employees: employees.map((e) => ({
+export async function vacationPlanner(year: number) {
+  const employees = await listEmployees(false);
+  const employeesOut = [];
+  for (const e of employees) {
+    employeesOut.push({
       id: e.id, name: e.name,
-      balance: vacationBalance(e, year),
-      vacations: listVacations(year, e.id),
-    })),
-  };
+      balance: await vacationBalance(e, year),
+      vacations: await listVacations(year, e.id),
+    });
+  }
+  return { year, holidays: zhHolidays(year), employees: employeesOut };
 }
 
 // ==================== STAFF TASKS ====================
@@ -374,40 +369,40 @@ export interface StaffTask {
   created_by: string | null;
 }
 
-export function createStaffTask(input: Partial<StaffTask> & { title: string }): StaffTask {
+export async function createStaffTask(input: Partial<StaffTask> & { title: string }): Promise<StaffTask> {
   const id = crypto.randomUUID();
-  db.prepare(`
+  await dbRun(`
     INSERT INTO staff_tasks (id, title, description, assignee_id, booking_id, due_date, priority, status, created_by)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, input.title, input.description || '', input.assignee_id || null,
+  `, [id, input.title, input.description || '', input.assignee_id || null,
     input.booking_id || null, input.due_date || null,
-    input.priority || 'normal', input.status || 'offen', input.created_by || null);
-  return db.prepare('SELECT * FROM staff_tasks WHERE id = ?').get(id) as StaffTask;
+    input.priority || 'normal', input.status || 'offen', input.created_by || null]);
+  return (await dbGet<StaffTask>('SELECT * FROM staff_tasks WHERE id = ?', [id]))!;
 }
 
-export function updateStaffTask(id: string, u: Partial<StaffTask>): StaffTask | null {
-  const cur = db.prepare('SELECT * FROM staff_tasks WHERE id = ?').get(id) as StaffTask | undefined;
+export async function updateStaffTask(id: string, u: Partial<StaffTask>): Promise<StaffTask | null> {
+  const cur = await dbGet<StaffTask>('SELECT * FROM staff_tasks WHERE id = ?', [id]);
   if (!cur) return null;
-  db.prepare(`
+  await dbRun(`
     UPDATE staff_tasks SET
       title = ?, description = ?, assignee_id = ?, booking_id = ?, due_date = ?,
       priority = ?, status = ?, updated_at = datetime('now')
     WHERE id = ?
-  `).run(
+  `, [
     u.title ?? cur.title, u.description ?? cur.description,
     u.assignee_id !== undefined ? u.assignee_id : cur.assignee_id,
     u.booking_id !== undefined ? u.booking_id : cur.booking_id,
     u.due_date !== undefined ? u.due_date : cur.due_date,
     u.priority ?? cur.priority, u.status ?? cur.status, id,
-  );
-  return db.prepare('SELECT * FROM staff_tasks WHERE id = ?').get(id) as StaffTask;
+  ]);
+  return (await dbGet<StaffTask>('SELECT * FROM staff_tasks WHERE id = ?', [id])) ?? null;
 }
 
-export function deleteStaffTask(id: string): boolean {
-  return db.prepare('DELETE FROM staff_tasks WHERE id = ?').run(id).changes > 0;
+export async function deleteStaffTask(id: string): Promise<boolean> {
+  return (await dbRun('DELETE FROM staff_tasks WHERE id = ?', [id])).changes > 0;
 }
 
-export function listStaffTasks(filter?: { assignee_id?: string; status?: string; booking_id?: string }): StaffTask[] {
+export async function listStaffTasks(filter?: { assignee_id?: string; status?: string; booking_id?: string }): Promise<StaffTask[]> {
   const where: string[] = [];
   const params: string[] = [];
   if (filter?.assignee_id) { where.push('assignee_id = ?'); params.push(filter.assignee_id); }
@@ -415,5 +410,5 @@ export function listStaffTasks(filter?: { assignee_id?: string; status?: string;
   if (filter?.booking_id) { where.push('booking_id = ?'); params.push(filter.booking_id); }
   const sql = `SELECT * FROM staff_tasks ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
     ORDER BY CASE status WHEN 'erledigt' THEN 1 ELSE 0 END, due_date IS NULL, due_date, created_at DESC`;
-  return db.prepare(sql).all(...params) as StaffTask[];
+  return dbAll<StaffTask>(sql, params);
 }

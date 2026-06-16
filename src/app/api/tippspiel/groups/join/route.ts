@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   if (typeof body.inviteCode !== 'string') {
     return NextResponse.json({ success: false, error: 'Ungültiger Einladungslink.' }, { status: 400 });
   }
-  const group = joinGroup(session.user.id, body.inviteCode);
+  const group = await joinGroup(session.user.id, body.inviteCode);
   if (!group) return NextResponse.json({ success: false, error: 'Die Gruppe wurde nicht gefunden.' }, { status: 404 });
   return NextResponse.json({ success: true, group });
 }

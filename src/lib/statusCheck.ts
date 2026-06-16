@@ -14,7 +14,9 @@
 import { readFileSync } from 'fs';
 import { promises as fsp } from 'fs';
 import path from 'path';
-import { db } from './database';
+import { dbGet } from './dbq';
+import { pgEnabled } from './pg';
+import './database';
 import { getSettings } from './settingsStore';
 import { graphHealth } from './graphMailer';
 import { isAiConfigured, anthropicMessage } from './aiAssist';
@@ -138,12 +140,13 @@ export async function getHealth(): Promise<HealthReport> {
   // App
   items.push({ key: 'app', label: 'Anwendung (Next.js)', status: 'ok', detail: `läuft · ${process.env.NODE_ENV || 'production'}` });
 
-  // SQLite
+  // Datenbank
+  const dbLabel = `Datenbank (${pgEnabled() ? 'PostgreSQL' : 'SQLite'})`;
   try {
-    const row = db.prepare('SELECT COUNT(*) AS n FROM booking_requests').get() as { n: number };
-    items.push({ key: 'db', label: 'Datenbank (SQLite)', status: 'ok', detail: `erreichbar · ${row?.n ?? 0} Anfragen` });
+    const row = await dbGet<{ n: number }>('SELECT COUNT(*) AS n FROM booking_requests');
+    items.push({ key: 'db', label: dbLabel, status: 'ok', detail: `erreichbar · ${Number(row?.n) || 0} Anfragen` });
   } catch (e) {
-    items.push({ key: 'db', label: 'Datenbank (SQLite)', status: 'down', detail: (e as Error).message });
+    items.push({ key: 'db', label: dbLabel, status: 'down', detail: (e as Error).message });
   }
 
   // Daten-Volume beschreibbar?
@@ -175,7 +178,7 @@ export async function getHealth(): Promise<HealthReport> {
 
   // Letzte eingehende Mail (Inbound-Poll lebt?)
   try {
-    const row = db.prepare(`SELECT MAX(created_at) AS last FROM booking_messages WHERE direction = 'in'`).get() as { last?: string } | undefined;
+    const row = await dbGet<{ last?: string }>(`SELECT MAX(created_at) AS last FROM booking_messages WHERE direction = 'in'`);
     if (row?.last) items.push({ key: 'inbound', label: 'Letzte Kundenantwort', status: 'ok', detail: row.last });
   } catch {
     /* Tabelle evtl. anders benannt – nicht kritisch */

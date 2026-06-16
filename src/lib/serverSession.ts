@@ -20,8 +20,8 @@ export async function getSessionEmployee(): Promise<{ session: Session; employee
   if (!session) return null;
   let employee: Employee | null = null;
   if (session.src === 'microsoft') {
-    employee = getEmployee(session.sub)
-      || upsertEmployeeOnLogin({ id: session.sub, name: session.name, email: session.email });
+    employee = (await getEmployee(session.sub))
+      || (await upsertEmployeeOnLogin({ id: session.sub, name: session.name, email: session.email }));
   }
   return { session, employee };
 }

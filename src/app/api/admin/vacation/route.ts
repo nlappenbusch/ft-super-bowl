@@ -5,7 +5,7 @@ import { vacationPlanner, createVacationRequest } from '@/lib/staffStore';
 /** GET ?year=YYYY → Jahresplaner: alle Mitarbeiter, Abwesenheiten, ZH-Feiertage, Salden. */
 export async function GET(req: Request) {
   const year = parseInt(new URL(req.url).searchParams.get('year') || '', 10) || new Date().getFullYear();
-  return NextResponse.json({ success: true, data: vacationPlanner(year) });
+  return NextResponse.json({ success: true, data: await vacationPlanner(year) });
 }
 
 /** POST: Urlaubsantrag { employee_id?, start_date, end_date, type?, comment? } */
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   if (!employeeId || !body.start_date || !body.end_date) {
     return NextResponse.json({ success: false, error: 'start_date, end_date (und ggf. employee_id) erforderlich' }, { status: 400 });
   }
-  const created = createVacationRequest({
+  const created = await createVacationRequest({
     employee_id: employeeId,
     start_date: body.start_date,
     end_date: body.end_date,

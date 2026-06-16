@@ -202,7 +202,7 @@ export async function recordPayment(id: string, amount: number) {
   return true;
 }
 
-export function generateInvoiceNumber() {
+export async function generateInvoiceNumber(): Promise<string | undefined> {
   if (!isSupabaseConfigured()) {
     return generateInvoiceNumberSqlite();
   }
