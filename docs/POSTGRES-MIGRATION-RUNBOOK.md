@@ -3,6 +3,11 @@
 > Ziel: kompletter Umzug von SQLite (+ JSON-Content) auf PostgreSQL – **risikoarm und jederzeit zurückrollbar**.
 > Grundprinzip: **Die SQLite-Datei wird während der gesamten Migration NIE gelöscht.** Backend ist per Env umschaltbar → Rollback = Schalter zurück.
 
+> **STATUS (2026-06-16): CUTOVER ABGESCHLOSSEN.** App läuft live auf PostgreSQL (`DB_BACKEND=postgres` in `/opt/super-bowl/.env`).
+> Daten migriert (38 Buchungen, 42 CRM-Nachrichten, 15 Kunden, 6 Rechnungen, …); Lesen+Schreiben gegen echtes Postgres verifiziert; `/admin/status` meldet „Datenbank (PostgreSQL)".
+> **Rollback in Sekunden:** `DB_BACKEND=sqlite` in `.env` + `docker compose up -d`. SQLite-Datei + Proxmox-Snapshot bleiben Sicherheitsnetz, bis Postgres mehrere Tage stabil läuft.
+> Flip-Mechanik & dbq-Abstraktion: siehe `CLAUDE.md` → „Datenbank-Backend (umschaltbar)".
+
 ---
 
 ## 1) Aktueller Stand (festgehalten)

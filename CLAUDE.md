@@ -7,7 +7,7 @@ Deploy- oder Konventionsänderungen hier mitpflegen.**
 Sportreisen-Buchungsplattform (Tickets + Hotel + Hospitality) für Faltin Travel AG.
 Generische Event-/Serien-Struktur (Super Bowl, French Open, WM, EM, CL-Finale, …).
 
-- **Stack:** Next.js 16 (App Router), React 19, TypeScript, Tailwind v4, better-sqlite3, lucide-react.
+- **Stack:** Next.js 16 (App Router), React 19, TypeScript, Tailwind v4, **PostgreSQL (`pg`)** mit umschaltbarem SQLite-Fallback (`better-sqlite3`), lucide-react.
 - **Repo:** `github.com/nlappenbusch/ft-super-bowl`
 - **Prod:** `https://next.faltintravel.com`
 
@@ -17,9 +17,16 @@ Generische Event-/Serien-Struktur (Super Bowl, French Open, WM, EM, CL-Finale, �
 - `packages.json` — Buchbare Pakete (event_id/event_slug, includes[], price, …). Nur `active:true` wird angezeigt.
 - `faqs.json` — Event-FAQs (keyed by event_id).
 - `settings.json` — Admin-editierbare Config (company, bank, invoice, mail, **ai**). Hat Vorrang vor `.env`.
-- `bookings.db` — SQLite (Buchungen, Rechnungen, Expenses, CRM-Messages, Counter).
+- **Transaktionsdaten (Buchungen, Rechnungen, Expenses, CRM-Messages, Counter, HR, Tippspiel, Kunden): PostgreSQL** (Container `db`, Volume `pgdata`). `data/bookings.db` (SQLite) bleibt als Fallback/Rollback erhalten, ist aber im Normalbetrieb inaktiv.
 
-Laufzeit-Lesen: `src/lib/contentStore.ts` (`findPackagesByEvent` etc.). Buchungen/Mail/Settings: jeweils eigene Stores.
+Laufzeit-Lesen Content: `src/lib/contentStore.ts` (`findPackagesByEvent` etc.).
+
+## Datenbank-Backend (umschaltbar) — WICHTIG
+- **`src/lib/dbq.ts`** ist die zentrale Abstraktion: `dbGet/dbAll/dbRun/withTx` laufen je nach `DB_BACKEND` über `pg` (Postgres) ODER `better-sqlite3` (SQLite). **Alle Stores sind async** (`database.ts`, `customerStore.ts`, `staffStore.ts`, `tippspielStore.ts`, `tippspielAuth.ts`, Wrapper `bookingStore/invoiceStore/expenseStore`). SQL weiterhin im SQLite-Dialekt mit `?`-Platzhaltern schreiben — `dbq` übersetzt für pg (`?`→`$n`, `datetime('now')`, `INSERT OR IGNORE`→`ON CONFLICT DO NOTHING`). `instr()`/`COLLATE NOCASE` vermeiden (JS-Fallback bzw. `lower()`).
+- **Connection (pg):** diskrete Parameter (`PGHOST/PGPORT/POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB`), NICHT `DATABASE_URL` — ein `/` o.ä. im Passwort bricht sonst das URL-Parsing. `pg.ts` setzt Type-Parser (bigint/numeric → JS-Zahl).
+- **pg-Schema:** Tabellen+Daten kommen aus der Migration (`pgMigrate.ts`, introspektiert SQLite → kopiert). `dbq.applyPgSchemaEnhancements()` ergänzt Defaults (Timestamp-Spalten), Unique-Constraints (für `ON CONFLICT`), Indizes und den `updated_at`-Trigger — wird vom Migrator und beim pg-Start (`ensurePgSchema`) aufgerufen.
+- **Flip auf Postgres:** in `/opt/super-bowl/.env` `DB_BACKEND=postgres` setzen → `docker compose up -d` (rekreiert App-Container in Sekunden, kein Rebuild). **Rollback:** `DB_BACKEND=sqlite` + `docker compose up -d` (SQLite bleibt unberührt).
+- **Daten-(Re)Migration SQLite→PG:** POST `/api/admin/db/migrate` (admin-gated, im Browser-Console ausführen). Non-destruktiv für SQLite (nur lesend), TRUNCATE+Copy in PG. Details: `docs/POSTGRES-MIGRATION-RUNBOOK.md`.
 
 ## Deploy & Content-Seed — WICHTIG
 - Push auf **`main`** → GitHub Actions (self-hosted runner) → `deploy.sh` → `docker compose` baut neu & startet `super-bowl-app`.
