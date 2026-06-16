@@ -370,7 +370,7 @@ export function buildStatusReportPdf(health: HealthReport | null, report: Status
   }
 
   sectionTitle('Methodik & Quellen');
-  para('Installierte Versionen aus package-lock.json. Aktuelle Versionen: npm-Registry (registry.npmjs.org) und nodejs.org/dist. Schwachstellen: OSV.dev (Open Source Vulnerabilities, Google) je installierter Version, Schweregrade nach GHSA/Hersteller. Health-Status: Live-Signale dieser Plattform. Stand der Daten: ' + today + '. Werte sind eine Momentaufnahme – die Live-Version steht unter Admin -> System -> Status.', { size: 8, color: MUT });
+  para('Installierte Versionen aus node_modules. Aktuelle Versionen: npm-Registry (registry.npmjs.org) und nodejs.org/dist. Schwachstellen: OSV.dev (Open Source Vulnerabilities, Google) über ALLE installierten Pakete inkl. transitiver Abhängigkeiten, Schweregrade nach GHSA/Hersteller. Health-Status: Live-Signale dieser Plattform. Stand der Daten: ' + today + '. Werte sind eine Momentaufnahme – die Live-Version steht unter Admin -> System -> Status.', { size: 8, color: MUT });
   para('Dieser Bericht ist vertraulich und ausschließlich zur internen Verwendung bei der Faltin Travel AG bestimmt.', { size: 8, color: MUT });
 
   // ── Kopf-/Fußzeile auf allen Inhaltsseiten (2..N) ────────────────────────

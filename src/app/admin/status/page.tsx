@@ -11,7 +11,7 @@ interface HealthReport { generatedAt: string; uptimeSec: number; nodeVersion: st
 type VersionState = 'current' | 'patch' | 'minor' | 'major' | 'unknown';
 interface VersionRow { name: string; installed: string; latest: string; state: VersionState; source: string }
 interface VulnRow { package: string; version: string; id: string; cve: string; severity: string; summary: string; url: string }
-interface StatusReport { generatedAt: string; durationMs: number; versions: VersionRow[]; vulnerabilities: VulnRow[]; ai: { generatedAt: string; text: string } | null; errors: string[] }
+interface StatusReport { generatedAt: string; durationMs: number; versions: VersionRow[]; vulnerabilities: VulnRow[]; scannedDeps?: number; ai: { generatedAt: string; text: string } | null; errors: string[] }
 interface FixItem { name: string; from: string; to: string; type: string; dev: boolean; security: boolean }
 interface FixPlan { scope: string; items: FixItem[]; summary: { total: number; security: number; major: number; minor: number; patch: number }; nodeHint: string | null }
 interface GithubCfg { configured: boolean; owner: string; repo: string; base: string }
@@ -202,13 +202,13 @@ export default function StatusPage() {
           {/* SICHERHEIT / CVE */}
           <SectionCard
             title={`Sicherheit / CVEs${vulns.length ? ` (${vulns.length})` : ''}`}
-            description="Bekannte Schwachstellen der eingesetzten Pakete (Quelle: OSV.dev)."
+            description={`Bekannte Schwachstellen über alle installierten Pakete${report?.scannedDeps ? ` (${report.scannedDeps} inkl. transitiv geprüft)` : ''} – Quelle: OSV.dev.`}
             icon={vulns.length ? <ShieldAlert className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
           >
             {!report ? (
               <p className="text-sm text-gray-500">Noch kein Scan. Klicke „Jetzt prüfen“.</p>
             ) : vulns.length === 0 ? (
-              <EmptyState icon={<ShieldCheck className="h-6 w-6" />} title="Keine bekannten Schwachstellen." description="Keine der beobachteten Versionen hat aktuell einen OSV-Eintrag." />
+              <EmptyState icon={<ShieldCheck className="h-6 w-6" />} title="Keine bekannten Schwachstellen." description={`Keines der ${report?.scannedDeps ?? 0} geprüften Pakete hat aktuell einen OSV-Eintrag.`} />
             ) : (
               <div className="grid gap-2">
                 {vulns.map((v) => (

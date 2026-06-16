@@ -11,7 +11,7 @@
  * (externe APIs) und wird gecacht in data/status-report.json.
  * ─────────────────────────────────────────────────────────────────────────────
  */
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { promises as fsp } from 'fs';
 import path from 'path';
 import { dbGet } from './dbq';
@@ -26,7 +26,7 @@ const REPORT_PATH = path.join(DATA_DIR, 'status-report.json');
 
 /** Pakete, die im Versions-/CVE-Check beobachtet werden. */
 const WATCHED_PACKAGES = [
-  'next', 'react', 'react-dom', 'better-sqlite3', 'lucide-react', 'react-hook-form',
+  'next', 'react', 'react-dom', 'better-sqlite3', 'pg', 'lucide-react', 'react-hook-form',
   'date-fns', 'jspdf', 'jspdf-autotable', 'qrcode', 'pdf-parse', '@supabase/supabase-js',
   'typescript', 'tailwindcss', 'eslint', 'eslint-config-next',
 ];
@@ -75,6 +75,8 @@ export interface StatusReport {
   durationMs: number;
   versions: VersionRow[];
   vulnerabilities: VulnRow[];
+  /** Anzahl aller installierten Pakete, die auf CVEs geprüft wurden (inkl. transitiv). */
+  scannedDeps: number;
   ai: { generatedAt: string; text: string } | null;
   errors: string[];
 }
@@ -121,6 +123,35 @@ function installedVersion(pkg: string, declared: string): string {
     /* node_modules evtl. nicht vorhanden (standalone) */
   }
   return cleanVersion(declared);
+}
+
+/** Listet ALLE installierten Pakete aus node_modules (inkl. transitiv + scoped @org/pkg). */
+function listInstalledPackages(): { name: string; version: string }[] {
+  const base = path.join(process.cwd(), 'node_modules');
+  const out: { name: string; version: string }[] = [];
+  const readPkg = (dir: string, fallbackName: string) => {
+    try {
+      const j = JSON.parse(readFileSync(path.join(dir, 'package.json'), 'utf8')) as { name?: string; version?: string };
+      if (j.version) out.push({ name: j.name || fallbackName, version: j.version });
+    } catch {
+      /* kein gültiges Paket */
+    }
+  };
+  let entries: string[] = [];
+  try { entries = readdirSync(base); } catch { return out; }
+  for (const e of entries) {
+    if (e.startsWith('.')) continue;
+    if (e.startsWith('@')) {
+      try {
+        for (const sub of readdirSync(path.join(base, e))) readPkg(path.join(base, e, sub), `${e}/${sub}`);
+      } catch { /* skip scope */ }
+    } else {
+      readPkg(path.join(base, e), e);
+    }
+  }
+  // Duplikate (gleicher name@version) entfernen
+  const seen = new Set<string>();
+  return out.filter((p) => { const k = `${p.name}@${p.version}`; if (seen.has(k)) return false; seen.add(k); return true; });
 }
 
 function readPackageJson(): { dependencies: Record<string, string>; devDependencies: Record<string, string> } {
@@ -326,7 +357,13 @@ export async function runScan(withAi = true): Promise<StatusReport> {
   const t0 = Date.now();
   const errors: string[] = [];
   const versions = await checkVersions(errors);
-  const vulnerabilities = await checkVulnerabilities(versions, errors);
+  // CVE-Scan über ALLE installierten Pakete (inkl. transitiv), nicht nur die kuratierte Liste.
+  const installed = listInstalledPackages();
+  const scanRows: VersionRow[] = installed.length
+    ? installed.map((p) => ({ name: p.name, installed: p.version, latest: '', state: 'unknown', source: 'npm' as const }))
+    : versions; // Fallback (z. B. standalone ohne node_modules)
+  const scannedDeps = scanRows.filter((r) => r.source === 'npm' && r.installed).length;
+  const vulnerabilities = await checkVulnerabilities(scanRows, errors);
   let ai: StatusReport['ai'] = null;
   if (withAi) {
     try { ai = await generateAiFixes(versions, vulnerabilities); }
@@ -337,6 +374,7 @@ export async function runScan(withAi = true): Promise<StatusReport> {
     durationMs: Date.now() - t0,
     versions,
     vulnerabilities,
+    scannedDeps,
     ai,
     errors,
   };
