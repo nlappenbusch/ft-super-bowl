@@ -79,7 +79,7 @@ export default function PortalApp() {
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 22, flexWrap: 'wrap' }}>
-        {([['requests', 'Meine Anfragen'], ['docs', 'Dokumente'], ['profile', 'Meine Daten']] as const).map(([k, label]) => (
+        {([['requests', '📋 Meine Anfragen'], ['docs', '📄 Dokumente & Angebote'], ['profile', '👤 Meine Daten']] as const).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
             style={{ background: tab === k ? NAVY : '#fff', color: tab === k ? '#fff' : NAVY, border: `1px solid ${tab === k ? NAVY : '#d8dde4'}`, borderRadius: 999, padding: '9px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
             {label}{k === 'requests' ? ` (${me.requests.length})` : ''}
@@ -88,7 +88,7 @@ export default function PortalApp() {
       </div>
 
       {tab === 'requests' && <RequestsView requests={me.requests} reload={load} />}
-      {tab === 'docs' && <DocsView docs={me.generalDocuments} />}
+      {tab === 'docs' && <DocsView requests={me.requests} generalDocuments={me.generalDocuments} />}
       {tab === 'profile' && <ProfileView profile={me.profile} emails={me.emails} onSaved={load} />}
     </div>
   );
@@ -253,17 +253,81 @@ function ReplyBox({ bookingId, reload }: { bookingId: string; reload: () => void
   );
 }
 
-function DocsView({ docs }: { docs: DocItem[] }) {
-  if (docs.length === 0) {
-    return <Card><p style={{ margin: 0, color: '#6b7280' }}>Hier finden Sie allgemeine Unterlagen. Aktuell ist nichts hinterlegt – reisespezifische Dokumente sehen Sie direkt bei der jeweiligen Anfrage.</p></Card>;
-  }
+interface ConsolidatedDoc { key: string; category: string; categoryLabel: string; title: string; sub: string; href: string; assignment: string; general: boolean }
+const CAT_ORDER: { cat: string; label: string }[] = [
+  { cat: 'offer', label: 'Angebote' },
+  { cat: 'invoice', label: 'Rechnungen' },
+  { cat: 'ticket', label: 'Tickets' },
+  { cat: 'hotel', label: 'Hotel-Infos' },
+  { cat: 'voucher', label: 'Voucher' },
+  { cat: 'other', label: 'Weitere Dokumente' },
+];
+
+function AssignmentChip({ general, label }: { general: boolean; label: string }) {
   return (
-    <Card>
-      <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#9ca3af', marginBottom: 4 }}>Allgemeine Dokumente</div>
-      {docs.map((d) => (
-        <DownloadRow key={d.id} href={`/api/portal/documents/${d.id}`} label={`${d.categoryLabel}: ${d.title}`} sub={fsize(d.size)} />
+    <span style={{
+      fontSize: 11, fontWeight: 800, padding: '3px 9px', borderRadius: 999, whiteSpace: 'nowrap',
+      background: general ? '#eef1f5' : '#fff1ea', color: general ? '#6b7280' : ACCENT,
+      border: `1px solid ${general ? '#e5e8ed' : '#ffd2bd'}`,
+    }}>{general ? 'Allgemein' : label}</span>
+  );
+}
+
+function DocRow({ d }: { d: ConsolidatedDoc }) {
+  return (
+    <a href={d.href} target="_blank" rel="noopener noreferrer"
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, textDecoration: 'none', background: '#f5f7fa', border: '1px solid #e5e8ed', borderRadius: 10, padding: '11px 14px', marginTop: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+        <AssignmentChip general={d.general} label={d.assignment} />
+        <span style={{ fontSize: 14, fontWeight: 600, color: NAVY, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.title}</span>
+      </div>
+      <span style={{ fontSize: 12, color: ACCENT, fontWeight: 700, whiteSpace: 'nowrap' }}>{d.sub} ↗</span>
+    </a>
+  );
+}
+
+function DocsView({ requests, generalDocuments }: { requests: RequestItem[]; generalDocuments: DocItem[] }) {
+  // Alle Dokumente konsolidieren: allgemeine + pro Anfrage + Rechnungen.
+  const items: ConsolidatedDoc[] = [];
+  for (const d of generalDocuments) {
+    items.push({ key: `g-${d.id}`, category: d.category, categoryLabel: d.categoryLabel, title: d.title || d.filename, sub: fsize(d.size), href: `/api/portal/documents/${d.id}`, assignment: 'Allgemein', general: true });
+  }
+  for (const r of requests) {
+    const rq = r.request_number || 'Anfrage';
+    for (const d of r.documents) {
+      items.push({ key: `d-${d.id}`, category: d.category, categoryLabel: d.categoryLabel, title: d.title || d.filename, sub: fsize(d.size), href: `/api/portal/documents/${d.id}`, assignment: rq, general: false });
+    }
+    for (const i of r.invoices) {
+      items.push({ key: `i-${i.id}`, category: 'invoice', categoryLabel: 'Rechnung', title: `${i.invoice_number} · ${eur(i.total_amount)}`, sub: i.status === 'paid' ? 'Bezahlt' : 'PDF', href: `/api/portal/invoices/${i.id}/pdf`, assignment: rq, general: false });
+    }
+  }
+
+  if (items.length === 0) {
+    return <Card><p style={{ margin: 0, color: '#6b7280' }}>Hier sammeln sich künftig alle Ihre Unterlagen – Angebote, Rechnungen, Tickets, Hotel-Infos und Voucher. Aktuell ist noch nichts hinterlegt.</p></Card>;
+  }
+
+  const known = new Set(CAT_ORDER.map((c) => c.cat));
+  const groups = CAT_ORDER.map((c) => ({ ...c, docs: items.filter((d) => d.category === c.cat) }));
+  const rest = items.filter((d) => !known.has(d.category));
+  if (rest.length) groups.push({ cat: 'rest', label: 'Sonstiges', docs: rest });
+
+  return (
+    <div style={{ display: 'grid', gap: 14 }}>
+      <Card style={{ padding: '14px 18px', background: '#fcfdfe' }}>
+        <p style={{ margin: 0, fontSize: 13.5, color: '#6b7280', lineHeight: 1.6 }}>
+          Alle Ihre Unterlagen an einem Ort. Das Etikett zeigt, ob ein Dokument <strong style={{ color: '#6b7280' }}>allgemein</strong> gilt oder zu einer bestimmten <strong style={{ color: ACCENT }}>Anfrage</strong> gehört.
+        </p>
+      </Card>
+      {groups.filter((g) => g.docs.length > 0).map((g) => (
+        <Card key={g.cat}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: NAVY, letterSpacing: 0.3 }}>{g.label}</div>
+            <span style={{ fontSize: 12, color: '#9ca3af', fontWeight: 700 }}>{g.docs.length}</span>
+          </div>
+          {g.docs.map((d) => <DocRow key={d.key} d={d} />)}
+        </Card>
       ))}
-    </Card>
+    </div>
   );
 }
 
