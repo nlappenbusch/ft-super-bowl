@@ -1027,6 +1027,7 @@ export default function AdminEventsPage() {
                         <div className="mb-1.5 flex flex-wrap items-center gap-2">
                           <span className="text-xs font-semibold" style={{ color: COLORS.navy }}>Platzhalter einfügen:</span>
                           {[
+                            { t: '{{grussformel}}', l: 'Grußformel' },
                             { t: '{{anrede}}', l: 'Anrede' },
                             { t: '{{vorname}}', l: 'Vorname' },
                             { t: '{{nachname}}', l: 'Nachname' },
@@ -1049,7 +1050,7 @@ export default function AdminEventsPage() {
                           onChange={(event) => updateField('auto_reply_message', event.target.value)}
                           rows={8}
                           placeholder={'Vielen Dank für Ihre unverbindliche Anfrage …\n\nIm Anhang finden Sie unsere aktuellen Angebote.\n\nGerne melden wir uns persönlich bei Ihnen.'}
-                          hint="Die Nachricht wird 1:1 im Faltin-Rahmen (Logo/Footer) versendet – inkl. deiner eigenen Grußformel. Kein Zusatztext, keine extra Anfragenummer-Zeile (die steht im Betreff). Platzhalter: {{anrede}} = „Sehr geehrte/r Herr/Frau“, {{vorname}}, {{nachname}} (z. B. „{{anrede}} {{nachname}},“). Schreibst du gar keine Begrüßung, ergänzen wir automatisch eine geschlechtskorrekte."
+                          hint="Die Nachricht wird 1:1 im Faltin-Rahmen (Logo/Footer) versendet. Platzhalter: {{grussformel}} = tageszeit-abhängig „Guten Morgen/Tag/Abend“ · {{anrede}} = „Herr“/„Frau“ · {{vorname}} · {{nachname}}. Beispiel: „Guten Tag {{anrede}} {{nachname}}“ → „Guten Tag Herr Müller“. Fehlt die Anrede, fällt die Zeile automatisch sauber auf „Guten Tag“ zurück (ohne Name)."
                         />
                       </div>
 

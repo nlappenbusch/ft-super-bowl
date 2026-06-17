@@ -87,14 +87,20 @@ export function formalGreeting(r: RecipientInfo): string {
  */
 export function renderRecipientTokens(escapedText: string, r: RecipientInfo): string {
   const s = (r.salutation || '').trim().toLowerCase();
-  const anrede = s === 'herr' ? 'Sehr geehrter Herr' : s === 'frau' ? 'Sehr geehrte Frau' : 'Sehr geehrte Damen und Herren';
+  const hasSalutation = s === 'herr' || s === 'frau';
+  // {{anrede}} = nur "Herr"/"Frau" (für "Guten Tag {{anrede}} {{nachname}}" → "Guten Tag Herr Mudda").
+  const anrede = s === 'herr' ? 'Herr' : s === 'frau' ? 'Frau' : '';
+  // Ohne Anrede: Name NICHT einsetzen → Fallback wird sauber "Guten Tag" (ohne Anrede/Vor-/Nachname).
+  const vorname = hasSalutation ? escapeHtml((r.firstName || '').trim()) : '';
+  const nachname = hasSalutation ? escapeHtml((r.lastName || '').trim()) : '';
   return escapedText
     .replace(/\{\{\s*grussformel\s*\}\}/gi, grussformel())
     .replace(/\{\{\s*anrede\s*\}\}/gi, anrede)
-    .replace(/\{\{\s*vorname\s*\}\}/gi, escapeHtml((r.firstName || '').trim()))
-    .replace(/\{\{\s*nachname\s*\}\}/gi, escapeHtml((r.lastName || '').trim()))
-    .replace(/ +([,.;:!?])/g, '$1')
-    .replace(/[ \t]{2,}/g, ' ');
+    .replace(/\{\{\s*vorname\s*\}\}/gi, vorname)
+    .replace(/\{\{\s*nachname\s*\}\}/gi, nachname)
+    .replace(/ +([,.;:!?])/g, '$1')   // Leerzeichen vor Satzzeichen
+    .replace(/[ \t]{2,}/g, ' ')        // doppelte Leerzeichen (entstehen bei leeren Tokens)
+    .replace(/[ \t]+$/gm, '');         // Leerzeichen am Zeilenende → "Guten Tag " wird "Guten Tag"
 }
 
 /** Gemeinsames Grundgerüst (Header + Footer) */
