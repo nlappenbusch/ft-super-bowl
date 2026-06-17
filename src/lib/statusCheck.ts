@@ -13,6 +13,7 @@
  */
 import { readFileSync, readdirSync } from 'fs';
 import { promises as fsp } from 'fs';
+import { execSync } from 'child_process';
 import path from 'path';
 import { dbGet } from './dbq';
 import { pgEnabled } from './pg';
@@ -154,6 +155,21 @@ function listInstalledPackages(): { name: string; version: string }[] {
   return out.filter((p) => { const k = `${p.name}@${p.version}`; if (seen.has(k)) return false; seen.add(k); return true; });
 }
 
+/** Installierte npm-CLI-Version (aus dem global installierten npm, ohne Subprozess wenn möglich). */
+function npmVersion(): string {
+  const candidates = [
+    '/usr/local/lib/node_modules/npm/package.json',
+    path.join(path.dirname(process.execPath), '..', 'lib', 'node_modules', 'npm', 'package.json'),
+  ];
+  for (const p of candidates) {
+    try {
+      const j = JSON.parse(readFileSync(p, 'utf8')) as { version?: string };
+      if (j.version) return j.version;
+    } catch { /* nächster Kandidat */ }
+  }
+  try { return execSync('npm --version', { timeout: 4000 }).toString().trim(); } catch { return ''; }
+}
+
 function readPackageJson(): { dependencies: Record<string, string>; devDependencies: Record<string, string> } {
   try {
     const j = JSON.parse(readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
@@ -255,6 +271,18 @@ async function checkVersions(errors: string[]): Promise<VersionRow[]> {
     rows.push({ name: 'node', installed: installedNode, latest: latestNode, state: latestNode ? compareVersions(installedNode, latestNode) : 'unknown', source: 'node' });
   } catch (e) {
     errors.push(`node: ${(e as Error).message}`);
+  }
+
+  // npm-CLI (kommt mit dem Node-Image, keine package.json-Abhängigkeit – darum separat)
+  try {
+    const installedNpm = npmVersion();
+    if (installedNpm) {
+      const j = (await fetchJson('https://registry.npmjs.org/npm/latest')) as { version?: string };
+      const latestNpm = j.version || '';
+      rows.push({ name: 'npm', installed: installedNpm, latest: latestNpm, state: latestNpm ? compareVersions(installedNpm, latestNpm) : 'unknown', source: 'node' });
+    }
+  } catch (e) {
+    errors.push(`npm: ${(e as Error).message}`);
   }
 
   rows.sort((a, b) => a.name.localeCompare(b.name));
