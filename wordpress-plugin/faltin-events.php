@@ -303,6 +303,13 @@ function faltin_anfrage_shortcode($atts) {
           $lbl = 'style="color:#143047 !important;background:transparent !important;text-shadow:none !important;padding:0 !important;display:block !important;margin:0 0 6px !important;font-size:12px !important;font-weight:700 !important"';
           $inp = 'style="color:#143047 !important;background:#fff !important"';
           ?>
+          <div class="ft-af-field"><label <?php echo $lbl; ?>>Anrede</label>
+            <select <?php echo $inp; ?> name="salutation" autocomplete="honorific-prefix">
+              <option value="">– bitte wählen –</option>
+              <option value="herr">Herr</option>
+              <option value="frau">Frau</option>
+            </select>
+          </div>
           <div class="ft-af-row">
             <div class="ft-af-field"><label <?php echo $lbl; ?>>Vorname</label><input <?php echo $inp; ?> type="text" name="firstName" placeholder="Max" autocomplete="given-name"></div>
             <div class="ft-af-field"><label <?php echo $lbl; ?>>Nachname</label><input <?php echo $inp; ?> type="text" name="lastName" placeholder="Mustermann" autocomplete="family-name"></div>
@@ -350,7 +357,8 @@ function faltin_anfrage_shortcode($atts) {
             numberOfPersons: 1,
             doubleRooms: 0,
             singleRooms: 0,
-            travelers: [{ firstName: val('firstName'), lastName: val('lastName'), email: val('email') }],
+            salutation: val('salutation'),
+            travelers: [{ salutation: val('salutation'), firstName: val('firstName'), lastName: val('lastName'), email: val('email') }],
             email: val('email'),
             phone: val('phone'),
             message: val('message'),

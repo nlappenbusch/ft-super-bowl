@@ -52,17 +52,30 @@ export interface RecipientInfo {
 }
 
 /**
- * Geschlechtskorrekte, förmliche Begrüßung (HTML-escaped, inkl. Komma).
- * Herr/Frau + Nachname → "Sehr geehrter/e …"; sonst neutral "Guten Tag [Vorname],".
+ * Tageszeit-abhängige Grußformel nach Schweizer/deutscher Serverzeit (Europe/Zurich = CET/CEST).
+ *   <05 Guten Tag · <11 Guten Morgen · <14 Guten Mittag · <18 Guten Tag · sonst Guten Abend
+ */
+export function grussformel(date: Date = new Date()): string {
+  const h = Number(new Intl.DateTimeFormat('de-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', hour12: false }).format(date));
+  if (h < 5) return 'Guten Tag';
+  if (h < 11) return 'Guten Morgen';
+  if (h < 14) return 'Guten Mittag';
+  if (h < 18) return 'Guten Tag';
+  return 'Guten Abend';
+}
+
+/**
+ * Begrüßung (HTML-escaped, inkl. Komma).
+ * - Mit Anrede (Herr/Frau): tageszeit-abhängig + Nachname, z.B. "Guten Morgen Herr Müller,".
+ * - OHNE Anrede (Felder nicht gesetzt, z.B. aus CF7): neutral "Sehr geehrte Damen und Herren," (ohne Namen, ohne Grußformel).
  */
 export function formalGreeting(r: RecipientInfo): string {
   const s = (r.salutation || '').trim().toLowerCase();
   const last = (r.lastName || '').trim();
-  if (s === 'herr') return last ? `Sehr geehrter Herr ${escapeHtml(last)},` : 'Sehr geehrter Herr,';
-  if (s === 'frau') return last ? `Sehr geehrte Frau ${escapeHtml(last)},` : 'Sehr geehrte Frau,';
-  const first = (r.firstName || '').trim();
-  if (first) return `Guten Tag ${escapeHtml(first)},`;
-  return 'Guten Tag,';
+  const g = grussformel();
+  if (s === 'herr') return last ? `${g} Herr ${escapeHtml(last)},` : `${g} Herr,`;
+  if (s === 'frau') return last ? `${g} Frau ${escapeHtml(last)},` : `${g} Frau,`;
+  return 'Sehr geehrte Damen und Herren,';
 }
 
 /**
@@ -76,6 +89,7 @@ export function renderRecipientTokens(escapedText: string, r: RecipientInfo): st
   const s = (r.salutation || '').trim().toLowerCase();
   const anrede = s === 'herr' ? 'Sehr geehrter Herr' : s === 'frau' ? 'Sehr geehrte Frau' : 'Sehr geehrte Damen und Herren';
   return escapedText
+    .replace(/\{\{\s*grussformel\s*\}\}/gi, grussformel())
     .replace(/\{\{\s*anrede\s*\}\}/gi, anrede)
     .replace(/\{\{\s*vorname\s*\}\}/gi, escapeHtml((r.firstName || '').trim()))
     .replace(/\{\{\s*nachname\s*\}\}/gi, escapeHtml((r.lastName || '').trim()))
@@ -207,7 +221,7 @@ export function autoReplyHtml(input: AutoReplyInput): string {
 
   // Eigene Begrüßung erkennen (erste nicht-leere Zeile)
   const firstLine = rendered.replace(/^\s+/, '').slice(0, 40).toLowerCase();
-  const hasOwnGreeting = /^(sehr geehrt|hallo|guten (tag|morgen|abend)|liebe|moin|servus|hi[\s,]|hey[\s,])/.test(firstLine);
+  const hasOwnGreeting = /^(sehr geehrt|hallo|guten (tag|morgen|mittag|abend)|liebe|moin|servus|hi[\s,]|hey[\s,])/.test(firstLine);
   const greetingHtml = hasOwnGreeting
     ? ''
     : `<p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#374151;">${formalGreeting(r)}</p>`;
