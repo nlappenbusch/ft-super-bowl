@@ -241,7 +241,7 @@ function faltin_anfrage_styles() {
 .ft-af input,.ft-af textarea,.ft-af select{width:100%;box-sizing:border-box;border:1.5px solid #e5e8ed;border-radius:12px;padding:11px 14px;font-size:14px;color:#143047!important;background:#fff!important;outline:none;transition:border-color .15s;font-family:inherit;height:auto;line-height:1.3}
 .ft-af input:focus,.ft-af textarea:focus,.ft-af select:focus{border-color:#d9531e}
 .ft-af input::placeholder,.ft-af textarea::placeholder{color:#9ca3af!important}
-.ft-af select{appearance:none;-webkit-appearance:none;-moz-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23143047' d='M6 8 0 0h12z'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-position:right 14px center!important;padding-right:38px!important}
+.ft-af select{cursor:pointer;height:46px}
 .ft-af textarea{min-height:110px;resize:vertical}
 .ft-af-btn{width:100%;border:none;cursor:pointer;background:#d9531e;color:#fff!important;font-size:15px;font-weight:800;padding:14px 20px;border-radius:12px;transition:opacity .15s;font-family:inherit}
 .ft-af-btn:hover{opacity:.92}
