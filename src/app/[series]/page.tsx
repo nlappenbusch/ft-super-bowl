@@ -1,9 +1,9 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Calendar, MapPin, ArrowRight, Ticket, CheckCircle2, ShieldCheck, Award, Headset } from 'lucide-react';
-import { getEventsBySeriesSlug, getSeriesBySlug, getPackagesByEventSlug } from '@/lib/eventData';
+import { getEventsBySeriesSlug, getSeriesBySlug, getPackagesByEventSlug, getSeriesList } from '@/lib/eventData';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import SeriesPackages, { type SeriesPackageGroup } from '@/components/SeriesPackages';
 import EventContactForm from '@/components/EventContactForm';
@@ -69,7 +69,12 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
   if (reservedSlugs.has(series)) return notFound();
 
   const seriesData = await getSeriesBySlug(series);
-  if (!seriesData) return notFound();
+  if (!seriesData) {
+    // Alias-Slug? -> 301 auf den kanonischen Serien-Slug
+    const byAlias = (await getSeriesList()).find((s) => (s.aliases || []).includes(series));
+    if (byAlias) permanentRedirect(`/${byAlias.slug}`);
+    return notFound();
+  }
 
   const events = await getEventsBySeriesSlug(series);
   const upcoming = [...events].sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''));

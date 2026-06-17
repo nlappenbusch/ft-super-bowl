@@ -1,5 +1,6 @@
-import { notFound, permanentRedirect } from 'next/navigation';
+import { notFound, permanentRedirect, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
+import { getSession } from '@/lib/serverSession';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import EventLiveEditor from '@/components/event/EventLiveEditor';
 import { generateEventSchema, generateProductSchema, generateFaqPageSchema } from '@/lib/schema';
@@ -18,7 +19,9 @@ async function resolveEvent(seriesSlug: string, eventParam: string) {
   let event = await getEventBySlug(eventParam);
   if (!event) {
     const evts = await getEventsBySeriesSlug(seriesSlug);
-    event = evts.find((e) => (e.url_segment || '') === eventParam) || null;
+    event = evts.find((e) => (e.url_segment || '') === eventParam)
+      || evts.find((e) => (e.aliases || []).includes(eventParam))
+      || null;
   }
   return event;
 }
@@ -47,9 +50,18 @@ export default async function EventUnderSeriesPage({ params }: EventPageProps) {
   const series = event.series_id ? await getSeriesById(event.series_id) : null;
   const canonicalSeg = event.url_segment || event.slug;
 
-  // Auf kanonischen Pfad umleiten (falsche Serie ODER voller Slug statt url_segment)
+  // Auf kanonischen Pfad umleiten (falsche Serie ODER voller Slug/Alias statt url_segment)
   if ((series?.slug || '') !== seriesSlug || canonicalSeg !== eventParam) {
     permanentRedirect(series?.slug ? `/${series.slug}/${canonicalSeg}` : `/events/${event.slug}`);
+  }
+
+  // Abgelaufene Events leiten zur Serien-Übersicht (temporär/302, da Events jährlich wiederkehren).
+  // Ausnahme: eingeloggte Admins – damit alte Events weiter bearbeitbar bleiben.
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const eventEnd = event.end_date || event.start_date || '';
+  if (eventEnd && eventEnd < todayIso && event.redirect_when_expired !== false && series?.slug) {
+    const session = await getSession();
+    if (!session) redirect(`/${series.slug}`);
   }
 
   const packages = await getPackagesByEventSlug(event.slug);

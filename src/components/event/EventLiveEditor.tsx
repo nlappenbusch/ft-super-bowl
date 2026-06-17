@@ -22,7 +22,7 @@ type ViewProps = React.ComponentProps<typeof EventPageView>;
 type Props = Omit<ViewProps, 'editable'>;
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
-type FieldType = 'text' | 'textarea' | 'image' | 'list';
+type FieldType = 'text' | 'textarea' | 'image' | 'list' | 'bool';
 interface FieldDef { key: string; label: string; type: FieldType }
 type EditorKind = 'fields' | 'ticketCategories' | 'spielplan' | 'faqs' | 'seo';
 interface GroupDef { title: string; editor: EditorKind; fields?: FieldDef[]; note?: string; deepLink?: 'event' | 'series' }
@@ -90,6 +90,13 @@ const GROUPS: Record<string, GroupDef> = {
   faq: { title: 'FAQ', editor: 'faqs' },
   __seo__: {
     title: 'SEO / Meta', editor: 'seo', fields: [],
+  },
+  __url__: {
+    title: 'URL / Weiterleitungen', editor: 'fields', fields: [
+      { key: 'aliases', label: 'Alias-URLs (Segmente, eine pro Zeile → 301 auf die echte URL)', type: 'list' },
+      { key: 'redirect_when_expired', label: 'Nach Ablauf automatisch zur Serie weiterleiten (302)', type: 'bool' },
+    ],
+    note: 'Alias-Segmente leiten dauerhaft (301) auf die kanonische URL. Abgelaufene Events leiten temporär (302) zur Serien-Übersicht – eingeloggte Admins sehen die Seite weiterhin.',
   },
   lageplan: { title: 'Lageplan', editor: 'fields', fields: [], note: 'Die Karten-Pins im Voll-Editor (Pin-Map) bearbeiten.', deepLink: 'event' },
   series: { title: 'Serie', editor: 'fields', fields: [], note: 'Serien-Inhalte im Serien-Editor bearbeiten.', deepLink: 'series' },
@@ -272,6 +279,15 @@ export default function EventLiveEditor(props: Props) {
                 const raw = ev[f.key];
                 if (f.type === 'image') {
                   return <ImageField key={f.key} label={f.label} fieldKey={f.key} get={(k) => { const v = (ev as Record<string, unknown>)[k]; return typeof v === 'string' ? v : ''; }} onChange={applyChange} />;
+                }
+                if (f.type === 'bool') {
+                  const checked = raw !== false; // Default an (null/undefined = true)
+                  return (
+                    <label key={f.key} className="flex items-center gap-2 text-sm text-gray-700">
+                      <input type="checkbox" checked={checked} onChange={(e) => applyChange(f.key, e.target.checked)} />
+                      {f.label}
+                    </label>
+                  );
                 }
                 if (f.type === 'list') {
                   const text = Array.isArray(raw) ? (raw as string[]).join('\n') : '';

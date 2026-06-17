@@ -31,6 +31,10 @@ export interface EventRecord {
   slug: string;
   /** Kurzes URL-Segment für /<serie>/<edition> (z.B. "2027"); leer = slug */
   url_segment?: string | null;
+  /** Alternative URL-Segmente, die per 301 auf die kanonische URL weiterleiten. */
+  aliases?: string[] | null;
+  /** Nach Ablauf (end/start_date vergangen) automatisch zur Serie weiterleiten. Default: true. */
+  redirect_when_expired?: boolean | null;
   name: string;
   title: string;
   description?: string | null;
@@ -158,6 +162,8 @@ export interface EventRecord {
 export interface SeriesRecord {
   id: string;
   slug: string;
+  /** Alternative Slugs, die per 301 auf den kanonischen Serien-Slug weiterleiten. */
+  aliases?: string[] | null;
   title: string;
   description?: string | null;
   category: string;
