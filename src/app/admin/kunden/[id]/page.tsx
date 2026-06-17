@@ -304,7 +304,7 @@ export default function KundenakteePage() {
                     {c.bookings.map((b) => <option key={b.id} value={b.id}>{b.request_number || b.id.slice(0, 8)} · {b.package_title}</option>)}
                   </select>
                 </Field>
-                <input ref={fileRef} type="file" className="text-xs text-gray-600" />
+                <input ref={fileRef} type="file" className="block w-full text-xs text-gray-500 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#143047] file:px-3 file:py-2 file:text-xs file:font-bold file:text-white hover:file:opacity-90" />
                 <Button type="button" variant="accent" onClick={uploadDoc} disabled={uploading}>{uploading ? <Spinner className="h-4 w-4 border-white" /> : <Upload className="h-4 w-4" />} Hochladen</Button>
               </div>
             </div>

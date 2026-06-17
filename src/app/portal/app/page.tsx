@@ -28,6 +28,21 @@ const eur = (n: number) => new Intl.NumberFormat('de-CH', { style: 'currency', c
 const fdate = (s?: string) => { if (!s) return '–'; try { return new Date(s).toLocaleDateString('de-CH'); } catch { return s; } }
 const fsize = (n: number) => n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
 
+/** E-Mail-/HTML-Nachrichten in lesbaren Text umwandeln (Tags raus, Entities dekodieren). */
+function cleanBody(s: string): string {
+  if (!s) return '';
+  let t = s
+    .replace(/<head[\s\S]*?<\/head>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|tr|li)>/gi, '\n')
+    .replace(/<[^>]+>/g, '');
+  t = t.replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&#39;/gi, "'");
+  return t.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+$/gm, '').trim();
+}
+
 export default function PortalApp() {
   const router = useRouter();
   const [me, setMe] = useState<Me | null>(null);
@@ -110,9 +125,11 @@ function RequestsView({ requests, reload }: { requests: RequestItem[]; reload: (
           <button onClick={() => setOpen(open === r.id ? null : r.id)}
             style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', letterSpacing: 0.5 }}>{r.request_number || 'Anfrage'} · {fdate(r.created_at)}</div>
-              <div style={{ fontSize: 17, fontWeight: 800, color: NAVY, marginTop: 2 }}>{r.package_title || 'Reiseanfrage'}</div>
-              <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>Reisedatum: {fdate(r.start_date)}{r.total_price ? ` · Richtpreis ${eur(r.total_price)}` : ''}</div>
+              <span style={{ display: 'inline-block', background: '#fff1ea', color: ACCENT, fontSize: 14, fontWeight: 800, letterSpacing: 1, padding: '5px 14px', borderRadius: 9, border: '1px solid #ffd2bd' }}>
+                {r.request_number || 'Anfrage'}
+              </span>
+              <div style={{ fontSize: 18, fontWeight: 800, color: NAVY, marginTop: 10 }}>{r.package_title || 'Reiseanfrage'}</div>
+              <div style={{ fontSize: 13, color: '#6b7280', marginTop: 3 }}>Angefragt am {fdate(r.created_at)} · Reisedatum: {fdate(r.start_date)}{r.total_price ? ` · Richtpreis ${eur(r.total_price)}` : ''}</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <StatusBadge status={r.status} />
@@ -171,7 +188,7 @@ function MessageThread({ messages }: { messages: Message[] }) {
           <div key={m.id} style={{ display: 'flex', justifyContent: fromUs ? 'flex-start' : 'flex-end' }}>
             <div style={{ maxWidth: '85%', background: fromUs ? '#fff' : '#143047', color: fromUs ? '#374151' : '#fff', border: fromUs ? '1px solid #e5e8ed' : 'none', borderRadius: 14, padding: '12px 15px' }}>
               <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.7, marginBottom: 4 }}>{fromUs ? 'Faltin Travel' : 'Sie'} · {fdate(m.created_at)}</div>
-              <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{m.body}</div>
+              <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{cleanBody(m.body)}</div>
               {m.attachments.map((a) => (
                 <a key={a.id} href={`/api/portal/attachments/${a.id}`} target="_blank" rel="noopener noreferrer"
                   style={{ display: 'inline-block', marginTop: 8, fontSize: 13, fontWeight: 700, color: fromUs ? ACCENT : '#ffd9c7', textDecoration: 'underline' }}>
@@ -190,6 +207,7 @@ function ReplyBox({ bookingId, reload }: { bookingId: string; reload: () => void
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [msg, setMsg] = useState('');
+  const [fileNames, setFileNames] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const send = async () => {
@@ -204,7 +222,7 @@ function ReplyBox({ bookingId, reload }: { bookingId: string; reload: () => void
       const r = await fetch('/api/portal/messages', { method: 'POST', body: fd });
       const j = await r.json();
       if (!r.ok || !j.success) { setMsg(j.error || 'Senden fehlgeschlagen.'); }
-      else { setText(''); if (fileRef.current) fileRef.current.value = ''; reload(); }
+      else { setText(''); setFileNames([]); if (fileRef.current) fileRef.current.value = ''; reload(); }
     } catch { setMsg('Verbindungsfehler.'); }
     finally { setSending(false); }
   };
@@ -213,8 +231,18 @@ function ReplyBox({ bookingId, reload }: { bookingId: string; reload: () => void
     <div style={{ background: '#fff', border: '1px solid #e5e8ed', borderRadius: 12, padding: 14 }}>
       <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} placeholder="Ihre Nachricht an uns…"
         style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #d8dde4', borderRadius: 9, padding: '10px 12px', fontSize: 14, resize: 'vertical', outline: 'none', fontFamily: 'inherit' }} />
+      <input ref={fileRef} type="file" multiple style={{ display: 'none' }}
+        onChange={(e) => setFileNames(Array.from(e.target.files || []).map((f) => f.name))} />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-        <input ref={fileRef} type="file" multiple style={{ fontSize: 13, color: '#6b7280' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <button type="button" onClick={() => fileRef.current?.click()}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f5f7fa', color: NAVY, border: '1px solid #d8dde4', borderRadius: 9, padding: '9px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            📎 Datei anhängen
+          </button>
+          <span style={{ fontSize: 12.5, color: fileNames.length ? NAVY : '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {fileNames.length ? fileNames.join(', ') : 'Keine Datei gewählt'}
+          </span>
+        </div>
         <button onClick={send} disabled={sending}
           style={{ background: ACCENT, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 20px', fontSize: 14, fontWeight: 800, cursor: 'pointer', opacity: sending ? 0.6 : 1 }}>
           {sending ? 'Senden…' : 'Senden →'}

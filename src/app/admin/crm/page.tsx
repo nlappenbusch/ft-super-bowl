@@ -455,7 +455,7 @@ function ConversationTab({ lead }: { lead: Lead }) {
           className="w-full border rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none resize-none"
           style={{ borderColor: '#e5e8ed' }}
         />
-        <input ref={fileRef} type="file" multiple className="block w-full text-xs text-gray-600" />
+        <input ref={fileRef} type="file" multiple className="block w-full text-xs text-gray-500 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#143047] file:px-3 file:py-2 file:text-xs file:font-bold file:text-white hover:file:opacity-90" />
         {error && <p className="text-red-600 text-xs">{error}</p>}
         <button
           onClick={handleSend}
