@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import AdminShell from '@/components/admin/AdminShell';
-import { PageHeader, SectionCard, Badge, COLORS } from '@/components/admin/ui';
+import { PageHeader, SectionCard, Badge, SelectInput, TextInput, COLORS } from '@/components/admin/ui';
 import { Copy, Check, Code2, Send, Boxes, HelpCircle, LayoutGrid } from 'lucide-react';
 
 interface Param { name: string; def?: string; required?: boolean; desc: string }
@@ -182,6 +182,75 @@ function ShortcodeCard({ sc }: { sc: Shortcode }) {
   );
 }
 
+const EVENT_TEMPLATES: { key: string; label: string; tpl: (slug: string, name: string) => string }[] = [
+  { key: 'anfrage', label: '[faltin_anfrage] – Anfrageformular', tpl: (s, n) => `[faltin_anfrage event="${s}" name="${n}"]` },
+  { key: 'event', label: '[faltin_event] – Event-Teaser', tpl: (s) => `[faltin_event event="${s}"]` },
+  { key: 'pkg_adv', label: '[superbowl_package_advanced] – Paket + Personen', tpl: (s) => `[superbowl_package_advanced event="${s}"]` },
+  { key: 'pkg', label: '[superbowl_package] – Paket (Festpreis)', tpl: (s) => `[superbowl_package event="${s}"]` },
+  { key: 'faqs', label: '[superbowl_faqs] – FAQ-Accordion', tpl: (s) => `[superbowl_faqs event="${s}"]` },
+];
+
+interface Ev { slug: string; name?: string; title?: string; status?: string }
+
+function ResolvedPerEvent() {
+  const [events, setEvents] = useState<Ev[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState('');
+  const [tplKey, setTplKey] = useState('anfrage');
+  const [copiedAll, setCopiedAll] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/events').then((r) => r.json()).then((d) => { if (d.success) setEvents(d.data || []); }).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  const tpl = EVENT_TEMPLATES.find((t) => t.key === tplKey) || EVENT_TEMPLATES[0];
+  const rows = useMemo(() => {
+    const list = events
+      .filter((e) => (e.status || 'active') !== 'archived')
+      .map((e) => { const name = e.name || e.title || e.slug; return { name, slug: e.slug, code: tpl.tpl(e.slug, name) }; })
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const k = q.trim().toLowerCase();
+    return k ? list.filter((r) => r.name.toLowerCase().includes(k) || r.slug.toLowerCase().includes(k)) : list;
+  }, [events, tpl, q]);
+
+  const copyAll = async () => {
+    try { await navigator.clipboard.writeText(rows.map((r) => `${r.name}: ${r.code}`).join('\n')); setCopiedAll(true); setTimeout(() => setCopiedAll(false), 1500); } catch { /* ignore */ }
+  };
+
+  return (
+    <SectionCard
+      className="mt-6"
+      title="Aufgelöst je Event"
+      icon={<Send className="h-4 w-4" />}
+      description="Fertige Shortcodes mit eingesetztem Event-Slug – pro Event kopieren oder alle auf einmal. Vorlage oben umschalten."
+    >
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <SelectInput value={tplKey} onChange={(e) => setTplKey(e.target.value)} className="w-auto">
+          {EVENT_TEMPLATES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+        </SelectInput>
+        <TextInput value={q} onChange={(e) => setQ(e.target.value)} placeholder="Event suchen…" className="w-56" />
+        <button type="button" onClick={copyAll} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ background: COLORS.navy }}>
+          {copiedAll ? '✓ Alle kopiert' : `Alle kopieren (${rows.length})`}
+        </button>
+      </div>
+      {loading ? (
+        <p className="text-sm text-gray-500">Lädt Events…</p>
+      ) : (
+        <div className="max-h-[28rem] overflow-y-auto rounded-xl border" style={{ borderColor: COLORS.stroke }}>
+          {rows.map((r) => (
+            <div key={r.slug} className="flex items-center gap-3 border-b px-3 py-2 last:border-b-0" style={{ borderColor: COLORS.stroke }}>
+              <div className="w-48 shrink-0 truncate text-sm font-semibold" style={{ color: COLORS.navy }} title={r.name}>{r.name}</div>
+              <code className="flex-1 overflow-x-auto whitespace-nowrap rounded px-2 py-1 text-xs" style={{ background: '#0f1f30', color: '#86efac' }}>{r.code}</code>
+              <CopyButton text={r.code} />
+            </div>
+          ))}
+          {rows.length === 0 && <p className="px-3 py-3 text-sm text-gray-500">Keine Events gefunden.</p>}
+        </div>
+      )}
+    </SectionCard>
+  );
+}
+
 export default function ShortcodesPage() {
   return (
     <AdminShell title="WP-Shortcodes">
@@ -204,6 +273,8 @@ export default function ShortcodesPage() {
           <span className="inline-flex items-center gap-1"><LayoutGrid className="h-3.5 w-3.5" /> Listen/Embeds</span>
         </div>
       </SectionCard>
+
+      <ResolvedPerEvent />
 
       {PLUGINS.map((plugin) => (
         <SectionCard
