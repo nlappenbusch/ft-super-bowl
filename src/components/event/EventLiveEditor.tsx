@@ -312,6 +312,9 @@ export default function EventLiveEditor(props: Props) {
               {group.editor === 'seo' && (() => {
                 const g = (k: string) => { const v = (ev as Record<string, unknown>)[k]; return typeof v === 'string' ? v : ''; };
                 const body = ['name', 'title', 'description', 'first_paragraph_heading', 'first_paragraph_text', 'wissenswertes_text', 'wissenswertes_accordion_text'].map(g).join(' ');
+                const imgFields = ['hero_image', 'leistungen_image', 'stadionplan_image', 'first_paragraph_image_1', 'first_paragraph_image_2', 'first_paragraph_image_3'];
+                let imagesTotal = 0, imagesWithAlt = 0;
+                for (const f of imgFields) { if (g(f)) { imagesTotal++; if (g(f + '_alt')) imagesWithAlt++; } }
                 return (
                   <SeoMetaEditor
                     seoTitle={g('seo_title')}
@@ -319,6 +322,8 @@ export default function EventLiveEditor(props: Props) {
                     focusKeyword={g('focus_keyword')}
                     pageTitle={g('name') || g('title')}
                     bodyText={body}
+                    imagesTotal={imagesTotal}
+                    imagesWithAlt={imagesWithAlt}
                     onChange={applyChange}
                   />
                 );

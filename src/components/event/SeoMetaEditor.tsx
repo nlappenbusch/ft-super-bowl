@@ -17,13 +17,15 @@ function has(haystack: string, needle: string) {
 }
 
 export default function SeoMetaEditor({
-  seoTitle, seoDescription, focusKeyword, pageTitle, bodyText, onChange,
+  seoTitle, seoDescription, focusKeyword, pageTitle, bodyText, imagesTotal = 0, imagesWithAlt = 0, onChange,
 }: {
   seoTitle: string;
   seoDescription: string;
   focusKeyword: string;
   pageTitle: string;
   bodyText: string;
+  imagesTotal?: number;
+  imagesWithAlt?: number;
   onChange: (field: string, value: string) => void;
 }) {
   const [title, setTitle] = useState(seoTitle);
@@ -67,8 +69,25 @@ export default function SeoMetaEditor({
       list.push({ label: 'Keyword in der URL', status: has(url.path.replace(/-/g, ' '), k) || has(url.path, k) ? 'ok' : 'warn', hint: 'Im URL-Pfad.' });
       list.push({ label: 'Keyword im Seitentext', status: has(`${pageTitle} ${bodyText}`, k) ? 'ok' : 'warn', hint: has(`${pageTitle} ${bodyText}`, k) ? 'Kommt im Inhalt vor.' : 'Keyword im Seiteninhalt nicht gefunden.' });
     }
+    // Inhaltslänge
+    const words = (bodyText || '').split(/\s+/).filter(Boolean).length;
+    list.push({
+      label: 'Inhaltslänge',
+      status: words >= 300 ? 'ok' : words >= 120 ? 'warn' : 'bad',
+      hint: `${words} Wörter (≥300 empfohlen).`,
+    });
+    // Bild-Alt-Abdeckung
+    if (imagesTotal === 0) {
+      list.push({ label: 'Bild-Alt-Texte', status: 'info', hint: 'Keine Bilder auf dieser Seite erfasst.' });
+    } else {
+      list.push({
+        label: 'Bild-Alt-Texte',
+        status: imagesWithAlt >= imagesTotal ? 'ok' : imagesWithAlt > 0 ? 'warn' : 'bad',
+        hint: `${imagesWithAlt}/${imagesTotal} Bildern mit Alt-Text.`,
+      });
+    }
     return list;
-  }, [kw, effTitle, effDesc, titleLen, descLen, titleStatus, descStatus, url.path, pageTitle, bodyText]);
+  }, [kw, effTitle, effDesc, titleLen, descLen, titleStatus, descStatus, url.path, pageTitle, bodyText, imagesTotal, imagesWithAlt]);
 
   const score = useMemo(() => {
     const rel = checks.filter((c) => c.status !== 'info');

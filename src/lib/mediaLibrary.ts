@@ -1,9 +1,31 @@
 import { mkdir, readdir, stat, writeFile } from 'fs/promises';
 import path from 'path';
+import sharp from 'sharp';
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg', '.avif']);
 const PUBLIC_DIR = path.join(process.cwd(), 'public');
 const UPLOADS_DIR = path.join(PUBLIC_DIR, 'uploads', 'media');
+const MAX_DIMENSION = 2000; // px – Längste Kante; größere werden herunterskaliert
+const WEBP_QUALITY = 80;
+
+/**
+ * Optimiert ein Raster-Bild: Auto-Rotate (EXIF), auf max. 2000px begrenzen, nach WebP.
+ * SVG/GIF (Vektor/Animation) bleiben unverändert. Bei Fehlern: Original zurück (kein Upload-Abbruch).
+ */
+async function optimizeImage(buf: Buffer, ext: string): Promise<{ buf: Buffer; ext: string }> {
+  if (ext === '.svg' || ext === '.gif') return { buf, ext };
+  try {
+    const out = await sharp(buf)
+      .rotate()
+      .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: WEBP_QUALITY })
+      .toBuffer();
+    // Nur übernehmen, wenn die Optimierung wirklich kleiner ist
+    return out.length < buf.length ? { buf: out, ext: '.webp' } : { buf, ext };
+  } catch {
+    return { buf, ext };
+  }
+}
 
 export interface MediaItem {
   name: string;
@@ -115,14 +137,15 @@ export async function localizeRemoteImage(url: string): Promise<string> {
   let ext = path.extname(rawBase).toLowerCase();
   if (!IMAGE_EXTENSIONS.has(ext)) ext = extFromContentType(contentType);
 
+  const opt = await optimizeImage(buf, ext);
   const baseNoExt = path.basename(rawBase, path.extname(rawBase));
-  const safeBase = sanitizeFileName(`${baseNoExt}${ext}`);
+  const safeBase = sanitizeFileName(`${baseNoExt}${opt.ext}`);
 
   await mkdir(UPLOADS_DIR, { recursive: true });
   const timeStamp = new Date().toISOString().replace(/[:.]/g, '-');
   const finalName = `${timeStamp}-${safeBase}`;
   const finalPath = path.join(UPLOADS_DIR, finalName);
-  await writeFile(finalPath, buf);
+  await writeFile(finalPath, opt.buf);
 
   const relativePath = path.relative(PUBLIC_DIR, finalPath).split(path.sep).join('/');
   return toPublicUrl(relativePath);
@@ -138,13 +161,15 @@ export async function saveUploadedMedia(file: File): Promise<MediaItem> {
 
   await mkdir(UPLOADS_DIR, { recursive: true });
 
-  const safeName = sanitizeFileName(originalName);
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const opt = await optimizeImage(bytes, extension);
+  const baseNoExt = path.basename(originalName, path.extname(originalName));
+  const safeName = sanitizeFileName(`${baseNoExt}${opt.ext}`);
   const timeStamp = new Date().toISOString().replace(/[:.]/g, '-');
   const finalName = `${timeStamp}-${safeName}`;
   const finalPath = path.join(UPLOADS_DIR, finalName);
-  const bytes = Buffer.from(await file.arrayBuffer());
 
-  await writeFile(finalPath, bytes);
+  await writeFile(finalPath, opt.buf);
 
   const fileStat = await stat(finalPath);
   const relativePath = path.relative(PUBLIC_DIR, finalPath).split(path.sep).join('/');
