@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionEmployee } from '@/lib/serverSession';
-import { decideVacation, deleteVacationRequest } from '@/lib/staffStore';
+import { decideVacation, deleteVacationRequest, getEmployee } from '@/lib/staffStore';
+import { sendGraphMail, isGraphConfigured } from '@/lib/graphMailer';
 
 /** PATCH { status: 'genehmigt' | 'abgelehnt' } – Antrag entscheiden. */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -14,6 +15,29 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
   const updated = await decideVacation(id, body.status, ctx.session.name);
   if (!updated) return NextResponse.json({ success: false, error: 'Antrag nicht gefunden' }, { status: 404 });
+
+  // Mitarbeiter über die Entscheidung informieren (non-blocking)
+  try {
+    if (isGraphConfigured()) {
+      const emp = await getEmployee(updated.employee_id);
+      if (emp?.email) {
+        const ok = body.status === 'genehmigt';
+        await sendGraphMail({
+          to: emp.email,
+          toName: emp.name,
+          subject: `Abwesenheitsantrag ${ok ? 'genehmigt' : 'abgelehnt'}: ${updated.start_date}–${updated.end_date}`,
+          html: `<p>Hallo ${emp.name},</p>
+            <p>dein Antrag für <b>${updated.start_date} bis ${updated.end_date}</b> (${updated.days} Arbeitstage) wurde
+            <b style="color:${ok ? '#15803d' : '#b91c1c'}">${ok ? 'genehmigt' : 'abgelehnt'}</b>.</p>
+            ${updated.comment ? `<p>Kommentar: ${updated.comment}</p>` : ''}
+            <p>Viele Grüße<br/>Faltin Travel</p>`,
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('[Urlaub] Benachrichtigung an Mitarbeiter fehlgeschlagen:', e);
+  }
+
   return NextResponse.json({ success: true, data: updated });
 }
 

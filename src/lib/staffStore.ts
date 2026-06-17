@@ -276,11 +276,14 @@ export interface VacationRequest {
 
 export async function createVacationRequest(input: {
   employee_id: string; start_date: string; end_date: string;
-  type?: VacationRequest['type']; comment?: string;
+  type?: VacationRequest['type']; comment?: string; half_day?: boolean;
 }): Promise<VacationRequest | null> {
   const emp = await getEmployee(input.employee_id);
   if (!emp || input.end_date < input.start_date) return null;
-  const days = workingDaysBetween(input.start_date, input.end_date, emp.weekly_hours);
+  // Halbtag: nur sinnvoll für einen einzelnen Tag -> 0,5 Arbeitstage.
+  const days = (input.half_day && input.start_date === input.end_date)
+    ? 0.5
+    : workingDaysBetween(input.start_date, input.end_date, emp.weekly_hours);
   const id = crypto.randomUUID();
   await dbRun(`
     INSERT INTO vacation_requests (id, employee_id, start_date, end_date, days, type, comment)
@@ -317,26 +320,39 @@ export async function listVacations(year: number, employeeId?: string): Promise<
 export interface VacationBalance {
   year: number;
   entitlement: number;
+  carryover: number; // Übertrag aus dem Vorjahr (nicht verbrauchter Rest)
   used: number;
   pending: number;
-  remaining: number;
+  sickDays: number;  // Krankheitstage – zählen NICHT gegen den Urlaub
+  remaining: number; // entitlement + carryover - used
+}
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+/** Verbrauchte Tage eines Antrags im gegebenen Jahr – Halbtage (days=0.5) bleiben erhalten. */
+function daysInYear(v: VacationRequest, year: number, weekly: WeeklyHours): number {
+  const yStart = `${year}-01-01`, yEnd = `${year}-12-31`;
+  if (v.start_date >= yStart && v.end_date <= yEnd) return v.days; // ganz im Jahr -> gespeicherter Wert (inkl. 0,5)
+  const from = v.start_date < yStart ? yStart : v.start_date;
+  const to = v.end_date > yEnd ? yEnd : v.end_date;
+  return to >= from ? workingDaysBetween(from, to, weekly) : 0;
 }
 
 export async function vacationBalance(employee: Employee, year: number): Promise<VacationBalance> {
-  const vacs = (await listVacations(year, employee.id)).filter((v) => v.type === 'urlaub');
-  const part = (v: VacationRequest) => {
-    const from = v.start_date < `${year}-01-01` ? `${year}-01-01` : v.start_date;
-    const to = v.end_date > `${year}-12-31` ? `${year}-12-31` : v.end_date;
-    return workingDaysBetween(from, to, employee.weekly_hours);
-  };
-  const used = vacs.filter((v) => v.status === 'genehmigt').reduce((s, v) => s + part(v), 0);
-  const pending = vacs.filter((v) => v.status === 'beantragt').reduce((s, v) => s + part(v), 0);
-  return {
-    year,
-    entitlement: employee.vacation_days_per_year,
-    used, pending,
-    remaining: Math.round((employee.vacation_days_per_year - used) * 100) / 100,
-  };
+  const vacs = await listVacations(year, employee.id);
+  const sum = (list: VacationRequest[]) => r2(list.reduce((s, v) => s + daysInYear(v, year, employee.weekly_hours), 0));
+
+  const used = sum(vacs.filter((v) => v.type === 'urlaub' && v.status === 'genehmigt'));
+  const pending = sum(vacs.filter((v) => v.type === 'urlaub' && v.status === 'beantragt'));
+  const sickDays = sum(vacs.filter((v) => v.type === 'krankheit' && v.status !== 'abgelehnt'));
+
+  // Übertrag = nicht verbrauchter Rest des Vorjahres (automatisch, ungekappt)
+  const prev = await listVacations(year - 1, employee.id);
+  const prevUsed = sum(prev.filter((v) => v.type === 'urlaub' && v.status === 'genehmigt'));
+  const carryover = Math.max(0, r2(employee.vacation_days_per_year - prevUsed));
+
+  const remaining = r2(employee.vacation_days_per_year + carryover - used);
+  return { year, entitlement: employee.vacation_days_per_year, carryover, used, pending, sickDays, remaining };
 }
 
 /** Daten für den gemeinsamen Jahresplaner: alle Mitarbeiter, Abwesenheiten, ZH-Feiertage. */
