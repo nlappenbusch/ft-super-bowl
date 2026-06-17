@@ -379,7 +379,7 @@ export function seoReportAgeHours(report: SeoReport | null): number | null {
 }
 
 /** KI: optimierten Title + Meta-Description für eine Seite vorschlagen (anhand des Live-HTML). */
-export async function suggestMeta(pagePath: string): Promise<{ ok: boolean; title?: string; description?: string; error?: string }> {
+export async function suggestMeta(pagePath: string): Promise<{ ok: boolean; title?: string; description?: string; keyword?: string; error?: string }> {
   if (!isAiConfigured()) return { ok: false, error: 'Kein Anthropic-Key (Admin -> KI-Redaktion).' };
   const internal = internalBase();
   const p = pagePath.startsWith('/') ? pagePath : '/' + pagePath;
@@ -388,11 +388,11 @@ export async function suggestMeta(pagePath: string): Promise<{ ok: boolean; titl
   const h1 = (r.body.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1] || '').replace(/<[^>]+>/g, '').trim();
   const curTitle = attr(r.body, /<title[^>]*>([\s\S]*?)<\/title>/i) || '';
   const text = textWordCount(r.body) ? r.body.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 1500) : '';
-  const system = 'Du bist SEO-Texter. Antworte NUR als JSON {"title":"...","description":"..."}. Deutsch. Title 50-60 Zeichen inkl. Marke Faltin Travel. Description 140–160 Zeichen, mit Nutzen/CTA. Keine Anführungszeichen im Text.';
+  const system = 'Du bist SEO-Texter. Antworte NUR als JSON {"title":"...","description":"...","keyword":"..."}. Deutsch. Title 50-60 Zeichen inkl. Marke Faltin Travel. Description 140–160 Zeichen, mit Nutzen/CTA. keyword = das wichtigste Fokus-Keyword der Seite (1–4 Wörter), das in Title UND Description vorkommt. Keine Anführungszeichen im Text.';
   const res = await anthropicMessage({ system, userText: `Seite: ${p}\nH1: ${h1}\nAktueller Title: ${curTitle}\nInhalt: ${text}`, maxTokens: 400 });
   if (!res.ok || !res.text) return { ok: false, error: res.error || 'KI-Fehler' };
   try {
     const j = JSON.parse(res.text.slice(res.text.indexOf('{'), res.text.lastIndexOf('}') + 1));
-    return { ok: true, title: String(j.title || '').trim(), description: String(j.description || '').trim() };
+    return { ok: true, title: String(j.title || '').trim(), description: String(j.description || '').trim(), keyword: String(j.keyword || '').trim() };
   } catch { return { ok: false, error: 'KI-Antwort nicht lesbar' }; }
 }

@@ -32,6 +32,21 @@ export default function SeoMetaEditor({
   const [desc, setDesc] = useState(seoDescription);
   const [kw, setKw] = useState(focusKeyword);
   const [url, setUrl] = useState<{ host: string; path: string }>({ host: 'next.faltintravel.com', path: '/' });
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  const runAi = async () => {
+    setAiBusy(true); setAiError(null);
+    try {
+      const r = await fetch('/api/admin/seo/suggest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: url.path }) });
+      const d = await r.json();
+      if (d.success) {
+        if (d.title) { setTitle(d.title); onChange('seo_title', d.title); }
+        if (d.description) { setDesc(d.description); onChange('seo_description', d.description); }
+        if (d.keyword) { setKw(d.keyword); onChange('focus_keyword', d.keyword); }
+      } else setAiError(d.error || 'KI-Fehler');
+    } catch { setAiError('KI-Fehler'); } finally { setAiBusy(false); }
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -108,11 +123,15 @@ export default function SeoMetaEditor({
 
   return (
     <div className="space-y-4">
-      {/* Gesamt-Ampel */}
+      {/* Gesamt-Ampel + KI */}
       <div className="flex items-center gap-3 rounded-lg px-3 py-2" style={{ background: '#f6f8fa' }}>
         <span className="inline-flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white" style={{ background: scoreColor }}>{score}</span>
-        <div className="text-xs text-gray-600">SEO-Score dieser Seite · {score >= 75 ? 'gut' : score >= 45 ? 'verbesserbar' : 'schwach'}</div>
+        <div className="flex-1 text-xs text-gray-600">SEO-Score dieser Seite · {score >= 75 ? 'gut' : score >= 45 ? 'verbesserbar' : 'schwach'}</div>
+        <button type="button" onClick={runAi} disabled={aiBusy} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50" style={{ background: '#7c3aed' }}>
+          {aiBusy ? '… denkt' : '✨ KI-Vorschlag'}
+        </button>
       </div>
+      {aiError && <div className="rounded-lg px-3 py-2 text-xs" style={{ background: '#fee2e2', color: '#991b1b' }}>{aiError}</div>}
 
       {/* Google SERP-Vorschau */}
       <div className="rounded-xl border p-3" style={{ borderColor: '#e5e8ed' }}>

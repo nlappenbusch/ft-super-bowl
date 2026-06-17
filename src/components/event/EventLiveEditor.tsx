@@ -110,7 +110,20 @@ function ImageField({ label, fieldKey, get, onChange }: { label: string; fieldKe
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [libOpen, setLibOpen] = useState(false);
+  const [altText, setAltText] = useState(get(fieldKey + '_alt'));
+  const [aiBusy, setAiBusy] = useState(false);
   const value = get(fieldKey);
+
+  const suggestAlt = async () => {
+    if (!value) return;
+    setAiBusy(true);
+    try {
+      const r = await fetch('/api/admin/seo/alt-suggest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: value }) });
+      const d = await r.json();
+      if (d.success && d.alt) { setAltText(d.alt); onChange(fieldKey + '_alt', d.alt); }
+      else setBusy(d.error || 'KI-Fehler');
+    } catch { setBusy('KI-Fehler'); } finally { setAiBusy(false); }
+  };
 
   const upload = async (file: File) => {
     setBusy('Lädt hoch…');
@@ -148,10 +161,17 @@ function ImageField({ label, fieldKey, get, onChange }: { label: string; fieldKe
       </div>
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void upload(f); }} />
       <MediaLibraryDialog open={libOpen} onClose={() => setLibOpen(false)} onSelect={(url) => onChange(fieldKey, url)} />
-      <label className="mt-3 block">
-        <span className="mb-1 block text-[11px] font-semibold text-gray-500">Alt-Text (SEO / Barrierefreiheit)</span>
-        <input type="text" defaultValue={get(fieldKey + '_alt')} onChange={(e) => onChange(fieldKey + '_alt', e.target.value)} placeholder="Was zeigt das Bild?" className={inputCls} style={inputStyle} />
-      </label>
+      <div className="mt-3">
+        <div className="mb-1 flex items-center justify-between">
+          <span className="text-[11px] font-semibold text-gray-500">Alt-Text (SEO / Barrierefreiheit)</span>
+          {value && (
+            <button type="button" onClick={suggestAlt} disabled={aiBusy} className="rounded-md border px-2 py-0.5 text-[11px] font-semibold text-violet-700 hover:bg-violet-50 disabled:opacity-50" style={inputStyle}>
+              {aiBusy ? '… KI' : '✨ KI'}
+            </button>
+          )}
+        </div>
+        <input type="text" value={altText} onChange={(e) => { setAltText(e.target.value); onChange(fieldKey + '_alt', e.target.value); }} placeholder="Was zeigt das Bild?" className={inputCls} style={inputStyle} />
+      </div>
       <label className="mt-2 block">
         <span className="mb-1 block text-[11px] font-semibold text-gray-500">Title (Tooltip beim Hovern)</span>
         <input type="text" defaultValue={get(fieldKey + '_title')} onChange={(e) => onChange(fieldKey + '_title', e.target.value)} placeholder="Optionaler Tooltip" className={inputCls} style={inputStyle} />
