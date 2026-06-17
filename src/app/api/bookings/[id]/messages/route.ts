@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { listMessages } from '@/lib/bookingStore';
+import { listAttachmentsForBooking } from '@/lib/documentStore';
 
 export async function GET(
   _request: Request,
@@ -8,7 +9,15 @@ export async function GET(
   try {
     const { id } = await params;
     const messages = await listMessages(id);
-    return NextResponse.json({ success: true, data: messages });
+    const atts = await listAttachmentsForBooking(id);
+    const byMsg = new Map<string, { id: string; filename: string; mime: string; size: number }[]>();
+    for (const a of atts) {
+      const arr = byMsg.get(a.message_id) || [];
+      arr.push({ id: a.id, filename: a.filename, mime: a.mime, size: a.size });
+      byMsg.set(a.message_id, arr);
+    }
+    const data = messages.map((m) => ({ ...m, attachments: byMsg.get(m.id) || [] }));
+    return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error('API error:', error);
     return NextResponse.json(

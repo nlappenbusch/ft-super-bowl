@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import InvoiceEditor, { type InvoiceLead } from '@/components/admin/InvoiceEditor';
 import AdminShell from '@/components/admin/AdminShell';
 import {
@@ -34,6 +34,7 @@ interface Lead {
   travelers?: string | Array<{ firstName?: string; lastName?: string; first_name?: string; last_name?: string }>;
 }
 
+interface MsgAttachment { id: string; filename: string; mime: string; size: number }
 interface Message {
   id: string;
   booking_id: string;
@@ -43,6 +44,7 @@ interface Message {
   to_email: string;
   subject: string;
   body: string;
+  attachments?: MsgAttachment[];
 }
 
 interface InvoiceItem {
@@ -344,6 +346,7 @@ function ConversationTab({ lead }: { lead: Lead }) {
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -365,18 +368,19 @@ function ConversationTab({ lead }: { lead: Lead }) {
   }, [load]);
 
   const handleSend = async () => {
-    if (!reply.trim()) return;
+    const files = fileRef.current?.files;
+    if (!reply.trim() && (!files || files.length === 0)) return;
     setSending(true);
     setError(null);
     try {
-      const res = await fetch(`/api/bookings/${lead.id}/reply`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: reply }),
-      });
+      const fd = new FormData();
+      fd.append('body', reply);
+      if (files) for (const f of Array.from(files)) fd.append('files', f);
+      const res = await fetch(`/api/bookings/${lead.id}/reply`, { method: 'POST', body: fd });
       const data = await res.json();
       if (data.success) {
         setReply('');
+        if (fileRef.current) fileRef.current.value = '';
         await load();
       } else {
         setError(data.error || 'Versand fehlgeschlagen.');
@@ -420,6 +424,16 @@ function ConversationTab({ lead }: { lead: Lead }) {
                   <div className="whitespace-pre-wrap leading-relaxed">
                     {isOut ? m.body : stripHtml(m.body)}
                   </div>
+                  {(m.attachments && m.attachments.length > 0) && (
+                    <div className="mt-2 flex flex-col gap-1">
+                      {m.attachments.map((a) => (
+                        <a key={a.id} href={`/api/admin/attachments/${a.id}`} target="_blank" rel="noopener noreferrer"
+                          className="text-xs font-bold underline" style={{ color: isOut ? '#ffd9c7' : '#d9531e' }}>
+                          📎 {a.filename}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -441,10 +455,11 @@ function ConversationTab({ lead }: { lead: Lead }) {
           className="w-full border rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none resize-none"
           style={{ borderColor: '#e5e8ed' }}
         />
+        <input ref={fileRef} type="file" multiple className="block w-full text-xs text-gray-600" />
         {error && <p className="text-red-600 text-xs">{error}</p>}
         <button
           onClick={handleSend}
-          disabled={sending || !reply.trim()}
+          disabled={sending}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
           style={{ background: '#d9531e' }}
         >

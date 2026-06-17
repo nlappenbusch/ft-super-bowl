@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getBooking, addMessage } from '@/lib/bookingStore';
 import { getEventBySlug } from '@/lib/eventData';
-import { sendGraphMail, isGraphConfigured, getMailbox, getFromName } from '@/lib/graphMailer';
+import { sendGraphMail, isGraphConfigured, getMailbox, getFromName, type MailAttachment } from '@/lib/graphMailer';
 import { replyEmailHtml, replySubject } from '@/lib/emailTemplates';
+import { addMessageAttachment, MAX_FILE_BYTES } from '@/lib/documentStore';
 
 export async function POST(
   request: Request,
@@ -10,10 +11,28 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const body = await request.json();
-    const text: string = (body.body || body.message || '').trim();
 
-    if (!text) {
+    // JSON ODER multipart/form-data (mit Datei-Anhängen) akzeptieren.
+    let text = '';
+    let agentName: string | undefined;
+    const uploads: { name: string; mime: string; size: number; b64: string }[] = [];
+    const ctype = request.headers.get('content-type') || '';
+    if (ctype.includes('multipart/form-data')) {
+      const form = await request.formData();
+      text = String(form.get('body') || form.get('message') || '').trim();
+      agentName = (form.get('agentName') as string) || undefined;
+      for (const f of form.getAll('files')) {
+        if (f instanceof File && f.size > 0 && f.size <= MAX_FILE_BYTES) {
+          uploads.push({ name: f.name || 'datei', mime: f.type || 'application/octet-stream', size: f.size, b64: Buffer.from(await f.arrayBuffer()).toString('base64') });
+        }
+      }
+    } else {
+      const body = await request.json();
+      text = (body.body || body.message || '').trim();
+      agentName = body.agentName;
+    }
+
+    if (!text && uploads.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Nachrichtentext fehlt' },
         { status: 400 }
@@ -59,13 +78,17 @@ export async function POST(
 
     const subject = replySubject(requestNumber, eventName);
     const html = replyEmailHtml({
-      bodyText: text,
+      bodyText: text || '(siehe Anhang)',
       requestNumber,
       eventName,
-      agentName: body.agentName,
+      agentName,
     });
 
-    const sendRes = await sendGraphMail({ to: b.email, subject, html });
+    const mailAttachments: MailAttachment[] = uploads
+      .filter((u) => u.size <= 3 * 1024 * 1024)
+      .map((u) => ({ name: u.name, contentType: u.mime, contentBytes: u.b64 }));
+
+    const sendRes = await sendGraphMail({ to: b.email, subject, html, attachments: mailAttachments });
     if (!sendRes.success) {
       return NextResponse.json(
         { success: false, error: sendRes.error || 'Versand fehlgeschlagen' },
@@ -79,9 +102,13 @@ export async function POST(
       from_email: getMailbox() || getFromName(),
       to_email: b.email,
       subject,
-      body: text,
+      body: text || '(nur Anhang)',
       graph_message_id: null,
     });
+
+    for (const u of uploads) {
+      await addMessageAttachment({ message_id: saved.id, filename: u.name, mime: u.mime, size: u.size, data_b64: u.b64 });
+    }
 
     return NextResponse.json({ success: true, data: saved });
   } catch (error) {

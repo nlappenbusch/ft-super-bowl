@@ -138,6 +138,8 @@ export function initDatabase() {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       salutation TEXT DEFAULT '',
+      first_name TEXT DEFAULT '',
+      last_name TEXT DEFAULT '',
       name TEXT DEFAULT '',
       company TEXT DEFAULT '',
       phone TEXT DEFAULT '',
@@ -154,6 +156,48 @@ export function initDatabase() {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_customer_emails_cid ON customer_emails(customer_id);
+
+    -- ==================== KUNDENPORTAL ====================
+    -- Magic-Link-Login: Einmal-Token (gehasht) mit Ablauf.
+    CREATE TABLE IF NOT EXISTS portal_login_tokens (
+      token_hash TEXT PRIMARY KEY,
+      customer_id TEXT NOT NULL,
+      email TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      expires_at TEXT NOT NULL,
+      used INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_portal_tokens_cid ON portal_login_tokens(customer_id);
+
+    -- Datei-Anhänge an Nachrichten (beide Richtungen). Inhalt als base64-TEXT.
+    CREATE TABLE IF NOT EXISTS booking_message_attachments (
+      id TEXT PRIMARY KEY,
+      message_id TEXT NOT NULL,
+      filename TEXT NOT NULL DEFAULT 'datei',
+      mime TEXT NOT NULL DEFAULT 'application/octet-stream',
+      size INTEGER NOT NULL DEFAULT 0,
+      data_b64 TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_bma_message ON booking_message_attachments(message_id);
+
+    -- Kuratierte Dokumente / digitale Reiseakte (Tickets, Hotel-Infos, Voucher, Angebote).
+    CREATE TABLE IF NOT EXISTS customer_documents (
+      id TEXT PRIMARY KEY,
+      customer_id TEXT NOT NULL,
+      booking_id TEXT NOT NULL DEFAULT '',
+      category TEXT NOT NULL DEFAULT 'other',
+      title TEXT NOT NULL DEFAULT '',
+      filename TEXT NOT NULL DEFAULT 'datei',
+      mime TEXT NOT NULL DEFAULT 'application/octet-stream',
+      size INTEGER NOT NULL DEFAULT 0,
+      data_b64 TEXT NOT NULL DEFAULT '',
+      visible INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_by TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX IF NOT EXISTS idx_cdoc_customer ON customer_documents(customer_id);
+    CREATE INDEX IF NOT EXISTS idx_cdoc_booking ON customer_documents(booking_id);
 
     -- ==================== HR / TEAM ====================
     CREATE TABLE IF NOT EXISTS employees (
@@ -287,6 +331,8 @@ export function initDatabase() {
   if (!cols.some((c) => c.name === 'customer_id')) addColumn('booking_requests', 'customer_id TEXT');
   const ccols = sqlite.prepare(`PRAGMA table_info(customers)`).all() as Array<{ name: string }>;
   if (ccols.length && !ccols.some((c) => c.name === 'salutation')) addColumn('customers', "salutation TEXT DEFAULT ''");
+  if (ccols.length && !ccols.some((c) => c.name === 'first_name')) addColumn('customers', "first_name TEXT DEFAULT ''");
+  if (ccols.length && !ccols.some((c) => c.name === 'last_name')) addColumn('customers', "last_name TEXT DEFAULT ''");
 
   sqlite.prepare(`INSERT OR IGNORE INTO counters (name, value) VALUES ('request_number', 10000)`).run();
 }

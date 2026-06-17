@@ -14,11 +14,26 @@ function normEmail(email: string): string {
   return (email || '').trim().toLowerCase();
 }
 
+/** Vollständiger Name aus Vor-/Nachname (getrimmt, Einzelfelder optional). */
+export function joinName(first?: string | null, last?: string | null): string {
+  return `${(first || '').trim()} ${(last || '').trim()}`.trim();
+}
+
+/** Heuristischer Split eines kombinierten Namens: letztes Token = Nachname. */
+export function splitName(full?: string | null): { first: string; last: string } {
+  const parts = (full || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { first: '', last: '' };
+  if (parts.length === 1) return { first: parts[0], last: '' };
+  return { first: parts.slice(0, -1).join(' '), last: parts[parts.length - 1] };
+}
+
 export interface Customer {
   id: string;
   created_at: string;
   updated_at: string;
   salutation: string;
+  first_name: string;
+  last_name: string;
   name: string;
   company: string;
   phone: string;
@@ -47,24 +62,32 @@ export async function findCustomerIdByEmail(email: string): Promise<string | nul
 /** Legt einen Kunden zur E-Mail an oder liefert den bestehenden. */
 export async function upsertCustomerByEmail(
   email: string,
-  data?: { name?: string; phone?: string; salutation?: string }
+  data?: { name?: string; firstName?: string; lastName?: string; phone?: string; salutation?: string }
 ): Promise<string> {
   const e = normEmail(email);
   if (!e) throw new Error('E-Mail fehlt');
 
+  // Vor-/Nachname herleiten: explizite Felder bevorzugt, sonst aus name splitten.
+  const sp = splitName(data?.name);
+  const inFirst = (data?.firstName ?? '').trim() || sp.first;
+  const inLast = (data?.lastName ?? '').trim() || sp.last;
+  const inName = joinName(inFirst, inLast) || (data?.name || '').trim();
+
   const existingId = await findCustomerIdByEmail(e);
   if (existingId) {
-    if (data?.name || data?.phone || data?.salutation) {
-      const cur = await dbGet<{ salutation: string; name: string; phone: string }>(
-        `SELECT salutation, name, phone FROM customers WHERE id = ?`, [existingId]
+    if (inFirst || inLast || inName || data?.phone || data?.salutation) {
+      const cur = await dbGet<{ salutation: string; first_name: string; last_name: string; name: string; phone: string }>(
+        `SELECT salutation, first_name, last_name, name, phone FROM customers WHERE id = ?`, [existingId]
       );
       if (cur) {
         const salutation = cur.salutation?.trim() ? cur.salutation : data?.salutation || '';
-        const name = cur.name?.trim() ? cur.name : data?.name || '';
+        const first_name = cur.first_name?.trim() ? cur.first_name : inFirst;
+        const last_name = cur.last_name?.trim() ? cur.last_name : inLast;
+        const name = cur.name?.trim() ? cur.name : (joinName(first_name, last_name) || inName);
         const phone = cur.phone?.trim() ? cur.phone : data?.phone || '';
         await dbRun(
-          `UPDATE customers SET salutation = ?, name = ?, phone = ?, updated_at = datetime('now') WHERE id = ?`,
-          [salutation, name, phone, existingId]
+          `UPDATE customers SET salutation = ?, first_name = ?, last_name = ?, name = ?, phone = ?, updated_at = datetime('now') WHERE id = ?`,
+          [salutation, first_name, last_name, name, phone, existingId]
         );
       }
     }
@@ -72,7 +95,10 @@ export async function upsertCustomerByEmail(
   }
 
   const id = crypto.randomUUID();
-  await dbRun(`INSERT INTO customers (id, salutation, name, phone) VALUES (?, ?, ?, ?)`, [id, data?.salutation || '', data?.name || '', data?.phone || '']);
+  await dbRun(
+    `INSERT INTO customers (id, salutation, first_name, last_name, name, phone) VALUES (?, ?, ?, ?, ?, ?)`,
+    [id, data?.salutation || '', inFirst, inLast, inName, data?.phone || '']
+  );
   await dbRun(`INSERT INTO customer_emails (email, customer_id, is_primary) VALUES (?, ?, 1)`, [e, id]);
   return id;
 }
@@ -81,7 +107,7 @@ export async function upsertCustomerByEmail(
 export async function linkBookingToCustomer(
   bookingId: string,
   email: string,
-  data?: { name?: string; phone?: string; salutation?: string }
+  data?: { name?: string; firstName?: string; lastName?: string; phone?: string; salutation?: string }
 ): Promise<string | null> {
   const e = normEmail(email);
   if (!e || !bookingId) return null;
@@ -168,6 +194,12 @@ export interface CustomerDetail extends Customer {
 export async function getCustomer(id: string): Promise<CustomerDetail | null> {
   const c = await dbGet<Customer>(`SELECT * FROM customers WHERE id = ?`, [id]);
   if (!c) return null;
+  // Altdaten ohne getrennte Felder: aus kombiniertem Namen herleiten (nur Anzeige).
+  if (!(c.first_name || '').trim() && !(c.last_name || '').trim() && (c.name || '').trim()) {
+    const sp = splitName(c.name);
+    c.first_name = sp.first;
+    c.last_name = sp.last;
+  }
   const emails = await dbAll<CustomerEmail>(`SELECT * FROM customer_emails WHERE customer_id = ? ORDER BY is_primary DESC, created_at ASC`, [id]);
   const bookings = await dbAll<CustomerBooking>(
     `SELECT id, request_number, package_title, start_date, status, total_price, created_at, email
@@ -186,10 +218,10 @@ export async function getCustomer(id: string): Promise<CustomerDetail | null> {
   return { ...c, emails, bookings, invoices };
 }
 
-export type CustomerUpdate = Partial<Pick<Customer, 'salutation' | 'name' | 'company' | 'phone' | 'street' | 'zip' | 'city' | 'country' | 'notes'>>;
+export type CustomerUpdate = Partial<Pick<Customer, 'salutation' | 'first_name' | 'last_name' | 'name' | 'company' | 'phone' | 'street' | 'zip' | 'city' | 'country' | 'notes'>>;
 
 export async function updateCustomer(id: string, updates: CustomerUpdate): Promise<CustomerDetail | null> {
-  const fields = ['salutation', 'name', 'company', 'phone', 'street', 'zip', 'city', 'country', 'notes'] as const;
+  const fields = ['salutation', 'first_name', 'last_name', 'name', 'company', 'phone', 'street', 'zip', 'city', 'country', 'notes'] as const;
   const sets: string[] = [];
   const vals: unknown[] = [];
   for (const f of fields) {
@@ -197,6 +229,14 @@ export async function updateCustomer(id: string, updates: CustomerUpdate): Promi
       sets.push(`${f} = ?`);
       vals.push(String(updates[f] ?? ''));
     }
+  }
+  // Wenn Vor-/Nachname geändert werden, kombiniertes `name`-Feld konsistent halten.
+  if (('first_name' in updates || 'last_name' in updates) && !('name' in updates)) {
+    const cur = await dbGet<{ first_name: string; last_name: string }>(`SELECT first_name, last_name FROM customers WHERE id = ?`, [id]);
+    const first = 'first_name' in updates ? String(updates.first_name ?? '') : (cur?.first_name || '');
+    const last = 'last_name' in updates ? String(updates.last_name ?? '') : (cur?.last_name || '');
+    sets.push(`name = ?`);
+    vals.push(joinName(first, last));
   }
   if (sets.length) {
     sets.push(`updated_at = datetime('now')`);

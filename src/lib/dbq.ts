@@ -189,6 +189,49 @@ let pgSchemaPromise: Promise<void> | null = null;
 export async function applyPgSchemaEnhancements(): Promise<void> {
   {
     const pool = getPool();
+    // Getrennte Vor-/Nachname-Spalten am Kundenstamm (CRM)
+    try { await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS first_name text DEFAULT ''`); } catch { /* ignore */ }
+    try { await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS last_name text DEFAULT ''`); } catch { /* ignore */ }
+
+    // Kundenportal-Tabellen (in PG zusätzlich anlegen – Migration introspektiert nur Bestandstabellen).
+    try {
+      await pool.query(`CREATE TABLE IF NOT EXISTS portal_login_tokens (
+        token_hash text PRIMARY KEY,
+        customer_id text NOT NULL,
+        email text NOT NULL DEFAULT '',
+        created_at timestamptz NOT NULL DEFAULT now(),
+        expires_at timestamptz NOT NULL,
+        used integer NOT NULL DEFAULT 0
+      )`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_portal_tokens_cid ON portal_login_tokens(customer_id)`);
+      await pool.query(`CREATE TABLE IF NOT EXISTS booking_message_attachments (
+        id text PRIMARY KEY,
+        message_id text NOT NULL,
+        filename text NOT NULL DEFAULT 'datei',
+        mime text NOT NULL DEFAULT 'application/octet-stream',
+        size integer NOT NULL DEFAULT 0,
+        data_b64 text NOT NULL DEFAULT '',
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_bma_message ON booking_message_attachments(message_id)`);
+      await pool.query(`CREATE TABLE IF NOT EXISTS customer_documents (
+        id text PRIMARY KEY,
+        customer_id text NOT NULL,
+        booking_id text NOT NULL DEFAULT '',
+        category text NOT NULL DEFAULT 'other',
+        title text NOT NULL DEFAULT '',
+        filename text NOT NULL DEFAULT 'datei',
+        mime text NOT NULL DEFAULT 'application/octet-stream',
+        size integer NOT NULL DEFAULT 0,
+        data_b64 text NOT NULL DEFAULT '',
+        visible integer NOT NULL DEFAULT 1,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        created_by text NOT NULL DEFAULT ''
+      )`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_cdoc_customer ON customer_documents(customer_id)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_cdoc_booking ON customer_documents(booking_id)`);
+    } catch (e) { console.warn('[pg] Portal-Schema:', (e as Error).message); }
+
     // Defaults auf Timestamp-Spalten (damit Inserts ohne created_at/updated_at funktionieren)
     for (const [table, col] of TS_DEFAULT_COLUMNS) {
       try { await pool.query(`ALTER TABLE ${table} ALTER COLUMN ${col} SET DEFAULT ${NOW_ISO_PG}`); } catch { /* Tabelle/Spalte evtl. (noch) nicht da */ }

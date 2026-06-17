@@ -17,6 +17,11 @@ function baseUrl(): string {
   return (m.login_base_url || process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url).replace(/\/+$/, '');
 }
 
+/** Öffentliche Basis-URL (für Portal-Links etc.). */
+export function publicBaseUrl(): string {
+  return baseUrl();
+}
+
 /** Eindeutiger Betreff-Tag für Threading, z.B. "[RQ-12345]" */
 export function subjectTag(requestNumber: string): string {
   return `[${requestNumber}]`;
@@ -144,6 +149,67 @@ function layout(innerHtml: string, preheader = ''): string {
 </body></html>`;
 }
 
+/**
+ * Markenkonformer CTA-Block zum Kundenportal. Wird in Kundenmails eingebettet.
+ * withNote=true ergänzt den sympathischen Hinweis für die erste Auto-Antwort.
+ */
+export function portalCtaHtml(opts: { withNote?: boolean } = {}): string {
+  const url = `${baseUrl()}/portal`;
+  const note = opts.withNote
+    ? `<p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:#374151;">
+         In der Zwischenzeit können Sie in Ihrem persönlichen <strong style="color:${NAVY};">Reiseportal</strong> jederzeit
+         Ihre Angaben vervollständigen, den Stand Ihrer Anfrage verfolgen und uns Nachrichten oder Unterlagen senden.
+       </p>`
+    : '';
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+      <tr><td style="background:#f5f7fa;border:1px solid #e5e8ed;border-radius:14px;padding:20px 22px;">
+        ${note}
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:10px;background:${ACCENT};">
+          <a href="${url}" style="display:inline-block;padding:12px 26px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;">
+            Zum Reiseportal →
+          </a>
+        </td></tr></table>
+        <p style="margin:12px 0 0;font-size:12px;color:#9ca3af;">Login per E-Mail-Link – ganz ohne Passwort. Einfach Ihre E-Mail-Adresse eingeben.</p>
+      </td></tr>
+    </table>`;
+}
+
+export interface MagicLinkInput {
+  link: string;
+  recipientName?: string;
+  ttlMinutes?: number;
+}
+
+export function magicLinkSubject(): string {
+  return 'Ihr Login-Link zum Faltin Reiseportal';
+}
+
+/** E-Mail mit dem Einmal-Login-Link fürs Kundenportal. */
+export function magicLinkEmailHtml(input: MagicLinkInput): string {
+  const ttl = input.ttlMinutes || 30;
+  const hi = input.recipientName ? `Hallo ${escapeHtml(input.recipientName)},` : 'Guten Tag,';
+  const inner = `
+    <h1 style="margin:0 0 6px;font-size:23px;font-weight:800;color:${NAVY};">Ihr Login zum Reiseportal</h1>
+    <p style="margin:0 0 18px;font-size:15px;line-height:1.7;color:#374151;">
+      ${hi}<br>
+      mit einem Klick gelangen Sie sicher und ohne Passwort in Ihr persönliches Reiseportal –
+      dort sehen Sie den Stand Ihrer Anfragen, können uns schreiben und Ihre Unterlagen abrufen.
+    </p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 18px;"><tr><td style="border-radius:12px;background:${ACCENT};">
+      <a href="${input.link}" style="display:inline-block;padding:14px 34px;font-size:15px;font-weight:800;color:#ffffff;text-decoration:none;border-radius:12px;">
+        Jetzt einloggen →
+      </a>
+    </td></tr></table>
+    <p style="margin:0 0 4px;font-size:13px;line-height:1.6;color:#6b7280;">
+      Der Link ist aus Sicherheitsgründen <strong>${ttl} Minuten</strong> gültig und nur einmal verwendbar.
+    </p>
+    <p style="margin:0;font-size:12px;line-height:1.6;color:#9ca3af;">
+      Falls Sie keinen Login angefordert haben, können Sie diese E-Mail ignorieren.
+    </p>`;
+  return layout(inner, 'Ihr Login-Link zum Faltin Reiseportal');
+}
+
 export interface ConfirmationInput {
   firstName?: string;
   lastName?: string;
@@ -196,7 +262,8 @@ export function confirmationEmailHtml(input: ConfirmationInput): string {
 
     <p style="margin:24px 0 0;font-size:15px;line-height:1.7;color:#374151;">
       Herzliche Grüße<br><strong style="color:${NAVY};">Ihr Faltin Travel Team</strong>
-    </p>`;
+    </p>
+    ${portalCtaHtml({ withNote: true })}`;
 
   return layout(inner, `Ihre Anfrage ${input.requestNumber} ist bei uns eingegangen.`);
 }
@@ -240,7 +307,8 @@ export function autoReplyHtml(input: AutoReplyInput): string {
   // Die Anfragenummer steht weiterhin im Betreff (Threading).
   const inner = `
     ${greetingHtml}
-    <div style="font-size:15px;line-height:1.7;color:#374151;">${bodyHtml}</div>`;
+    <div style="font-size:15px;line-height:1.7;color:#374151;">${bodyHtml}</div>
+    ${portalCtaHtml({ withNote: true })}`;
 
   return layout(inner, (input.message || '').slice(0, 120));
 }
@@ -318,7 +386,8 @@ export function replyEmailHtml(input: ReplyInput): string {
     <div style="margin:14px 0 0;font-size:15px;line-height:1.7;color:#374151;">${bodyHtml}</div>
     <p style="margin:24px 0 0;font-size:15px;line-height:1.7;color:#374151;">
       Herzliche Grüße<br><strong style="color:${NAVY};">${signature}</strong>
-    </p>`;
+    </p>
+    ${portalCtaHtml()}`;
 
   return layout(inner, input.bodyText.slice(0, 120));
 }
