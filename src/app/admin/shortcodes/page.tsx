@@ -251,6 +251,84 @@ function ResolvedPerEvent() {
   );
 }
 
+interface SugItem { event_slug: string; event_name: string; score: number; shortcode: string }
+interface SugRes { title: string; id?: string; suggestion: SugItem | null; alternatives: SugItem[] }
+
+function scoreColor(s: number) { return s >= 0.6 ? COLORS.ok : s >= 0.34 ? '#d97706' : '#dc2626'; }
+
+function SugLine({ s, faint }: { s: SugItem; faint?: boolean }) {
+  return (
+    <div className={`flex items-center gap-2 ${faint ? 'opacity-80' : ''}`}>
+      <span className="inline-block rounded px-1.5 py-0.5 text-[10px] font-bold text-white" style={{ background: scoreColor(s.score) }}>{Math.round(s.score * 100)}%</span>
+      <span className="text-xs font-semibold" style={{ color: COLORS.navy }}>{s.event_name}</span>
+      <code className="flex-1 overflow-x-auto whitespace-nowrap rounded px-2 py-1 text-[11px]" style={{ background: '#0f1f30', color: '#86efac' }}>{s.shortcode}</code>
+      <CopyButton text={s.shortcode} />
+    </div>
+  );
+}
+
+function Cf7Migrator() {
+  const [input, setInput] = useState('');
+  const [results, setResults] = useState<SugRes[] | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const run = async () => {
+    const lines = input.split('\n').map((s) => s.trim()).filter(Boolean);
+    if (!lines.length) return;
+    setLoading(true);
+    try {
+      const r = await fetch('/api/wp/match', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lines }) });
+      const d = await r.json();
+      setResults(d.success ? d.results : []);
+    } catch { setResults([]); } finally { setLoading(false); }
+  };
+
+  return (
+    <SectionCard
+      className="mt-6"
+      title="CF7 → Anfrage migrieren"
+      icon={<Send className="h-4 w-4" />}
+      description="Contact-Form-7-Shortcodes (oder nur die Titel) reinkopieren – pro Stück kommt der passende [faltin_anfrage]-Vorschlag mit Konfidenz zum Kopieren. Eine Zeile pro Formular."
+    >
+      <textarea
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        rows={4}
+        placeholder={'[contact-form-7 id="35398" title="_Wimbledon Tennis"]\n[contact-form-7 id="35401" title="Ryder Cup 2027"]'}
+        className="w-full rounded-lg border px-3 py-2 font-mono text-xs"
+        style={{ borderColor: COLORS.stroke }}
+      />
+      <div className="mt-2">
+        <button type="button" onClick={run} disabled={loading} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50" style={{ background: '#7c3aed' }}>
+          {loading ? '… analysiert' : 'Vorschläge holen'}
+        </button>
+      </div>
+
+      {results && (
+        <div className="mt-4 space-y-3">
+          {results.length === 0 && <p className="text-sm text-gray-500">Keine Eingabe erkannt.</p>}
+          {results.map((r, i) => (
+            <div key={i} className="rounded-xl border p-3" style={{ borderColor: COLORS.stroke }}>
+              <div className="mb-2 text-xs text-gray-500">CF7: <b style={{ color: COLORS.navy }}>{r.title}</b>{r.id ? ` (id ${r.id})` : ''}</div>
+              {r.suggestion ? (
+                <SugLine s={r.suggestion} />
+              ) : (
+                <p className="text-xs" style={{ color: '#b45309' }}>Kein sicherer Treffer – bitte manuell wählen{r.alternatives.length ? ':' : '.'}</p>
+              )}
+              {r.alternatives.length > 0 && (
+                <div className="mt-2 space-y-1.5 border-t pt-2" style={{ borderColor: COLORS.stroke }}>
+                  <div className="text-[10px] uppercase tracking-wide text-gray-400">Alternativen</div>
+                  {r.alternatives.map((a, j) => <SugLine key={j} s={a} faint />)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </SectionCard>
+  );
+}
+
 export default function ShortcodesPage() {
   return (
     <AdminShell title="WP-Shortcodes">
@@ -273,6 +351,8 @@ export default function ShortcodesPage() {
           <span className="inline-flex items-center gap-1"><LayoutGrid className="h-3.5 w-3.5" /> Listen/Embeds</span>
         </div>
       </SectionCard>
+
+      <Cf7Migrator />
 
       <ResolvedPerEvent />
 
