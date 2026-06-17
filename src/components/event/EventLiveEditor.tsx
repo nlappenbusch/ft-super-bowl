@@ -16,6 +16,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import EventPageView from './EventPageView';
 import MediaLibraryDialog from '@/components/admin/MediaLibraryDialog';
+import SeoMetaEditor from './SeoMetaEditor';
 
 type ViewProps = React.ComponentProps<typeof EventPageView>;
 type Props = Omit<ViewProps, 'editable'>;
@@ -23,7 +24,7 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 type FieldType = 'text' | 'textarea' | 'image' | 'list';
 interface FieldDef { key: string; label: string; type: FieldType }
-type EditorKind = 'fields' | 'ticketCategories' | 'spielplan' | 'faqs';
+type EditorKind = 'fields' | 'ticketCategories' | 'spielplan' | 'faqs' | 'seo';
 interface GroupDef { title: string; editor: EditorKind; fields?: FieldDef[]; note?: string; deepLink?: 'event' | 'series' }
 
 interface TicketCat { name: string; items: string[]; note?: string | null }
@@ -88,11 +89,7 @@ const GROUPS: Record<string, GroupDef> = {
   spielplan: { title: 'Spielplan', editor: 'spielplan' },
   faq: { title: 'FAQ', editor: 'faqs' },
   __seo__: {
-    title: 'SEO / Meta', editor: 'fields', fields: [
-      { key: 'seo_title', label: 'Meta-Titel (Suchergebnis-Titel)', type: 'text' },
-      { key: 'seo_description', label: 'Meta-Description (Suchergebnis-Text)', type: 'textarea' },
-    ],
-    note: 'Leer lassen = automatisch aus Event-Titel/Beschreibung.',
+    title: 'SEO / Meta', editor: 'seo', fields: [],
   },
   lageplan: { title: 'Lageplan', editor: 'fields', fields: [], note: 'Die Karten-Pins im Voll-Editor (Pin-Map) bearbeiten.', deepLink: 'event' },
   series: { title: 'Serie', editor: 'fields', fields: [], note: 'Serien-Inhalte im Serien-Editor bearbeiten.', deepLink: 'series' },
@@ -310,6 +307,22 @@ export default function EventLiveEditor(props: Props) {
               {group.editor === 'faqs' && (
                 <FaqsEditor faqs={faqList} onChange={applyFaqs} />
               )}
+
+              {/* SEO / Meta – Yoast-Panel */}
+              {group.editor === 'seo' && (() => {
+                const g = (k: string) => { const v = (ev as Record<string, unknown>)[k]; return typeof v === 'string' ? v : ''; };
+                const body = ['name', 'title', 'description', 'first_paragraph_heading', 'first_paragraph_text', 'wissenswertes_text', 'wissenswertes_accordion_text'].map(g).join(' ');
+                return (
+                  <SeoMetaEditor
+                    seoTitle={g('seo_title')}
+                    seoDescription={g('seo_description')}
+                    focusKeyword={g('focus_keyword')}
+                    pageTitle={g('name') || g('title')}
+                    bodyText={body}
+                    onChange={applyChange}
+                  />
+                );
+              })()}
 
               {group.note && <p className="text-xs italic text-gray-500">{group.note}</p>}
             </div>

@@ -124,6 +124,8 @@ export interface EventRecord {
   // SEO (Meta-Override pro Event)
   seo_title?: string | null;
   seo_description?: string | null;
+  /** Fokus-Keyword für die Yoast-artigen On-Page-Checks. */
+  focus_keyword?: string | null;
   // Bild-Alt-/Title-Attribute (SEO/Barrierefreiheit)
   hero_image_alt?: string | null;
   hero_image_title?: string | null;
