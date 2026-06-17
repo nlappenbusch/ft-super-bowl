@@ -28,6 +28,8 @@ interface BookingRow {
   status: 'new' | 'in_progress' | 'booked' | 'rejected';
   total_price: number;
   notes: string;
+  offer_sent?: number;
+  docs_ready?: number;
 }
 
 const IS_BUILD_PHASE = process.env.NEXT_PHASE === 'phase-production-build';
@@ -54,7 +56,9 @@ export function initDatabase() {
       total_price REAL NOT NULL DEFAULT 0,
       notes TEXT DEFAULT '',
       assigned_to TEXT,
-      customer_id TEXT
+      customer_id TEXT,
+      offer_sent INTEGER NOT NULL DEFAULT 0,
+      docs_ready INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS invoices (
@@ -329,6 +333,8 @@ export function initDatabase() {
   if (!cols.some((c) => c.name === 'request_number')) addColumn('booking_requests', 'request_number TEXT');
   if (!cols.some((c) => c.name === 'assigned_to')) addColumn('booking_requests', 'assigned_to TEXT');
   if (!cols.some((c) => c.name === 'customer_id')) addColumn('booking_requests', 'customer_id TEXT');
+  if (!cols.some((c) => c.name === 'offer_sent')) addColumn('booking_requests', 'offer_sent INTEGER NOT NULL DEFAULT 0');
+  if (!cols.some((c) => c.name === 'docs_ready')) addColumn('booking_requests', 'docs_ready INTEGER NOT NULL DEFAULT 0');
   const ccols = sqlite.prepare(`PRAGMA table_info(customers)`).all() as Array<{ name: string }>;
   if (ccols.length && !ccols.some((c) => c.name === 'salutation')) addColumn('customers', "salutation TEXT DEFAULT ''");
   if (ccols.length && !ccols.some((c) => c.name === 'first_name')) addColumn('customers', "first_name TEXT DEFAULT ''");
@@ -440,6 +446,16 @@ export async function updateBookingStatus(id: string, status: BookingRequest['st
 
 export async function updateBookingNotes(id: string, notes: string) {
   const { changes } = await dbRun('UPDATE booking_requests SET notes = ? WHERE id = ?', [notes, id]);
+  return changes > 0;
+}
+
+export async function updateBookingMilestones(id: string, m: { offer_sent?: boolean; docs_ready?: boolean }) {
+  const sets: string[] = [];
+  const vals: unknown[] = [];
+  if (m.offer_sent !== undefined) { sets.push('offer_sent = ?'); vals.push(m.offer_sent ? 1 : 0); }
+  if (m.docs_ready !== undefined) { sets.push('docs_ready = ?'); vals.push(m.docs_ready ? 1 : 0); }
+  if (!sets.length) return false;
+  const { changes } = await dbRun(`UPDATE booking_requests SET ${sets.join(', ')} WHERE id = ?`, [...vals, id]);
   return changes > 0;
 }
 

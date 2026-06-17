@@ -19,6 +19,8 @@ export interface BookingRequest {
   status: 'new' | 'in_progress' | 'booked' | 'rejected';
   total_price: number;
   notes?: string;
+  offer_sent?: number;
+  docs_ready?: number;
 }
 
 export interface Traveler {

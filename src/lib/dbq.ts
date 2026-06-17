@@ -192,6 +192,9 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
     // Getrennte Vor-/Nachname-Spalten am Kundenstamm (CRM)
     try { await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS first_name text DEFAULT ''`); } catch { /* ignore */ }
     try { await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS last_name text DEFAULT ''`); } catch { /* ignore */ }
+    // Reise-Meilensteine an der Buchung (für die Kundenportal-Timeline)
+    try { await pool.query(`ALTER TABLE booking_requests ADD COLUMN IF NOT EXISTS offer_sent integer NOT NULL DEFAULT 0`); } catch { /* ignore */ }
+    try { await pool.query(`ALTER TABLE booking_requests ADD COLUMN IF NOT EXISTS docs_ready integer NOT NULL DEFAULT 0`); } catch { /* ignore */ }
 
     // Kundenportal-Tabellen (in PG zusätzlich anlegen – Migration introspektiert nur Bestandstabellen).
     try {

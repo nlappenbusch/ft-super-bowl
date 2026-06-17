@@ -12,17 +12,16 @@ interface DocItem { id: string; category: string; categoryLabel: string; title: 
 interface InvoiceItem { id: string; invoice_number: string; total_amount: number; paid_amount: number; status: string; invoice_date: string }
 interface RequestItem {
   id: string; request_number: string | null; package_title: string; start_date: string; status: string;
+  stage: number; closed: boolean;
   total_price: number; created_at: string; messages: Message[]; documents: DocItem[]; invoices: InvoiceItem[];
 }
 interface Profile { salutation: string; first_name: string; last_name: string; name: string; company: string; phone: string; street: string; zip: string; city: string; country: string }
 interface Me { success: boolean; email: string; emails: string[]; profile: Profile; requests: RequestItem[]; generalDocuments: DocItem[] }
 
-const STATUS: Record<string, { label: string; color: string; bg: string }> = {
-  new: { label: 'Eingegangen', color: '#1d4ed8', bg: '#eff6ff' },
-  in_progress: { label: 'In Bearbeitung', color: '#b45309', bg: '#fffbeb' },
-  booked: { label: 'Gebucht', color: '#15803d', bg: '#f0fdf4' },
-  rejected: { label: 'Abgeschlossen', color: '#6b7280', bg: '#f3f4f6' },
-};
+const STAGES = ['Anfrage eingegangen', 'Angebot erhalten', 'Gebucht', 'Unterlagen bereit', 'Reise'];
+const STAGE_BADGE = ['Eingegangen', 'Angebot erhalten', 'Gebucht', 'Unterlagen bereit', 'Reise'];
+const STAGE_COLOR = ['#1d4ed8', '#b45309', '#15803d', '#0f766e', '#143047'];
+const STAGE_BG = ['#eff6ff', '#fffbeb', '#f0fdf4', '#f0fdfa', '#eef2f7'];
 
 const eur = (n: number) => new Intl.NumberFormat('de-CH', { style: 'currency', currency: 'CHF', minimumFractionDigits: 0 }).format(n || 0);
 const fdate = (s?: string) => { if (!s) return '–'; try { return new Date(s).toLocaleDateString('de-CH'); } catch { return s; } }
@@ -98,9 +97,38 @@ function Card({ children, style }: { children: React.ReactNode; style?: React.CS
   return <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 4px 18px rgba(20,48,71,0.06)', padding: 22, ...style }}>{children}</div>;
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const s = STATUS[status] || { label: status, color: '#6b7280', bg: '#f3f4f6' };
-  return <span style={{ background: s.bg, color: s.color, fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 999 }}>{s.label}</span>;
+function JourneyBadge({ stage, closed }: { stage: number; closed: boolean }) {
+  const s = closed
+    ? { label: 'Abgeschlossen', color: '#6b7280', bg: '#f3f4f6' }
+    : { label: STAGE_BADGE[stage] || 'Eingegangen', color: STAGE_COLOR[stage] || '#1d4ed8', bg: STAGE_BG[stage] || '#eff6ff' };
+  return <span style={{ background: s.bg, color: s.color, fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 999, whiteSpace: 'nowrap' }}>{s.label}</span>;
+}
+
+function Timeline({ stage, closed }: { stage: number; closed: boolean }) {
+  if (closed) {
+    return <div style={{ fontSize: 14, color: '#6b7280', background: '#f3f4f6', borderRadius: 10, padding: '12px 14px' }}>Diese Anfrage wurde abgeschlossen.</div>;
+  }
+  return (
+    <div>
+      {STAGES.map((label, i) => {
+        const done = i < stage; const current = i === stage; const active = done || current;
+        return (
+          <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ width: 22, height: 22, borderRadius: 999, flexShrink: 0, background: done ? ACCENT : '#fff', border: `2px solid ${active ? ACCENT : '#d1d5db'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: done ? '#fff' : ACCENT }}>
+                {done ? '✓' : current ? '•' : ''}
+              </div>
+              {i < STAGES.length - 1 && <div style={{ width: 2, flex: 1, minHeight: 16, background: i < stage ? ACCENT : '#e5e8ed' }} />}
+            </div>
+            <div style={{ paddingBottom: 14 }}>
+              <div style={{ fontSize: 14, fontWeight: current ? 800 : 600, color: active ? NAVY : '#9ca3af' }}>{label}</div>
+              {current && <div style={{ fontSize: 12, color: '#6b7280', marginTop: 1 }}>Aktueller Stand</div>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function DownloadRow({ href, label, sub }: { href: string; label: string; sub?: string }) {
@@ -132,13 +160,17 @@ function RequestsView({ requests, reload }: { requests: RequestItem[]; reload: (
               <div style={{ fontSize: 13, color: '#6b7280', marginTop: 3 }}>Angefragt am {fdate(r.created_at)} · Reisedatum: {fdate(r.start_date)}{r.total_price ? ` · Richtpreis ${eur(r.total_price)}` : ''}</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <StatusBadge status={r.status} />
+              <JourneyBadge stage={r.stage} closed={r.closed} />
               <span style={{ color: '#9ca3af', fontSize: 18 }}>{open === r.id ? '▾' : '▸'}</span>
             </div>
           </button>
 
           {open === r.id && (
             <div style={{ borderTop: '1px solid #eef1f5', padding: 20, background: '#fcfdfe' }}>
+              <Section title="Status Ihrer Reise">
+                <Timeline stage={r.stage} closed={r.closed} />
+              </Section>
+
               {r.invoices.length > 0 && (
                 <Section title="Rechnungen">
                   {r.invoices.map((i) => (

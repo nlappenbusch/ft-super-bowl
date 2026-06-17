@@ -29,19 +29,33 @@ export async function GET() {
       arr.push({ id: a.id, filename: a.filename, mime: a.mime, size: a.size });
       attByMsg.set(a.message_id, arr);
     }
+    const bDocs = docs.filter((d) => d.booking_id === b.id);
+
+    // Reise-Timeline ableiten (monoton: höchste erreichte Stufe gilt, frühere sind erledigt).
+    const hasOfferDoc = bDocs.some((d) => d.category === 'offer');
+    const hasTravelDoc = bDocs.some((d) => ['ticket', 'voucher', 'hotel'].includes(d.category));
+    let stage = 0; // 0 Anfrage · 1 Angebot · 2 Gebucht · 3 Unterlagen · 4 Reise
+    if (Number(b.offer_sent) === 1 || (b.total_price || 0) > 0 || hasOfferDoc) stage = Math.max(stage, 1);
+    if (b.status === 'booked') stage = Math.max(stage, 2);
+    if (Number(b.docs_ready) === 1 || hasTravelDoc) stage = Math.max(stage, 3);
+    if (b.start_date && new Date(b.start_date).getTime() <= Date.now()) stage = Math.max(stage, 4);
+    const closed = b.status === 'rejected';
+
     requests.push({
       id: b.id,
       request_number: b.request_number,
       package_title: b.package_title,
       start_date: b.start_date,
       status: b.status,
+      stage,
+      closed,
       total_price: b.total_price,
       created_at: b.created_at,
       messages: msgs.map((m) => ({
         id: m.id, direction: m.direction, subject: m.subject, body: m.body, created_at: m.created_at,
         attachments: attByMsg.get(m.id) || [],
       })),
-      documents: docs.filter((d) => d.booking_id === b.id).map(docView),
+      documents: bDocs.map(docView),
       invoices: c.invoices.filter((i) => i.booking_id === b.id).map((i) => ({
         id: i.id, invoice_number: i.invoice_number, total_amount: i.total_amount,
         paid_amount: i.paid_amount, status: i.status, invoice_date: i.invoice_date,

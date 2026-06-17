@@ -12,7 +12,9 @@ export async function PATCH(
     const updatedBooking = await updateBooking(id, {
       status: body.status,
       notes: body.notes,
-      assigned_to: body.assigned_to
+      assigned_to: body.assigned_to,
+      offer_sent: typeof body.offer_sent === 'boolean' ? body.offer_sent : undefined,
+      docs_ready: typeof body.docs_ready === 'boolean' ? body.docs_ready : undefined,
     });
 
     if (!updatedBooking) {

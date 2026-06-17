@@ -31,6 +31,8 @@ interface Lead {
   notes?: string;
   message?: string;
   created_at?: string;
+  offer_sent?: number;
+  docs_ready?: number;
   travelers?: string | Array<{ firstName?: string; lastName?: string; first_name?: string; last_name?: string }>;
 }
 
@@ -499,7 +501,7 @@ function DetailDrawer({
 }: {
   lead: Lead;
   onClose: () => void;
-  onUpdate: (id: string, updates: { status?: CrmStatus; notes?: string; assigned_to?: string | null }) => Promise<void>;
+  onUpdate: (id: string, updates: { status?: CrmStatus; notes?: string; assigned_to?: string | null; offer_sent?: boolean; docs_ready?: boolean }) => Promise<void>;
   employees: EmployeeLite[];
 }) {
   const [notes, setNotes] = useState(lead.notes || '');
@@ -584,6 +586,28 @@ function DetailDrawer({
               <option value="">Niemand</option>
               {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
             </select>
+          </div>
+
+          {/* Reise-Meilensteine (steuern die Kunden-Timeline im Portal) */}
+          <div className="mb-4">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Reise-Meilensteine (Portal)</div>
+            <div className="flex flex-wrap gap-1.5">
+              {([
+                { key: 'offer_sent', label: 'Angebot gesendet', on: Number(lead.offer_sent) === 1 },
+                { key: 'docs_ready', label: 'Unterlagen vollständig', on: Number(lead.docs_ready) === 1 },
+              ] as const).map(m => (
+                <button
+                  key={m.key}
+                  disabled={saving}
+                  onClick={() => onUpdate(lead.id, m.key === 'offer_sent' ? { offer_sent: !m.on } : { docs_ready: !m.on })}
+                  className="px-3 py-1 rounded-full text-xs font-bold transition border-2"
+                  style={{ background: m.on ? '#0f766e' : 'white', borderColor: '#0f766e', color: m.on ? 'white' : '#0f766e', opacity: saving ? 0.6 : 1 }}
+                >
+                  {m.on ? '✓ ' : ''}{m.label}
+                </button>
+              ))}
+            </div>
+            <div className="text-[11px] text-gray-400 mt-1">Angebot/Unterlagen werden auch automatisch erkannt (Angebots-Dokument bzw. hochgeladene Tickets/Voucher). Diese Schalter sind ein manuelles Override.</div>
           </div>
 
           {/* Tabs */}
@@ -749,7 +773,7 @@ export default function CrmPage() {
     return () => { active = false; clearInterval(id); };
   }, [loadData]);
 
-  const handleUpdate = async (id: string, updates: { status?: CrmStatus; notes?: string; assigned_to?: string | null }) => {
+  const handleUpdate = async (id: string, updates: { status?: CrmStatus; notes?: string; assigned_to?: string | null; offer_sent?: boolean; docs_ready?: boolean }) => {
     await fetch(`/api/bookings/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -757,7 +781,14 @@ export default function CrmPage() {
     });
     await loadData();
     if (selected?.id === id) {
-      setSelected(prev => prev ? { ...prev, ...updates } : null);
+      const localPatch: Partial<Lead> = {
+        ...(updates.status !== undefined ? { status: updates.status } : {}),
+        ...(updates.notes !== undefined ? { notes: updates.notes } : {}),
+        ...(updates.assigned_to !== undefined ? { assigned_to: updates.assigned_to } : {}),
+        ...(updates.offer_sent !== undefined ? { offer_sent: updates.offer_sent ? 1 : 0 } : {}),
+        ...(updates.docs_ready !== undefined ? { docs_ready: updates.docs_ready ? 1 : 0 } : {}),
+      };
+      setSelected(prev => prev ? { ...prev, ...localPatch } : null);
     }
   };
 

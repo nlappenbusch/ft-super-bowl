@@ -173,6 +173,8 @@ export interface CustomerBooking {
   total_price: number;
   created_at: string;
   email: string;
+  offer_sent: number;
+  docs_ready: number;
 }
 
 export interface CustomerInvoice {
@@ -202,7 +204,7 @@ export async function getCustomer(id: string): Promise<CustomerDetail | null> {
   }
   const emails = await dbAll<CustomerEmail>(`SELECT * FROM customer_emails WHERE customer_id = ? ORDER BY is_primary DESC, created_at ASC`, [id]);
   const bookings = await dbAll<CustomerBooking>(
-    `SELECT id, request_number, package_title, start_date, status, total_price, created_at, email
+    `SELECT id, request_number, package_title, start_date, status, total_price, created_at, email, offer_sent, docs_ready
      FROM booking_requests WHERE customer_id = ? ORDER BY created_at DESC`, [id]
   );
   let invoices: CustomerInvoice[] = [];

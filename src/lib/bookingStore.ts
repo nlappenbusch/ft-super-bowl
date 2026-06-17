@@ -4,6 +4,7 @@ import {
   updateBookingStatus,
   updateBookingNotes,
   updateBookingAssignee,
+  updateBookingMilestones,
   getBookingById,
   getNextRequestNumber,
   insertMessage,
@@ -119,7 +120,7 @@ export async function listBookings() {
   return data || [];
 }
 
-export async function updateBooking(id: string, updates: { status?: string; notes?: string; assigned_to?: string | null }) {
+export async function updateBooking(id: string, updates: { status?: string; notes?: string; assigned_to?: string | null; offer_sent?: boolean; docs_ready?: boolean }) {
   if (!isSupabaseConfigured() || !supabase) {
     if (updates.status && ['new', 'in_progress', 'booked', 'rejected'].includes(updates.status)) {
       await updateBookingStatus(id, updates.status as 'new' | 'in_progress' | 'booked' | 'rejected');
@@ -130,6 +131,9 @@ export async function updateBooking(id: string, updates: { status?: string; note
     if (updates.assigned_to !== undefined) {
       await updateBookingAssignee(id, updates.assigned_to);
     }
+    if (updates.offer_sent !== undefined || updates.docs_ready !== undefined) {
+      await updateBookingMilestones(id, { offer_sent: updates.offer_sent, docs_ready: updates.docs_ready });
+    }
     return getBookingById(id);
   }
 
@@ -138,7 +142,9 @@ export async function updateBooking(id: string, updates: { status?: string; note
     .update({
       ...(updates.status ? { status: updates.status } : {}),
       ...(updates.notes !== undefined ? { notes: updates.notes } : {}),
-      ...(updates.assigned_to !== undefined ? { assigned_to: updates.assigned_to } : {})
+      ...(updates.assigned_to !== undefined ? { assigned_to: updates.assigned_to } : {}),
+      ...(updates.offer_sent !== undefined ? { offer_sent: updates.offer_sent ? 1 : 0 } : {}),
+      ...(updates.docs_ready !== undefined ? { docs_ready: updates.docs_ready ? 1 : 0 } : {})
     })
     .eq('id', id)
     .select('*')
