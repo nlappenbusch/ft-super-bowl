@@ -63,7 +63,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       await updateIncentivePlan(id, { plan, status: 'final', title: plan.introTitle || `Incentive nach ${destination.name}`, error: '' });
     }
   } catch (e) {
-    await updateIncentivePlan(id, { status: 'error', error: (e as Error).message }).catch(() => {});
+    const where = phase === 'day' ? `day ${(rec.progress?.dayIndex || 0) + 1}` : phase;
+    await updateIncentivePlan(id, { status: 'error', error: `[${where}] ${(e as Error).message}` }).catch(() => {});
   }
 
   const updated = await getIncentivePlan(id);

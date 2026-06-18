@@ -54,6 +54,11 @@ export default function IncentivePlanPage() {
     return () => { cancelled = true; drivingRef.current = false; };
   }, [rec?.status, id]);
 
+  const retry = useCallback(async () => {
+    await fetch(`/api/admin/incentive/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'generating' }) }).catch(() => {});
+    load();
+  }, [id, load]);
+
   if (loading) return <AdminShell title="Incentive"><div className="py-16 text-center"><Spinner /></div></AdminShell>;
   if (!rec) return <AdminShell title="Incentive"><p className="text-gray-500">Plan nicht gefunden. <Link href="/admin/incentive" className="underline">Zurück</Link></p></AdminShell>;
 
@@ -122,7 +127,8 @@ export default function IncentivePlanPage() {
             <div>
               <p>Die Reise konnte nicht erstellt werden.</p>
               {rec.error && <p className="mt-1 text-xs text-gray-500">{rec.error}</p>}
-              <p className="mt-2 text-gray-600">Bitte erneut versuchen. Häufigste Ursache: KI nicht konfiguriert (Admin → KI) oder eine Zeitüberschreitung.</p>
+              <p className="mt-2 text-gray-600">Häufigste Ursache: KI nicht konfiguriert (Admin → KI) oder eine Zeitüberschreitung. „Erneut versuchen" wiederholt die fehlgeschlagene Phase – der bisherige Fortschritt bleibt erhalten.</p>
+              <div className="mt-3"><Button variant="accent" size="sm" onClick={retry}>Erneut versuchen</Button></div>
             </div>
           </div>
         </SectionCard>

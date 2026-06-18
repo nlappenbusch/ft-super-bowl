@@ -93,11 +93,14 @@ export function parseJsonLoose(text: string): any | null {
   const start = t.indexOf('{');
   const end = t.lastIndexOf('}');
   if (start === -1 || end === -1 || end < start) return null;
-  try {
-    return JSON.parse(t.slice(start, end + 1));
-  } catch {
-    return null;
-  }
+  const body = t.slice(start, end + 1);
+  const tryParse = (s: string): any | undefined => { try { return JSON.parse(s); } catch { return undefined; } };
+  let r = tryParse(body);
+  if (r !== undefined) return r;
+  // Trailing-Kommas entfernen (häufigster KI-Fehler) und erneut versuchen.
+  r = tryParse(body.replace(/,(\s*[}\]])/g, '$1'));
+  if (r !== undefined) return r;
+  return null;
 }
 
 export interface ModuleSpec {

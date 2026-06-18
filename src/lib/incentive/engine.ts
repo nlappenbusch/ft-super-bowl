@@ -28,17 +28,22 @@ function briefContext(b: IncentiveBrief, period: DateRange): string {
 }
 
 async function callJson(userText: string, maxTokens: number): Promise<Record<string, unknown>> {
-  const res = await anthropicMessage({ system: SYSTEM, userText, maxTokens });
-  if (!res.ok) throw new Error(res.error || 'KI-Aufruf fehlgeschlagen');
-  const parsed = parseJsonLoose(res.text || '');
-  if (!parsed) throw new Error('KI-Antwort war kein gültiges JSON');
-  return parsed as Record<string, unknown>;
+  let lastErr = '';
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const extra = attempt === 0 ? '' : '\n\nWICHTIG: Antworte AUSSCHLIESSLICH mit EINEM einzigen, vollständigen, gültigen JSON-Objekt. Kein Markdown, keine Code-Fences, keine Kommentare, keine abschließenden Kommata. Halte die Texte kompakt, damit das JSON vollständig bleibt.';
+    const res = await anthropicMessage({ system: SYSTEM, userText: userText + extra, maxTokens });
+    if (!res.ok) throw new Error(res.error || 'KI-Aufruf fehlgeschlagen');
+    const parsed = parseJsonLoose(res.text || '');
+    if (parsed) return parsed as Record<string, unknown>;
+    lastErr = 'KI-Antwort war kein gültiges JSON';
+  }
+  throw new Error(lastErr || 'KI-Antwort war kein gültiges JSON');
 }
 
 /** Schritt 1: Zielvorschläge mit Koordinaten. */
 async function proposeDestinations(b: IncentiveBrief, period: DateRange): Promise<DestinationOption[]> {
   const userText = `Schlage 6 sehr unterschiedliche, zum Brief passende Incentive-Reiseziele vor (gut erreichbar ab der Startregion, passend zur Jahreszeit des Zeitraums, zum Stil und Budget).\n\nBRIEF:\n${briefContext(b, period)}\n\nSchema:\n{ "destinations": [ { "name": string, "country": string, "region": string, "lat": number, "lon": number, "rationale": string (1-2 Sätze, warum ideal) } ] }\nWICHTIG: lat/lon als Dezimalgrad der Hauptstadt/Hauptort des Ziels.`;
-  const j = await callJson(userText, 1800);
+  const j = await callJson(userText, 2200);
   const arr = Array.isArray(j.destinations) ? j.destinations : [];
   return (arr as Record<string, unknown>[]).map((d) => ({
     name: String(d.name || ''), country: String(d.country || ''), region: d.region ? String(d.region) : undefined,
@@ -126,7 +131,7 @@ export async function stepFrame(brief: IncentiveBrief, dest: DestinationOption) 
   const period = brief.periods[0];
   const w = dest.weather ? `Wetter-Erwartung: ${dest.weather.summary}.` : '';
   const userText = `Erstelle das GERÜST einer ${brief.days}-tägigen Incentive-Reise nach ${dest.name}, ${dest.country} für ${brief.groupSize} Personen (noch OHNE Detail-Tagesprogramm).\n${w}\n\nBRIEF:\n${briefContext(brief, period)}\n\nSchema:\n{\n  "introTitle": string (packender Titel),\n  "introText": string (3-5 Sätze, emotionales Intro),\n  "summary": string (1-2 Sätze),\n  "estBudgetPerPerson": string (grobe Spanne, ohne Garantie),\n  "accommodation": { "name": string, "description": string, "bookingHint": string },\n  "logistics": string (Anreise/Transfers kompakt),\n  "wowHighlights": string[] (3-5 Signature-Momente),\n  "days": [ { "day": number, "title": string, "theme": string } ]\n}\nGenau ${brief.days} Tage als Stubs (nur day/title/theme).`;
-  const j = await callJson(userText, 1800);
+  const j = await callJson(userText, 2400);
   const acc = (j.accommodation || {}) as Record<string, unknown>;
   const stubs: DayPlan[] = (Array.isArray(j.days) ? j.days : []).slice(0, brief.days).map((d: Record<string, unknown>, i: number) => ({
     day: Number(d.day) || i + 1, title: String(d.title || `Tag ${i + 1}`), theme: String(d.theme || ''),
@@ -148,7 +153,7 @@ export async function stepFrame(brief: IncentiveBrief, dest: DestinationOption) 
 /** Schritt 2b: Ein einzelner Tag im Detail. Kurzer Call. */
 export async function stepDay(brief: IncentiveBrief, dest: DestinationOption, stub: DayPlan, totalDays: number): Promise<DayPlan> {
   const userText = `Plane Tag ${stub.day} von ${totalDays} der ${brief.days}-tägigen Incentive-Reise nach ${dest.name}, ${dest.country} für ${brief.groupSize} Personen.\nTitel: "${stub.title}" · Thema: "${stub.theme}"\nStil: ${(brief.styles || []).join(', ') || 'offen'} · Budget: ${brief.budgetLevel}\n\nSchema:\n{ "morning": string, "afternoon": string, "evening": string, "activities": [ { "name": string, "description": string, "durationH": number, "bookingHint": string } ], "transport": string, "accommodation": string, "wow": string, "text": string (2-3 Sätze, emotionaler Präsentationstext) }`;
-  const j = await callJson(userText, 1400);
+  const j = await callJson(userText, 2000);
   return {
     day: stub.day, title: stub.title, theme: stub.theme,
     morning: String(j.morning || ''), afternoon: String(j.afternoon || ''), evening: String(j.evening || ''),
