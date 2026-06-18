@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import AdminShell from '@/components/admin/AdminShell';
@@ -17,6 +17,8 @@ export default function IncentivePlanPage() {
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<'plan' | 'deck'>('plan');
 
+  const runningRef = useRef(false);
+
   const load = useCallback(async () => {
     const r = await fetch(`/api/admin/incentive/${id}`).then((x) => x.json()).catch(() => null);
     if (r?.success) setRec(r.data);
@@ -24,21 +26,27 @@ export default function IncentivePlanPage() {
   }, [id]);
   useEffect(() => { load(); }, [load]);
 
-  // Während die KI generiert: alle 4 s neu laden.
+  // Generierung client-getrieben: pro Phase ein kurzer Request, verkettet bis fertig.
+  const runStep = useCallback(async () => {
+    if (runningRef.current) return;
+    runningRef.current = true;
+    try {
+      const r = await fetch(`/api/admin/incentive/${id}/step`, { method: 'POST' }).then((x) => x.json()).catch(() => null);
+      if (r?.success && r.data) setRec(r.data);
+    } finally { runningRef.current = false; }
+  }, [id]);
+
   useEffect(() => {
-    if (rec?.status === 'generating') {
-      const t = setTimeout(load, 4000);
-      return () => clearTimeout(t);
-    }
-  }, [rec?.status, load]);
+    if (rec?.status === 'generating') { runStep(); }
+  }, [rec?.status, rec?.progress?.step, runStep]);
 
   if (loading) return <AdminShell title="Incentive"><div className="py-16 text-center"><Spinner /></div></AdminShell>;
   if (!rec) return <AdminShell title="Incentive"><p className="text-gray-500">Plan nicht gefunden. <Link href="/admin/incentive" className="underline">Zurück</Link></p></AdminShell>;
 
   if (rec.status === 'generating') {
-    const STEP_LABELS = ['Reiseziele vorschlagen', 'Bestwetter-Ranking', 'Tag-für-Tag-Plan & WOW', 'Machbarkeits-Check', 'Bilder suchen'];
+    const STEP_LABELS = ['Ziele & Bestwetter', 'Tag-für-Tag-Plan & WOW', 'Machbarkeits-Check', 'Bilder suchen'];
     const cur = rec.progress?.step || 1;
-    const total = rec.progress?.total || 5;
+    const total = rec.progress?.total || 4;
     const dests = rec.progress?.destinations || [];
     return (
       <AdminShell title="Incentive">
@@ -68,7 +76,7 @@ export default function IncentivePlanPage() {
                 );
               })}
             </div>
-            <p className="mt-4 text-xs text-gray-400">Die Seite aktualisiert sich automatisch. Du kannst sie auch verlassen – die Reise wird im Hintergrund fertig geplant.</p>
+            <p className="mt-4 text-xs text-gray-400">Bitte dieses Fenster geöffnet lassen, bis die Planung fertig ist. Falls du es schließt, kannst du die Reise später erneut öffnen – sie setzt dann an dieser Stelle fort.</p>
           </SectionCard>
 
           <SectionCard title={`Erste Ergebnisse${dests.length ? ` · ${dests.length} Ziele` : ''}`}>

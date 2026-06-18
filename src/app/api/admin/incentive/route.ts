@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { generateIncentivePlan } from '@/lib/incentive/engine';
 import { createIncentivePlan, listIncentivePlans, updateIncentivePlan } from '@/lib/incentive/store';
 import type { IncentiveBrief } from '@/lib/incentive/types';
 
@@ -11,9 +10,9 @@ export async function GET() {
 }
 
 /**
- * POST – Brief entgegennehmen, Plan-Datensatz sofort anlegen (status 'generating')
- * und die KI-Generierung im Hintergrund laufen lassen. Antwortet sofort mit der id,
- * damit kein Reverse-Proxy-Timeout greift (Generierung dauert 30–90 s).
+ * POST – Brief entgegennehmen, Plan-Datensatz anlegen (status 'generating', Schritt 1).
+ * Die eigentliche Generierung treibt der Client in kurzen Einzelschritten über
+ * /api/admin/incentive/[id]/step (vermeidet Proxy-Timeout & Background-Kill).
  */
 export async function POST(req: Request) {
   try {
@@ -22,24 +21,8 @@ export async function POST(req: Request) {
     if (!brief.groupSize || !brief.days || !Array.isArray(brief.periods) || !brief.periods.length) {
       return NextResponse.json({ success: false, error: 'Gruppengröße, Tage und mind. ein Reisezeitraum sind erforderlich.' }, { status: 400 });
     }
-
     const id = await createIncentivePlan('Incentive wird geplant …', brief, null, 'generating');
-
-    // Hintergrund-Generierung (Node-Standalone hält die Promise am Leben).
-    void (async () => {
-      try {
-        const plan = await generateIncentivePlan(brief, (p) => updateIncentivePlan(id, { progress: p }));
-        await updateIncentivePlan(id, {
-          plan,
-          status: 'final',
-          title: plan.introTitle || `Incentive nach ${plan.destination.name}`,
-          error: '',
-        });
-      } catch (e) {
-        await updateIncentivePlan(id, { status: 'error', error: (e as Error).message }).catch(() => {});
-      }
-    })();
-
+    await updateIncentivePlan(id, { progress: { step: 1, total: 4, label: 'Passende Reiseziele & Bestwetter …' } });
     return NextResponse.json({ success: true, id });
   } catch (e) {
     return NextResponse.json({ success: false, error: (e as Error).message }, { status: 500 });

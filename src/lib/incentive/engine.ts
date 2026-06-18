@@ -103,6 +103,35 @@ async function attachImages(dest: DestinationOption, days: DayPlan[]): Promise<v
   }));
 }
 
+// ─────────── Einzelschritte (client-getrieben, je kurzer Request) ───────────
+
+/** Schritt 1: Ziele vorschlagen + nach Wetter ranken. */
+export async function stepDestinations(brief: IncentiveBrief): Promise<{ ranked: DestinationOption[]; chosenPeriod: DateRange }> {
+  if (!isAiConfigured()) throw new Error('KI ist nicht konfiguriert (Admin → KI).');
+  if (!brief.periods?.length) throw new Error('Mindestens ein Reisezeitraum erforderlich.');
+  const period = brief.periods[0];
+  const candidates = await proposeDestinations(brief, period);
+  if (!candidates.length) throw new Error('Keine Zielvorschläge erhalten.');
+  const ranked = await rankByWeather(candidates, period);
+  return { ranked, chosenPeriod: period };
+}
+
+/** Schritt 2: Itinerary für das gewählte Ziel. */
+export async function stepItinerary(brief: IncentiveBrief, dest: DestinationOption) {
+  return buildItinerary(brief, dest, brief.periods[0]);
+}
+
+/** Schritt 3: Machbarkeits-/Konsistenz-Check. */
+export async function stepFeasibility(brief: IncentiveBrief, dest: DestinationOption, days: DayPlan[], logistics: string): Promise<Feasibility> {
+  return feasibilityCheck(brief, dest, { days, logistics });
+}
+
+/** Schritt 4: Bilder anreichern. */
+export async function stepImages(dest: DestinationOption, days: DayPlan[]): Promise<{ destination: DestinationOption; days: DayPlan[] }> {
+  await attachImages(dest, days);
+  return { destination: dest, days };
+}
+
 /** Gesamtlauf: Brief → fertiger Plan. onProgress meldet Zwischenschritte. */
 export async function generateIncentivePlan(brief: IncentiveBrief, onProgress?: ProgressFn): Promise<IncentivePlan> {
   if (!isAiConfigured()) throw new Error('KI ist nicht konfiguriert (Admin → KI).');
