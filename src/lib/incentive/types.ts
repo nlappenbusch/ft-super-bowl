@@ -81,6 +81,13 @@ export interface IncentivePlan {
   feasibility: Feasibility;
 }
 
+export interface IncentiveProgress {
+  step: number;
+  total: number;
+  label: string;
+  destinations?: DestinationOption[]; // erste Ergebnisse (nach Wetter sortiert)
+}
+
 export interface IncentivePlanRecord {
   id: string;
   created_at: string;
@@ -89,6 +96,7 @@ export interface IncentivePlanRecord {
   brief: IncentiveBrief;
   plan: IncentivePlan | null;
   error?: string;
+  progress?: IncentiveProgress | null;
 }
 
 export const STYLE_OPTIONS = [

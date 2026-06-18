@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     // Hintergrund-Generierung (Node-Standalone hält die Promise am Leben).
     void (async () => {
       try {
-        const plan = await generateIncentivePlan(brief);
+        const plan = await generateIncentivePlan(brief, (p) => updateIncentivePlan(id, { progress: p }));
         await updateIncentivePlan(id, {
           plan,
           status: 'final',

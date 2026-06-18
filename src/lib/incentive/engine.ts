@@ -6,7 +6,9 @@
 import { anthropicMessage, parseJsonLoose, isAiConfigured } from '../aiAssist';
 import { rankByWeather } from './weather';
 import { findImage } from './images';
-import type { IncentiveBrief, DestinationOption, DayPlan, IncentivePlan, Feasibility, DateRange } from './types';
+import type { IncentiveBrief, DestinationOption, DayPlan, IncentivePlan, Feasibility, DateRange, IncentiveProgress } from './types';
+
+export type ProgressFn = (p: IncentiveProgress) => Promise<void> | void;
 
 const SYSTEM = 'Du bist ein erfahrener Incentive-Reise-Designer für Faltin Travel (Schweiz, Slogan „Wir liefern Emotionen"). ' +
   'Du planst hochwertige Gruppen-Incentives. Du schreibst auf Deutsch in der Sie-Form, emotional aber präzise, ohne erfundene Garantien oder Fixpreise. ' +
@@ -101,19 +103,28 @@ async function attachImages(dest: DestinationOption, days: DayPlan[]): Promise<v
   }));
 }
 
-/** Gesamtlauf: Brief → fertiger Plan. */
-export async function generateIncentivePlan(brief: IncentiveBrief): Promise<IncentivePlan> {
+/** Gesamtlauf: Brief → fertiger Plan. onProgress meldet Zwischenschritte. */
+export async function generateIncentivePlan(brief: IncentiveBrief, onProgress?: ProgressFn): Promise<IncentivePlan> {
   if (!isAiConfigured()) throw new Error('KI ist nicht konfiguriert (Admin → KI).');
   if (!brief.periods?.length) throw new Error('Mindestens ein Reisezeitraum erforderlich.');
   const period = brief.periods[0];
+  const report = async (p: IncentiveProgress) => { try { await onProgress?.(p); } catch { /* ignore */ } };
 
+  await report({ step: 1, total: 5, label: 'Passende Reiseziele werden vorgeschlagen …' });
   const candidates = await proposeDestinations(brief, period);
   if (!candidates.length) throw new Error('Keine Zielvorschläge erhalten.');
+
+  await report({ step: 2, total: 5, label: 'Ziele werden nach Bestwetter sortiert …' });
   const ranked = await rankByWeather(candidates, period);
   const top = ranked[0];
 
+  await report({ step: 3, total: 5, label: `Tag-für-Tag-Plan & WOW-Momente für ${top.name} …`, destinations: ranked });
   const itin = await buildItinerary(brief, top, period);
+
+  await report({ step: 4, total: 5, label: 'Machbarkeit & Konsistenz werden geprüft …', destinations: ranked });
   const feasibility = await feasibilityCheck(brief, top, itin);
+
+  await report({ step: 5, total: 5, label: 'Inspirierende Bilder werden gesucht …', destinations: ranked });
   await attachImages(top, itin.days);
 
   return {

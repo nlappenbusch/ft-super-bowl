@@ -242,6 +242,7 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
         plan text NOT NULL DEFAULT ''
       )`);
       await pool.query(`ALTER TABLE incentive_plans ADD COLUMN IF NOT EXISTS error text NOT NULL DEFAULT ''`);
+      await pool.query(`ALTER TABLE incentive_plans ADD COLUMN IF NOT EXISTS progress text NOT NULL DEFAULT ''`);
     } catch (e) { console.warn('[pg] Portal-Schema:', (e as Error).message); }
 
     // Defaults auf Timestamp-Spalten (damit Inserts ohne created_at/updated_at funktionieren)

@@ -48,6 +48,8 @@ export async function anthropicMessage(opts: {
   }
   content.push({ type: 'text', text: opts.userText });
 
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 150_000); // hartes Limit, damit nichts ewig hängt
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -62,6 +64,7 @@ export async function anthropicMessage(opts: {
         system: opts.system,
         messages: [{ role: 'user', content }],
       }),
+      signal: ctrl.signal,
     });
     if (!res.ok) {
       const t = await res.text().catch(() => '');
@@ -75,7 +78,10 @@ export async function anthropicMessage(opts: {
       .trim();
     return { ok: true, text };
   } catch (e) {
-    return { ok: false, error: (e as Error).message };
+    const msg = (e as Error).name === 'AbortError' ? 'Zeitüberschreitung beim KI-Aufruf (>150s).' : (e as Error).message;
+    return { ok: false, error: msg };
+  } finally {
+    clearTimeout(timer);
   }
 }
 

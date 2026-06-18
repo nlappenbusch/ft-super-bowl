@@ -11,9 +11,16 @@ function incentiveCfg(): Record<string, string> {
   return ((getSettings() as unknown as { incentive?: Record<string, string> }).incentive) || {};
 }
 
+async function fetchT(url: string, init?: RequestInit, ms = 10_000): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try { return await fetch(url, { ...init, signal: ctrl.signal }); }
+  finally { clearTimeout(t); }
+}
+
 async function fromUnsplash(query: string, key: string): Promise<FoundImage | undefined> {
   try {
-    const res = await fetch(`https://api.unsplash.com/search/photos?per_page=1&orientation=landscape&query=${encodeURIComponent(query)}`,
+    const res = await fetchT(`https://api.unsplash.com/search/photos?per_page=1&orientation=landscape&query=${encodeURIComponent(query)}`,
       { headers: { Authorization: `Client-ID ${key}` } });
     if (!res.ok) return undefined;
     const j = await res.json() as { results?: Array<{ urls?: { regular?: string }; user?: { name?: string } }> };
@@ -25,7 +32,7 @@ async function fromUnsplash(query: string, key: string): Promise<FoundImage | un
 
 async function fromPexels(query: string, key: string): Promise<FoundImage | undefined> {
   try {
-    const res = await fetch(`https://api.pexels.com/v1/search?per_page=1&orientation=landscape&query=${encodeURIComponent(query)}`,
+    const res = await fetchT(`https://api.pexels.com/v1/search?per_page=1&orientation=landscape&query=${encodeURIComponent(query)}`,
       { headers: { Authorization: key } });
     if (!res.ok) return undefined;
     const j = await res.json() as { photos?: Array<{ src?: { large2x?: string; large?: string }; photographer?: string }> };
@@ -39,7 +46,7 @@ async function fromPexels(query: string, key: string): Promise<FoundImage | unde
 async function fromWikipedia(query: string, lang = 'de'): Promise<FoundImage | undefined> {
   try {
     const title = encodeURIComponent(query.trim().replace(/\s+/g, '_'));
-    const res = await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${title}`,
+    const res = await fetchT(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${title}`,
       { headers: { 'accept': 'application/json' } });
     if (!res.ok) return lang === 'de' ? fromWikipedia(query, 'en') : undefined;
     const j = await res.json() as { originalimage?: { source?: string }; thumbnail?: { source?: string } };

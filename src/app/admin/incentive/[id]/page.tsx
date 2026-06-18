@@ -36,15 +36,56 @@ export default function IncentivePlanPage() {
   if (!rec) return <AdminShell title="Incentive"><p className="text-gray-500">Plan nicht gefunden. <Link href="/admin/incentive" className="underline">Zurück</Link></p></AdminShell>;
 
   if (rec.status === 'generating') {
+    const STEP_LABELS = ['Reiseziele vorschlagen', 'Bestwetter-Ranking', 'Tag-für-Tag-Plan & WOW', 'Machbarkeits-Check', 'Bilder suchen'];
+    const cur = rec.progress?.step || 1;
+    const total = rec.progress?.total || 5;
+    const dests = rec.progress?.destinations || [];
     return (
       <AdminShell title="Incentive">
         <Link href="/admin/incentive" className="mb-4 inline-flex items-center gap-1 text-xs font-semibold text-gray-500"><ArrowLeft className="h-3.5 w-3.5" /> Alle Reisen</Link>
-        <SectionCard title="KI plant Ihre Reise …">
-          <div className="flex flex-col items-center gap-3 py-12 text-center">
-            <Spinner />
-            <p className="max-w-md text-sm text-gray-600">Ziele werden vorgeschlagen, nach Bestwetter sortiert, ein Tag-für-Tag-Plan mit WOW-Momenten erstellt, geprüft und bebildert. Diese Seite aktualisiert sich automatisch (30–90 Sek.).</p>
-          </div>
-        </SectionCard>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <SectionCard title="KI plant Ihre Reise …">
+            <div className="mb-4">
+              <div className="mb-1 flex items-center justify-between text-xs font-semibold text-gray-500">
+                <span>Schritt {Math.min(cur, total)} von {total}</span><span>{Math.round((cur / total) * 100)} %</span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                <div className="h-full rounded-full transition-all" style={{ width: `${(cur / total) * 100}%`, background: ACCENT }} />
+              </div>
+              <p className="mt-2 flex items-center gap-2 text-sm font-semibold" style={{ color: NAVY }}><Spinner className="h-4 w-4" /> {rec.progress?.label || 'Wird gestartet …'}</p>
+            </div>
+            <div className="grid gap-2">
+              {STEP_LABELS.map((label, i) => {
+                const done = (i + 1) < cur; const active = (i + 1) === cur;
+                return (
+                  <div key={i} className="flex items-center gap-2 text-sm" style={{ color: done ? NAVY : active ? NAVY : '#9ca3af' }}>
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold"
+                      style={{ background: done ? ACCENT : active ? '#fff' : '#fff', border: `2px solid ${done || active ? ACCENT : '#d1d5db'}`, color: done ? '#fff' : ACCENT }}>
+                      {done ? '✓' : active ? '•' : ''}
+                    </span>
+                    <span className={active ? 'font-bold' : ''}>{label}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-4 text-xs text-gray-400">Die Seite aktualisiert sich automatisch. Du kannst sie auch verlassen – die Reise wird im Hintergrund fertig geplant.</p>
+          </SectionCard>
+
+          <SectionCard title={`Erste Ergebnisse${dests.length ? ` · ${dests.length} Ziele` : ''}`}>
+            {dests.length === 0 ? (
+              <p className="text-sm text-gray-400">Sobald die Ziele gefunden und nach Wetter sortiert sind, erscheinen sie hier.</p>
+            ) : (
+              <div className="grid gap-2">
+                {dests.map((alt, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-lg px-3 py-2 text-sm" style={{ background: i === 0 ? '#fff7ed' : '#f5f7fa', border: i === 0 ? '1px solid #fed7aa' : '1px solid #eef2f7' }}>
+                    <span style={{ color: NAVY }}>{i === 0 && '★ '}{alt.name}, {alt.country}</span>
+                    {alt.weather && <span className="text-xs text-gray-500">{Math.round(alt.weather.tempMaxAvg)}°C · Wetter-Score {alt.weather.score}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </SectionCard>
+        </div>
       </AdminShell>
     );
   }

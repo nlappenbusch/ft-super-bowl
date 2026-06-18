@@ -29,8 +29,10 @@ export async function fetchWeather(lat: number, lon: number, period: DateRange):
   const end = shiftYear(period.end || period.start, -1);
   const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}` +
     `&start_date=${start}&end_date=${end}&daily=temperature_2m_max,precipitation_sum&timezone=auto`;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 12_000);
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: ctrl.signal });
     if (!res.ok) return undefined;
     const j = (await res.json()) as { daily?: { temperature_2m_max?: number[]; precipitation_sum?: number[] } };
     const temps = (j.daily?.temperature_2m_max || []).filter((n) => typeof n === 'number');
@@ -47,6 +49,8 @@ export async function fetchWeather(lat: number, lon: number, period: DateRange):
     };
   } catch {
     return undefined;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
