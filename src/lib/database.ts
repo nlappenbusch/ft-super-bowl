@@ -203,6 +203,16 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_cdoc_customer ON customer_documents(customer_id);
     CREATE INDEX IF NOT EXISTS idx_cdoc_booking ON customer_documents(booking_id);
 
+    -- Incentive Builder: gespeicherte KI-Reisepläne (brief/plan als JSON-TEXT).
+    CREATE TABLE IF NOT EXISTS incentive_plans (
+      id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      title TEXT NOT NULL DEFAULT 'Incentive',
+      status TEXT NOT NULL DEFAULT 'draft',
+      brief TEXT NOT NULL DEFAULT '',
+      plan TEXT NOT NULL DEFAULT ''
+    );
+
     -- ==================== HR / TEAM ====================
     CREATE TABLE IF NOT EXISTS employees (
       id TEXT PRIMARY KEY,

@@ -233,6 +233,14 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
       )`);
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_cdoc_customer ON customer_documents(customer_id)`);
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_cdoc_booking ON customer_documents(booking_id)`);
+      await pool.query(`CREATE TABLE IF NOT EXISTS incentive_plans (
+        id text PRIMARY KEY,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        title text NOT NULL DEFAULT 'Incentive',
+        status text NOT NULL DEFAULT 'draft',
+        brief text NOT NULL DEFAULT '',
+        plan text NOT NULL DEFAULT ''
+      )`);
     } catch (e) { console.warn('[pg] Portal-Schema:', (e as Error).message); }
 
     // Defaults auf Timestamp-Spalten (damit Inserts ohne created_at/updated_at funktionieren)
