@@ -82,10 +82,12 @@ export interface IncentivePlan {
 }
 
 export interface IncentiveProgress {
-  step: number;
+  step: number;                  // Anzeige-Gruppe 1-4
   total: number;
   label: string;
   destinations?: DestinationOption[]; // erste Ergebnisse (nach Wetter sortiert)
+  phase?: string;                // 'destinations' | 'frame' | 'day' | 'feasibility' | 'images'
+  dayIndex?: number;             // aktueller Tag (0-basiert) in Phase 'day'
 }
 
 export interface IncentivePlanRecord {

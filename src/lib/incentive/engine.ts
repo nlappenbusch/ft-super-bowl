@@ -116,9 +116,51 @@ export async function stepDestinations(brief: IncentiveBrief): Promise<{ ranked:
   return { ranked, chosenPeriod: period };
 }
 
-/** Schritt 2: Itinerary für das gewählte Ziel. */
+/** Schritt 2: Itinerary für das gewählte Ziel (Komplett – nur für Einmal-Lauf). */
 export async function stepItinerary(brief: IncentiveBrief, dest: DestinationOption) {
   return buildItinerary(brief, dest, brief.periods[0]);
+}
+
+/** Schritt 2a: Reise-Gerüst (Intro, Unterkunft, Logistik, WOW, Tages-Stubs). Kurzer Call. */
+export async function stepFrame(brief: IncentiveBrief, dest: DestinationOption) {
+  const period = brief.periods[0];
+  const w = dest.weather ? `Wetter-Erwartung: ${dest.weather.summary}.` : '';
+  const userText = `Erstelle das GERÜST einer ${brief.days}-tägigen Incentive-Reise nach ${dest.name}, ${dest.country} für ${brief.groupSize} Personen (noch OHNE Detail-Tagesprogramm).\n${w}\n\nBRIEF:\n${briefContext(brief, period)}\n\nSchema:\n{\n  "introTitle": string (packender Titel),\n  "introText": string (3-5 Sätze, emotionales Intro),\n  "summary": string (1-2 Sätze),\n  "estBudgetPerPerson": string (grobe Spanne, ohne Garantie),\n  "accommodation": { "name": string, "description": string, "bookingHint": string },\n  "logistics": string (Anreise/Transfers kompakt),\n  "wowHighlights": string[] (3-5 Signature-Momente),\n  "days": [ { "day": number, "title": string, "theme": string } ]\n}\nGenau ${brief.days} Tage als Stubs (nur day/title/theme).`;
+  const j = await callJson(userText, 1800);
+  const acc = (j.accommodation || {}) as Record<string, unknown>;
+  const stubs: DayPlan[] = (Array.isArray(j.days) ? j.days : []).slice(0, brief.days).map((d: Record<string, unknown>, i: number) => ({
+    day: Number(d.day) || i + 1, title: String(d.title || `Tag ${i + 1}`), theme: String(d.theme || ''),
+    morning: '', afternoon: '', evening: '', activities: [], text: '',
+  }));
+  while (stubs.length < brief.days) { const i = stubs.length; stubs.push({ day: i + 1, title: `Tag ${i + 1}`, theme: '', morning: '', afternoon: '', evening: '', activities: [], text: '' }); }
+  return {
+    introTitle: String(j.introTitle || `Incentive nach ${dest.name}`),
+    introText: String(j.introText || ''),
+    summary: String(j.summary || ''),
+    estBudgetPerPerson: j.estBudgetPerPerson ? String(j.estBudgetPerPerson) : undefined,
+    accommodation: { name: String(acc.name || ''), description: String(acc.description || ''), bookingHint: acc.bookingHint ? String(acc.bookingHint) : undefined },
+    logistics: String(j.logistics || ''),
+    wowHighlights: (Array.isArray(j.wowHighlights) ? j.wowHighlights : []).map((x: unknown) => String(x)),
+    days: stubs,
+  };
+}
+
+/** Schritt 2b: Ein einzelner Tag im Detail. Kurzer Call. */
+export async function stepDay(brief: IncentiveBrief, dest: DestinationOption, stub: DayPlan, totalDays: number): Promise<DayPlan> {
+  const userText = `Plane Tag ${stub.day} von ${totalDays} der ${brief.days}-tägigen Incentive-Reise nach ${dest.name}, ${dest.country} für ${brief.groupSize} Personen.\nTitel: "${stub.title}" · Thema: "${stub.theme}"\nStil: ${(brief.styles || []).join(', ') || 'offen'} · Budget: ${brief.budgetLevel}\n\nSchema:\n{ "morning": string, "afternoon": string, "evening": string, "activities": [ { "name": string, "description": string, "durationH": number, "bookingHint": string } ], "transport": string, "accommodation": string, "wow": string, "text": string (2-3 Sätze, emotionaler Präsentationstext) }`;
+  const j = await callJson(userText, 1400);
+  return {
+    day: stub.day, title: stub.title, theme: stub.theme,
+    morning: String(j.morning || ''), afternoon: String(j.afternoon || ''), evening: String(j.evening || ''),
+    activities: (Array.isArray(j.activities) ? j.activities : []).map((a: Record<string, unknown>) => ({
+      name: String(a.name || ''), description: String(a.description || ''),
+      durationH: a.durationH != null ? Number(a.durationH) : undefined, bookingHint: a.bookingHint ? String(a.bookingHint) : undefined,
+    })),
+    transport: j.transport ? String(j.transport) : undefined,
+    accommodation: j.accommodation ? String(j.accommodation) : undefined,
+    wow: j.wow ? String(j.wow) : undefined,
+    text: String(j.text || ''),
+  };
 }
 
 /** Schritt 3: Machbarkeits-/Konsistenz-Check. */

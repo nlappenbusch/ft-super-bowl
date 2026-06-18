@@ -17,7 +17,7 @@ export default function IncentivePlanPage() {
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<'plan' | 'deck'>('plan');
 
-  const runningRef = useRef(false);
+  const drivingRef = useRef(false);
 
   const load = useCallback(async () => {
     const r = await fetch(`/api/admin/incentive/${id}`).then((x) => x.json()).catch(() => null);
@@ -26,19 +26,33 @@ export default function IncentivePlanPage() {
   }, [id]);
   useEffect(() => { load(); }, [load]);
 
-  // Generierung client-getrieben: pro Phase ein kurzer Request, verkettet bis fertig.
-  const runStep = useCallback(async () => {
-    if (runningRef.current) return;
-    runningRef.current = true;
-    try {
-      const r = await fetch(`/api/admin/incentive/${id}/step`, { method: 'POST' }).then((x) => x.json()).catch(() => null);
-      if (r?.success && r.data) setRec(r.data);
-    } finally { runningRef.current = false; }
-  }, [id]);
-
+  // Generierung client-getrieben: selbst-verkettende Schleife, jede Phase ein kurzer Request.
+  // Transiente Fehler (z.B. Deploy läuft noch → 405) werden automatisch erneut versucht.
   useEffect(() => {
-    if (rec?.status === 'generating') { runStep(); }
-  }, [rec?.status, rec?.progress?.step, runStep]);
+    if (rec?.status !== 'generating' || drivingRef.current) return;
+    drivingRef.current = true;
+    let cancelled = false;
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    (async () => {
+      while (!cancelled) {
+        let data: IncentivePlanRecord | null = null;
+        try {
+          const res = await fetch(`/api/admin/incentive/${id}/step`, { method: 'POST' });
+          if (res.ok) { const j = await res.json(); if (j?.success) data = j.data as IncentivePlanRecord; }
+        } catch { /* Netzwerk-/Transient-Fehler */ }
+        if (cancelled) break;
+        if (data) {
+          setRec(data);
+          if (data.status !== 'generating') break;
+          await sleep(400);
+        } else {
+          await sleep(5000); // transient (Deploy/Timeout) → erneut versuchen
+        }
+      }
+      drivingRef.current = false;
+    })();
+    return () => { cancelled = true; drivingRef.current = false; };
+  }, [rec?.status, id]);
 
   if (loading) return <AdminShell title="Incentive"><div className="py-16 text-center"><Spinner /></div></AdminShell>;
   if (!rec) return <AdminShell title="Incentive"><p className="text-gray-500">Plan nicht gefunden. <Link href="/admin/incentive" className="underline">Zurück</Link></p></AdminShell>;
