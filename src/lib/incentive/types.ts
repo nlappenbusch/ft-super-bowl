@@ -85,9 +85,10 @@ export interface IncentivePlanRecord {
   id: string;
   created_at: string;
   title: string;
-  status: string;                // 'draft' | 'final'
+  status: string;                // 'generating' | 'final' | 'error' | 'draft'
   brief: IncentiveBrief;
   plan: IncentivePlan | null;
+  error?: string;
 }
 
 export const STYLE_OPTIONS = [

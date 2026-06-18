@@ -210,7 +210,8 @@ export function initDatabase() {
       title TEXT NOT NULL DEFAULT 'Incentive',
       status TEXT NOT NULL DEFAULT 'draft',
       brief TEXT NOT NULL DEFAULT '',
-      plan TEXT NOT NULL DEFAULT ''
+      plan TEXT NOT NULL DEFAULT '',
+      error TEXT NOT NULL DEFAULT ''
     );
 
     -- ==================== HR / TEAM ====================
@@ -345,6 +346,8 @@ export function initDatabase() {
   if (!cols.some((c) => c.name === 'customer_id')) addColumn('booking_requests', 'customer_id TEXT');
   if (!cols.some((c) => c.name === 'offer_sent')) addColumn('booking_requests', 'offer_sent INTEGER NOT NULL DEFAULT 0');
   if (!cols.some((c) => c.name === 'docs_ready')) addColumn('booking_requests', 'docs_ready INTEGER NOT NULL DEFAULT 0');
+  const icols = sqlite.prepare(`PRAGMA table_info(incentive_plans)`).all() as Array<{ name: string }>;
+  if (icols.length && !icols.some((c) => c.name === 'error')) addColumn('incentive_plans', "error TEXT NOT NULL DEFAULT ''");
   const ccols = sqlite.prepare(`PRAGMA table_info(customers)`).all() as Array<{ name: string }>;
   if (ccols.length && !ccols.some((c) => c.name === 'salutation')) addColumn('customers', "salutation TEXT DEFAULT ''");
   if (ccols.length && !ccols.some((c) => c.name === 'first_name')) addColumn('customers', "first_name TEXT DEFAULT ''");

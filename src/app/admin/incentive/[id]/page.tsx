@@ -18,15 +18,54 @@ export default function IncentivePlanPage() {
   const [mode, setMode] = useState<'plan' | 'deck'>('plan');
 
   const load = useCallback(async () => {
-    setLoading(true);
     const r = await fetch(`/api/admin/incentive/${id}`).then((x) => x.json()).catch(() => null);
     if (r?.success) setRec(r.data);
     setLoading(false);
   }, [id]);
   useEffect(() => { load(); }, [load]);
 
+  // Während die KI generiert: alle 4 s neu laden.
+  useEffect(() => {
+    if (rec?.status === 'generating') {
+      const t = setTimeout(load, 4000);
+      return () => clearTimeout(t);
+    }
+  }, [rec?.status, load]);
+
   if (loading) return <AdminShell title="Incentive"><div className="py-16 text-center"><Spinner /></div></AdminShell>;
-  if (!rec || !rec.plan) return <AdminShell title="Incentive"><p className="text-gray-500">Plan nicht gefunden. <Link href="/admin/incentive" className="underline">Zurück</Link></p></AdminShell>;
+  if (!rec) return <AdminShell title="Incentive"><p className="text-gray-500">Plan nicht gefunden. <Link href="/admin/incentive" className="underline">Zurück</Link></p></AdminShell>;
+
+  if (rec.status === 'generating') {
+    return (
+      <AdminShell title="Incentive">
+        <Link href="/admin/incentive" className="mb-4 inline-flex items-center gap-1 text-xs font-semibold text-gray-500"><ArrowLeft className="h-3.5 w-3.5" /> Alle Reisen</Link>
+        <SectionCard title="KI plant Ihre Reise …">
+          <div className="flex flex-col items-center gap-3 py-12 text-center">
+            <Spinner />
+            <p className="max-w-md text-sm text-gray-600">Ziele werden vorgeschlagen, nach Bestwetter sortiert, ein Tag-für-Tag-Plan mit WOW-Momenten erstellt, geprüft und bebildert. Diese Seite aktualisiert sich automatisch (30–90 Sek.).</p>
+          </div>
+        </SectionCard>
+      </AdminShell>
+    );
+  }
+
+  if (rec.status === 'error' || !rec.plan) {
+    return (
+      <AdminShell title="Incentive">
+        <Link href="/admin/incentive" className="mb-4 inline-flex items-center gap-1 text-xs font-semibold text-gray-500"><ArrowLeft className="h-3.5 w-3.5" /> Alle Reisen</Link>
+        <SectionCard title="Generierung fehlgeschlagen">
+          <div className="flex items-start gap-2 text-sm text-red-700">
+            <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0" />
+            <div>
+              <p>Die Reise konnte nicht erstellt werden.</p>
+              {rec.error && <p className="mt-1 text-xs text-gray-500">{rec.error}</p>}
+              <p className="mt-2 text-gray-600">Bitte erneut versuchen. Häufigste Ursache: KI nicht konfiguriert (Admin → KI) oder eine Zeitüberschreitung.</p>
+            </div>
+          </div>
+        </SectionCard>
+      </AdminShell>
+    );
+  }
 
   const plan = rec.plan;
 
