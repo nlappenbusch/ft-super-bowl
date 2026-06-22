@@ -254,6 +254,17 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
         created_at timestamptz NOT NULL DEFAULT now()
       )`);
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_subtasks_task ON staff_task_subtasks(task_id)`);
+      await pool.query(`CREATE TABLE IF NOT EXISTS task_attachments (
+        id text PRIMARY KEY,
+        task_id text NOT NULL,
+        filename text NOT NULL DEFAULT 'datei',
+        mime text NOT NULL DEFAULT 'application/octet-stream',
+        size integer NOT NULL DEFAULT 0,
+        data_b64 text NOT NULL DEFAULT '',
+        created_at timestamptz NOT NULL DEFAULT now(),
+        created_by text NOT NULL DEFAULT ''
+      )`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_task_attach_task ON task_attachments(task_id)`);
     } catch (e) { console.warn('[pg] Portal-Schema:', (e as Error).message); }
 
     // Defaults auf Timestamp-Spalten (damit Inserts ohne created_at/updated_at funktionieren)

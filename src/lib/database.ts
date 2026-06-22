@@ -288,6 +288,18 @@ export function initDatabase() {
     );
     CREATE INDEX IF NOT EXISTS idx_subtasks_task ON staff_task_subtasks(task_id);
 
+    CREATE TABLE IF NOT EXISTS task_attachments (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      filename TEXT NOT NULL DEFAULT 'datei',
+      mime TEXT NOT NULL DEFAULT 'application/octet-stream',
+      size INTEGER NOT NULL DEFAULT 0,
+      data_b64 TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_by TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX IF NOT EXISTS idx_task_attach_task ON task_attachments(task_id);
+
     CREATE TABLE IF NOT EXISTS tippspiel_users (
       id TEXT PRIMARY KEY,
       email TEXT NOT NULL UNIQUE,
