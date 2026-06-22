@@ -8,6 +8,7 @@ import {
 import { Plus, Trash2, ChevronRight, ChevronLeft, ListTodo, GripVertical } from 'lucide-react';
 import Link from 'next/link';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
+import TaskDrawer from '@/components/admin/TaskDrawer';
 
 interface StaffTask {
   id: string;
@@ -38,6 +39,7 @@ export default function AufgabenPage() {
   const [filterAssignee, setFilterAssignee] = useState('');
   const [form, setForm] = useState({ title: '', description: '', assignee_id: '', due_date: '', priority: 'normal' });
   const [saving, setSaving] = useState(false);
+  const [selected, setSelected] = useState<StaffTask | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -211,7 +213,7 @@ export default function AufgabenPage() {
                                       >
                                         <GripVertical className="h-4 w-4" style={{ color: COLORS.textMuted }} />
                                       </span>
-                                      <div className="min-w-0">
+                                      <div className="min-w-0 cursor-pointer" onClick={() => setSelected(t)} title="Details öffnen">
                                         <div className="font-semibold" style={{ color: COLORS.navy }}>{t.title}</div>
                                         {t.description && <p className="mt-1 text-xs" style={{ color: COLORS.textMuted }}>{t.description}</p>}
                                       </div>
@@ -269,6 +271,7 @@ export default function AufgabenPage() {
           </div>
         </DragDropContext>
       )}
+      {selected && <TaskDrawer task={selected} onClose={() => setSelected(null)} onChanged={load} />}
     </AdminShell>
   );
 }
