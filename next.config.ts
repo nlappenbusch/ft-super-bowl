@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Docker Production Build
   output: 'standalone',
+
+  // @hello-pangea/dnd (Drag&Drop) bricht unter React-StrictMode im Dev-Modus -> aus.
+  reactStrictMode: false,
   
   // SEO & Performance Optimierungen
   images: {
