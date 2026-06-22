@@ -10,6 +10,7 @@ import {
   TrendingUp, Banknote, AlertCircle, Target, Inbox, KanbanSquare,
   CalendarDays, Package, Mail, ArrowRight, Hash,
 } from 'lucide-react';
+import DashboardAnalytics from '@/components/admin/DashboardAnalytics';
 
 interface Lead {
   id: string;
@@ -111,6 +112,9 @@ export default function DashboardPage() {
         <StatCard icon={<AlertCircle className="h-4 w-4" />} tone="accent" label="Offene Posten" value={money(openAmount)} sub={`${openInvoices.length} offene RE`} />
         <StatCard icon={<Target className="h-4 w-4" />} tone="navy" label="Conversion" value={`${conversion}%`} sub={`${leads.length} Leads gesamt`} />
       </div>
+
+      {/* Anfragen-Analytics (Charts) */}
+      {!loading && <DashboardAnalytics leads={leads} />}
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Recent leads */}
