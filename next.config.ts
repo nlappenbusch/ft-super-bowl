@@ -110,12 +110,14 @@ const nextConfig: NextConfig = {
   // Redirects (falls WordPress-URLs umgeleitet werden sollen)
   async redirects() {
     return [
-      // Beispiel: WordPress URL zu Next.js
-      // {
-      //   source: '/old-wordpress-page',
-      //   destination: '/new-page',
-      //   permanent: true,
-      // },
+      // Harte http -> https Weiterleitung (hinter Reverse-Proxy via x-forwarded-proto).
+      // Behebt u.a. den Microsoft-SSO Redirect-URI-Mismatch (AADSTS50011) bei http-Aufruf.
+      {
+        source: '/:path*',
+        has: [{ type: 'header', key: 'x-forwarded-proto', value: 'http' }],
+        destination: 'https://next.faltintravel.com/:path*',
+        permanent: true,
+      },
     ]
   },
 };
