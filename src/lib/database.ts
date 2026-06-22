@@ -300,6 +300,16 @@ export function initDatabase() {
     );
     CREATE INDEX IF NOT EXISTS idx_task_attach_task ON task_attachments(task_id);
 
+    CREATE TABLE IF NOT EXISTS task_time (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      employee_id TEXT,
+      minutes INTEGER NOT NULL DEFAULT 0,
+      note TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_task_time_task ON task_time(task_id);
+
     CREATE TABLE IF NOT EXISTS tippspiel_users (
       id TEXT PRIMARY KEY,
       email TEXT NOT NULL UNIQUE,

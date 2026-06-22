@@ -483,3 +483,31 @@ export async function getTaskAttachment(id: string): Promise<{ filename: string;
 export async function deleteTaskAttachment(id: string): Promise<boolean> {
   return (await dbRun('DELETE FROM task_attachments WHERE id = ?', [id])).changes > 0;
 }
+
+export interface TaskTime {
+  id: string;
+  task_id: string;
+  employee_id: string | null;
+  minutes: number;
+  note: string;
+  created_at: string;
+}
+
+export async function listTaskTime(taskId: string): Promise<TaskTime[]> {
+  return dbAll<TaskTime>('SELECT * FROM task_time WHERE task_id = ? ORDER BY created_at DESC', [taskId]);
+}
+
+export async function sumTaskMinutes(taskId: string): Promise<number> {
+  const r = await dbGet<{ total: number }>('SELECT COALESCE(SUM(minutes), 0) AS total FROM task_time WHERE task_id = ?', [taskId]);
+  return r?.total ?? 0;
+}
+
+export async function addTaskTime(taskId: string, minutes: number, note?: string, employeeId?: string | null): Promise<TaskTime> {
+  const id = crypto.randomUUID();
+  await dbRun('INSERT INTO task_time (id, task_id, employee_id, minutes, note) VALUES (?, ?, ?, ?, ?)', [id, taskId, employeeId || null, minutes, note || '']);
+  return (await dbGet<TaskTime>('SELECT * FROM task_time WHERE id = ?', [id]))!;
+}
+
+export async function deleteTaskTime(id: string): Promise<boolean> {
+  return (await dbRun('DELETE FROM task_time WHERE id = ?', [id])).changes > 0;
+}
