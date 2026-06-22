@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, type ReactNode, type CSSProperties } from 'react';
 import InvoiceEditor, { type InvoiceLead } from '@/components/admin/InvoiceEditor';
 import AdminShell from '@/components/admin/AdminShell';
-import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
+import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import {
   User, Mail, Phone, Calendar, Package, Euro,
   ChevronRight, X, FileText, RefreshCw, Receipt,
@@ -742,6 +742,26 @@ function DetailDrawer({
 
 /* ─── Main Page ──────────────────────────────────────────────────────── */
 
+function DropCol({ id, children }: { id: string; children: ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div ref={setNodeRef} className="flex flex-col gap-2.5 min-h-[100px] rounded-xl transition-colors" style={{ background: isOver ? '#f5f7fa' : undefined, padding: isOver ? 4 : 0 }}>
+      {children}
+    </div>
+  );
+}
+
+function DraggableLead({ id, children }: { id: string; children: ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id });
+  const style: CSSProperties = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    opacity: isDragging ? 0.5 : 1,
+    boxShadow: isDragging ? '0 10px 24px rgba(20,48,71,0.18)' : undefined,
+    zIndex: isDragging ? 50 : undefined,
+  };
+  return <div ref={setNodeRef} style={style} {...listeners} {...attributes}>{children}</div>;
+}
+
 export default function CrmPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -806,12 +826,17 @@ export default function CrmPage() {
     }
   };
 
-  const onDragEnd = (result: DropResult) => {
-    const { destination, source, draggableId } = result;
-    if (!destination || destination.droppableId === source.droppableId) return;
-    const newStatus = destination.droppableId as CrmStatus;
-    setLeads(prev => prev.map(l => (l.id === draggableId ? { ...l, status: newStatus } : l)));
-    fetch(`/api/bookings/${draggableId}`, {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  const onDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over) return;
+    const newStatus = String(over.id) as CrmStatus;
+    const id = String(active.id);
+    const l = leads.find((x) => x.id === id);
+    if (!l || l.status === newStatus) return;
+    setLeads(prev => prev.map(x => (x.id === id ? { ...x, status: newStatus } : x)));
+    fetch(`/api/bookings/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus }),
@@ -861,7 +886,7 @@ export default function CrmPage() {
       </div>
 
       {/* Kanban board */}
-      <DragDropContext onDragEnd={onDragEnd}>
+      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 pb-8">
         {COLUMNS.map(col => {
           const colLeads = filtered.filter(l => l.status === col.id);
@@ -888,47 +913,28 @@ export default function CrmPage() {
                 )}
               </div>
 
-              <Droppable droppableId={col.id}>
-                {(dropProvided, dropSnapshot) => (
-                  <div
-                    ref={dropProvided.innerRef}
-                    {...dropProvided.droppableProps}
-                    className="flex flex-col gap-2.5 min-h-[100px] rounded-xl transition-colors"
-                    style={{ background: dropSnapshot.isDraggingOver ? '#f5f7fa' : undefined, padding: dropSnapshot.isDraggingOver ? 4 : 0 }}
-                  >
-                    {!loading && colLeads.length === 0 && !dropSnapshot.isDraggingOver && (
-                      <div className="rounded-xl p-6 text-center text-xs text-gray-400" style={{ border: '1.5px dashed #e5e8ed' }}>
-                        Hierher ziehen
-                      </div>
-                    )}
-                    {colLeads.map((lead, idx) => (
-                      <Draggable key={lead.id} draggableId={lead.id} index={idx}>
-                        {(dragProvided, dragSnapshot) => (
-                          <div
-                            ref={dragProvided.innerRef}
-                            {...dragProvided.draggableProps}
-                            {...dragProvided.dragHandleProps}
-                            style={{ ...dragProvided.draggableProps.style, boxShadow: dragSnapshot.isDragging ? '0 10px 24px rgba(20,48,71,0.18)' : undefined }}
-                          >
-                            <LeadCard
-                              lead={lead}
-                              hasInvoice={!!invoicesByBooking[lead.id]?.length}
-                              onClick={() => setSelected(lead)}
-                              assigneeName={employees.find(e => e.id === lead.assigned_to)?.name}
-                            />
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {dropProvided.placeholder}
+              <DropCol id={col.id}>
+                {!loading && colLeads.length === 0 && (
+                  <div className="rounded-xl p-6 text-center text-xs text-gray-400" style={{ border: '1.5px dashed #e5e8ed' }}>
+                    Hierher ziehen
                   </div>
                 )}
-              </Droppable>
+                {colLeads.map((lead) => (
+                  <DraggableLead key={lead.id} id={lead.id}>
+                    <LeadCard
+                      lead={lead}
+                      hasInvoice={!!invoicesByBooking[lead.id]?.length}
+                      onClick={() => setSelected(lead)}
+                      assigneeName={employees.find(e => e.id === lead.assigned_to)?.name}
+                    />
+                  </DraggableLead>
+                ))}
+              </DropCol>
             </div>
           );
         })}
       </div>
-      </DragDropContext>
+      </DndContext>
 
       {selected && (
         <DetailDrawer
