@@ -8,7 +8,7 @@ import {
   ChevronRight, X, FileText, RefreshCw, Receipt,
   Plus, Trash2, Download, CheckCircle, Clock, AlertCircle,
   TrendingUp, Banknote, BarChart3, Target,
-  MessageSquare, Send, Hash, CornerDownRight
+  MessageSquare, Send, Hash, CornerDownRight, Paperclip
 } from 'lucide-react';
 
 /* ─── Types ──────────────────────────────────────────────────────────── */
@@ -349,6 +349,7 @@ function ConversationTab({ lead }: { lead: Lead }) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [replyFiles, setReplyFiles] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -383,6 +384,7 @@ function ConversationTab({ lead }: { lead: Lead }) {
       if (data.success) {
         setReply('');
         if (fileRef.current) fileRef.current.value = '';
+        setReplyFiles([]);
         await load();
       } else {
         setError(data.error || 'Versand fehlgeschlagen.');
@@ -457,7 +459,18 @@ function ConversationTab({ lead }: { lead: Lead }) {
           className="w-full border rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none resize-none"
           style={{ borderColor: '#e5e8ed' }}
         />
-        <input ref={fileRef} type="file" multiple className="block w-full text-xs text-gray-500 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#143047] file:px-3 file:py-2 file:text-xs file:font-bold file:text-white hover:file:opacity-90" />
+        <input ref={fileRef} type="file" multiple className="hidden" onChange={e => setReplyFiles(Array.from(e.target.files ?? []).map(f => f.name))} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold text-white transition hover:opacity-90"
+            style={{ background: '#143047' }}
+          >
+            <Paperclip className="w-3.5 h-3.5" /> Dateien anhängen
+          </button>
+          <span className="text-xs text-gray-500 truncate">{replyFiles.length ? replyFiles.join(', ') : 'Keine Dateien gewählt'}</span>
+        </div>
         {error && <p className="text-red-600 text-xs">{error}</p>}
         <button
           onClick={handleSend}

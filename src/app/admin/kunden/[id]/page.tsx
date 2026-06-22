@@ -48,6 +48,7 @@ export default function KundenakteePage() {
   const [docBooking, setDocBooking] = useState('');
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [docFileName, setDocFileName] = useState<string | null>(null);
 
   const flash = (ok: boolean, msg: string) => { setToast({ ok, msg }); setTimeout(() => setToast(null), 4000); };
 
@@ -84,7 +85,7 @@ export default function KundenakteePage() {
       fd.append('title', docTitle);
       fd.append('booking_id', docBooking);
       const res = await fetch(`/api/admin/customers/${id}/documents`, { method: 'POST', body: fd }).then((r) => r.json());
-      if (res.success) { setDocTitle(''); if (fileRef.current) fileRef.current.value = ''; flash(true, 'Dokument hochgeladen – im Portal sichtbar.'); await loadDocs(); }
+      if (res.success) { setDocTitle(''); if (fileRef.current) fileRef.current.value = ''; setDocFileName(null); flash(true, 'Dokument hochgeladen – im Portal sichtbar.'); await loadDocs(); }
       else flash(false, res.error || 'Upload fehlgeschlagen.');
     } catch { flash(false, 'Verbindungsfehler.'); } finally { setUploading(false); }
   };
@@ -304,8 +305,12 @@ export default function KundenakteePage() {
                     {c.bookings.map((b) => <option key={b.id} value={b.id}>{b.request_number || b.id.slice(0, 8)} · {b.package_title}</option>)}
                   </select>
                 </Field>
-                <input ref={fileRef} type="file" className="block w-full text-xs text-gray-500 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#143047] file:px-3 file:py-2 file:text-xs file:font-bold file:text-white hover:file:opacity-90" />
-                <Button type="button" variant="accent" onClick={uploadDoc} disabled={uploading}>{uploading ? <Spinner className="h-4 w-4 border-white" /> : <Upload className="h-4 w-4" />} Hochladen</Button>
+                <input ref={fileRef} type="file" className="hidden" onChange={(e) => setDocFileName(e.target.files?.[0]?.name ?? null)} />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="button" variant="secondary" onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" /> Datei wählen</Button>
+                  <span className="truncate text-xs" style={{ color: docFileName ? '#143047' : '#9ca3af' }} title={docFileName ?? undefined}>{docFileName ?? 'Keine Datei gewählt'}</span>
+                </div>
+                <Button type="button" variant="accent" onClick={uploadDoc} disabled={uploading || !docFileName}>{uploading ? <Spinner className="h-4 w-4 border-white" /> : <Upload className="h-4 w-4" />} Hochladen</Button>
               </div>
             </div>
           </div>
