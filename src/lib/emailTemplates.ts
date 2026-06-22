@@ -154,25 +154,10 @@ function layout(innerHtml: string, preheader = ''): string {
  * withNote=true ergänzt den sympathischen Hinweis für die erste Auto-Antwort.
  */
 export function portalCtaHtml(opts: { withNote?: boolean } = {}): string {
-  const url = `${baseUrl()}/portal`;
-  const note = opts.withNote
-    ? `<p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:#374151;">
-         In der Zwischenzeit können Sie in Ihrem persönlichen <strong style="color:${NAVY};">Reiseportal</strong> jederzeit
-         Ihre Angaben vervollständigen, den Stand Ihrer Anfrage verfolgen und uns Nachrichten oder Unterlagen senden.
-       </p>`
-    : '';
-  return `
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
-      <tr><td style="background:#f5f7fa;border:1px solid #e5e8ed;border-radius:14px;padding:20px 22px;">
-        ${note}
-        <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:10px;background:${ACCENT};">
-          <a href="${url}" style="display:inline-block;padding:12px 26px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;">
-            Zum Reiseportal →
-          </a>
-        </td></tr></table>
-        <p style="margin:12px 0 0;font-size:12px;color:#9ca3af;">Login per E-Mail-Link – ganz ohne Passwort. Einfach Ihre E-Mail-Adresse eingeben.</p>
-      </td></tr>
-    </table>`;
+  // Kundenportal noch in Entwicklung – Portal-CTA vorerst aus allen Kundenmails entfernt.
+  // TODO: Reaktivieren, sobald das Reiseportal live ist (vorheriger Inhalt: siehe Git-Historie).
+  void opts;
+  return '';
 }
 
 export interface MagicLinkInput {
