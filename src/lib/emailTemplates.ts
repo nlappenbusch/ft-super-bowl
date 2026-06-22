@@ -90,6 +90,15 @@ export function formalGreeting(r: RecipientInfo): string {
  *   {{nachname}} → Nachname
  * Räumt überflüssige Leerzeichen vor Satzzeichen auf (Fallback ohne Nachname).
  */
+/** Wie formalGreeting, aber OHNE tageszeit-abhaengige Grussformel (immer "Guten Tag"). */
+export function neutralGreeting(r: RecipientInfo): string {
+  const s = (r.salutation || '').trim().toLowerCase();
+  const last = (r.lastName || '').trim();
+  if (s === 'herr') return last ? `Guten Tag Herr ${escapeHtml(last)},` : `Guten Tag Herr,`;
+  if (s === 'frau') return last ? `Guten Tag Frau ${escapeHtml(last)},` : `Guten Tag Frau,`;
+  return 'Sehr geehrte Damen und Herren,';
+}
+
 export function renderRecipientTokens(escapedText: string, r: RecipientInfo): string {
   const s = (r.salutation || '').trim().toLowerCase();
   const hasSalutation = s === 'herr' || s === 'frau';
@@ -282,7 +291,7 @@ export function autoReplyHtml(input: AutoReplyInput): string {
   const hasOwnGreeting = /^(sehr geehrt|hallo|guten (tag|morgen|mittag|abend)|liebe|moin|servus|hi[\s,]|hey[\s,])/.test(firstLine);
   const greetingHtml = hasOwnGreeting
     ? ''
-    : `<p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#374151;">${formalGreeting(r)}</p>`;
+    : `<p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#374151;">${neutralGreeting(r)}</p>`;
 
   const bodyHtml = rendered.replace(/\n/g, '<br>');
 
