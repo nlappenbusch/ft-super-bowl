@@ -455,3 +455,31 @@ export async function setSubtaskDone(id: string, done: boolean): Promise<boolean
 export async function deleteSubtask(id: string): Promise<boolean> {
   return (await dbRun('DELETE FROM staff_task_subtasks WHERE id = ?', [id])).changes > 0;
 }
+
+export interface TaskAttachment {
+  id: string;
+  task_id: string;
+  filename: string;
+  mime: string;
+  size: number;
+  created_at: string;
+  created_by: string;
+}
+
+export async function listTaskAttachments(taskId: string): Promise<TaskAttachment[]> {
+  return dbAll<TaskAttachment>('SELECT id, task_id, filename, mime, size, created_at, created_by FROM task_attachments WHERE task_id = ? ORDER BY created_at DESC', [taskId]);
+}
+
+export async function addTaskAttachment(taskId: string, a: { filename: string; mime: string; size: number; data_b64: string; created_by?: string }): Promise<TaskAttachment> {
+  const id = crypto.randomUUID();
+  await dbRun('INSERT INTO task_attachments (id, task_id, filename, mime, size, data_b64, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)', [id, taskId, a.filename, a.mime, a.size, a.data_b64, a.created_by || '']);
+  return (await dbGet<TaskAttachment>('SELECT id, task_id, filename, mime, size, created_at, created_by FROM task_attachments WHERE id = ?', [id]))!;
+}
+
+export async function getTaskAttachment(id: string): Promise<{ filename: string; mime: string; data_b64: string } | null> {
+  return (await dbGet<{ filename: string; mime: string; data_b64: string }>('SELECT filename, mime, data_b64 FROM task_attachments WHERE id = ?', [id])) ?? null;
+}
+
+export async function deleteTaskAttachment(id: string): Promise<boolean> {
+  return (await dbRun('DELETE FROM task_attachments WHERE id = ?', [id])).changes > 0;
+}
