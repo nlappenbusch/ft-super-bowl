@@ -15,6 +15,7 @@ interface BookingRow {
   created_at: string;
   updated_at: string;
   request_number: string | null;
+  booking_number?: string | null;
   package_id: string;
   package_title: string;
   start_date: string;
@@ -42,6 +43,7 @@ export function initDatabase() {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       request_number TEXT,
+      booking_number TEXT,
       package_id TEXT NOT NULL,
       package_title TEXT NOT NULL,
       start_date TEXT NOT NULL,
@@ -343,6 +345,7 @@ export function initDatabase() {
   };
   const cols = sqlite.prepare(`PRAGMA table_info(booking_requests)`).all() as Array<{ name: string }>;
   if (!cols.some((c) => c.name === 'request_number')) addColumn('booking_requests', 'request_number TEXT');
+  if (!cols.some((c) => c.name === 'booking_number')) addColumn('booking_requests', 'booking_number TEXT');
   if (!cols.some((c) => c.name === 'assigned_to')) addColumn('booking_requests', 'assigned_to TEXT');
   if (!cols.some((c) => c.name === 'customer_id')) addColumn('booking_requests', 'customer_id TEXT');
   if (!cols.some((c) => c.name === 'offer_sent')) addColumn('booking_requests', 'offer_sent INTEGER NOT NULL DEFAULT 0');
@@ -356,6 +359,7 @@ export function initDatabase() {
   if (ccols.length && !ccols.some((c) => c.name === 'last_name')) addColumn('customers', "last_name TEXT DEFAULT ''");
 
   sqlite.prepare(`INSERT OR IGNORE INTO counters (name, value) VALUES ('request_number', 10000)`).run();
+  sqlite.prepare(`INSERT OR IGNORE INTO counters (name, value) VALUES ('booking_number', 1000)`).run();
 }
 
 // Initialisierung nur zur Laufzeit (nicht während `next build`).
@@ -374,6 +378,29 @@ export async function getNextRequestNumber(): Promise<string> {
     ['request_number']
   );
   return `RQ-${row?.value ?? Date.now()}`;
+}
+
+/** Naechste Buchungsnummer "FT26-1001" (FT + 2-stelliges Jahr + fortlaufend, atomar). */
+export async function getNextBookingNumber(): Promise<string> {
+  const row = await dbGet<{ value: number }>(
+    `UPDATE counters SET value = value + 1 WHERE name = ? RETURNING value`,
+    ['booking_number']
+  );
+  const yy = String(new Date().getFullYear()).slice(-2);
+  return `FT${yy}-${row?.value ?? Date.now()}`;
+}
+
+/** Vergibt eine Buchungsnummer, falls die Buchung noch keine hat (idempotent). */
+export async function ensureBookingNumber(id: string): Promise<string | null> {
+  const row = await dbGet<{ booking_number: string | null }>(
+    'SELECT booking_number FROM booking_requests WHERE id = ?',
+    [id]
+  );
+  if (!row) return null;
+  if (row.booking_number) return row.booking_number;
+  const num = await getNextBookingNumber();
+  await dbRun('UPDATE booking_requests SET booking_number = ? WHERE id = ?', [num, id]);
+  return num;
 }
 
 export async function insertBooking(booking: Omit<BookingRequest, 'id' | 'created_at' | 'updated_at'>) {

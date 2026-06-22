@@ -2,6 +2,7 @@ import {
   insertBooking,
   getAllBookings,
   updateBookingStatus,
+  ensureBookingNumber,
   updateBookingNotes,
   updateBookingAssignee,
   updateBookingMilestones,
@@ -124,6 +125,9 @@ export async function updateBooking(id: string, updates: { status?: string; note
   if (!isSupabaseConfigured() || !supabase) {
     if (updates.status && ['new', 'in_progress', 'booked', 'rejected'].includes(updates.status)) {
       await updateBookingStatus(id, updates.status as 'new' | 'in_progress' | 'booked' | 'rejected');
+    }
+    if (updates.status === 'booked') {
+      await ensureBookingNumber(id);
     }
     if (updates.notes !== undefined) {
       await updateBookingNotes(id, updates.notes);
