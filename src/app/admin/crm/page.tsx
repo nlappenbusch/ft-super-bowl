@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import InvoiceEditor, { type InvoiceLead } from '@/components/admin/InvoiceEditor';
 import AdminShell from '@/components/admin/AdminShell';
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import {
   User, Mail, Phone, Calendar, Package, Euro,
   ChevronRight, X, FileText, RefreshCw, Receipt,
@@ -805,6 +806,18 @@ export default function CrmPage() {
     }
   };
 
+  const onDragEnd = (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+    if (!destination || destination.droppableId === source.droppableId) return;
+    const newStatus = destination.droppableId as CrmStatus;
+    setLeads(prev => prev.map(l => (l.id === draggableId ? { ...l, status: newStatus } : l)));
+    fetch(`/api/bookings/${draggableId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    }).catch(() => loadData());
+  };
+
   const invoicesByBooking = invoices.reduce<Record<string, Invoice[]>>((acc, inv) => {
     if (!acc[inv.booking_id]) acc[inv.booking_id] = [];
     acc[inv.booking_id].push(inv);
@@ -848,6 +861,7 @@ export default function CrmPage() {
       </div>
 
       {/* Kanban board */}
+      <DragDropContext onDragEnd={onDragEnd}>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 pb-8">
         {COLUMNS.map(col => {
           const colLeads = filtered.filter(l => l.status === col.id);
@@ -874,26 +888,47 @@ export default function CrmPage() {
                 )}
               </div>
 
-              <div className="flex flex-col gap-2.5 min-h-[100px]">
-                {!loading && colLeads.length === 0 && (
-                  <div className="rounded-xl p-6 text-center text-xs text-gray-400" style={{ border: '1.5px dashed #e5e8ed' }}>
-                    Keine Einträge
+              <Droppable droppableId={col.id}>
+                {(dropProvided, dropSnapshot) => (
+                  <div
+                    ref={dropProvided.innerRef}
+                    {...dropProvided.droppableProps}
+                    className="flex flex-col gap-2.5 min-h-[100px] rounded-xl transition-colors"
+                    style={{ background: dropSnapshot.isDraggingOver ? '#f5f7fa' : undefined, padding: dropSnapshot.isDraggingOver ? 4 : 0 }}
+                  >
+                    {!loading && colLeads.length === 0 && !dropSnapshot.isDraggingOver && (
+                      <div className="rounded-xl p-6 text-center text-xs text-gray-400" style={{ border: '1.5px dashed #e5e8ed' }}>
+                        Hierher ziehen
+                      </div>
+                    )}
+                    {colLeads.map((lead, idx) => (
+                      <Draggable key={lead.id} draggableId={lead.id} index={idx}>
+                        {(dragProvided, dragSnapshot) => (
+                          <div
+                            ref={dragProvided.innerRef}
+                            {...dragProvided.draggableProps}
+                            {...dragProvided.dragHandleProps}
+                            style={{ ...dragProvided.draggableProps.style, boxShadow: dragSnapshot.isDragging ? '0 10px 24px rgba(20,48,71,0.18)' : undefined }}
+                          >
+                            <LeadCard
+                              lead={lead}
+                              hasInvoice={!!invoicesByBooking[lead.id]?.length}
+                              onClick={() => setSelected(lead)}
+                              assigneeName={employees.find(e => e.id === lead.assigned_to)?.name}
+                            />
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {dropProvided.placeholder}
                   </div>
                 )}
-                {colLeads.map(lead => (
-                  <LeadCard
-                    key={lead.id}
-                    lead={lead}
-                    hasInvoice={!!invoicesByBooking[lead.id]?.length}
-                    onClick={() => setSelected(lead)}
-                    assigneeName={employees.find(e => e.id === lead.assigned_to)?.name}
-                  />
-                ))}
-              </div>
+              </Droppable>
             </div>
           );
         })}
       </div>
+      </DragDropContext>
 
       {selected && (
         <DetailDrawer
