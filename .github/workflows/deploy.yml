@@ -25,10 +25,10 @@ jobs:
         if: success()
         run: |
           echo "✅ Deployment successful!"
-          echo "App is running on http://your-domain:8082"
+          echo "App is running on the configured domain or http://<server>:8085"
           
       - name: Deployment Failed
         if: failure()
         run: |
           echo "❌ Deployment failed!"
-          echo "Check container logs with: docker logs super-bowl-app"
+          echo "Check container logs with: cd /opt/super-bowl && docker compose logs --tail=100"

@@ -10,7 +10,7 @@
 git init
 git add .
 git commit -m "Initial commit mit Deployment-Pipeline"
-git remote add origin https://github.com/DEIN-USERNAME/ft-super-bowl.git
+git remote add origin https://github.com/nlappenbusch/ft-super-bowl.git
 git branch -M main
 git push -u origin main
 ```
@@ -44,7 +44,7 @@ tar xzf ./actions-runner-linux-x64-2.311.0.tar.gz
 
 # Runner konfigurieren
 ./config.sh \
-  --url https://github.com/DEIN-USERNAME/ft-super-bowl \
+  --url https://github.com/nlappenbusch/ft-super-bowl \
   --token DEIN-GITHUB-TOKEN \
   --name docker-prod-01 \
   --labels docker-prod-01
@@ -58,7 +58,7 @@ sudo ./svc.sh start
 
 ```bash
 cd /opt/super-bowl
-sudo git clone https://github.com/DEIN-USERNAME/ft-super-bowl.git .
+sudo git clone https://github.com/nlappenbusch/ft-super-bowl.git .
 ```
 
 ### C) User-Rechte setzen
@@ -102,7 +102,7 @@ Wenn das durchläuft: **✅ Server ist bereit!**
    - **Domain Names:** `superbowl.deine-domain.de`
    - **Scheme:** `http`
    - **Forward Hostname / IP:** `DOCKER-SERVER-IP`
-   - **Forward Port:** `8082`
+   - **Forward Port:** `8085`
    - **Cache Assets:** ON
    - **Block Common Exploits:** ON
 4. **SSL** Tab:
@@ -144,7 +144,7 @@ journalctl -u actions.runner.* -n 50 --no-pager
 docker ps
 
 # App testen
-curl -I http://127.0.0.1:8082
+curl -I http://127.0.0.1:8085
 ```
 
 ### Im Browser testen:

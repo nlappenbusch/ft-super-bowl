@@ -21,7 +21,7 @@ Lokale Entwicklung auf dem PC, Code liegt zentral in GitHub, Deployment passiert
    - Repo liegt unter: `/opt/super-bowl`
    - Deployment Script: `/opt/super-bowl/deploy.sh`
    - Docker Compose baut Image und recreated Container
-   - Website ist intern erreichbar auf Port **8082** (`8082:3000`)
+   - Website ist intern erreichbar auf Port **8085** (`8085:3000`)
    - SQLite Datenbank wird via Volume gemountet: `./data:/app/data`
 
 3. **GitHub Actions Self-hosted Runner (intern)**
@@ -30,7 +30,7 @@ Lokale Entwicklung auf dem PC, Code liegt zentral in GitHub, Deployment passiert
    - Führt Deploy Script lokal aus
 
 4. **Nginx Proxy Manager (separate VM)**
-   - Forward/Proxy von Domain → Docker-Server-IP:8082
+   - Forward/Proxy von Domain → Docker-Server-IP:8085
    - TLS via Let's Encrypt
 
 ---
@@ -51,7 +51,7 @@ curl -o actions-runner-linux-x64-2.311.0.tar.gz -L https://github.com/actions/ru
 tar xzf ./actions-runner-linux-x64-2.311.0.tar.gz
 
 # Runner konfigurieren
-./config.sh --url https://github.com/DEIN-USERNAME/ft-super-bowl --token DEIN-TOKEN
+./config.sh --url https://github.com/nlappenbusch/ft-super-bowl --token DEIN-TOKEN --labels docker-prod-01
 
 # Als Service installieren
 sudo ./svc.sh install
@@ -62,7 +62,7 @@ sudo ./svc.sh start
 
 ```bash
 cd /opt/super-bowl
-git clone https://github.com/DEIN-USERNAME/ft-super-bowl.git .
+git clone https://github.com/nlappenbusch/ft-super-bowl.git .
 ```
 
 ### 3. Deploy-Script ausführbar machen
@@ -133,7 +133,7 @@ export default nextConfig;
 5. Runner führt `/opt/super-bowl/deploy.sh` aus:
    - `git fetch/reset` auf `origin/main`
    - `docker compose up -d --build`
-6. Container wird aktualisiert, App läuft auf Port 8082
+6. Container wird aktualisiert, App läuft auf Port 8085
 
 ---
 
@@ -143,7 +143,7 @@ export default nextConfig;
 
 ```bash
 # Runner Service Status
-systemctl status actions.runner.DEIN-USERNAME-ft-super-bowl.docker-prod-01.service
+systemctl status 'actions.runner.nlappenbusch-ft-super-bowl.*.service'
 
 # Container Status
 docker compose ps
@@ -197,7 +197,7 @@ SQLite kann nur eine schreibende Verbindung haben. Lösung:
 - WAL-Mode aktivieren (bereits in database.ts)
 - Busy Timeout erhöhen
 
-### Problem: "Port 8082 not responding"
+### Problem: "Port 8085 not responding"
 
 ```bash
 # Container läuft?
@@ -225,7 +225,7 @@ sudo systemctl restart actions.runner.*
 2. **Domain Names:** `superbowl.deine-domain.de`
 3. **Scheme:** `http`
 4. **Forward Hostname / IP:** `DOCKER-SERVER-IP`
-5. **Forward Port:** `8082`
+5. **Forward Port:** `8085`
 6. **SSL:** Let's Encrypt aktivieren
 
 ---
@@ -315,7 +315,7 @@ watch -n 5 'docker compose ps'
 ### App erreichbar?
 
 ```bash
-watch -n 30 'curl -I http://127.0.0.1:8082'
+watch -n 30 'curl -I http://127.0.0.1:8085'
 ```
 
 ### Logs live verfolgen
@@ -332,7 +332,7 @@ docker compose logs -f --tail=100
 # Deployment Status
 systemctl status actions.runner.*
 docker compose ps
-curl -I http://127.0.0.1:8082
+curl -I http://127.0.0.1:8085
 
 # Manuell deployen
 cd /opt/super-bowl && ./deploy.sh
