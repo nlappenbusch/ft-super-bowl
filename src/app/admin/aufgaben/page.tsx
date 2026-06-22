@@ -1,13 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode, type CSSProperties } from 'react';
 import AdminShell from '@/components/admin/AdminShell';
 import {
   PageHeader, Card, SectionCard, Button, Field, TextInput, SelectInput, TextArea, Badge, Spinner, COLORS,
 } from '@/components/admin/ui';
 import { Plus, Trash2, ChevronRight, ChevronLeft, ListTodo, GripVertical } from 'lucide-react';
 import Link from 'next/link';
-import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
+import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import TaskDrawer from '@/components/admin/TaskDrawer';
 
 interface StaffTask {
@@ -32,6 +32,85 @@ const COLUMNS: Array<{ id: StaffTask['status']; label: string }> = [
 
 const PRIO_TONE = { niedrig: 'muted', normal: 'info', hoch: 'danger' } as const;
 
+function DropColumn({ id, children }: { id: string; children: ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      className="min-h-[60px] space-y-3 rounded-xl p-1 transition-colors"
+      style={{ background: isOver ? COLORS.surfaceMuted : 'transparent' }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function TaskCard({
+  t, today, employees, empName, onOpen, onMove, onRemove, onAssign,
+}: {
+  t: StaffTask;
+  today: string;
+  employees: EmployeeLite[];
+  empName: (id: string | null) => string;
+  onOpen: (t: StaffTask) => void;
+  onMove: (t: StaffTask, dir: 1 | -1) => void;
+  onRemove: (id: string) => void;
+  onAssign: (id: string, v: string | null) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: t.id });
+  const style: CSSProperties = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    opacity: isDragging ? 0.5 : 1,
+    boxShadow: isDragging ? '0 10px 24px rgba(20,48,71,0.18)' : undefined,
+    zIndex: isDragging ? 50 : undefined,
+  };
+  return (
+    <div ref={setNodeRef} style={style}>
+      <Card>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 items-start gap-2">
+            <span
+              {...listeners}
+              {...attributes}
+              className="mt-0.5 shrink-0 cursor-grab touch-none active:cursor-grabbing"
+              title="Ziehen, um zu verschieben"
+            >
+              <GripVertical className="h-4 w-4" style={{ color: COLORS.textMuted }} />
+            </span>
+            <div className="min-w-0 cursor-pointer" onClick={() => onOpen(t)} title="Details öffnen">
+              <div className="font-semibold" style={{ color: COLORS.navy }}>{t.title}</div>
+              {t.description && <p className="mt-1 text-xs" style={{ color: COLORS.textMuted }}>{t.description}</p>}
+            </div>
+          </div>
+          <Badge tone={PRIO_TONE[t.priority]}>{t.priority}</Badge>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs" style={{ color: COLORS.textMuted }}>
+          <span>👤 {empName(t.assignee_id)}</span>
+          {t.due_date && (
+            <span style={{ color: t.due_date < today && t.status !== 'erledigt' ? COLORS.danger : undefined }}>📅 {t.due_date}</span>
+          )}
+          {t.booking_id && (
+            <Link href={`/admin/crm?booking=${t.booking_id}`} className="underline" style={{ color: COLORS.accent }}>Anfrage öffnen</Link>
+          )}
+        </div>
+        <div className="mt-3 flex items-center justify-between border-t pt-2" style={{ borderColor: COLORS.stroke }}>
+          <div className="flex gap-1">
+            <Button size="sm" variant="ghost" onClick={() => onMove(t, -1)} disabled={t.status === 'offen'} title="Zurück"><ChevronLeft className="h-3.5 w-3.5" /></Button>
+            <Button size="sm" variant="ghost" onClick={() => onMove(t, 1)} disabled={t.status === 'erledigt'} title="Weiter"><ChevronRight className="h-3.5 w-3.5" /></Button>
+          </div>
+          <div className="flex items-center gap-1">
+            <SelectInput value={t.assignee_id || ''} onChange={(e) => onAssign(t.id, e.target.value || null)} className="!w-32 !py-1 !text-xs">
+              <option value="">Niemand</option>
+              {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+            </SelectInput>
+            <Button size="sm" variant="ghost" onClick={() => onRemove(t.id)} title="Löschen"><Trash2 className="h-3.5 w-3.5" /></Button>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 export default function AufgabenPage() {
   const [tasks, setTasks] = useState<StaffTask[]>([]);
   const [employees, setEmployees] = useState<EmployeeLite[]>([]);
@@ -40,6 +119,8 @@ export default function AufgabenPage() {
   const [form, setForm] = useState({ title: '', description: '', assignee_id: '', due_date: '', priority: 'normal' });
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<StaffTask | null>(null);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -105,13 +186,16 @@ export default function AufgabenPage() {
     if (next) patch(t.id, { status: next.id });
   };
 
-  // Drag & Drop: Karte in die Ziel-Spalte verschieben (optimistisch + persistiert)
-  const onDragEnd = (result: DropResult) => {
-    const { destination, source, draggableId } = result;
-    if (!destination || destination.droppableId === source.droppableId) return;
-    const newStatus = destination.droppableId as StaffTask['status'];
-    setTasks((prev) => prev.map((t) => (t.id === draggableId ? { ...t, status: newStatus } : t)));
-    fetch(`/api/admin/tasks/${draggableId}`, {
+  // Drag & Drop (dnd-kit): Karte in die Ziel-Spalte verschieben (optimistisch + persistiert)
+  const onDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over) return;
+    const newStatus = String(over.id) as StaffTask['status'];
+    const id = String(active.id);
+    const t = tasks.find((x) => x.id === id);
+    if (!t || t.status === newStatus) return;
+    setTasks((prev) => prev.map((x) => (x.id === id ? { ...x, status: newStatus } : x)));
+    fetch(`/api/admin/tasks/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus }),
@@ -170,7 +254,7 @@ export default function AufgabenPage() {
       {loading ? (
         <div className="flex justify-center py-16"><Spinner /></div>
       ) : (
-        <DragDropContext onDragEnd={onDragEnd}>
+        <DndContext sensors={sensors} onDragEnd={onDragEnd}>
           <div className="mt-6 grid gap-4 lg:grid-cols-3">
             {COLUMNS.map((col) => {
               const colTasks = tasks.filter((t) => t.status === col.id);
@@ -181,95 +265,29 @@ export default function AufgabenPage() {
                     <span className="text-sm font-bold" style={{ color: COLORS.navy }}>{col.label}</span>
                     <Badge tone="muted">{colTasks.length}</Badge>
                   </div>
-                  <Droppable droppableId={col.id}>
-                    {(dropProvided, dropSnapshot) => (
-                      <div
-                        ref={dropProvided.innerRef}
-                        {...dropProvided.droppableProps}
-                        className="min-h-[60px] space-y-3 rounded-xl p-1 transition-colors"
-                        style={{ background: dropSnapshot.isDraggingOver ? COLORS.surfaceMuted : 'transparent' }}
-                      >
-                        {colTasks.length === 0 && !dropSnapshot.isDraggingOver && (
-                          <Card className="text-center"><span className="text-xs" style={{ color: COLORS.textMuted }}>Hierher ziehen</span></Card>
-                        )}
-                        {colTasks.map((t, idx) => (
-                          <Draggable key={t.id} draggableId={t.id} index={idx}>
-                            {(dragProvided, dragSnapshot) => (
-                              <div
-                                ref={dragProvided.innerRef}
-                                {...dragProvided.draggableProps}
-                                style={{
-                                  ...dragProvided.draggableProps.style,
-                                  boxShadow: dragSnapshot.isDragging ? '0 10px 24px rgba(20,48,71,0.18)' : undefined,
-                                }}
-                              >
-                                <Card>
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div className="flex min-w-0 items-start gap-2">
-                                      <span
-                                        {...dragProvided.dragHandleProps}
-                                        className="mt-0.5 shrink-0 cursor-grab active:cursor-grabbing"
-                                        title="Ziehen, um zu verschieben"
-                                      >
-                                        <GripVertical className="h-4 w-4" style={{ color: COLORS.textMuted }} />
-                                      </span>
-                                      <div className="min-w-0 cursor-pointer" onClick={() => setSelected(t)} title="Details öffnen">
-                                        <div className="font-semibold" style={{ color: COLORS.navy }}>{t.title}</div>
-                                        {t.description && <p className="mt-1 text-xs" style={{ color: COLORS.textMuted }}>{t.description}</p>}
-                                      </div>
-                                    </div>
-                                    <Badge tone={PRIO_TONE[t.priority]}>{t.priority}</Badge>
-                                  </div>
-                                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs" style={{ color: COLORS.textMuted }}>
-                                    <span>👤 {empName(t.assignee_id)}</span>
-                                    {t.due_date && (
-                                      <span style={{ color: t.due_date < today && t.status !== 'erledigt' ? COLORS.danger : undefined }}>
-                                        📅 {t.due_date}
-                                      </span>
-                                    )}
-                                    {t.booking_id && (
-                                      <Link href={`/admin/crm?booking=${t.booking_id}`} className="underline" style={{ color: COLORS.accent }}>
-                                        Anfrage öffnen
-                                      </Link>
-                                    )}
-                                  </div>
-                                  <div className="mt-3 flex items-center justify-between border-t pt-2" style={{ borderColor: COLORS.stroke }}>
-                                    <div className="flex gap-1">
-                                      <Button size="sm" variant="ghost" onClick={() => moveStatus(t, -1)} disabled={t.status === 'offen'} title="Zurück">
-                                        <ChevronLeft className="h-3.5 w-3.5" />
-                                      </Button>
-                                      <Button size="sm" variant="ghost" onClick={() => moveStatus(t, 1)} disabled={t.status === 'erledigt'} title="Weiter">
-                                        <ChevronRight className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                      <SelectInput
-                                        value={t.assignee_id || ''}
-                                        onChange={(e) => patch(t.id, { assignee_id: e.target.value || null })}
-                                        className="!w-32 !py-1 !text-xs"
-                                      >
-                                        <option value="">Niemand</option>
-                                        {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-                                      </SelectInput>
-                                      <Button size="sm" variant="ghost" onClick={() => remove(t.id)} title="Löschen">
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </Card>
-                              </div>
-                            )}
-                          </Draggable>
-                        ))}
-                        {dropProvided.placeholder}
-                      </div>
+                  <DropColumn id={col.id}>
+                    {colTasks.length === 0 && (
+                      <Card className="text-center"><span className="text-xs" style={{ color: COLORS.textMuted }}>Hierher ziehen</span></Card>
                     )}
-                  </Droppable>
+                    {colTasks.map((t) => (
+                      <TaskCard
+                        key={t.id}
+                        t={t}
+                        today={today}
+                        employees={employees}
+                        empName={empName}
+                        onOpen={setSelected}
+                        onMove={moveStatus}
+                        onRemove={remove}
+                        onAssign={(id, v) => patch(id, { assignee_id: v })}
+                      />
+                    ))}
+                  </DropColumn>
                 </div>
               );
             })}
           </div>
-        </DragDropContext>
+        </DndContext>
       )}
       {selected && <TaskDrawer task={selected} onClose={() => setSelected(null)} onChanged={load} />}
     </AdminShell>
