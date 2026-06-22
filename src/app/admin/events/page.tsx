@@ -15,7 +15,8 @@ import {
   ArrowUp,
   ArrowDown,
   Mail,
-  Paperclip
+  Paperclip,
+  Upload
 } from 'lucide-react';
 import AdminShell from '@/components/admin/AdminShell';
 import AdminImageField from '@/components/admin/AdminImageField';
@@ -360,6 +361,7 @@ export default function AdminEventsPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [pdfUploading, setPdfUploading] = useState(false);
+  const autoReplyPdfInputRef = useRef<HTMLInputElement>(null);
 
   function insertAutoReplyToken(token: string) {
     const el = document.getElementById('ev-f-autoreply-msg') as HTMLTextAreaElement | null;
@@ -1074,16 +1076,31 @@ export default function AdminEventsPage() {
                           <div className="mt-2 text-xs" style={{ color: COLORS.textMuted }}>Noch keine PDF hinterlegt.</div>
                         )}
                         <input
+                          ref={autoReplyPdfInputRef}
                           type="file"
                           accept="application/pdf,.pdf"
                           disabled={pdfUploading}
-                          className="mt-3 block w-full text-sm"
+                          className="hidden"
                           onChange={(e) => {
                             const f = e.target.files?.[0];
                             if (f) handleAutoReplyPdfUpload(f);
                             e.target.value = '';
                           }}
                         />
+                        <div className="mt-3 flex flex-wrap items-center gap-3">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => autoReplyPdfInputRef.current?.click()}
+                            disabled={pdfUploading}
+                          >
+                            <Upload className="h-4 w-4" />
+                            PDF auswählen
+                          </Button>
+                          <span className="min-w-0 text-sm" style={{ color: COLORS.textMuted }}>
+                            {form.auto_reply_pdf_name || form.auto_reply_pdf || 'Keine Datei ausgewählt'}
+                          </span>
+                        </div>
                         {pdfUploading && <div className="mt-2 text-xs" style={{ color: COLORS.accent }}>PDF wird hochgeladen …</div>}
                       </div>
                     </>
