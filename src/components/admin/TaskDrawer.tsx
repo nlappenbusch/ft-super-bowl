@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { X, Plus, Trash2, Check, Paperclip, Download } from 'lucide-react';
+import { X, Plus, Trash2, Check, Paperclip, Download, Clock } from 'lucide-react';
 import { Button, TextArea, Spinner, Badge, COLORS } from './ui';
 
 interface Task {
@@ -14,9 +14,16 @@ interface Task {
 }
 interface Subtask { id: string; title: string; done: number }
 interface Att { id: string; filename: string; mime: string; size: number }
+interface TimeEntry { id: string; minutes: number; note: string }
 
 const PRIO_TONE = { niedrig: 'muted', normal: 'info', hoch: 'danger' } as const;
 const STATUS_LABEL = { offen: 'Offen', in_arbeit: 'In Arbeit', erledigt: 'Erledigt' } as const;
+
+function fmtMin(m: number): string {
+  if (!m) return '0 min';
+  const h = Math.floor(m / 60), mm = m % 60;
+  return h ? `${h}h ${mm}min` : `${mm} min`;
+}
 
 export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; onClose: () => void; onChanged?: () => void }) {
   const [desc, setDesc] = useState(task.description || '');
@@ -27,6 +34,10 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
   const [atts, setAtts] = useState<Att[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [mins, setMins] = useState('');
+  const [timeNote, setTimeNote] = useState('');
+  const [times, setTimes] = useState<TimeEntry[]>([]);
+  const [totalMin, setTotalMin] = useState(0);
 
   const loadSubs = () => {
     setLoading(true);
@@ -39,7 +50,10 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
   const loadAtts = () => {
     fetch(`/api/admin/tasks/${task.id}/attachments`).then((r) => r.json()).then((r) => { if (r.success) setAtts(r.data); }).catch(() => {});
   };
-  useEffect(() => { loadSubs(); loadAtts(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [task.id]);
+  const loadTimes = () => {
+    fetch(`/api/admin/tasks/${task.id}/time`).then((r) => r.json()).then((r) => { if (r.success) { setTimes(r.data.entries); setTotalMin(r.data.totalMinutes); } }).catch(() => {});
+  };
+  useEffect(() => { loadSubs(); loadAtts(); loadTimes(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [task.id]);
 
   const saveDesc = async () => {
     setSavingDesc(true);
@@ -81,6 +95,18 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
   const delAtt = async (a: Att) => {
     setAtts((prev) => prev.filter((x) => x.id !== a.id));
     await fetch(`/api/admin/tasks/${task.id}/attachments?attId=${encodeURIComponent(a.id)}`, { method: 'DELETE' });
+  };
+  const bookTime = async () => {
+    const m = Math.round(Number(mins));
+    if (!m || m <= 0) return;
+    setMins(''); setTimeNote('');
+    await fetch(`/api/admin/tasks/${task.id}/time`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ minutes: m, note: timeNote }) });
+    loadTimes();
+  };
+  const delTime = async (t: TimeEntry) => {
+    setTimes((prev) => prev.filter((x) => x.id !== t.id));
+    await fetch(`/api/admin/tasks/${task.id}/time?entryId=${encodeURIComponent(t.id)}`, { method: 'DELETE' });
+    loadTimes();
   };
 
   const doneCount = subs.filter((s) => s.done).length;
@@ -174,6 +200,30 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
                     <span className="truncate">{a.filename}</span>
                   </a>
                   <button onClick={() => delAtt(a)} className="opacity-0 transition group-hover:opacity-100" title="Löschen"><Trash2 className="h-3.5 w-3.5" style={{ color: COLORS.textMuted }} /></button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Zeit */}
+        <div className="mt-6">
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-xs font-semibold" style={{ color: COLORS.textMuted }}>Zeit</label>
+            <span className="text-xs font-bold tabular-nums" style={{ color: COLORS.navy }}>{fmtMin(totalMin)} gebucht</span>
+          </div>
+          <div className="flex gap-2">
+            <input type="number" min={1} value={mins} onChange={(e) => setMins(e.target.value)} placeholder="Min" className="w-20 rounded-lg border px-3 py-1.5 text-sm focus:outline-none" style={{ borderColor: COLORS.stroke }} />
+            <input value={timeNote} onChange={(e) => setTimeNote(e.target.value)} placeholder="Notiz (optional)" className="flex-1 rounded-lg border px-3 py-1.5 text-sm focus:outline-none" style={{ borderColor: COLORS.stroke }} />
+            <Button size="sm" variant="secondary" onClick={bookTime} disabled={!mins || Number(mins) <= 0}><Clock className="h-4 w-4" /></Button>
+          </div>
+          {times.length > 0 && (
+            <div className="mt-2 space-y-1 text-xs">
+              {times.map((t) => (
+                <div key={t.id} className="group flex items-center gap-2">
+                  <span className="tabular-nums font-semibold" style={{ color: COLORS.navy }}>{fmtMin(t.minutes)}</span>
+                  <span className="flex-1 truncate" style={{ color: COLORS.textMuted }}>{t.note}</span>
+                  <button onClick={() => delTime(t)} className="opacity-0 transition group-hover:opacity-100" title="Löschen"><Trash2 className="h-3 w-3" style={{ color: COLORS.textMuted }} /></button>
                 </div>
               ))}
             </div>
