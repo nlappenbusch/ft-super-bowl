@@ -428,3 +428,30 @@ export async function listStaffTasks(filter?: { assignee_id?: string; status?: s
     ORDER BY CASE status WHEN 'erledigt' THEN 1 ELSE 0 END, due_date IS NULL, due_date, created_at DESC`;
   return dbAll<StaffTask>(sql, params);
 }
+
+export interface Subtask {
+  id: string;
+  task_id: string;
+  title: string;
+  done: number;
+  sort_order: number;
+  created_at: string;
+}
+
+export async function listSubtasks(taskId: string): Promise<Subtask[]> {
+  return dbAll<Subtask>('SELECT * FROM staff_task_subtasks WHERE task_id = ? ORDER BY sort_order, created_at', [taskId]);
+}
+
+export async function addSubtask(taskId: string, title: string): Promise<Subtask> {
+  const id = crypto.randomUUID();
+  await dbRun('INSERT INTO staff_task_subtasks (id, task_id, title) VALUES (?, ?, ?)', [id, taskId, title]);
+  return (await dbGet<Subtask>('SELECT * FROM staff_task_subtasks WHERE id = ?', [id]))!;
+}
+
+export async function setSubtaskDone(id: string, done: boolean): Promise<boolean> {
+  return (await dbRun('UPDATE staff_task_subtasks SET done = ? WHERE id = ?', [done ? 1 : 0, id])).changes > 0;
+}
+
+export async function deleteSubtask(id: string): Promise<boolean> {
+  return (await dbRun('DELETE FROM staff_task_subtasks WHERE id = ?', [id])).changes > 0;
+}

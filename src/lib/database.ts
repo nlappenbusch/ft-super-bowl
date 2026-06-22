@@ -276,6 +276,16 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_vacation_requests_employee ON vacation_requests(employee_id, start_date);
     CREATE INDEX IF NOT EXISTS idx_staff_tasks_assignee ON staff_tasks(assignee_id, status);
 
+    CREATE TABLE IF NOT EXISTS staff_task_subtasks (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      done INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_subtasks_task ON staff_task_subtasks(task_id);
+
     CREATE TABLE IF NOT EXISTS tippspiel_users (
       id TEXT PRIMARY KEY,
       email TEXT NOT NULL UNIQUE,

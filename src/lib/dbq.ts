@@ -243,6 +243,15 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
       )`);
       await pool.query(`ALTER TABLE incentive_plans ADD COLUMN IF NOT EXISTS error text NOT NULL DEFAULT ''`);
       await pool.query(`ALTER TABLE incentive_plans ADD COLUMN IF NOT EXISTS progress text NOT NULL DEFAULT ''`);
+      await pool.query(`CREATE TABLE IF NOT EXISTS staff_task_subtasks (
+        id text PRIMARY KEY,
+        task_id text NOT NULL,
+        title text NOT NULL,
+        done integer NOT NULL DEFAULT 0,
+        sort_order integer NOT NULL DEFAULT 0,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_subtasks_task ON staff_task_subtasks(task_id)`);
     } catch (e) { console.warn('[pg] Portal-Schema:', (e as Error).message); }
 
     // Defaults auf Timestamp-Spalten (damit Inserts ohne created_at/updated_at funktionieren)
