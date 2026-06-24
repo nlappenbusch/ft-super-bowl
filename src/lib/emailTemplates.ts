@@ -304,7 +304,18 @@ export function autoReplyHtml(input: AutoReplyInput): string {
     <div style="font-size:15px;line-height:1.7;color:#374151;">${bodyHtml}</div>
     ${portalCtaHtml({ withNote: true })}`;
 
-  return layout(inner, (input.message || '').slice(0, 120));
+  // Preheader (Inbox-Vorschau) aus dem BEREITS gerenderten Text bilden – sonst
+  // erscheinen die {{…}}-Platzhalter unersetzt in der Gmail-/Client-Vorschau.
+  // rendered ist HTML-escaped → für den Preheader zurück-entschärfen (layout() escaped erneut).
+  const preheader = rendered
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120);
+
+  return layout(inner, preheader);
 }
 
 export interface InternalNotificationInput {
