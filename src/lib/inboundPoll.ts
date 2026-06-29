@@ -11,7 +11,8 @@
  */
 import { listInboxMessages, markMessageRead, isGraphConfigured, getMailbox } from './graphMailer';
 import { findBookingByRequestNumber, graphMessageExists, addMessage } from './bookingStore';
-import { parseRequestNumber } from './emailTemplates';
+import { findTaskByTicketNumber, taskGraphMessageExists, addTaskMessage } from './staffStore';
+import { parseRequestNumber, parseTicketNumber } from './emailTemplates';
 
 /**
  * Entfernt den zitierten Original-Verlauf aus einer eingehenden Antwort, sodass
@@ -74,34 +75,62 @@ export async function runInboundPoll(): Promise<InboundPollResult> {
       continue;
     }
     const rq = parseRequestNumber(m.subject) || parseRequestNumber(m.bodyPreview);
-    if (!rq) {
+    const ticketNo = parseTicketNumber(m.subject) || parseTicketNumber(m.bodyPreview);
+    if (!rq && !ticketNo) {
       unmatched.push(m.subject);
       continue;
     }
 
-    if (await graphMessageExists(m.id)) {
-      skipped++;
-      await markMessageRead(m.id);
-      continue;
+    // 1) Anfrage (RQ) hat Vorrang — bestehendes CRM-Threading.
+    if (rq) {
+      if (await graphMessageExists(m.id)) {
+        skipped++;
+        await markMessageRead(m.id);
+        continue;
+      }
+      const booking = await findBookingByRequestNumber(rq);
+      if (booking) {
+        await addMessage({
+          booking_id: (booking as { id: string }).id,
+          direction: 'in',
+          from_email: m.fromAddress,
+          to_email: '',
+          subject: m.subject,
+          body: stripQuotedReply(m.bodyHtml || m.bodyPreview),
+          graph_message_id: m.id,
+        });
+        await markMessageRead(m.id);
+        matched++;
+        continue;
+      }
+      // RQ im Betreff, aber keine passende Buchung → ggf. Ticket prüfen.
     }
 
-    const booking = await findBookingByRequestNumber(rq);
-    if (!booking) {
-      unmatched.push(`${rq}: ${m.subject}`);
-      continue;
+    // 2) Ticket (TASK-xxxxx) — Antwort dem internen Ticket zuordnen.
+    if (ticketNo) {
+      if (await taskGraphMessageExists(m.id)) {
+        skipped++;
+        await markMessageRead(m.id);
+        continue;
+      }
+      const task = await findTaskByTicketNumber(ticketNo);
+      if (task) {
+        await addTaskMessage({
+          task_id: task.id,
+          direction: 'in',
+          from_email: m.fromAddress,
+          to_email: '',
+          subject: m.subject,
+          body: stripQuotedReply(m.bodyHtml || m.bodyPreview),
+          graph_message_id: m.id,
+        });
+        await markMessageRead(m.id);
+        matched++;
+        continue;
+      }
     }
 
-    await addMessage({
-      booking_id: (booking as { id: string }).id,
-      direction: 'in',
-      from_email: m.fromAddress,
-      to_email: '',
-      subject: m.subject,
-      body: stripQuotedReply(m.bodyHtml || m.bodyPreview),
-      graph_message_id: m.id,
-    });
-    await markMessageRead(m.id);
-    matched++;
+    unmatched.push(`${rq || `TASK-${ticketNo}`}: ${m.subject}`);
   }
 
   return { success: true, configured: true, scanned: messages.length, matched, skipped, unmatched };

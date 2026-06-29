@@ -5,7 +5,7 @@
  * Läuft über die Backend-Abstraktion `dbq` (SQLite ODER Postgres je nach DB_BACKEND).
  * ─────────────────────────────────────────────────────────────────────────────
  */
-import { dbGet, dbAll, dbRun } from './dbq';
+import { dbGet, dbAll, dbRun, withTx } from './dbq';
 import './database';
 import {
   WeeklyHours, DEFAULT_WEEKLY_HOURS,
@@ -373,6 +373,7 @@ export async function vacationPlanner(year: number) {
 
 export interface StaffTask {
   id: string;
+  ticket_number: number | null;
   created_at: string;
   updated_at: string;
   title: string;
@@ -385,15 +386,31 @@ export interface StaffTask {
   created_by: string | null;
 }
 
+/** Formatiert die fortlaufende Ticketnummer, z.B. 10 → "TASK-00010". */
+export function formatTicketNo(n: number | null | undefined): string {
+  if (!n || n <= 0) return '';
+  return `TASK-${String(n).padStart(5, '0')}`;
+}
+
 export async function createStaffTask(input: Partial<StaffTask> & { title: string }): Promise<StaffTask> {
   const id = crypto.randomUUID();
-  await dbRun(`
-    INSERT INTO staff_tasks (id, title, description, assignee_id, booking_id, due_date, priority, status, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [id, input.title, input.description || '', input.assignee_id || null,
-    input.booking_id || null, input.due_date || null,
-    input.priority || 'normal', input.status || 'offen', input.created_by || null]);
+  // Fortlaufende Ticketnummer atomar vergeben (ab 10). withTx = echte Transaktion in PG.
+  await withTx(async (q) => {
+    const row = await q.get<{ n: number }>(`SELECT COALESCE(MAX(ticket_number), 9) + 1 AS n FROM staff_tasks`);
+    const next = row?.n ?? 10;
+    await q.run(`
+      INSERT INTO staff_tasks (id, ticket_number, title, description, assignee_id, booking_id, due_date, priority, status, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [id, next, input.title, input.description || '', input.assignee_id || null,
+      input.booking_id || null, input.due_date || null,
+      input.priority || 'normal', input.status || 'offen', input.created_by || null]);
+  });
   return (await dbGet<StaffTask>('SELECT * FROM staff_tasks WHERE id = ?', [id]))!;
+}
+
+/** Findet ein Ticket über seine fortlaufende Nummer (für Inbound-Mail-Zuordnung). */
+export async function findTaskByTicketNumber(n: number): Promise<StaffTask | null> {
+  return (await dbGet<StaffTask>('SELECT * FROM staff_tasks WHERE ticket_number = ?', [n])) ?? null;
 }
 
 export async function updateStaffTask(id: string, u: Partial<StaffTask>): Promise<StaffTask | null> {
@@ -411,6 +428,10 @@ export async function updateStaffTask(id: string, u: Partial<StaffTask>): Promis
     u.due_date !== undefined ? u.due_date : cur.due_date,
     u.priority ?? cur.priority, u.status ?? cur.status, id,
   ]);
+  return (await dbGet<StaffTask>('SELECT * FROM staff_tasks WHERE id = ?', [id])) ?? null;
+}
+
+export async function getStaffTask(id: string): Promise<StaffTask | null> {
   return (await dbGet<StaffTask>('SELECT * FROM staff_tasks WHERE id = ?', [id])) ?? null;
 }
 
@@ -490,11 +511,12 @@ export interface TaskTime {
   employee_id: string | null;
   minutes: number;
   note: string;
+  work_date: string;
   created_at: string;
 }
 
 export async function listTaskTime(taskId: string): Promise<TaskTime[]> {
-  return dbAll<TaskTime>('SELECT * FROM task_time WHERE task_id = ? ORDER BY created_at DESC', [taskId]);
+  return dbAll<TaskTime>('SELECT * FROM task_time WHERE task_id = ? ORDER BY work_date DESC, created_at DESC', [taskId]);
 }
 
 export async function sumTaskMinutes(taskId: string): Promise<number> {
@@ -502,12 +524,57 @@ export async function sumTaskMinutes(taskId: string): Promise<number> {
   return r?.total ?? 0;
 }
 
-export async function addTaskTime(taskId: string, minutes: number, note?: string, employeeId?: string | null): Promise<TaskTime> {
+export async function addTaskTime(taskId: string, minutes: number, note?: string, employeeId?: string | null, workDate?: string): Promise<TaskTime> {
   const id = crypto.randomUUID();
-  await dbRun('INSERT INTO task_time (id, task_id, employee_id, minutes, note) VALUES (?, ?, ?, ?, ?)', [id, taskId, employeeId || null, minutes, note || '']);
+  const date = workDate || nowLocal().date; // Standard: heutiges Datum (Europe/Zurich)
+  await dbRun('INSERT INTO task_time (id, task_id, employee_id, minutes, note, work_date) VALUES (?, ?, ?, ?, ?, ?)', [id, taskId, employeeId || null, minutes, note || '', date]);
   return (await dbGet<TaskTime>('SELECT * FROM task_time WHERE id = ?', [id]))!;
 }
 
 export async function deleteTaskTime(id: string): Promise<boolean> {
   return (await dbRun('DELETE FROM task_time WHERE id = ?', [id])).changes > 0;
+}
+
+// ==================== TASK MESSAGES (Mail-Verlauf pro Ticket) ====================
+
+export interface TaskMessage {
+  id: string;
+  task_id: string;
+  direction: 'in' | 'out' | 'note';
+  from_email: string;
+  to_email: string;
+  subject: string;
+  body: string;
+  graph_message_id: string | null;
+  created_at: string;
+  created_by: string;
+}
+
+export async function listTaskMessages(taskId: string): Promise<TaskMessage[]> {
+  return dbAll<TaskMessage>('SELECT * FROM task_messages WHERE task_id = ? ORDER BY created_at ASC', [taskId]);
+}
+
+export async function addTaskMessage(m: {
+  task_id: string;
+  direction: 'in' | 'out' | 'note';
+  from_email?: string;
+  to_email?: string;
+  subject?: string;
+  body?: string;
+  graph_message_id?: string | null;
+  created_by?: string;
+}): Promise<TaskMessage> {
+  const id = crypto.randomUUID();
+  await dbRun(
+    `INSERT INTO task_messages (id, task_id, direction, from_email, to_email, subject, body, graph_message_id, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, m.task_id, m.direction, m.from_email || '', m.to_email || '', m.subject || '', m.body || '', m.graph_message_id || null, m.created_by || ''],
+  );
+  return (await dbGet<TaskMessage>('SELECT * FROM task_messages WHERE id = ?', [id]))!;
+}
+
+/** Prüft, ob eine eingehende Graph-Nachricht bereits einem Ticket zugeordnet wurde (Dedupe). */
+export async function taskGraphMessageExists(graphMessageId: string): Promise<boolean> {
+  const r = await dbGet<{ id: string }>('SELECT id FROM task_messages WHERE graph_message_id = ?', [graphMessageId]);
+  return !!r;
 }

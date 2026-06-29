@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Faltin Travel – Event Shortcodes
  * Description: SEO-freundliche, serverseitig gerenderte Event-Karten + natives Anfrageformular. Shortcodes: [faltin_events serie="..."], [faltin_event event="..."], [faltin_anfrage event="..."].
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Faltin Travel AG
  *
  * Die Inhalte werden serverseitig per REST-API geladen (wp_remote_get) und als
@@ -243,6 +243,10 @@ function faltin_anfrage_styles() {
 .ft-af input::placeholder,.ft-af textarea::placeholder{color:#9ca3af!important}
 .ft-af select{cursor:pointer;height:46px}
 .ft-af textarea{min-height:110px;resize:vertical}
+.ft-af-consent{display:flex!important;align-items:flex-start;gap:10px;margin:0 0 16px;cursor:pointer;font-size:12px!important;font-weight:400!important;line-height:1.5;color:#6b7280!important;background:transparent!important}
+.ft-af-consent input[type=checkbox]{width:16px!important;height:16px!important;min-width:16px;margin:1px 0 0!important;padding:0!important;border-radius:4px!important;accent-color:#143047;cursor:pointer;box-shadow:none!important;flex:none}
+.ft-af-consent span{color:#6b7280!important;background:transparent!important;text-shadow:none!important}
+.ft-af-consent a{color:#143047!important;font-weight:700;text-decoration:underline;background:transparent!important}
 .ft-af-btn{width:100%;border:none;cursor:pointer;background:#d9531e;color:#fff!important;font-size:15px;font-weight:800;padding:14px 20px;border-radius:12px;transition:opacity .15s;font-family:inherit}
 .ft-af-btn:hover{opacity:.92}
 .ft-af-btn:disabled{opacity:.6;cursor:wait}
@@ -292,7 +296,7 @@ function faltin_anfrage_shortcode($atts) {
     $check_icon = '<svg class="ft-af-check" style="color:#2ecc71 !important" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
 
     ob_start(); ?>
-    <div class="ft-af" id="<?php echo esc_attr($id); ?>" data-ftv="1.1.0">
+    <div class="ft-af" id="<?php echo esc_attr($id); ?>" data-ftv="1.2.0">
       <div class="ft-af-main">
         <div class="ft-af-head">
           <h3><?php echo $mail_icon; ?> <?php echo esc_html($atts['title']); ?></h3>
@@ -318,6 +322,10 @@ function faltin_anfrage_shortcode($atts) {
           <div class="ft-af-field"><label <?php echo $lbl; ?>>E-Mail <span style="color:#d9531e !important">*</span></label><input <?php echo $inp; ?> type="email" name="email" placeholder="max@example.com" autocomplete="email" required></div>
           <div class="ft-af-field"><label <?php echo $lbl; ?>>Telefon <span style="color:#d9531e !important">*</span></label><input <?php echo $inp; ?> type="tel" name="phone" placeholder="+41 79 123 45 67" autocomplete="tel" required></div>
           <div class="ft-af-field"><label <?php echo $lbl; ?>>Nachricht / Wunsch</label><textarea <?php echo $inp; ?> name="message" placeholder="Ich interessiere mich für… (Reisezeitraum, Personenanzahl, besondere Wünsche)"></textarea></div>
+          <label class="ft-af-consent">
+            <input type="checkbox" name="consent">
+            <span>Ich habe die <a href="https://faltintravel.com/allgemeine-geschaeftsbedingungen/" target="_blank" rel="noopener noreferrer">AGB</a> und die <a href="https://faltintravel.com/datenschutzerklaerung/" target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a> gelesen und stimme diesen zu. <span style="color:#d9531e !important">*</span></span>
+          </label>
           <button type="button" class="ft-af-btn" style="color:#fff !important;background:#d9531e !important">Unverbindlich anfragen</button>
           <p class="ft-af-trust" style="color:#9ca3af !important;background:transparent !important">✓ Kostenlos &amp; unverbindlich &nbsp;·&nbsp; ✓ Antwort innerhalb 24h &nbsp;·&nbsp; ✓ Schweizer Reisegarantie</p>
         </div>
@@ -344,6 +352,12 @@ function faltin_anfrage_shortcode($atts) {
           err.style.display = 'block';
           return;
         }
+        var consentEl = root.querySelector('[name="consent"]');
+        if (!consentEl || !consentEl.checked) {
+          err.textContent = 'Bitte stimmen Sie den AGB und der Datenschutzerklärung zu.';
+          err.style.display = 'block';
+          return;
+        }
         btn.disabled = true;
         btn.textContent = 'Wird gesendet…';
         fetch(<?php echo wp_json_encode($api); ?>, {
@@ -363,7 +377,8 @@ function faltin_anfrage_shortcode($atts) {
             email: val('email'),
             phone: val('phone'),
             message: val('message'),
-            totalPrice: 0
+            totalPrice: 0,
+            consent: true
           })
         }).then(function(r){ return r.json(); }).then(function(d){
           if (d.success) {

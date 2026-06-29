@@ -361,7 +361,8 @@ export default function BookingForm() {
           email: data.email,
           phone: data.phone,
           message: data.message,
-          totalPrice: calculateTotal()
+          totalPrice: calculateTotal(),
+          consent: data.acceptTerms && data.acceptPrivacy
         }),
       });
 

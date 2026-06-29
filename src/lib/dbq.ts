@@ -271,9 +271,36 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
         employee_id text,
         minutes integer NOT NULL DEFAULT 0,
         note text NOT NULL DEFAULT '',
+        work_date text NOT NULL DEFAULT '',
         created_at timestamptz NOT NULL DEFAULT now()
       )`);
+      await pool.query(`ALTER TABLE task_time ADD COLUMN IF NOT EXISTS work_date text NOT NULL DEFAULT ''`);
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_task_time_task ON task_time(task_id)`);
+
+      // Ticket-System: fortlaufende Ticketnummer + Mail-Verlauf
+      await pool.query(`ALTER TABLE staff_tasks ADD COLUMN IF NOT EXISTS ticket_number integer`);
+      await pool.query(`CREATE TABLE IF NOT EXISTS task_messages (
+        id text PRIMARY KEY,
+        task_id text NOT NULL,
+        direction text NOT NULL DEFAULT 'out',
+        from_email text NOT NULL DEFAULT '',
+        to_email text NOT NULL DEFAULT '',
+        subject text NOT NULL DEFAULT '',
+        body text NOT NULL DEFAULT '',
+        graph_message_id text,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        created_by text NOT NULL DEFAULT ''
+      )`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_task_messages_task ON task_messages(task_id)`);
+      // Backfill: bestehende Tasks ohne Nummer fortlaufend ab 10 nummerieren.
+      await pool.query(`
+        WITH ordered AS (
+          SELECT id, ROW_NUMBER() OVER (ORDER BY created_at, id)
+                 + COALESCE((SELECT MAX(ticket_number) FROM staff_tasks), 9) AS rn
+          FROM staff_tasks WHERE ticket_number IS NULL
+        )
+        UPDATE staff_tasks t SET ticket_number = ordered.rn FROM ordered WHERE t.id = ordered.id
+      `);
     } catch (e) { console.warn('[pg] Portal-Schema:', (e as Error).message); }
 
     // Defaults auf Timestamp-Spalten (damit Inserts ohne created_at/updated_at funktionieren)

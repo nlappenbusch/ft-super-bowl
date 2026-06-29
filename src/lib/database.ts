@@ -262,6 +262,7 @@ export function initDatabase() {
 
     CREATE TABLE IF NOT EXISTS staff_tasks (
       id TEXT PRIMARY KEY,
+      ticket_number INTEGER,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       title TEXT NOT NULL,
@@ -306,9 +307,24 @@ export function initDatabase() {
       employee_id TEXT,
       minutes INTEGER NOT NULL DEFAULT 0,
       note TEXT NOT NULL DEFAULT '',
+      work_date TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_task_time_task ON task_time(task_id);
+
+    CREATE TABLE IF NOT EXISTS task_messages (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      direction TEXT NOT NULL DEFAULT 'out' CHECK(direction IN ('in','out','note')),
+      from_email TEXT NOT NULL DEFAULT '',
+      to_email TEXT NOT NULL DEFAULT '',
+      subject TEXT NOT NULL DEFAULT '',
+      body TEXT NOT NULL DEFAULT '',
+      graph_message_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_by TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX IF NOT EXISTS idx_task_messages_task ON task_messages(task_id);
 
     CREATE TABLE IF NOT EXISTS tippspiel_users (
       id TEXT PRIMARY KEY,
@@ -389,6 +405,22 @@ export function initDatabase() {
   if (ccols.length && !ccols.some((c) => c.name === 'salutation')) addColumn('customers', "salutation TEXT DEFAULT ''");
   if (ccols.length && !ccols.some((c) => c.name === 'first_name')) addColumn('customers', "first_name TEXT DEFAULT ''");
   if (ccols.length && !ccols.some((c) => c.name === 'last_name')) addColumn('customers', "last_name TEXT DEFAULT ''");
+
+  // Ticket-System: fortlaufende Ticketnummer + Zeit-Datum (Bestands-DBs nachrüsten)
+  const stcols = sqlite.prepare(`PRAGMA table_info(staff_tasks)`).all() as Array<{ name: string }>;
+  if (stcols.length && !stcols.some((c) => c.name === 'ticket_number')) addColumn('staff_tasks', 'ticket_number INTEGER');
+  const ttcols = sqlite.prepare(`PRAGMA table_info(task_time)`).all() as Array<{ name: string }>;
+  if (ttcols.length && !ttcols.some((c) => c.name === 'work_date')) addColumn('task_time', "work_date TEXT NOT NULL DEFAULT ''");
+  // Backfill: bestehende Tasks ohne Nummer fortlaufend ab 10 nummerieren (nach Erstellzeit).
+  try {
+    const missing = sqlite.prepare(`SELECT id FROM staff_tasks WHERE ticket_number IS NULL ORDER BY created_at, id`).all() as Array<{ id: string }>;
+    if (missing.length) {
+      const startRow = sqlite.prepare(`SELECT COALESCE(MAX(ticket_number), 9) AS m FROM staff_tasks`).get() as { m: number };
+      let n = startRow.m;
+      const upd = sqlite.prepare(`UPDATE staff_tasks SET ticket_number = ? WHERE id = ?`);
+      for (const r of missing) { n += 1; upd.run(n, r.id); }
+    }
+  } catch { /* staff_tasks evtl. (noch) leer */ }
 
   sqlite.prepare(`INSERT OR IGNORE INTO counters (name, value) VALUES ('request_number', 10000)`).run();
   sqlite.prepare(`INSERT OR IGNORE INTO counters (name, value) VALUES ('booking_number', 1000)`).run();
