@@ -292,9 +292,9 @@ export default function EventContactForm({ eventSlug, eventName, events, matchOp
           />
           <span className="text-xs text-gray-600 leading-relaxed">
             Ich habe die{' '}
-            <a href="/agb" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: '#143047' }} onClick={(e) => e.stopPropagation()}>AGB</a>
+            <a href="https://faltintravel.com/allgemeine-geschaeftsbedingungen/" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: '#143047' }} onClick={(e) => e.stopPropagation()}>AGB</a>
             {' '}und die{' '}
-            <a href="/datenschutz" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: '#143047' }} onClick={(e) => e.stopPropagation()}>Datenschutzerklärung</a>
+            <a href="https://faltintravel.com/datenschutzerklaerung/" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: '#143047' }} onClick={(e) => e.stopPropagation()}>Datenschutzerklärung</a>
             {' '}gelesen und stimme diesen zu. *
           </span>
         </label>

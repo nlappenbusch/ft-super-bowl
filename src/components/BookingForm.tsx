@@ -778,7 +778,7 @@ export default function BookingForm() {
                     <label className='flex items-start gap-3 cursor-pointer'>
                       <input type='checkbox' {...register('acceptTerms', { required: true })} style={{ accentColor: '#184a7b' }} className='mt-1 w-4 h-4 border-gray-300 rounded' />
                       <span className='text-sm text-gray-700'>
-                        Ich habe die <a href='/agb' target='_blank' rel='noopener noreferrer' style={{ color: '#184a7b' }} className='hover:underline font-semibold' onClick={(e) => e.stopPropagation()}>Allgemeinen Geschäftsbedingungen (AGB)</a> gelesen und akzeptiere diese. *
+                        Ich habe die <a href='https://faltintravel.com/allgemeine-geschaeftsbedingungen/' target='_blank' rel='noopener noreferrer' style={{ color: '#184a7b' }} className='hover:underline font-semibold' onClick={(e) => e.stopPropagation()}>Allgemeinen Geschäftsbedingungen (AGB)</a> gelesen und akzeptiere diese. *
                       </span>
                     </label>
                     {errors.acceptTerms && <span className='text-red-500 text-sm block ml-7'>Pflichtfeld</span>}
@@ -786,7 +786,7 @@ export default function BookingForm() {
                     <label className='flex items-start gap-3 cursor-pointer'>
                       <input type='checkbox' {...register('acceptPrivacy', { required: true })} style={{ accentColor: '#184a7b' }} className='mt-1 w-4 h-4 border-gray-300 rounded' />
                       <span className='text-sm text-gray-700'>
-                        Ich habe die <a href='/datenschutz' target='_blank' rel='noopener noreferrer' style={{ color: '#184a7b' }} className='hover:underline font-semibold' onClick={(e) => e.stopPropagation()}>Datenschutzerklärung</a> gelesen und akzeptiere diese. *
+                        Ich habe die <a href='https://faltintravel.com/datenschutzerklaerung/' target='_blank' rel='noopener noreferrer' style={{ color: '#184a7b' }} className='hover:underline font-semibold' onClick={(e) => e.stopPropagation()}>Datenschutzerklärung</a> gelesen und akzeptiere diese. *
                       </span>
                     </label>
                     {errors.acceptPrivacy && <span className='text-red-500 text-sm block ml-7'>Pflichtfeld</span>}
