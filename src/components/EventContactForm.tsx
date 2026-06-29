@@ -34,6 +34,7 @@ export default function EventContactForm({ eventSlug, eventName, events, matchOp
     phone: '',
     message: '',
   });
+  const [accepted, setAccepted] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [requestNumber, setRequestNumber] = useState<string | null>(null);
@@ -48,6 +49,10 @@ export default function EventContactForm({ eventSlug, eventName, events, matchOp
     e.preventDefault();
     if (!form.email || !form.phone) {
       setError('Bitte E-Mail und Telefonnummer angeben.');
+      return;
+    }
+    if (!accepted) {
+      setError('Bitte stimmen Sie den AGB und der Datenschutzerklärung zu.');
       return;
     }
     setSending(true);
@@ -76,6 +81,7 @@ export default function EventContactForm({ eventSlug, eventName, events, matchOp
           phone: form.phone,
           message: match ? `Wunschspiel: ${match}\n\n${form.message}`.trim() : form.message,
           totalPrice: 0,
+          consent: true,
         }),
       });
       const data = await res.json();
@@ -276,13 +282,30 @@ export default function EventContactForm({ eventSlug, eventName, events, matchOp
           />
         </div>
 
+        <label className="flex items-start gap-3 cursor-pointer pt-1">
+          <input
+            type="checkbox"
+            checked={accepted}
+            onChange={(e) => setAccepted(e.target.checked)}
+            style={{ accentColor: '#143047' }}
+            className="mt-0.5 w-4 h-4 shrink-0 border-gray-300 rounded"
+          />
+          <span className="text-xs text-gray-600 leading-relaxed">
+            Ich habe die{' '}
+            <a href="/agb" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: '#143047' }} onClick={(e) => e.stopPropagation()}>AGB</a>
+            {' '}und die{' '}
+            <a href="/datenschutz" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: '#143047' }} onClick={(e) => e.stopPropagation()}>Datenschutzerklärung</a>
+            {' '}gelesen und stimme diesen zu. *
+          </span>
+        </label>
+
         {error && (
           <p className="text-red-600 text-sm bg-red-50 rounded-lg px-3 py-2 border border-red-200">{error}</p>
         )}
 
         <button
           type="submit"
-          disabled={sending}
+          disabled={sending || !accepted}
           className="w-full flex items-center justify-center gap-2 text-white font-bold py-3.5 px-6 rounded-lg text-base transition-all hover:opacity-90 disabled:opacity-60"
           style={{ background: '#d9531e', boxShadow: '0 4px 12px rgba(217,83,30,0.25)' }}
         >

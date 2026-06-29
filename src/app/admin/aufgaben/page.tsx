@@ -12,6 +12,7 @@ import TaskDrawer from '@/components/admin/TaskDrawer';
 
 interface StaffTask {
   id: string;
+  ticket_number: number | null;
   title: string;
   description: string;
   assignee_id: string | null;
@@ -20,6 +21,10 @@ interface StaffTask {
   priority: 'niedrig' | 'normal' | 'hoch';
   status: 'offen' | 'in_arbeit' | 'erledigt';
   created_by: string | null;
+}
+
+function ticketNo(n: number | null): string {
+  return n && n > 0 ? `TASK-${String(n).padStart(5, '0')}` : '';
 }
 
 interface EmployeeLite { id: string; name: string }
@@ -78,6 +83,9 @@ function TaskCard({
               <GripVertical className="h-4 w-4" style={{ color: COLORS.textMuted }} />
             </span>
             <div className="min-w-0 cursor-pointer" onClick={() => onOpen(t)} title="Details öffnen">
+              {ticketNo(t.ticket_number) && (
+                <span className="mb-0.5 inline-block font-mono text-[10px] font-bold tracking-wide" style={{ color: COLORS.accent }}>{ticketNo(t.ticket_number)}</span>
+              )}
               <div className="font-semibold" style={{ color: COLORS.navy }}>{t.title}</div>
               {t.description && <p className="mt-1 text-xs" style={{ color: COLORS.textMuted }}>{t.description}</p>}
             </div>

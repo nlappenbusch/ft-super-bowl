@@ -53,6 +53,7 @@ export async function POST(request: Request) {
       totalPrice: body.totalPrice || 0
     });
 
+    const consent = !!body.consent;
     const firstTraveler = Array.isArray(body.travelers) ? body.travelers[0] : null;
     // Hauptbucher/Kontakt hat Vorrang vor erstem Reisenden.
     const firstName = body.firstName || firstTraveler?.firstName || firstTraveler?.first_name || body.email.split('@')[0];
@@ -118,7 +119,7 @@ export async function POST(request: Request) {
           subject = (event!.auto_reply_subject || '').trim() || autoReplySubjectDefault(eventName, requestNumber);
           // RQ-Tag fürs Threading anhängen, falls nicht bereits im Custom-Betreff enthalten.
           if (!/RQ-\d/i.test(subject)) subject = `${subject} ${subjectTag(requestNumber)}`;
-          html = autoReplyHtml({ message: event!.auto_reply_message || '', firstName, lastName, salutation, eventName, requestNumber });
+          html = autoReplyHtml({ message: event!.auto_reply_message || '', firstName, lastName, salutation, eventName, requestNumber, consent });
 
           if (event!.auto_reply_pdf) {
             const pdf = await readAutoReplyPdfBase64(event!.auto_reply_pdf);
@@ -135,7 +136,7 @@ export async function POST(request: Request) {
           }
         } else {
           subject = confirmationSubject(requestNumber, eventName);
-          html = confirmationEmailHtml({ firstName, lastName, salutation, requestNumber, eventName, message: body.message || '' });
+          html = confirmationEmailHtml({ firstName, lastName, salutation, requestNumber, eventName, message: body.message || '', consent });
         }
 
         const sendRes = await sendGraphMail({ to: body.email, toName: customerName, subject, html, attachments });
@@ -176,6 +177,7 @@ export async function POST(request: Request) {
           singleRooms: body.singleRooms,
           totalPrice: body.totalPrice,
           message: body.message || '',
+          consent,
         });
         const teamRes = await sendGraphMail({ to: getNotifyTo(), subject, html });
         mail.team = { success: teamRes.success, error: teamRes.error };

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getSessionEmployee } from '@/lib/serverSession';
 import { listTaskTime, addTaskTime, sumTaskMinutes, deleteTaskTime } from '@/lib/staffStore';
 
 /** GET → { entries, totalMinutes }. */
@@ -8,13 +9,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   return NextResponse.json({ success: true, data: { entries, totalMinutes } });
 }
 
-/** POST { minutes, note? } → Zeit buchen. */
+/** POST { minutes, note?, work_date? } → Zeit buchen (mit Datums-Stempel). */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
   const minutes = Math.round(Number(body?.minutes));
   if (!minutes || minutes <= 0) return NextResponse.json({ success: false, error: 'minutes > 0 erforderlich' }, { status: 400 });
-  const data = await addTaskTime(id, minutes, (body?.note || '').trim() || undefined);
+  const ctx = await getSessionEmployee();
+  const workDate = /^\d{4}-\d{2}-\d{2}$/.test(String(body?.work_date || '')) ? String(body.work_date) : undefined;
+  const data = await addTaskTime(id, minutes, (body?.note || '').trim() || undefined, ctx?.employee?.id ?? null, workDate);
   return NextResponse.json({ success: true, data });
 }
 

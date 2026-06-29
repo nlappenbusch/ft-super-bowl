@@ -33,6 +33,17 @@ export function parseRequestNumber(text: string): string | null {
   return m ? m[0].toUpperCase() : null;
 }
 
+/** Eindeutiger Betreff-Tag für die Ticket-Zuordnung, z.B. "[TASK-00010]". */
+export function taskSubjectTag(ticketNo: string): string {
+  return `[${ticketNo}]`;
+}
+
+/** Extrahiert die Ticketnummer aus einem Betreff/Text (z.B. "Re: … [TASK-00010]") → 10. */
+export function parseTicketNumber(text: string): number | null {
+  const m = text.match(/TASK-(\d{3,})/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+
 export function confirmationSubject(requestNumber: string, eventName?: string): string {
   const ev = eventName ? ` – ${eventName}` : '';
   return `Ihre Anfrage${ev} ${subjectTag(requestNumber)}`;
@@ -204,6 +215,21 @@ export function magicLinkEmailHtml(input: MagicLinkInput): string {
   return layout(inner, 'Ihr Login-Link zum Faltin Reiseportal');
 }
 
+/**
+ * Marken-Hinweis für Kundenmails: bestätigt die Zustimmung zu AGB & Datenschutz.
+ * Wird nur gerendert, wenn der Kunde im Formular zugestimmt hat.
+ */
+function consentNoticeHtml(consent?: boolean): string {
+  if (!consent) return '';
+  return `<p style="margin:18px 0 0;font-size:12px;line-height:1.6;color:#9ca3af;">
+      Mit dem Absenden Ihrer Anfrage haben Sie unseren
+      <a href="${baseUrl()}/agb" style="color:${ACCENT};text-decoration:none;">Allgemeinen Geschäftsbedingungen (AGB)</a>
+      und der
+      <a href="${baseUrl()}/datenschutz" style="color:${ACCENT};text-decoration:none;">Datenschutzerklärung</a>
+      zugestimmt.
+    </p>`;
+}
+
 export interface ConfirmationInput {
   firstName?: string;
   lastName?: string;
@@ -211,6 +237,7 @@ export interface ConfirmationInput {
   requestNumber: string;
   eventName?: string;
   message?: string;
+  consent?: boolean;
 }
 
 /** Fancy Bestätigungsmail an den Kunden ("Vielen Dank für Ihre Anfrage") */
@@ -257,7 +284,8 @@ export function confirmationEmailHtml(input: ConfirmationInput): string {
     <p style="margin:24px 0 0;font-size:15px;line-height:1.7;color:#374151;">
       Herzliche Grüße<br><strong style="color:${NAVY};">Ihr Faltin Travel Team</strong>
     </p>
-    ${portalCtaHtml({ withNote: true })}`;
+    ${portalCtaHtml({ withNote: true })}
+    ${consentNoticeHtml(input.consent)}`;
 
   return layout(inner, `Ihre Anfrage ${input.requestNumber} ist bei uns eingegangen.`);
 }
@@ -274,6 +302,7 @@ export interface AutoReplyInput extends RecipientInfo {
   message: string;
   eventName?: string;
   requestNumber?: string;
+  consent?: boolean;
 }
 
 /**
@@ -302,7 +331,8 @@ export function autoReplyHtml(input: AutoReplyInput): string {
   const inner = `
     ${greetingHtml}
     <div style="font-size:15px;line-height:1.7;color:#374151;">${bodyHtml}</div>
-    ${portalCtaHtml({ withNote: true })}`;
+    ${portalCtaHtml({ withNote: true })}
+    ${consentNoticeHtml(input.consent)}`;
 
   // Preheader (Inbox-Vorschau) aus dem BEREITS gerenderten Text bilden – sonst
   // erscheinen die {{…}}-Platzhalter unersetzt in der Gmail-/Client-Vorschau.
@@ -332,6 +362,7 @@ export interface InternalNotificationInput {
   totalPrice?: number;
   message?: string;
   adminUrl?: string;
+  consent?: boolean;
 }
 
 export function internalNotificationSubject(requestNumber: string, eventName?: string): string {
@@ -366,6 +397,7 @@ export function internalNotificationHtml(input: InternalNotificationInput): stri
       ${row('Personen', input.numberOfPersons)}
       ${row('Zimmer', rooms)}
       ${row('Richtpreis', price)}
+      ${input.consent ? `<tr><td style="padding:6px 0;font-size:13px;color:#6b7280;width:42%;">AGB & Datenschutz</td><td style="padding:6px 0;font-size:14px;font-weight:600;color:#16a34a;">✓ Zugestimmt (AGB &amp; Datenschutzerklärung)</td></tr>` : ''}
       ${messageBlock}
     </table>
     <p style="margin:22px 0 0;"><a href="${adminUrl}" style="display:inline-block;background:${ACCENT};color:#fff;font-size:14px;font-weight:700;text-decoration:none;padding:11px 22px;border-radius:10px;">Im CRM öffnen →</a></p>`;
@@ -395,4 +427,33 @@ export function replyEmailHtml(input: ReplyInput): string {
     ${portalCtaHtml()}`;
 
   return layout(inner, input.bodyText.slice(0, 120));
+}
+
+export interface TaskEmailInput {
+  bodyText: string;
+  ticketNo: string;       // z.B. "TASK-00010"
+  taskTitle?: string;
+  agentName?: string;
+}
+
+/**
+ * Marken-Hülle für eine vom Ticket aus gesendete Mail. Die Ticketnummer steht im
+ * Betreff (Threading) und als dezenter Hinweis im Footer, damit Antworten via
+ * Inbound-Polling automatisch dem Ticket zugeordnet werden.
+ */
+export function taskEmailHtml(input: TaskEmailInput): string {
+  const bodyHtml = escapeHtml(input.bodyText).replace(/\n/g, '<br>');
+  const signature = input.agentName ? escapeHtml(input.agentName) : 'Faltin Travel Team';
+  const inner = `
+    <p style="margin:0 0 4px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;">
+      Ticket ${escapeHtml(input.ticketNo)}${input.taskTitle ? ' · ' + escapeHtml(input.taskTitle) : ''}
+    </p>
+    <div style="margin:14px 0 0;font-size:15px;line-height:1.7;color:#374151;">${bodyHtml}</div>
+    <p style="margin:24px 0 0;font-size:15px;line-height:1.7;color:#374151;">
+      Herzliche Grüße<br><strong style="color:${NAVY};">${signature}</strong>
+    </p>
+    <p style="margin:22px 0 0;font-size:11px;line-height:1.6;color:#9ca3af;">
+      Bitte antworten Sie direkt auf diese Nachricht – die Kennung <strong>${escapeHtml(input.ticketNo)}</strong> im Betreff ordnet Ihre Antwort automatisch dem richtigen Vorgang zu.
+    </p>`;
+  return layout(inner, `${input.ticketNo}: ${input.bodyText.slice(0, 100)}`);
 }
