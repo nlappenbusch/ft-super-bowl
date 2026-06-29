@@ -223,9 +223,9 @@ function consentNoticeHtml(consent?: boolean): string {
   if (!consent) return '';
   return `<p style="margin:18px 0 0;font-size:12px;line-height:1.6;color:#9ca3af;">
       Mit dem Absenden Ihrer Anfrage haben Sie unseren
-      <a href="${baseUrl()}/agb" style="color:${ACCENT};text-decoration:none;">Allgemeinen Geschäftsbedingungen (AGB)</a>
+      <a href="https://faltintravel.com/allgemeine-geschaeftsbedingungen/" style="color:${ACCENT};text-decoration:none;">Allgemeinen Geschäftsbedingungen (AGB)</a>
       und der
-      <a href="${baseUrl()}/datenschutz" style="color:${ACCENT};text-decoration:none;">Datenschutzerklärung</a>
+      <a href="https://faltintravel.com/datenschutzerklaerung/" style="color:${ACCENT};text-decoration:none;">Datenschutzerklärung</a>
       zugestimmt.
     </p>`;
 }

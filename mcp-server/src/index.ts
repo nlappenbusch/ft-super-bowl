@@ -13,6 +13,30 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+import { readFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+/**
+ * Minimaler .env-Loader (ohne Abhängigkeit): liest mcp-server/.env relativ zum
+ * kompilierten Skript (dist/index.js → ../.env). Bereits gesetzte Variablen
+ * (z.B. aus der MCP-Client-Config) haben Vorrang.
+ */
+function loadDotEnv(): void {
+  try {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const path = join(here, '..', '.env');
+    if (!existsSync(path)) return;
+    for (const raw of readFileSync(path, 'utf8').split('\n')) {
+      const m = raw.match(/^\s*([A-Za-z0-9_]+)\s*=\s*(.*)$/);
+      if (!m) continue;
+      let val = m[2].trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) val = val.slice(1, -1);
+      if (process.env[m[1]] === undefined) process.env[m[1]] = val;
+    }
+  } catch { /* .env optional */ }
+}
+loadDotEnv();
 
 const BASE_URL = (process.env.FT_BASE_URL || 'https://next.faltintravel.com').replace(/\/+$/, '');
 const API_KEY = process.env.FT_API_KEY || '';
