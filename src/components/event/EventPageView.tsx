@@ -8,6 +8,7 @@ import PackageCardPro, { type PackageProInclude } from '@/components/PackageCard
 import EventContactForm from '@/components/EventContactForm';
 import LageplanMap from '@/components/LageplanMap';
 import SpielplanSection from '@/components/event/SpielplanSection';
+import NationsLeagueFixtures from '@/components/event/NationsLeagueFixtures';
 import SpielorteSection from '@/components/event/SpielorteSection';
 import DuellSection from '@/components/event/DuellSection';
 import type { EventRecord, SeriesRecord, PackageRecord, EventFaqRecord } from '@/lib/eventData';
@@ -282,6 +283,9 @@ export default function EventPageView({
   const showFaqs        = event.show_faqs         ?? true;
   const showSpielplan   = event.show_spielplan    ?? false;
   const spielplan       = event.spielplan         || [];
+  // Nations League: eigene, kuratierte Fixtures-Ansicht statt des generischen Spielplan-Moduls
+  // (unabhängig von den – ggf. veralteten – Volume-Daten).
+  const isNationsLeague = series?.slug === 'uefa-nations-league' || (event.slug || '').startsWith('uefa-nations-league');
   // Spielorte/Vereine-Modul (Karten-Grid; Klick filtert den Spielplan)
   const spielorte       = (event.spielorte || []).filter((o) => o && o.name);
   const showSpielorte   = (event.show_spielorte ?? false) && spielorte.length > 0;
@@ -378,7 +382,7 @@ export default function EventPageView({
     showAbout       && { key: 'about', label: 'Überblick', href: '#leistungen' },
     showDuell       && { key: 'duell', label: duellTitle, href: '#duell' },
     showSpielorte   && { key: 'spielorte', label: spielorteTitle, href: '#spielorte' },
-    showSpielplan   && spielplan.length > 0 && { key: 'spielplan', label: 'Spielplan', href: '#spielplan' },
+    (isNationsLeague || (showSpielplan && spielplan.length > 0)) && { key: 'spielplan', label: 'Spielplan', href: '#spielplan' },
     showWissenswertes && { key: 'wissenswertes', label: 'Wissenswertes', href: '#wissenswertes' },
     showStadionplan && { key: 'stadionplan', label: 'Stadionplan', href: '#stadionplan' },
     hasLageplan     && { key: 'lageplan', label: 'Lageplan', href: '#lageplan' },
@@ -787,8 +791,15 @@ export default function EventPageView({
         </section>
       )}
 
-      {/* ── SPIELPLAN (smart: Runden-Filter, Suche, Einklappen) ──────────────── */}
-      {showSpielplan && spielplan && spielplan.length > 0 && (
+      {/* ── SPIELPLAN ────────────────────────────────────────────────────────── */}
+      {isNationsLeague ? (
+        <section className="py-14 px-4 scroll-mt-40" id="spielplan" style={{ background: '#eef3fb', borderTop: '1px solid #e5e8ed', borderBottom: '1px solid #e5e8ed', order: orderOf('spielplan') }}>
+          <div className="container mx-auto max-w-6xl">
+            <Editable editable={editable} target="spielplan" as="h2" className="text-3xl md:text-4xl font-extrabold mb-8 leading-tight" style={{ color: '#143047' }}>Spielplan</Editable>
+            <NationsLeagueFixtures />
+          </div>
+        </section>
+      ) : (showSpielplan && spielplan && spielplan.length > 0 && (
         <section className="py-14 px-4 scroll-mt-40" id="spielplan" style={{ background: '#eef3fb', borderTop: '1px solid #e5e8ed', borderBottom: '1px solid #e5e8ed', order: orderOf('spielplan') }}>
           <div className="container mx-auto max-w-4xl">
             <Editable editable={editable} target="spielplan" as="h2" className="text-3xl md:text-4xl font-extrabold mb-8 leading-tight" style={{ color: '#143047' }}>Spielplan</Editable>
@@ -800,7 +811,7 @@ export default function EventPageView({
             />
           </div>
         </section>
-      )}
+      ))}
 
       {/* ── WISSENSWERTES ────────────────────────────────────────────────────── */}
       {showWissenswertes && (
