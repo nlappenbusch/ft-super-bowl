@@ -173,6 +173,7 @@ export async function buildNavMenu(): Promise<NavItem[]> {
     items: [
       { label: 'Über Faltin Travel', href: '/ueber-uns', desc: 'Wer wir sind & wofür wir stehen' },
       { label: 'Ryder Cup 2027 – Authorized Distributor', href: '/ryder-cup-2027', desc: 'Offizieller Vertriebspartner' },
+      { label: 'UEFA Nations League 2026/27', href: '/uefa-nations-league-2026-27', desc: 'Gruppen, Spielplan & Termine' },
       { label: 'Verhaltenskodex', href: '/verhaltenskodex', desc: 'Unser Code of Conduct' },
     ],
   });

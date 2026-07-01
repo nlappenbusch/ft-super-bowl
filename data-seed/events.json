@@ -3780,28 +3780,940 @@
     "show_spielplan": true,
     "spielplan": [
       {
-        "date": "TBA",
-        "session": "Gruppe A1: Frankreich, Italien, Belgien, Türkei",
-        "matchup": "TBA",
-        "round": "Gruppenphase Liga A"
+        "date": "Do. 24.09.2026",
+        "session": "Gruppe A2",
+        "matchup": "Niederlande – Deutschland",
+        "round": "League A · Spieltag 1"
       },
       {
-        "date": "TBA",
-        "session": "Gruppe A2: Deutschland, Niederlande, Serbien, Griechenland",
-        "matchup": "TBA",
-        "round": "Gruppenphase Liga A"
+        "date": "Do. 24.09.2026",
+        "session": "Gruppe A2",
+        "matchup": "Serbien – Griechenland",
+        "round": "League A · Spieltag 1"
       },
       {
-        "date": "TBA",
-        "session": "Gruppe A3: Spanien, Kroatien, England, Tschechien",
-        "matchup": "TBA",
-        "round": "Gruppenphase Liga A"
+        "date": "Do. 24.09.2026",
+        "session": "Gruppe A4",
+        "matchup": "Norwegen – Dänemark",
+        "round": "League A · Spieltag 1"
       },
       {
-        "date": "TBA",
-        "session": "Gruppe A4: Portugal, Dänemark, Norwegen, Wales",
-        "matchup": "TBA",
-        "round": "Gruppenphase Liga A"
+        "date": "Do. 24.09.2026",
+        "session": "Gruppe A4",
+        "matchup": "Portugal – Wales",
+        "round": "League A · Spieltag 1"
+      },
+      {
+        "date": "Do. 24.09.2026",
+        "session": "Gruppe B3",
+        "matchup": "Kosovo – Irland",
+        "round": "League B · Spieltag 1"
+      },
+      {
+        "date": "Do. 24.09.2026",
+        "session": "Gruppe B3",
+        "matchup": "Österreich – Israel",
+        "round": "League B · Spieltag 1"
+      },
+      {
+        "date": "Do. 24.09.2026",
+        "session": "Gruppe D1",
+        "matchup": "Andorra – Malta",
+        "round": "League D · Spieltag 1"
+      },
+      {
+        "date": "Do. 24.09.2026",
+        "session": "Gruppe D2",
+        "matchup": "Liechtenstein – Litauen",
+        "round": "League D · Spieltag 1"
+      },
+      {
+        "date": "Fr. 25.09.2026",
+        "session": "Gruppe A1",
+        "matchup": "Italien – Belgien",
+        "round": "League A · Spieltag 1"
+      },
+      {
+        "date": "Fr. 25.09.2026",
+        "session": "Gruppe A1",
+        "matchup": "Türkei – Frankreich",
+        "round": "League A · Spieltag 1"
+      },
+      {
+        "date": "Fr. 25.09.2026",
+        "session": "Gruppe B2",
+        "matchup": "Georgien – Nordirland",
+        "round": "League B · Spieltag 1"
+      },
+      {
+        "date": "Fr. 25.09.2026",
+        "session": "Gruppe B2",
+        "matchup": "Ungarn – Ukraine",
+        "round": "League B · Spieltag 1"
+      },
+      {
+        "date": "Fr. 25.09.2026",
+        "session": "Gruppe B4",
+        "matchup": "Polen – Bosnien-Herzegowina",
+        "round": "League B · Spieltag 1"
+      },
+      {
+        "date": "Fr. 25.09.2026",
+        "session": "Gruppe B4",
+        "matchup": "Rumänien – Schweden",
+        "round": "League B · Spieltag 1"
+      },
+      {
+        "date": "Fr. 25.09.2026",
+        "session": "Gruppe C2",
+        "matchup": "Armenien – Lettland",
+        "round": "League C · Spieltag 1"
+      },
+      {
+        "date": "Fr. 25.09.2026",
+        "session": "Gruppe C2",
+        "matchup": "Montenegro – Zypern",
+        "round": "League C · Spieltag 1"
+      },
+      {
+        "date": "Sa. 26.09.2026",
+        "session": "Gruppe A3",
+        "matchup": "England – Spanien",
+        "round": "League A · Spieltag 1"
+      },
+      {
+        "date": "Sa. 26.09.2026",
+        "session": "Gruppe A3",
+        "matchup": "Tschechien – Kroatien",
+        "round": "League A · Spieltag 1"
+      },
+      {
+        "date": "Sa. 26.09.2026",
+        "session": "Gruppe B1",
+        "matchup": "Nordmazedonien – Schweiz",
+        "round": "League B · Spieltag 1"
+      },
+      {
+        "date": "Sa. 26.09.2026",
+        "session": "Gruppe B1",
+        "matchup": "Slowenien – Schottland",
+        "round": "League B · Spieltag 1"
+      },
+      {
+        "date": "Sa. 26.09.2026",
+        "session": "Gruppe C1",
+        "matchup": "Albanien – Belarus",
+        "round": "League C · Spieltag 1"
+      },
+      {
+        "date": "Sa. 26.09.2026",
+        "session": "Gruppe C1",
+        "matchup": "San Marino – Finnland",
+        "round": "League C · Spieltag 1"
+      },
+      {
+        "date": "Sa. 26.09.2026",
+        "session": "Gruppe C3",
+        "matchup": "Färöer – Kasachstan",
+        "round": "League C · Spieltag 1"
+      },
+      {
+        "date": "Sa. 26.09.2026",
+        "session": "Gruppe C3",
+        "matchup": "Slowakei – Moldau",
+        "round": "League C · Spieltag 1"
+      },
+      {
+        "date": "Sa. 26.09.2026",
+        "session": "Gruppe C4",
+        "matchup": "Bulgarien – Luxemburg",
+        "round": "League C · Spieltag 1"
+      },
+      {
+        "date": "Sa. 26.09.2026",
+        "session": "Gruppe C4",
+        "matchup": "Island – Estland",
+        "round": "League C · Spieltag 1"
+      },
+      {
+        "date": "So. 27.09.2026",
+        "session": "Gruppe A2",
+        "matchup": "Deutschland – Griechenland",
+        "round": "League A · Spieltag 2"
+      },
+      {
+        "date": "So. 27.09.2026",
+        "session": "Gruppe A2",
+        "matchup": "Serbien – Niederlande",
+        "round": "League A · Spieltag 2"
+      },
+      {
+        "date": "So. 27.09.2026",
+        "session": "Gruppe A4",
+        "matchup": "Dänemark – Wales",
+        "round": "League A · Spieltag 2"
+      },
+      {
+        "date": "So. 27.09.2026",
+        "session": "Gruppe A4",
+        "matchup": "Norwegen – Portugal",
+        "round": "League A · Spieltag 2"
+      },
+      {
+        "date": "So. 27.09.2026",
+        "session": "Gruppe B3",
+        "matchup": "Israel – Irland",
+        "round": "League B · Spieltag 2"
+      },
+      {
+        "date": "So. 27.09.2026",
+        "session": "Gruppe B3",
+        "matchup": "Österreich – Kosovo",
+        "round": "League B · Spieltag 2"
+      },
+      {
+        "date": "So. 27.09.2026",
+        "session": "Gruppe D1",
+        "matchup": "Gibraltar – Andorra",
+        "round": "League D · Spieltag 2"
+      },
+      {
+        "date": "So. 27.09.2026",
+        "session": "Gruppe D2",
+        "matchup": "Litauen – Aserbaidschan",
+        "round": "League D · Spieltag 2"
+      },
+      {
+        "date": "Mo. 28.09.2026",
+        "session": "Gruppe A1",
+        "matchup": "Belgien – Frankreich",
+        "round": "League A · Spieltag 2"
+      },
+      {
+        "date": "Mo. 28.09.2026",
+        "session": "Gruppe A1",
+        "matchup": "Türkei – Italien",
+        "round": "League A · Spieltag 2"
+      },
+      {
+        "date": "Mo. 28.09.2026",
+        "session": "Gruppe B2",
+        "matchup": "Georgien – Ukraine",
+        "round": "League B · Spieltag 2"
+      },
+      {
+        "date": "Mo. 28.09.2026",
+        "session": "Gruppe B2",
+        "matchup": "Nordirland – Ungarn",
+        "round": "League B · Spieltag 2"
+      },
+      {
+        "date": "Mo. 28.09.2026",
+        "session": "Gruppe B4",
+        "matchup": "Rumänien – Bosnien-Herzegowina",
+        "round": "League B · Spieltag 2"
+      },
+      {
+        "date": "Mo. 28.09.2026",
+        "session": "Gruppe B4",
+        "matchup": "Schweden – Polen",
+        "round": "League B · Spieltag 2"
+      },
+      {
+        "date": "Mo. 28.09.2026",
+        "session": "Gruppe C2",
+        "matchup": "Armenien – Montenegro",
+        "round": "League C · Spieltag 2"
+      },
+      {
+        "date": "Mo. 28.09.2026",
+        "session": "Gruppe C2",
+        "matchup": "Lettland – Zypern",
+        "round": "League C · Spieltag 2"
+      },
+      {
+        "date": "Di. 29.09.2026",
+        "session": "Gruppe A3",
+        "matchup": "Spanien – Kroatien",
+        "round": "League A · Spieltag 2"
+      },
+      {
+        "date": "Di. 29.09.2026",
+        "session": "Gruppe A3",
+        "matchup": "Tschechien – England",
+        "round": "League A · Spieltag 2"
+      },
+      {
+        "date": "Di. 29.09.2026",
+        "session": "Gruppe B1",
+        "matchup": "Schottland – Schweiz",
+        "round": "League B · Spieltag 2"
+      },
+      {
+        "date": "Di. 29.09.2026",
+        "session": "Gruppe B1",
+        "matchup": "Slowenien – Nordmazedonien",
+        "round": "League B · Spieltag 2"
+      },
+      {
+        "date": "Di. 29.09.2026",
+        "session": "Gruppe C1",
+        "matchup": "Finnland – Belarus",
+        "round": "League C · Spieltag 2"
+      },
+      {
+        "date": "Di. 29.09.2026",
+        "session": "Gruppe C1",
+        "matchup": "San Marino – Albanien",
+        "round": "League C · Spieltag 2"
+      },
+      {
+        "date": "Di. 29.09.2026",
+        "session": "Gruppe C3",
+        "matchup": "Moldau – Färöer",
+        "round": "League C · Spieltag 2"
+      },
+      {
+        "date": "Di. 29.09.2026",
+        "session": "Gruppe C3",
+        "matchup": "Slowakei – Kasachstan",
+        "round": "League C · Spieltag 2"
+      },
+      {
+        "date": "Di. 29.09.2026",
+        "session": "Gruppe C4",
+        "matchup": "Bulgarien – Estland",
+        "round": "League C · Spieltag 2"
+      },
+      {
+        "date": "Di. 29.09.2026",
+        "session": "Gruppe C4",
+        "matchup": "Luxemburg – Island",
+        "round": "League C · Spieltag 2"
+      },
+      {
+        "date": "Do. 01.10.2026",
+        "session": "Gruppe A2",
+        "matchup": "Deutschland – Serbien",
+        "round": "League A · Spieltag 3"
+      },
+      {
+        "date": "Do. 01.10.2026",
+        "session": "Gruppe A2",
+        "matchup": "Griechenland – Niederlande",
+        "round": "League A · Spieltag 3"
+      },
+      {
+        "date": "Do. 01.10.2026",
+        "session": "Gruppe A4",
+        "matchup": "Dänemark – Portugal",
+        "round": "League A · Spieltag 3"
+      },
+      {
+        "date": "Do. 01.10.2026",
+        "session": "Gruppe A4",
+        "matchup": "Wales – Norwegen",
+        "round": "League A · Spieltag 3"
+      },
+      {
+        "date": "Do. 01.10.2026",
+        "session": "Gruppe B3",
+        "matchup": "Irland – Österreich",
+        "round": "League B · Spieltag 3"
+      },
+      {
+        "date": "Do. 01.10.2026",
+        "session": "Gruppe B3",
+        "matchup": "Israel – Kosovo",
+        "round": "League B · Spieltag 3"
+      },
+      {
+        "date": "Do. 01.10.2026",
+        "session": "Gruppe D1",
+        "matchup": "Malta – Gibraltar",
+        "round": "League D · Spieltag 3"
+      },
+      {
+        "date": "Do. 01.10.2026",
+        "session": "Gruppe D2",
+        "matchup": "Aserbaidschan – Liechtenstein",
+        "round": "League D · Spieltag 3"
+      },
+      {
+        "date": "Fr. 02.10.2026",
+        "session": "Gruppe A1",
+        "matchup": "Belgien – Türkei",
+        "round": "League A · Spieltag 3"
+      },
+      {
+        "date": "Fr. 02.10.2026",
+        "session": "Gruppe A1",
+        "matchup": "Frankreich – Italien",
+        "round": "League A · Spieltag 3"
+      },
+      {
+        "date": "Fr. 02.10.2026",
+        "session": "Gruppe B2",
+        "matchup": "Ukraine – Nordirland",
+        "round": "League B · Spieltag 3"
+      },
+      {
+        "date": "Fr. 02.10.2026",
+        "session": "Gruppe B2",
+        "matchup": "Ungarn – Georgien",
+        "round": "League B · Spieltag 3"
+      },
+      {
+        "date": "Fr. 02.10.2026",
+        "session": "Gruppe B4",
+        "matchup": "Bosnien-Herzegowina – Schweden",
+        "round": "League B · Spieltag 3"
+      },
+      {
+        "date": "Fr. 02.10.2026",
+        "session": "Gruppe B4",
+        "matchup": "Polen – Rumänien",
+        "round": "League B · Spieltag 3"
+      },
+      {
+        "date": "Fr. 02.10.2026",
+        "session": "Gruppe C2",
+        "matchup": "Lettland – Montenegro",
+        "round": "League C · Spieltag 3"
+      },
+      {
+        "date": "Fr. 02.10.2026",
+        "session": "Gruppe C2",
+        "matchup": "Zypern – Armenien",
+        "round": "League C · Spieltag 3"
+      },
+      {
+        "date": "Fr. 02.10.2026",
+        "session": "Gruppe C3",
+        "matchup": "Färöer – Slowakei",
+        "round": "League C · Spieltag 3"
+      },
+      {
+        "date": "Fr. 02.10.2026",
+        "session": "Gruppe C3",
+        "matchup": "Kasachstan – Moldau",
+        "round": "League C · Spieltag 3"
+      },
+      {
+        "date": "Sa. 03.10.2026",
+        "session": "Gruppe A3",
+        "matchup": "Kroatien – England",
+        "round": "League A · Spieltag 3"
+      },
+      {
+        "date": "Sa. 03.10.2026",
+        "session": "Gruppe A3",
+        "matchup": "Spanien – Tschechien",
+        "round": "League A · Spieltag 3"
+      },
+      {
+        "date": "Sa. 03.10.2026",
+        "session": "Gruppe B1",
+        "matchup": "Nordmazedonien – Schottland",
+        "round": "League B · Spieltag 3"
+      },
+      {
+        "date": "Sa. 03.10.2026",
+        "session": "Gruppe B1",
+        "matchup": "Schweiz – Slowenien",
+        "round": "League B · Spieltag 3"
+      },
+      {
+        "date": "Sa. 03.10.2026",
+        "session": "Gruppe C1",
+        "matchup": "Belarus – San Marino",
+        "round": "League C · Spieltag 3"
+      },
+      {
+        "date": "Sa. 03.10.2026",
+        "session": "Gruppe C1",
+        "matchup": "Finnland – Albanien",
+        "round": "League C · Spieltag 3"
+      },
+      {
+        "date": "Sa. 03.10.2026",
+        "session": "Gruppe C4",
+        "matchup": "Estland – Luxemburg",
+        "round": "League C · Spieltag 3"
+      },
+      {
+        "date": "Sa. 03.10.2026",
+        "session": "Gruppe C4",
+        "matchup": "Island – Bulgarien",
+        "round": "League C · Spieltag 3"
+      },
+      {
+        "date": "So. 04.10.2026",
+        "session": "Gruppe A2",
+        "matchup": "Griechenland – Deutschland",
+        "round": "League A · Spieltag 4"
+      },
+      {
+        "date": "So. 04.10.2026",
+        "session": "Gruppe A2",
+        "matchup": "Niederlande – Serbien",
+        "round": "League A · Spieltag 4"
+      },
+      {
+        "date": "So. 04.10.2026",
+        "session": "Gruppe A4",
+        "matchup": "Portugal – Norwegen",
+        "round": "League A · Spieltag 4"
+      },
+      {
+        "date": "So. 04.10.2026",
+        "session": "Gruppe A4",
+        "matchup": "Wales – Dänemark",
+        "round": "League A · Spieltag 4"
+      },
+      {
+        "date": "So. 04.10.2026",
+        "session": "Gruppe B3",
+        "matchup": "Irland – Israel",
+        "round": "League B · Spieltag 4"
+      },
+      {
+        "date": "So. 04.10.2026",
+        "session": "Gruppe B3",
+        "matchup": "Kosovo – Österreich",
+        "round": "League B · Spieltag 4"
+      },
+      {
+        "date": "So. 04.10.2026",
+        "session": "Gruppe D1",
+        "matchup": "Malta – Andorra",
+        "round": "League D · Spieltag 4"
+      },
+      {
+        "date": "So. 04.10.2026",
+        "session": "Gruppe D2",
+        "matchup": "Aserbaidschan – Litauen",
+        "round": "League D · Spieltag 4"
+      },
+      {
+        "date": "Mo. 05.10.2026",
+        "session": "Gruppe A1",
+        "matchup": "Frankreich – Belgien",
+        "round": "League A · Spieltag 4"
+      },
+      {
+        "date": "Mo. 05.10.2026",
+        "session": "Gruppe A1",
+        "matchup": "Italien – Türkei",
+        "round": "League A · Spieltag 4"
+      },
+      {
+        "date": "Mo. 05.10.2026",
+        "session": "Gruppe B2",
+        "matchup": "Nordirland – Georgien",
+        "round": "League B · Spieltag 4"
+      },
+      {
+        "date": "Mo. 05.10.2026",
+        "session": "Gruppe B2",
+        "matchup": "Ukraine – Ungarn",
+        "round": "League B · Spieltag 4"
+      },
+      {
+        "date": "Mo. 05.10.2026",
+        "session": "Gruppe B4",
+        "matchup": "Bosnien-Herzegowina – Polen",
+        "round": "League B · Spieltag 4"
+      },
+      {
+        "date": "Mo. 05.10.2026",
+        "session": "Gruppe B4",
+        "matchup": "Schweden – Rumänien",
+        "round": "League B · Spieltag 4"
+      },
+      {
+        "date": "Mo. 05.10.2026",
+        "session": "Gruppe C2",
+        "matchup": "Montenegro – Armenien",
+        "round": "League C · Spieltag 4"
+      },
+      {
+        "date": "Mo. 05.10.2026",
+        "session": "Gruppe C2",
+        "matchup": "Zypern – Lettland",
+        "round": "League C · Spieltag 4"
+      },
+      {
+        "date": "Di. 06.10.2026",
+        "session": "Gruppe A3",
+        "matchup": "England – Tschechien",
+        "round": "League A · Spieltag 4"
+      },
+      {
+        "date": "Di. 06.10.2026",
+        "session": "Gruppe A3",
+        "matchup": "Kroatien – Spanien",
+        "round": "League A · Spieltag 4"
+      },
+      {
+        "date": "Di. 06.10.2026",
+        "session": "Gruppe B1",
+        "matchup": "Schottland – Slowenien",
+        "round": "League B · Spieltag 4"
+      },
+      {
+        "date": "Di. 06.10.2026",
+        "session": "Gruppe B1",
+        "matchup": "Schweiz – Nordmazedonien",
+        "round": "League B · Spieltag 4"
+      },
+      {
+        "date": "Di. 06.10.2026",
+        "session": "Gruppe C1",
+        "matchup": "Albanien – San Marino",
+        "round": "League C · Spieltag 4"
+      },
+      {
+        "date": "Di. 06.10.2026",
+        "session": "Gruppe C1",
+        "matchup": "Belarus – Finnland",
+        "round": "League C · Spieltag 4"
+      },
+      {
+        "date": "Di. 06.10.2026",
+        "session": "Gruppe C3",
+        "matchup": "Kasachstan – Färöer",
+        "round": "League C · Spieltag 4"
+      },
+      {
+        "date": "Di. 06.10.2026",
+        "session": "Gruppe C3",
+        "matchup": "Moldau – Slowakei",
+        "round": "League C · Spieltag 4"
+      },
+      {
+        "date": "Di. 06.10.2026",
+        "session": "Gruppe C4",
+        "matchup": "Estland – Island",
+        "round": "League C · Spieltag 4"
+      },
+      {
+        "date": "Di. 06.10.2026",
+        "session": "Gruppe C4",
+        "matchup": "Luxemburg – Bulgarien",
+        "round": "League C · Spieltag 4"
+      },
+      {
+        "date": "Do. 12.11.2026",
+        "session": "Gruppe A1",
+        "matchup": "Italien – Frankreich",
+        "round": "League A · Spieltag 5"
+      },
+      {
+        "date": "Do. 12.11.2026",
+        "session": "Gruppe A1",
+        "matchup": "Türkei – Belgien",
+        "round": "League A · Spieltag 5"
+      },
+      {
+        "date": "Do. 12.11.2026",
+        "session": "Gruppe A3",
+        "matchup": "England – Kroatien",
+        "round": "League A · Spieltag 5"
+      },
+      {
+        "date": "Do. 12.11.2026",
+        "session": "Gruppe A3",
+        "matchup": "Tschechien – Spanien",
+        "round": "League A · Spieltag 5"
+      },
+      {
+        "date": "Do. 12.11.2026",
+        "session": "Gruppe C1",
+        "matchup": "Albanien – Finnland",
+        "round": "League C · Spieltag 5"
+      },
+      {
+        "date": "Do. 12.11.2026",
+        "session": "Gruppe C1",
+        "matchup": "San Marino – Belarus",
+        "round": "League C · Spieltag 5"
+      },
+      {
+        "date": "Do. 12.11.2026",
+        "session": "Gruppe C2",
+        "matchup": "Armenien – Zypern",
+        "round": "League C · Spieltag 5"
+      },
+      {
+        "date": "Do. 12.11.2026",
+        "session": "Gruppe C2",
+        "matchup": "Montenegro – Lettland",
+        "round": "League C · Spieltag 5"
+      },
+      {
+        "date": "Fr. 13.11.2026",
+        "session": "Gruppe A2",
+        "matchup": "Niederlande – Griechenland",
+        "round": "League A · Spieltag 5"
+      },
+      {
+        "date": "Fr. 13.11.2026",
+        "session": "Gruppe A2",
+        "matchup": "Serbien – Deutschland",
+        "round": "League A · Spieltag 5"
+      },
+      {
+        "date": "Fr. 13.11.2026",
+        "session": "Gruppe B1",
+        "matchup": "Schottland – Nordmazedonien",
+        "round": "League B · Spieltag 5"
+      },
+      {
+        "date": "Fr. 13.11.2026",
+        "session": "Gruppe B1",
+        "matchup": "Slowenien – Schweiz",
+        "round": "League B · Spieltag 5"
+      },
+      {
+        "date": "Fr. 13.11.2026",
+        "session": "Gruppe C3",
+        "matchup": "Moldau – Kasachstan",
+        "round": "League C · Spieltag 5"
+      },
+      {
+        "date": "Fr. 13.11.2026",
+        "session": "Gruppe C3",
+        "matchup": "Slowakei – Färöer",
+        "round": "League C · Spieltag 5"
+      },
+      {
+        "date": "Fr. 13.11.2026",
+        "session": "Gruppe C4",
+        "matchup": "Bulgarien – Island",
+        "round": "League C · Spieltag 5"
+      },
+      {
+        "date": "Fr. 13.11.2026",
+        "session": "Gruppe C4",
+        "matchup": "Luxemburg – Estland",
+        "round": "League C · Spieltag 5"
+      },
+      {
+        "date": "Fr. 13.11.2026",
+        "session": "Gruppe D1",
+        "matchup": "Andorra – Gibraltar",
+        "round": "League D · Spieltag 5"
+      },
+      {
+        "date": "Fr. 13.11.2026",
+        "session": "Gruppe D2",
+        "matchup": "Liechtenstein – Aserbaidschan",
+        "round": "League D · Spieltag 5"
+      },
+      {
+        "date": "Sa. 14.11.2026",
+        "session": "Gruppe A4",
+        "matchup": "Norwegen – Wales",
+        "round": "League A · Spieltag 5"
+      },
+      {
+        "date": "Sa. 14.11.2026",
+        "session": "Gruppe A4",
+        "matchup": "Portugal – Dänemark",
+        "round": "League A · Spieltag 5"
+      },
+      {
+        "date": "Sa. 14.11.2026",
+        "session": "Gruppe B2",
+        "matchup": "Georgien – Ungarn",
+        "round": "League B · Spieltag 5"
+      },
+      {
+        "date": "Sa. 14.11.2026",
+        "session": "Gruppe B2",
+        "matchup": "Nordirland – Ukraine",
+        "round": "League B · Spieltag 5"
+      },
+      {
+        "date": "Sa. 14.11.2026",
+        "session": "Gruppe B3",
+        "matchup": "Kosovo – Israel",
+        "round": "League B · Spieltag 5"
+      },
+      {
+        "date": "Sa. 14.11.2026",
+        "session": "Gruppe B3",
+        "matchup": "Österreich – Irland",
+        "round": "League B · Spieltag 5"
+      },
+      {
+        "date": "Sa. 14.11.2026",
+        "session": "Gruppe B4",
+        "matchup": "Rumänien – Polen",
+        "round": "League B · Spieltag 5"
+      },
+      {
+        "date": "Sa. 14.11.2026",
+        "session": "Gruppe B4",
+        "matchup": "Schweden – Bosnien-Herzegowina",
+        "round": "League B · Spieltag 5"
+      },
+      {
+        "date": "So. 15.11.2026",
+        "session": "Gruppe A1",
+        "matchup": "Belgien – Italien",
+        "round": "League A · Spieltag 6"
+      },
+      {
+        "date": "So. 15.11.2026",
+        "session": "Gruppe A1",
+        "matchup": "Frankreich – Türkei",
+        "round": "League A · Spieltag 6"
+      },
+      {
+        "date": "So. 15.11.2026",
+        "session": "Gruppe A3",
+        "matchup": "Kroatien – Tschechien",
+        "round": "League A · Spieltag 6"
+      },
+      {
+        "date": "So. 15.11.2026",
+        "session": "Gruppe A3",
+        "matchup": "Spanien – England",
+        "round": "League A · Spieltag 6"
+      },
+      {
+        "date": "So. 15.11.2026",
+        "session": "Gruppe C1",
+        "matchup": "Belarus – Albanien",
+        "round": "League C · Spieltag 6"
+      },
+      {
+        "date": "So. 15.11.2026",
+        "session": "Gruppe C1",
+        "matchup": "Finnland – San Marino",
+        "round": "League C · Spieltag 6"
+      },
+      {
+        "date": "So. 15.11.2026",
+        "session": "Gruppe C2",
+        "matchup": "Lettland – Armenien",
+        "round": "League C · Spieltag 6"
+      },
+      {
+        "date": "So. 15.11.2026",
+        "session": "Gruppe C2",
+        "matchup": "Zypern – Montenegro",
+        "round": "League C · Spieltag 6"
+      },
+      {
+        "date": "Mo. 16.11.2026",
+        "session": "Gruppe A2",
+        "matchup": "Deutschland – Niederlande",
+        "round": "League A · Spieltag 6"
+      },
+      {
+        "date": "Mo. 16.11.2026",
+        "session": "Gruppe A2",
+        "matchup": "Griechenland – Serbien",
+        "round": "League A · Spieltag 6"
+      },
+      {
+        "date": "Mo. 16.11.2026",
+        "session": "Gruppe B1",
+        "matchup": "Nordmazedonien – Slowenien",
+        "round": "League B · Spieltag 6"
+      },
+      {
+        "date": "Mo. 16.11.2026",
+        "session": "Gruppe B1",
+        "matchup": "Schweiz – Schottland",
+        "round": "League B · Spieltag 6"
+      },
+      {
+        "date": "Mo. 16.11.2026",
+        "session": "Gruppe C3",
+        "matchup": "Färöer – Moldau",
+        "round": "League C · Spieltag 6"
+      },
+      {
+        "date": "Mo. 16.11.2026",
+        "session": "Gruppe C3",
+        "matchup": "Kasachstan – Slowakei",
+        "round": "League C · Spieltag 6"
+      },
+      {
+        "date": "Mo. 16.11.2026",
+        "session": "Gruppe C4",
+        "matchup": "Estland – Bulgarien",
+        "round": "League C · Spieltag 6"
+      },
+      {
+        "date": "Mo. 16.11.2026",
+        "session": "Gruppe C4",
+        "matchup": "Island – Luxemburg",
+        "round": "League C · Spieltag 6"
+      },
+      {
+        "date": "Mo. 16.11.2026",
+        "session": "Gruppe D1",
+        "matchup": "Gibraltar – Malta",
+        "round": "League D · Spieltag 6"
+      },
+      {
+        "date": "Mo. 16.11.2026",
+        "session": "Gruppe D2",
+        "matchup": "Litauen – Liechtenstein",
+        "round": "League D · Spieltag 6"
+      },
+      {
+        "date": "Di. 17.11.2026",
+        "session": "Gruppe A4",
+        "matchup": "Dänemark – Norwegen",
+        "round": "League A · Spieltag 6"
+      },
+      {
+        "date": "Di. 17.11.2026",
+        "session": "Gruppe A4",
+        "matchup": "Wales – Portugal",
+        "round": "League A · Spieltag 6"
+      },
+      {
+        "date": "Di. 17.11.2026",
+        "session": "Gruppe B2",
+        "matchup": "Ukraine – Georgien",
+        "round": "League B · Spieltag 6"
+      },
+      {
+        "date": "Di. 17.11.2026",
+        "session": "Gruppe B2",
+        "matchup": "Ungarn – Nordirland",
+        "round": "League B · Spieltag 6"
+      },
+      {
+        "date": "Di. 17.11.2026",
+        "session": "Gruppe B3",
+        "matchup": "Irland – Kosovo",
+        "round": "League B · Spieltag 6"
+      },
+      {
+        "date": "Di. 17.11.2026",
+        "session": "Gruppe B3",
+        "matchup": "Israel – Österreich",
+        "round": "League B · Spieltag 6"
+      },
+      {
+        "date": "Di. 17.11.2026",
+        "session": "Gruppe B4",
+        "matchup": "Bosnien-Herzegowina – Rumänien",
+        "round": "League B · Spieltag 6"
+      },
+      {
+        "date": "Di. 17.11.2026",
+        "session": "Gruppe B4",
+        "matchup": "Polen – Schweden",
+        "round": "League B · Spieltag 6"
       }
     ],
     "show_wissenswertes": true,

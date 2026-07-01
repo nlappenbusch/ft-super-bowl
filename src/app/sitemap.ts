@@ -20,6 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/kalender`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
     { url: `${BASE}/ueber-uns`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${BASE}/ryder-cup-2027`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${BASE}/uefa-nations-league-2026-27`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${BASE}/verhaltenskodex`, lastModified: now, changeFrequency: 'yearly', priority: 0.4 },
     { url: `${BASE}/kontakt`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${BASE}/booking`, lastModified: now, changeFrequency: 'weekly', priority: 0.7 },
