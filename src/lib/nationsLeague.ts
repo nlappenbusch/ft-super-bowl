@@ -67,6 +67,28 @@ export const NL_FLAG: Record<string, string> = {
   Litauen: 'lt', Aserbaidschan: 'az', Liechtenstein: 'li',
 };
 
+/**
+ * Voraussichtlicher Austragungsort (Gastgeberstadt) je Heim-Nation der League A.
+ * Der Austragungsort einer Partie ist immer das Land des Heimteams; die genaue
+ * Stadt/Arena bestätigt der jeweilige Verband/UEFA näher am Termin. Für Nationen,
+ * die ihre Heimspiele rotieren lassen, ist hier bewusst keine Stadt hinterlegt
+ * (dann gilt das Gastgeberland). Nur für sichere „National-Stadion"-Fälle gesetzt.
+ */
+export const NL_HOME_CITY: Record<string, string> = {
+  Frankreich: 'Saint-Denis (Paris)',
+  Belgien: 'Brüssel',
+  Niederlande: 'Amsterdam',
+  Serbien: 'Belgrad',
+  Griechenland: 'Athen',
+  Kroatien: 'Zagreb',
+  England: 'London',
+  Tschechien: 'Prag',
+  Portugal: 'Lissabon',
+  Dänemark: 'Kopenhagen',
+  Norwegen: 'Oslo',
+  Wales: 'Cardiff',
+};
+
 const f = (md: number, date: string, home: string, away: string): NLFixture => ({ md, date, home, away });
 
 export const NL_LEAGUES: NLLeague[] = [

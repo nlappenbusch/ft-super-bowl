@@ -15,9 +15,11 @@ interface EventContactFormProps {
   /** Überschrift-/Intro-Override */
   title?: string;
   intro?: string;
+  /** Vorbelegter Nachrichtentext (z.B. ausgewählte Spiele aus dem NL-Spielplan). */
+  initialMessage?: string;
 }
 
-export default function EventContactForm({ eventSlug, eventName, events, matchOptions, selectedMatch, title, intro }: EventContactFormProps) {
+export default function EventContactForm({ eventSlug, eventName, events, matchOptions, selectedMatch, title, intro, initialMessage }: EventContactFormProps) {
   const hasEventChoice = !!(events && events.length > 0);
   const hasMatchChoice = !!(matchOptions && matchOptions.length > 0);
   const [selectedEvent, setSelectedEvent] = useState<string>(events?.[0]?.slug || eventSlug);
@@ -32,7 +34,7 @@ export default function EventContactForm({ eventSlug, eventName, events, matchOp
     lastName: '',
     email: '',
     phone: '',
-    message: '',
+    message: initialMessage || '',
   });
   const [accepted, setAccepted] = useState(false);
   const [sending, setSending] = useState(false);

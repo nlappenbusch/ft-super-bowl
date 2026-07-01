@@ -22,7 +22,13 @@ const BLUE_GLOW: React.CSSProperties = {
 
 const MAP_QUERY = 'Riedthofstrasse 172, 8105 Regensdorf, Schweiz';
 
-export default async function KontaktPage() {
+export default async function KontaktPage({ searchParams }: { searchParams: Promise<{ spiele?: string; event?: string }> }) {
+  const sp = await searchParams;
+  const spiele = (sp?.spiele || '').trim();
+  const initialMessage = spiele
+    ? `Ich interessiere mich für folgende Nations-League-Spiele:\n${spiele.split(' | ').map((s) => `• ${s}`).join('\n')}\n\nBitte senden Sie mir ein unverbindliches Angebot.`
+    : undefined;
+
   let eventChoices: { slug: string; name: string }[] = [];
   try {
     const events = await getEventsList();
@@ -157,7 +163,10 @@ export default async function KontaktPage() {
               eventName="Allgemeine Anfrage"
               events={formEvents}
               title="Schreiben Sie uns"
-              intro={'Wählen Sie ein Event oder „Allgemeine Anfrage" – wir melden uns persönlich und unverbindlich bei Ihnen.'}
+              intro={initialMessage
+                ? 'Ihre Spiel-Auswahl ist unten schon eingetragen – ergänzen Sie einfach Ihre Kontaktdaten.'
+                : 'Wählen Sie ein Event oder „Allgemeine Anfrage" – wir melden uns persönlich und unverbindlich bei Ihnen.'}
+              initialMessage={initialMessage}
             />
           </div>
         </div>
