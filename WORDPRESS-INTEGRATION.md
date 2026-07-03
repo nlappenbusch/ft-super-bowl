@@ -410,3 +410,11 @@ Die Shortcode-Buchungslinks führen auf `…/booking?…&embed=1&ref=<host>`:
   `Quelle: <host>` in den CRM-Notizen der Buchung und in der
   Team-Benachrichtigungsmail („Eingegangen über: …"). Das native
   Anfrageformular sendet die Quelle ebenfalls mit (`source`-Feld).
+
+### SportsEvent-JSON-LD im Formular-Fall (ab Plugin 1.7.0)
+
+`[faltin_anfrage event="…"]` liefert auch OHNE Packages strukturierte Daten:
+ein `SportsEvent`-JSON-LD (Name, Datum, Venue, Stadt, Bild, Beschreibung) aus
+`/api/events` — gecacht wie die übrigen Shortcodes. Damit spielt jede
+Einbettung SEO/GEO-Signale aus: mit Packages `Product`/`Offer`, ohne Packages
+`SportsEvent`. (`event="allgemeine-anfrage"` bleibt ohne JSON-LD.)
