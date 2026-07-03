@@ -59,7 +59,7 @@ const PLUGINS: Plugin[] = [
         code: '[faltin_anfrage]',
         example: '[faltin_anfrage event="super-bowl-2027" title="Jetzt unverbindlich anfragen"]',
         title: 'Anfrage-/Kontaktformular (mit Package-Auto-Logik)',
-        desc: 'Eingebettetes Anfrageformular (serverseitig), sendet an /api/bookings. Ab Plugin 1.5.0: Hat das Event buchbare Packages, werden automatisch die Package-Karten ausgeliefert — bestehende Einbettungen bleiben gültig und upgraden von selbst. packages="0" erzwingt das reine Formular.',
+        desc: 'Eingebettetes Anfrageformular (serverseitig), sendet an /api/bookings. Ab Plugin 1.5.0: Hat das Event buchbare Packages, werden automatisch die Package-Karten ausgeliefert — bestehende Einbettungen bleiben gültig und upgraden von selbst. packages="0" erzwingt das reine Formular. Ab 1.7.0 liefert auch der Formular-Fall SportsEvent-JSON-LD (SEO/GEO) mit.',
         recommended: true,
         params: [
           { name: 'packages', def: 'auto', desc: 'auto = Package-Karten zeigen, wenn vorhanden; 0 = immer Formular.' },

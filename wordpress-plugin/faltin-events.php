@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Faltin Travel – Event Shortcodes
  * Description: SEO-freundliche, serverseitig gerenderte Event-Karten, Package-Karten + natives Anfrageformular. Shortcodes: [faltin_events serie="..."], [faltin_event event="..."], [faltin_packages event="..."], [faltin_anfrage event="..."].
- * Version: 1.6.0
+ * Version: 1.7.0
  * Author: Faltin Travel AG
  *
  * Die Inhalte werden serverseitig per REST-API geladen (wp_remote_get) und als
@@ -428,7 +428,18 @@ function faltin_anfrage_shortcode($atts) {
     })();
     </script>
     <?php
-    return faltin_anfrage_styles() . ob_get_clean();
+    // SEO/GEO: Auch ohne Packages strukturierte Event-Daten ausliefern —
+    // SportsEvent-JSON-LD aus /api/events (gecacht), gleiche LD-Funktion
+    // wie [faltin_events]/[faltin_event]. Formular bleibt unverändert.
+    $jsonld = '';
+    if ($atts['event'] && $atts['event'] !== 'allgemeine-anfrage') {
+        $ev_url = rtrim($atts['api_url'], '/') . '/api/events?event=' . rawurlencode($atts['event']);
+        $ev = faltin_events_fetch($ev_url, (int)$atts['cache']);
+        if (is_array($ev) && !empty($ev['url']) && (!empty($ev['name']) || !empty($ev['title']))) {
+            $jsonld = faltin_events_jsonld(array($ev));
+        }
+    }
+    return $jsonld . faltin_anfrage_styles() . ob_get_clean();
 }
 add_shortcode('faltin_anfrage', 'faltin_anfrage_shortcode');
 
