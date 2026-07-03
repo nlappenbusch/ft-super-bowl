@@ -44,6 +44,8 @@ export function initDatabase() {
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       request_number TEXT,
       booking_number TEXT,
+      event_slug TEXT DEFAULT '',
+      package_slug TEXT DEFAULT '',
       package_id TEXT NOT NULL,
       package_title TEXT NOT NULL,
       start_date TEXT NOT NULL,
@@ -412,6 +414,8 @@ export function initDatabase() {
   if (!cols.some((c) => c.name === 'offer_sent')) addColumn('booking_requests', 'offer_sent INTEGER NOT NULL DEFAULT 0');
   if (!cols.some((c) => c.name === 'docs_ready')) addColumn('booking_requests', 'docs_ready INTEGER NOT NULL DEFAULT 0');
   if (!cols.some((c) => c.name === 'source')) addColumn('booking_requests', "source TEXT DEFAULT ''");
+  if (!cols.some((c) => c.name === 'event_slug')) addColumn('booking_requests', "event_slug TEXT DEFAULT ''");
+  if (!cols.some((c) => c.name === 'package_slug')) addColumn('booking_requests', "package_slug TEXT DEFAULT ''");
   const icols = sqlite.prepare(`PRAGMA table_info(incentive_plans)`).all() as Array<{ name: string }>;
   if (icols.length && !icols.some((c) => c.name === 'error')) addColumn('incentive_plans', "error TEXT NOT NULL DEFAULT ''");
   if (icols.length && !icols.some((c) => c.name === 'progress')) addColumn('incentive_plans', "progress TEXT NOT NULL DEFAULT ''");
@@ -488,12 +492,14 @@ export async function insertBooking(booking: Omit<BookingRequest, 'id' | 'create
 
   await dbRun(
     `INSERT INTO booking_requests (
-      id, created_at, updated_at, request_number, package_id, package_title, start_date,
+      id, created_at, updated_at, request_number, event_slug, package_slug, package_id, package_title, start_date,
       number_of_persons, double_rooms, single_rooms, travelers,
       email, phone, message, status, total_price, notes, source
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, now, now, requestNumber,
+      (booking as { event_slug?: string }).event_slug || '',
+      (booking as { package_slug?: string }).package_slug || '',
       booking.package_id, booking.package_title, booking.start_date,
       booking.number_of_persons, booking.double_rooms, booking.single_rooms,
       booking.travelers, booking.email, booking.phone, booking.message,

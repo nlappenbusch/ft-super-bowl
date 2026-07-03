@@ -52,6 +52,8 @@ export interface BookingInput {
 export async function createBooking(input: BookingInput) {
   if (!isSupabaseConfigured() || !supabase) {
     return insertBooking({
+      event_slug: input.eventSlug || '',
+      package_slug: input.packageSlug || '',
       package_id: input.packageId,
       package_title: input.packageTitle,
       start_date: input.startDate,

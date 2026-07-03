@@ -8,7 +8,7 @@ import {
   internalNotificationHtml, internalNotificationSubject,
   autoReplyHtml, autoReplySubjectDefault, subjectTag,
 } from '@/lib/emailTemplates';
-import { linkBookingToCustomer } from '@/lib/customerStore';
+import { linkBookingToCustomer, normalizeSalutation } from '@/lib/customerStore';
 import { readAutoReplyPdfBase64 } from '@/lib/autoReplyStore';
 
 /**
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     // Hauptbucher/Kontakt hat Vorrang vor erstem Reisenden.
     const firstName = body.firstName || firstTraveler?.firstName || firstTraveler?.first_name || body.email.split('@')[0];
     const lastName = body.lastName || firstTraveler?.lastName || firstTraveler?.last_name || '';
-    const salutation = body.salutation || firstTraveler?.salutation || '';
+    const salutation = normalizeSalutation(body.salutation || firstTraveler?.salutation || '');
 
     // Kunde herleiten/verknüpfen (E-Mail = eindeutige ID)
     try {

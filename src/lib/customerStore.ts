@@ -60,6 +60,16 @@ export async function findCustomerIdByEmail(email: string): Promise<string | nul
 }
 
 /** Legt einen Kunden zur E-Mail an oder liefert den bestehenden. */
+/** Anrede vereinheitlichen: "herr"/"mr." → "Herr", "frau"/"mrs" → "Frau", sonst kapitalisiert. */
+export function normalizeSalutation(raw?: string | null): string {
+  const s = String(raw || '').trim();
+  if (!s) return '';
+  const l = s.toLowerCase();
+  if (l.startsWith('herr') || l === 'mr' || l === 'mr.') return 'Herr';
+  if (l.startsWith('frau') || l === 'mrs' || l === 'mrs.' || l === 'ms' || l === 'ms.') return 'Frau';
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 export async function upsertCustomerByEmail(
   email: string,
   data?: { name?: string; firstName?: string; lastName?: string; phone?: string; salutation?: string;
@@ -82,7 +92,7 @@ export async function upsertCustomerByEmail(
         `SELECT salutation, first_name, last_name, name, phone, street, zip, city, country FROM customers WHERE id = ?`, [existingId]
       );
       if (cur) {
-        const salutation = cur.salutation?.trim() ? cur.salutation : data?.salutation || '';
+        const salutation = cur.salutation?.trim() ? normalizeSalutation(cur.salutation) : normalizeSalutation(data?.salutation);
         const first_name = cur.first_name?.trim() ? cur.first_name : inFirst;
         const last_name = cur.last_name?.trim() ? cur.last_name : inLast;
         const name = cur.name?.trim() ? cur.name : (joinName(first_name, last_name) || inName);
@@ -104,7 +114,7 @@ export async function upsertCustomerByEmail(
   const id = crypto.randomUUID();
   await dbRun(
     `INSERT INTO customers (id, salutation, first_name, last_name, name, phone, street, zip, city, country) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, data?.salutation || '', inFirst, inLast, inName, data?.phone || '', data?.street || '', data?.zip || '', data?.city || '', data?.country || '']
+    [id, normalizeSalutation(data?.salutation), inFirst, inLast, inName, data?.phone || '', data?.street || '', data?.zip || '', data?.city || '', data?.country || '']
   );
   await dbRun(`INSERT INTO customer_emails (email, customer_id, is_primary) VALUES (?, ?, 1)`, [e, id]);
   return id;
