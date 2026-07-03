@@ -389,3 +389,11 @@ Ausgebucht-Status, Product-JSON-LD, Buchungslinks auf die Faltin-Buchungsseite).
   zurück zur WordPress-Seite — kein iframe, keine Doppel-Pflege.
 - Design-Änderungen am Karten-Layout passieren zentral im Faltin-System;
   WordPress muss dafür nie angefasst werden (10-Minuten-Cache via Transient).
+
+### Auto-Logik in `[faltin_anfrage]` (ab Plugin 1.5.0)
+
+Bestehende Einbettungen wie `[faltin_anfrage event="americas-cup-2024"
+name="America's Cup 2024"]` bleiben unverändert gültig — und **upgraden
+automatisch**: Sobald das Event buchbare Packages hat, liefert der Shortcode
+die Package-Karten aus; sonst wie bisher das Anfrageformular. Kein Umbau
+bestehender WordPress-Seiten nötig. `packages="0"` erzwingt das reine Formular.
