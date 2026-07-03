@@ -77,7 +77,7 @@
     "currency": "EUR",
     "single_supplement": 1485,
     "popular": true,
-    "available_spots": 12,
+    "available_spots": 0,
     "rating": 4.8,
     "reviews": 156,
     "hotel_images": [
@@ -99,39 +99,57 @@
     "includes": [
       {
         "type": "ticket",
-        "name": "Super Bowl LXI Premium Ticket",
-        "category": "500er Level (Lower Bowl)",
+        "name": "Super Bowl LXI Hospitality-Ticket",
+        "category": "500er Level",
         "status": "OK",
         "icon": "ticket",
-        "description": "Offizielles NFL Premium-Ticket mit VIP-Zugang",
+        "description": "Game Day Ticket mit reserviertem Sitzplatz im 500er Level – So. 14.02.2027, SoFi Stadium, Inglewood.",
         "sort_order": 1
       },
       {
         "type": "hotel",
-        "name": "Dream Hollywood, by Hyatt",
-        "category": "4-Sterne Superior",
+        "name": "4× Übernachtung – Dream Hollywood, by Hyatt",
+        "category": "Doppelzimmer",
         "status": "OK",
         "icon": "hotel",
-        "description": "Boutique-Hotel mit Rooftop-Pool und Hollywood Sign Blick",
+        "description": "Do. 11.02.–Mo. 15.02.2027 · Boutique-Hotel im Herzen von Hollywood mit Rooftop-Pool und Hollywood-Sign-Blick.",
         "sort_order": 2
       },
       {
-        "type": "transfer",
-        "name": "Flughafen-Hotel-Stadium Transfers",
-        "category": "Hin- und Rueckfahrt",
+        "type": "hospitality",
+        "name": "Offizielle Super Bowl Pregame-Party",
+        "category": "Catering, Getränke & Live-Entertainment",
         "status": "OK",
-        "icon": "transfer",
-        "description": "Komfortable Shuttles zu allen wichtigen Locations",
+        "icon": "hospitality",
+        "description": "Zutritt zur offiziellen Pregame-Party auf dem Super Bowl Campus mit Auftritten von NFL-Legenden.",
         "sort_order": 3
       },
       {
-        "type": "hospitality",
-        "name": "VIP Pregame-Party",
-        "category": "Inkl. Catering & Getraenke",
+        "type": "gift",
+        "name": "Personalisiertes Super Bowl Präsent",
+        "category": "Tickettasche, Reisebeutel & Kofferanhänger",
         "status": "OK",
-        "icon": "hospitality",
-        "description": "Exklusiver Zugang zur offiziellen Pregame-Party",
+        "icon": "gift",
+        "description": "Hochwertiges Willkommens-Set von Faltin Travel.",
         "sort_order": 4
+      },
+      {
+        "type": "map",
+        "name": "Detaillierte Reiseinformation & LA-Reiseführer",
+        "category": "inkl. Stadtplan",
+        "status": "OK",
+        "icon": "map",
+        "description": "Los Angeles Reiseführer mit Stadtplan sowie alle Reiseunterlagen.",
+        "sort_order": 5
+      },
+      {
+        "type": "guarantee",
+        "name": "Schweizer Reisegarantie",
+        "category": "Kundengeldabsicherung",
+        "status": "OK",
+        "icon": "check",
+        "description": "Vollständige Absicherung der Reisegelder über den Garantiefonds der Schweizer Reisebranche.",
+        "sort_order": 6
       }
     ],
     "active": true
@@ -151,7 +169,7 @@
     "currency": "EUR",
     "single_supplement": 1500,
     "popular": false,
-    "available_spots": 12,
+    "available_spots": 999,
     "rating": 4.6,
     "reviews": 128,
     "hotel_images": [
@@ -243,7 +261,7 @@
     "currency": "EUR",
     "single_supplement": 2238,
     "popular": false,
-    "available_spots": 12,
+    "available_spots": 999,
     "rating": 4.7,
     "reviews": 96,
     "hotel_images": [

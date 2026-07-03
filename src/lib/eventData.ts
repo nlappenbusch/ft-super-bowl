@@ -244,6 +244,8 @@ export interface PackageCardData {
   roomCategories: string[];
   popular: boolean;
   availableSpots: number;
+  /** Kontingent 0 = ausgebucht (weiter anzeigen, aber nicht buchbar). null/undefined im Record = kein Kontingent gepflegt. */
+  soldOut: boolean;
   rating: number;
   reviews: number;
   includes: PackageIncludeRecord[];
@@ -451,6 +453,8 @@ export function toPackageCardData(packageRecord: PackageRecord, baseUrl: string)
     roomCategories: packageRecord.room_categories || ['Doppelzimmer', 'Einzelzimmer'],
     popular: Boolean(packageRecord.popular),
     availableSpots: Number(packageRecord.available_spots || 0),
+    // Nur eine explizite 0 gilt als ausgebucht — null/undefined heißt "kein Kontingent gepflegt"
+    soldOut: packageRecord.available_spots === 0,
     rating: Number(packageRecord.rating || 0),
     reviews: Number(packageRecord.reviews || 0),
     includes,

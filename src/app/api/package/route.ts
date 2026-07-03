@@ -40,6 +40,7 @@ export async function GET(request: Request) {
     roomCategories: ['Doppelzimmer', 'Einzelzimmer'],
     popular: true,
     availableSpots: 12, // Verfügbare Plätze (Social Proof)
+    soldOut: false,
     rating: 4.8,
     reviews: 156,
     includes: [],
@@ -157,10 +158,14 @@ export async function GET(request: Request) {
         </div>
       ` : ''}
       
-      <!-- Availability Badge (Social Proof) -->
+      <!-- Kontingent-Badge: Ausgebucht bei 0, knappe Plätze ohne Zahl, sonst nichts -->
+      ${packageData.soldOut ? `
+      <div style="position: absolute; top: 20px; right: 20px; background: rgba(20,48,71,0.95); color: white; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+        Ausgebucht
+      </div>` : packageData.availableSpots > 0 && packageData.availableSpots <= 10 ? `
       <div class="availability-badge" style="position: absolute; top: 20px; right: 20px; background: rgba(241,70,36,0.95); color: white; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
-        ⏰ Nur noch ${packageData.availableSpots} Plätze verfügbar
-      </div>
+        ⏰ Nur noch wenige Plätze verfügbar
+      </div>` : ''}
       
       <div style="padding: 32px;">
         <!-- Package Summary (First Step) -->
@@ -297,12 +302,16 @@ export async function GET(request: Request) {
               <div style="font-size: 14px; color: #666;">pro Person im <span id="room-label">Doppelzimmer</span></div>
             </div>
             
-            <a id="booking-cta" href="${bookingUrl}&room=double&price=${packageData.price}&nights=${packageData.nights}" 
+            ${packageData.soldOut ? `
+            <div style="display: inline-block; background: #e2e8f0; color: #64748b; padding: 16px 32px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: not-allowed;">
+              Ausgebucht – nicht mehr buchbar
+            </div>` : `
+            <a id="booking-cta" href="${bookingUrl}&room=double&price=${packageData.price}&nights=${packageData.nights}"
                style="display: inline-block; background: #f14624; color: white; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; transition: all 0.3s; box-shadow: 0 2px 4px rgba(241,70,36,0.2);"
                onmouseover="this.style.background='#d63d1f'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(241,70,36,0.3)';"
                onmouseout="this.style.background='#f14624'; this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(241,70,36,0.2)';">
               Jetzt unverbindlich anfragen →
-            </a>
+            </a>`}
           </div>
         </div>
         
@@ -324,7 +333,8 @@ export async function GET(request: Request) {
       </div>
     </div>
     
-    <!-- Sticky CTA (appears on scroll) -->
+    <!-- Sticky CTA (appears on scroll) — entfällt bei ausgebuchtem Kontingent -->
+    ${packageData.soldOut ? '' : `
     <div id="sticky-cta" class="cta-sticky">
       <a id="sticky-booking-link" href="${bookingUrl}&room=double&price=${packageData.price}&nights=${packageData.nights}"
          style="display: block; background: #f14624; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); text-align: center;"
@@ -332,7 +342,7 @@ export async function GET(request: Request) {
          onmouseout="this.style.background='#f14624'">
         <span id="sticky-price">${packageData.price.toLocaleString('de-CH')} €</span> - Jetzt anfragen →
       </a>
-    </div>
+    </div>`}
     
     <script>
       // Room Selection Logic - als globale Funktion für WordPress-Kompatibilität
@@ -372,9 +382,12 @@ export async function GET(request: Request) {
         
         // Update CTA links with URL parameters
   const bookingUrl = '${bookingUrl}' + '&room=' + roomType + '&price=' + price + '&nights=' + nights + '&persons=' + personCount;
-        document.getElementById('booking-cta').href = bookingUrl;
-        document.getElementById('sticky-booking-link').href = bookingUrl;
-        document.getElementById('sticky-price').textContent = price.toLocaleString('de-CH') + ' €';
+        const ctaEl = document.getElementById('booking-cta');
+        if (ctaEl) ctaEl.href = bookingUrl;
+        const stickyLinkEl = document.getElementById('sticky-booking-link');
+        if (stickyLinkEl) stickyLinkEl.href = bookingUrl;
+        const stickyPriceEl = document.getElementById('sticky-price');
+        if (stickyPriceEl) stickyPriceEl.textContent = price.toLocaleString('de-CH') + ' €';
         
         // Animate price change
         priceDisplay.style.transform = 'scale(1.1)';
@@ -395,8 +408,10 @@ export async function GET(request: Request) {
         document.getElementById('price-display').textContent = price.toLocaleString('de-CH') + ' €';
 
         const bookingUrl = '${bookingUrl}' + '&room=' + roomType + '&price=' + price + '&nights=' + nights + '&persons=' + persons;
-        document.getElementById('booking-cta').href = bookingUrl;
-        document.getElementById('sticky-booking-link').href = bookingUrl;
+        const ctaEl = document.getElementById('booking-cta');
+        if (ctaEl) ctaEl.href = bookingUrl;
+        const stickyLinkEl = document.getElementById('sticky-booking-link');
+        if (stickyLinkEl) stickyLinkEl.href = bookingUrl;
 
         const hint = document.getElementById('person-hint');
         if (hint) {
@@ -409,7 +424,7 @@ export async function GET(request: Request) {
         const stickyCta = document.getElementById('sticky-cta');
         const card = document.querySelector('.superbowl-package-card');
         
-        if (card) {
+        if (card && stickyCta) {
           const cardRect = card.getBoundingClientRect();
           const isCardVisible = cardRect.bottom > 0 && cardRect.top < window.innerHeight;
           
