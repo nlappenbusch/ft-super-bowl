@@ -133,6 +133,7 @@ export default function BookingForm() {
   const [phonePrefix, setPhonePrefix] = useState('+41'); // Phone country code
   const [isPhoneDropdownOpen, setIsPhoneDropdownOpen] = useState(false); // Custom dropdown state
   const [isMounted, setIsMounted] = useState(false); // Fix hydration error for dynamic widgets
+  const [isSoldOut, setIsSoldOut] = useState(false); // Kontingent 0 → Anfrage gesperrt
   
   const phoneCountries = [
     { code: 'ch', prefix: '+41', name: 'CH' },
@@ -179,7 +180,9 @@ export default function BookingForm() {
             price?: number;
             title?: string;
             singleSupplement?: number;
+            soldOut?: boolean;
           };
+          setIsSoldOut(Boolean(pkg.soldOut));
           setSelectedPackage({
             id: pkg.id || packageParam,
             stars: pkg.stars || defaultPackage.stars,
@@ -792,9 +795,24 @@ export default function BookingForm() {
                     {errors.acceptPrivacy && <span className='text-red-500 text-sm block ml-7'>Pflichtfeld</span>}
                 </div>
 
-                <button 
-                  type='submit' 
-                  style={{ 
+                {isSoldOut && (
+                  <div className='p-4 bg-gray-100 border-l-4 border-gray-400 rounded-md'>
+                    <div className='flex items-start gap-3'>
+                      <AlertCircle className='w-5 h-5 text-gray-600 shrink-0 mt-0.5' />
+                      <div className='text-sm text-gray-800'>
+                        <p className='font-semibold mb-1'>Dieses Package ist ausgebucht.</p>
+                        <p>Das Kontingent für dieses Package ist erschöpft. Gerne beraten wir Sie zu verfügbaren Alternativen: <a href='tel:+41447002277' className='font-semibold underline'>+41 44 700 22 77</a></p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <button
+                  type='submit'
+                  disabled={isSoldOut}
+                  style={isSoldOut ? {
+                    backgroundColor: '#cbd5e1',
+                    cursor: 'not-allowed'
+                  } : {
                     backgroundColor: isSubmitHovered ? '#d63d1f' : '#f14624',
                     transform: isSubmitHovered ? 'translateY(-2px)' : 'translateY(0)',
                     boxShadow: isSubmitHovered ? '0 10px 25px rgba(241, 70, 36, 0.3)' : 'none',
@@ -804,7 +822,7 @@ export default function BookingForm() {
                   onMouseLeave={() => setIsSubmitHovered(false)}
                   className='w-full text-white font-bold py-4 px-6 rounded-lg text-lg shadow-lg'
                 >
-                  Verbindliche Buchungsanfrage senden →
+                  {isSoldOut ? 'Ausgebucht – nicht mehr buchbar' : 'Verbindliche Buchungsanfrage senden →'}
                 </button>
                 
                 {/* Phase 2: Verbindlichkeitshinweis */}

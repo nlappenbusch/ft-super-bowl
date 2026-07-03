@@ -40,6 +40,7 @@ export async function GET(request: Request) {
     roomCategories: ['Doppelzimmer', 'Einzelzimmer'],
     popular: true,
     availableSpots: 12,
+    soldOut: false,
     rating: 4.8,
     reviews: 156,
     includes: [
@@ -175,10 +176,14 @@ export async function GET(request: Request) {
         <div style="font-size: 13px; opacity: 0.95;">Event-Ticket + Hotel + Transfers + VIP-Zugang</div>
       </div>
       
-      <!-- Availability Badge -->
+      <!-- Kontingent-Badge: Ausgebucht bei 0, knappe Plätze ohne Zahl, sonst nichts -->
+      ${packageData.soldOut ? `
+      <div style="position: absolute; top: 100px; right: 20px; background: rgba(20,48,71,0.95); color: white; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10;">
+        Ausgebucht
+      </div>` : packageData.availableSpots > 0 && packageData.availableSpots <= 10 ? `
       <div class="availability-badge" style="position: absolute; top: 100px; right: 20px; background: rgba(241,70,36,0.95); color: white; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10;">
         ⏰ Nur noch wenige Plätze verfügbar
-      </div>
+      </div>` : ''}
       
       <div style="padding: 32px;">
         
@@ -339,12 +344,14 @@ export async function GET(request: Request) {
               </select>
             </div>
             
+${packageData.soldOut ? `
+            <div style="display: inline-block; background: #e2e8f0; color: #64748b; padding: 16px 32px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: not-allowed;">Ausgebucht – nicht mehr buchbar</div>` : `
             <a id="booking-cta-${packageData.id}" href="${bookingUrl}&room=double&price=${packageData.price}&nights=${packageData.nights}" 
                style="display: inline-block; background: #f14624; color: white; padding: 18px 36px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 18px; transition: all 0.3s; box-shadow: 0 4px 12px rgba(241,70,36,0.25);"
                onmouseover="this.style.background='#d63d1f'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(241,70,36,0.35)';"
                onmouseout="this.style.background='#f14624'; this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(241,70,36,0.25)';">
               Weiter zur Buchungsanfrage →
-            </a>
+            </a>`}
             
             <!-- PHASE 1: Verbindlichkeitshinweis -->
             <div style="margin-top: 14px; padding: 14px; background: #fef2f2; border-left: 3px solid #dc2626; border-radius: 6px; font-size: 12px; color: #7f1d1d; line-height: 1.6;">
@@ -373,14 +380,14 @@ export async function GET(request: Request) {
     </div>
     
     <!-- Sticky CTA (appears on scroll) -->
-    <div id="sticky-cta-${packageData.id}" class="cta-sticky">
+    ${packageData.soldOut ? '' : `<div id="sticky-cta-${packageData.id}" class="cta-sticky">
       <a id="sticky-booking-link-${packageData.id}" href="${bookingUrl}&room=double&price=${packageData.price}&nights=${packageData.nights}"
          style="display: block; background: #f14624; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); text-align: center;"
          onmouseover="this.style.background='#d63d1f'"
          onmouseout="this.style.background='#f14624'">
         <span id="sticky-price-${packageData.id}">${packageData.price.toLocaleString('de-CH')} €</span> - Weiter zur Buchungsanfrage →
       </a>
-    </div>
+    </div>`}
     
     <script>
       // Room Selection Logic - als globale Funktion für WordPress-Kompatibilität
@@ -429,9 +436,12 @@ export async function GET(request: Request) {
         
         // Update CTA links with URL parameters
   const bookingUrl = '${bookingUrl}' + '&room=' + roomType + '&price=' + price + '&nights=' + nights + '&persons=' + personCount;
-        document.getElementById('booking-cta-${packageData.id}').href = bookingUrl;
-        document.getElementById('sticky-booking-link-${packageData.id}').href = bookingUrl;
-        document.getElementById('sticky-price-${packageData.id}').textContent = price.toLocaleString('de-CH') + ' €';
+        const ctaEl = document.getElementById('booking-cta-${packageData.id}');
+        if (ctaEl) ctaEl.href = bookingUrl;
+        const stickyLinkEl = document.getElementById('sticky-booking-link-${packageData.id}');
+        if (stickyLinkEl) stickyLinkEl.href = bookingUrl;
+        const stickyPriceEl = document.getElementById('sticky-price-${packageData.id}');
+        if (stickyPriceEl) stickyPriceEl.textContent = price.toLocaleString('de-CH') + ' €';
         
         // Animate price change
         priceDisplay.style.transform = 'scale(1.1)';
@@ -457,8 +467,10 @@ export async function GET(request: Request) {
         }
 
         const bookingUrl = '${bookingUrl}' + '&room=' + roomType + '&price=' + price + '&nights=' + nights + '&persons=' + persons;
-        document.getElementById('booking-cta-${packageData.id}').href = bookingUrl;
-        document.getElementById('sticky-booking-link-${packageData.id}').href = bookingUrl;
+        const ctaEl2 = document.getElementById('booking-cta-${packageData.id}');
+        if (ctaEl2) ctaEl2.href = bookingUrl;
+        const stickyLinkEl2 = document.getElementById('sticky-booking-link-${packageData.id}');
+        if (stickyLinkEl2) stickyLinkEl2.href = bookingUrl;
       };
       
       // Sticky CTA on scroll
@@ -466,7 +478,7 @@ export async function GET(request: Request) {
         const stickyCta = document.getElementById('sticky-cta-${packageData.id}');
         const card = document.getElementById('superbowl-package-card-${packageData.id}');
         
-        if (card) {
+        if (card && stickyCta) {
           const cardRect = card.getBoundingClientRect();
           const isCardVisible = cardRect.bottom > 0 && cardRect.top < window.innerHeight;
           

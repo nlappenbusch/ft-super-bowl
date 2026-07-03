@@ -924,7 +924,7 @@ export default function EventPageView({
       {/* ── PACKAGES / TICKETS ───────────────────────────────────────────────── */}
       {showPackages && (
         <section className="py-14 px-4 scroll-mt-40" id="tickets" style={{ background: '#eef3fb', borderTop: '1px solid #e5e8ed', order: orderOf('packages') }}>
-          <div className="container mx-auto max-w-5xl">
+          <div className="container mx-auto max-w-6xl">
             <h2 className="text-3xl md:text-4xl font-extrabold mb-2 leading-tight text-center" style={{ color: '#143047' }}>Unsere Packages</h2>
             <p className="text-gray-600 text-center mb-10 max-w-2xl mx-auto">
               Wählen Sie Ihr Package — vom einzelnen Spieltag bis zur exklusiven Finale-Kombination. Alle Pakete inkl. Hotel, VIP-Hospitality &amp; Schweizer Reisegarantie.
@@ -938,7 +938,7 @@ export default function EventPageView({
                 selectedMatch={requestedMatch}
               />
             ) : (
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
                 {packages.map((pkg) => (
                   <PackageCardPro
                     key={pkg.id}
@@ -954,6 +954,7 @@ export default function EventPageView({
                     currency={pkg.currency || undefined}
                     popular={Boolean(pkg.popular)}
                     availableSpots={pkg.available_spots ?? undefined}
+                    images={pkg.hotel_images ?? undefined}
                     includes={(pkg.package_includes ?? (pkg as unknown as { includes?: PackageProInclude[] }).includes ?? [])}
                   />
                 ))}

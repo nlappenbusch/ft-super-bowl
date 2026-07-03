@@ -494,7 +494,7 @@ export default function AdminPackagesPage() {
                       onChange={(event) => updateField('single_supplement', event.target.value)}
                     />
                     <InputField
-                      label="Verfügbare Plätze"
+                      label="Kontingent (0 = ausgebucht, wird weiter angezeigt)"
                       type="number"
                       min="0"
                       value={form.available_spots}
