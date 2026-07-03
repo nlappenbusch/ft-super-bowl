@@ -183,9 +183,26 @@ export async function GET(request: Request) {
     });
   }
 
-  // Product/Offer-JSON-LD (GEO/SEO): Preise & Verfügbarkeit maschinenlesbar
-  const jsonLd = {
-    '@context': 'https://schema.org',
+  // SEO/GEO-JSON-LD: SportsEvent (Termin/Ort) + ItemList mit Product/Offer
+  // (Preise & Verfügbarkeit) — als @graph in einem Block.
+  const sportsEventLd: Record<string, unknown> = {
+    '@type': 'SportsEvent',
+    name: event.name || event.title,
+    url: `${base}/booking?event=${encodeURIComponent(eventSlug)}`,
+  };
+  if (event.start_date) sportsEventLd.startDate = event.start_date;
+  if (event.end_date) sportsEventLd.endDate = event.end_date;
+  if (event.hero_image) sportsEventLd.image = absUrl(base, event.hero_image);
+  if (event.description) sportsEventLd.description = event.description;
+  if (event.venue || event.location_city) {
+    sportsEventLd.location = {
+      '@type': 'Place',
+      name: event.venue || event.location_city,
+      address: [event.location_city, event.location_country].filter(Boolean).join(', '),
+    };
+  }
+
+  const itemListLd = {
     '@type': 'ItemList',
     itemListElement: packages.map((p, i) => ({
       '@type': 'ListItem',
@@ -206,9 +223,11 @@ export async function GET(request: Request) {
     })),
   };
 
+  const jsonLd = { '@context': 'https://schema.org', '@graph': [sportsEventLd, itemListLd] };
+
   const html =
     STYLE +
-    `<div class="ftpk-grid" data-ftv="1.6.1">${packages.map((p) => renderCard(p, base, eventSlug, linkSuffix)).join('')}</div>` +
+    `<div class="ftpk-grid" data-ftv="1.6.2">${packages.map((p) => renderCard(p, base, eventSlug, linkSuffix)).join('')}</div>` +
     `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`;
 
   return NextResponse.json({
