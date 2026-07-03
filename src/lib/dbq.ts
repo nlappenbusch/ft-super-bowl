@@ -197,6 +197,8 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
     try { await pool.query(`ALTER TABLE booking_requests ADD COLUMN IF NOT EXISTS docs_ready integer NOT NULL DEFAULT 0`); } catch { /* ignore */ }
     try { await pool.query(`ALTER TABLE booking_requests ADD COLUMN IF NOT EXISTS booking_number text`); } catch { /* ignore */ }
     try { await pool.query(`ALTER TABLE booking_requests ADD COLUMN IF NOT EXISTS source text DEFAULT ''`); } catch { /* ignore */ }
+    try { await pool.query(`ALTER TABLE booking_requests ADD COLUMN IF NOT EXISTS event_slug text DEFAULT ''`); } catch { /* ignore */ }
+    try { await pool.query(`ALTER TABLE booking_requests ADD COLUMN IF NOT EXISTS package_slug text DEFAULT ''`); } catch { /* ignore */ }
     try { await pool.query(`INSERT INTO counters (name, value) SELECT 'booking_number', 1000 WHERE NOT EXISTS (SELECT 1 FROM counters WHERE name = 'booking_number')`); } catch { /* ignore */ }
 
     // Kundenportal-Tabellen (in PG zusätzlich anlegen – Migration introspektiert nur Bestandstabellen).

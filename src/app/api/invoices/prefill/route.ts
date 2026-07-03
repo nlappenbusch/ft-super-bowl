@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getBooking } from '@/lib/bookingStore';
 import { getCustomer } from '@/lib/customerStore';
-import { findEventBySlug, findPackagesByEvent, type ContentPackageRecord } from '@/lib/contentStore';
+import { findEventBySlug, findPackagesByEvent, getPackages, getEvents, type ContentPackageRecord } from '@/lib/contentStore';
 
 /**
  * Rechnungs-Vorbefüllung aus einer Buchungsanfrage: lädt Buchung + Package +
@@ -30,9 +30,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: false, error: 'Buchung nicht gefunden' }, { status: 404 });
   }
 
-  const event = booking.event_slug ? findEventBySlug(booking.event_slug) : null;
+  let event = booking.event_slug ? findEventBySlug(booking.event_slug) : null;
   const eventPackages = (event ? findPackagesByEvent(event.id) : []) as ContentPackageRecord[];
-  const pkg = eventPackages.find((p) => p.slug === booking.package_slug || p.title === booking.package_title) || null;
+  let pkg = eventPackages.find((p) => p.slug === booking.package_slug || p.title === booking.package_title) || null;
+  // Fallback für Bestandsbuchungen ohne gespeicherte Slugs (Titel-Match global)
+  if (!pkg) {
+    pkg = (getPackages() as ContentPackageRecord[]).find((p) =>
+      (booking.package_slug && p.slug === booking.package_slug) || p.title === booking.package_title) || null;
+    if (pkg && !event) {
+      const found = (getEvents() as Array<NonNullable<ReturnType<typeof findEventBySlug>>>)
+        .find((e) => e.id === (pkg as ContentPackageRecord & { event_id?: string }).event_id);
+      if (found) event = found;
+    }
+  }
 
   const persons = Number(booking.number_of_persons || 0) || Math.max(1, Number(booking.double_rooms || 0) * 2 + Number(booking.single_rooms || 0));
   const singles = Number(booking.single_rooms || 0);

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getInvoiceById, getInvoiceItems, getBookingById } from '@/lib/database';
-import { findEventBySlug, findPackagesByEvent } from '@/lib/contentStore';
-import { getCustomer } from '@/lib/customerStore';
+import { findEventBySlug, findPackagesByEvent, getPackages, getEvents } from '@/lib/contentStore';
+import { getCustomer, normalizeSalutation } from '@/lib/customerStore';
 import { getSettings } from '@/lib/settingsStore';
 import { jsPDF } from 'jspdf';
 import fs from 'fs';
@@ -56,9 +56,18 @@ export async function GET(
     } catch { /* ignore parse errors */ }
 
     // Try to find the real event from booking's event_slug
-    const eventRecord = booking.event_slug ? findEventBySlug(booking.event_slug) : null;
+    let eventRecord = booking.event_slug ? findEventBySlug(booking.event_slug) : null;
     const eventPackages = eventRecord ? findPackagesByEvent(eventRecord.id) : [];
-    const bookedPackage = eventPackages.find((p: any) => p.slug === booking.package_slug || p.title === booking.package_title);
+    let bookedPackage = eventPackages.find((p: any) => p.slug === booking.package_slug || p.title === booking.package_title);
+    // Fallback für Bestandsbuchungen ohne gespeicherte Slugs: Package über
+    // Slug/Titel global suchen, Event über dessen event_id herleiten.
+    if (!bookedPackage) {
+      bookedPackage = (getPackages() as any[]).find((p: any) =>
+        (booking.package_slug && p.slug === booking.package_slug) || p.title === booking.package_title);
+      if (bookedPackage && !eventRecord) {
+        eventRecord = (getEvents() as any[]).find((e: any) => e.id === (bookedPackage as any).event_id) || null;
+      }
+    }
 
     // Build event display strings — noteMeta (admin edits) wins over auto-lookup
     const eventName = noteMeta.event_name ||
@@ -184,7 +193,7 @@ export async function GET(
     const traveler = booking.travelers[0];
     const recipientName = (customer?.name || [customer?.first_name, customer?.last_name].filter(Boolean).join(' ').trim())
       || `${traveler.firstName} ${traveler.lastName}`.trim();
-    const recipientLine1 = [customer?.salutation, recipientName].filter(Boolean).join(' ');
+    const recipientLine1 = [normalizeSalutation(customer?.salutation), recipientName].filter(Boolean).join(' ');
     doc.text(recipientLine1, leftMargin, currentY);
     currentY += 4;
     if (customer?.street) { doc.text(customer.street, leftMargin, currentY); currentY += 4; }

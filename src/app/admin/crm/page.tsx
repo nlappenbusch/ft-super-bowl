@@ -545,7 +545,7 @@ function DetailDrawer({
   return (
     <div className="fixed inset-0 z-50 flex justify-end" style={{ background: 'rgba(20,48,71,0.4)' }} onClick={onClose}>
       <div
-        className="h-full w-full max-w-lg bg-white shadow-2xl overflow-y-auto flex flex-col"
+        className="h-full w-full max-w-3xl bg-white shadow-2xl overflow-y-auto flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
