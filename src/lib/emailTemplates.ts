@@ -355,11 +355,17 @@ export interface InternalNotificationInput {
   customerName?: string;
   email: string;
   phone: string;
+  /** Rechnungs-/Kundenadresse aus dem Buchungsformular. */
+  address?: string;
   startDate?: string;
+  /** Anzeige-Reisezeitraum des Pakets, z.B. "Do. 11.02. – Mo. 15.02.2027 · 4 Nächte". */
+  travelPeriod?: string;
   numberOfPersons?: number;
   doubleRooms?: number;
   singleRooms?: number;
   totalPrice?: number;
+  /** Affiliate-/Herkunfts-Quelle (Host der einbettenden Website). */
+  source?: string;
   message?: string;
   adminUrl?: string;
   consent?: boolean;
@@ -377,10 +383,10 @@ export function internalNotificationHtml(input: InternalNotificationInput): stri
       ? ''
       : `<tr><td style="padding:6px 0;font-size:13px;color:#6b7280;width:42%;">${escapeHtml(label)}</td><td style="padding:6px 0;font-size:14px;font-weight:600;color:${NAVY};">${escapeHtml(String(value))}</td></tr>`;
   const rooms = [
-    input.doubleRooms ? `${input.doubleRooms}× DZ` : '',
-    input.singleRooms ? `${input.singleRooms}× EZ` : '',
+    input.doubleRooms ? `${input.doubleRooms}× Doppelbelegung` : '',
+    input.singleRooms ? `${input.singleRooms}× Einzelbelegung` : '',
   ].filter(Boolean).join(' · ');
-  const price = input.totalPrice ? `CHF ${Number(input.totalPrice).toLocaleString('de-CH')}` : '';
+  const price = input.totalPrice ? `EUR ${Number(input.totalPrice).toLocaleString('de-DE')}` : '';
   const adminUrl = input.adminUrl || `${baseUrl()}/admin/crm`;
   const messageBlock = input.message
     ? `<tr><td colspan="2" style="padding-top:14px;"><p style="margin:0 0 6px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;">Nachricht des Kunden</p><div style="background:#f5f7fa;border:1px solid #e5e8ed;border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.6;color:#374151;white-space:pre-wrap;">${escapeHtml(input.message)}</div></td></tr>`
@@ -390,13 +396,15 @@ export function internalNotificationHtml(input: InternalNotificationInput): stri
     <h1 style="margin:0 0 18px;font-size:22px;font-weight:800;color:${NAVY};">${escapeHtml(input.eventName || input.packageTitle || 'Anfrage')} <span style="color:${ACCENT};">${escapeHtml(input.requestNumber)}</span></h1>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
       ${row('Kunde', input.customerName)}
+      ${row('Adresse', input.address)}
       ${row('E-Mail', input.email)}
       ${row('Telefon', input.phone)}
       ${row('Paket', input.packageTitle)}
-      ${row('Reisedatum', input.startDate)}
+      ${row('Reisezeitraum', input.travelPeriod || input.startDate)}
       ${row('Personen', input.numberOfPersons)}
-      ${row('Zimmer', rooms)}
+      ${row('Belegung', rooms)}
       ${row('Richtpreis', price)}
+      ${row('Eingegangen über', input.source)}
       ${input.consent ? `<tr><td style="padding:6px 0;font-size:13px;color:#6b7280;width:42%;">AGB & Datenschutz</td><td style="padding:6px 0;font-size:14px;font-weight:600;color:#16a34a;">✓ Zugestimmt (AGB &amp; Datenschutzerklärung)</td></tr>` : ''}
       ${messageBlock}
     </table>

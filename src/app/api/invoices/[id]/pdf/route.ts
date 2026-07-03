@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getInvoiceById, getInvoiceItems, getBookingById } from '@/lib/database';
 import { findEventBySlug, findPackagesByEvent } from '@/lib/contentStore';
+import { getCustomer } from '@/lib/customerStore';
 import { getSettings } from '@/lib/settingsStore';
 import { jsPDF } from 'jspdf';
 import fs from 'fs';
@@ -24,6 +25,8 @@ export async function GET(
 
     const items = await getInvoiceItems(id);
     const booking = await getBookingById(invoice.booking_id);
+    // Rechnungsempfaenger: Kundenstammdaten (inkl. Adresse aus dem Buchungsformular)
+    const customer = booking?.customer_id ? await getCustomer(booking.customer_id) : null;
 
     if (!booking) {
       return NextResponse.json(
@@ -179,9 +182,14 @@ export async function GET(
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     const traveler = booking.travelers[0];
-    doc.text(`${traveler.firstName} ${traveler.lastName}`, leftMargin, currentY);
+    const recipientName = (customer?.name || [customer?.first_name, customer?.last_name].filter(Boolean).join(' ').trim())
+      || `${traveler.firstName} ${traveler.lastName}`.trim();
+    const recipientLine1 = [customer?.salutation, recipientName].filter(Boolean).join(' ');
+    doc.text(recipientLine1, leftMargin, currentY);
     currentY += 4;
-    // Adressfelder noch nicht im System - können später ergänzt werden
+    if (customer?.street) { doc.text(customer.street, leftMargin, currentY); currentY += 4; }
+    const zipCity = [customer?.zip, customer?.city].filter(Boolean).join(' ');
+    if (zipCity) { doc.text(customer?.country ? `${zipCity}, ${customer.country}` : zipCity, leftMargin, currentY); currentY += 4; }
     doc.text(booking.email, leftMargin, currentY);
     currentY += 4;
     doc.text(booking.phone, leftMargin, currentY);
@@ -249,7 +257,14 @@ export async function GET(
     doc.setFont('helvetica', 'bold');
     doc.text('Reisetermin:', labelX, currentY);
     doc.setFont('helvetica', 'normal');
-    doc.text(`${checkInFormatted} - ${checkOutFormatted}2027`, valueX, currentY);
+    // Anzeige-Reisezeitraum des Pakets ist die verlaesslichste Quelle;
+    // Datums-Arithmetik bleibt Fallback (deckt Zusatznaechte ab).
+    const pkgTravelPeriod = (bookedPackage as { travel_period?: string } | undefined)?.travel_period || '';
+    const computedRange = `${checkInFormatted}${adjustedCheckIn.getFullYear()} - ${checkOutFormatted}${adjustedCheckOut.getFullYear()}`;
+    const extraCount = nightsBefore + nightsAfter;
+    const extraNightsNote = extraCount > 0 ? ` (+${extraCount} Zusatznacht${extraCount === 1 ? '' : 'e'})` : '';
+    const travelRangeText = pkgTravelPeriod ? `${pkgTravelPeriod}${extraNightsNote}` : computedRange;
+    doc.text(travelRangeText, valueX, currentY);
     currentY += 4.2;
 
     doc.setFont('helvetica', 'bold');
@@ -273,9 +288,15 @@ export async function GET(
     doc.setFont('helvetica', 'bold');
     doc.text('Unterbringung:', labelX, currentY);
     doc.setFont('helvetica', 'normal');
-    const roomCount = Math.ceil(booking.travelers.length / 2);
-    const nightText = totalNights === 1 ? 'Übernachtung' : 'Übernachtungen';
-    doc.text(`${roomCount}x ${totalNights} ${nightText}/Frühstück im Doppelzimmer von ${checkInFormatted}${adjustedCheckIn.getFullYear()} - ${checkOutFormatted}${adjustedCheckOut.getFullYear()}`, valueX, currentY);
+    const pkgNights = Number((bookedPackage as { nights?: number } | undefined)?.nights || 0);
+    const displayNights = (pkgNights > 0 ? pkgNights : baseNights) + nightsBefore + nightsAfter;
+    const nightText = displayNights === 1 ? 'Übernachtung' : 'Übernachtungen';
+    const dblRooms = Number(booking.double_rooms || 0);
+    const sglRooms = Number(booking.single_rooms || 0);
+    const occupancy = (dblRooms > 0 || sglRooms > 0)
+      ? [dblRooms ? `${dblRooms}× Doppelbelegung` : '', sglRooms ? `${sglRooms}× Einzelbelegung` : ''].filter(Boolean).join(', ')
+      : `${Math.ceil(booking.travelers.length / 2)}× Doppelzimmer`;
+    doc.text(`${occupancy} · ${displayNights} ${nightText}/Frühstück · ${travelRangeText}`, valueX, currentY);
     currentY += 4.2;
 
     doc.setFont('helvetica', 'bold');
@@ -295,7 +316,12 @@ export async function GET(
     doc.setFont('helvetica', 'bold');
     doc.text('Ticketkategorie:', labelX, currentY);
     doc.setFont('helvetica', 'normal');
-    doc.text(`${booking.travelers.length}x ${booking.package_title}`, valueX, currentY);
+    const pkgIncludes = ((bookedPackage as { includes?: Array<{ type?: string; name?: string; category?: string }> } | undefined)?.includes || []);
+    const ticketInclude = pkgIncludes.find((i) => i && i.type === 'ticket' && i.name);
+    const ticketLabel = ticketInclude
+      ? `${booking.travelers.length}x ${ticketInclude.name}${ticketInclude.category ? ` (${ticketInclude.category})` : ''}`
+      : `${booking.travelers.length}x ${booking.package_title}`;
+    doc.text(ticketLabel, valueX, currentY);
     currentY += 5;
 
     ticketDetailLines.forEach((line: string) => {
@@ -311,8 +337,10 @@ export async function GET(
     
     doc.setFont('helvetica', 'normal');
     booking.travelers.forEach((t: any, index: number) => {
-      const salutation = t.salutation === 'Herr' ? 'Mr.' : 'Mrs.';
-      doc.text(`${salutation}    ${t.firstName} ${t.lastName}`, valueX, currentY);
+      const sal = String(t.salutation || '').trim().toLowerCase();
+      const salutation = sal.startsWith('herr') || sal === 'mr' ? 'Herr' : (sal.startsWith('frau') || sal === 'mrs' || sal === 'ms' ? 'Frau' : '');
+      const nameLine = [salutation, t.firstName, t.lastName].filter(Boolean).join(' ').trim();
+      doc.text(nameLine || '–', valueX, currentY);
       if (index < booking.travelers.length - 1) currentY += 3.8;
     });
     
@@ -384,21 +412,38 @@ export async function GET(
       }
     });
     
+    // Einzelbelegungs-/EZ-Zuschlaege als eigene Kategorie (Stefans Preismodell)
+    const surchargeItems = items.filter((item: any) =>
+      item.description.toLowerCase().includes('zuschlag')
+    );
+
     // Andere Positionen - nur Beschreibung, kein Preis
     const otherItems = items.filter((item: any) => 
       !item.description.toLowerCase().includes('package') &&
       !item.description.toLowerCase().includes('paket') &&
-      !item.description.toLowerCase().includes('zusatznacht')
+      !item.description.toLowerCase().includes('zusatznacht') &&
+      !item.description.toLowerCase().includes('zuschlag')
     );
     
+    surchargeItems.forEach((item: any) => {
+      const lines = item.description.split('\n');
+      doc.setFont('helvetica', 'normal');
+      doc.text(lines[0], valueX, currentY);
+      const sPrice = item.quantity > 1
+        ? `${item.quantity}x EUR ${item.unit_price.toFixed(2).replace('.', ',')} = EUR ${item.total_price.toFixed(2).replace('.', ',')}`
+        : `EUR ${item.total_price.toFixed(2).replace('.', ',')}`;
+      doc.text(sPrice, 190, currentY, { align: 'right' });
+      currentY += 3.5;
+    });
+
     otherItems.forEach((item: any) => {
       const lines = item.description.split('\n');
       doc.setFont('helvetica', 'normal');
       doc.text(lines[0], valueX, currentY);
       
       const priceText = item.quantity > 1 
-        ? `${item.quantity}x CHF ${item.unit_price.toFixed(2).replace('.', ',')} = CHF ${item.total_price.toFixed(2).replace('.', ',')}`
-        : `CHF ${item.total_price.toFixed(2).replace('.', ',')}`;
+        ? `${item.quantity}x EUR ${item.unit_price.toFixed(2).replace('.', ',')} = EUR ${item.total_price.toFixed(2).replace('.', ',')}`
+        : `EUR ${item.total_price.toFixed(2).replace('.', ',')}`;
       doc.text(priceText, 190, currentY, { align: 'right' });
       currentY += 3.5;
       
@@ -420,21 +465,36 @@ export async function GET(
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     
-    // Berechne Package-Preis und Zusatznächte-Preis separat
+    // Berechne Package-Preis, Zuschlaege und Zusatznaechte separat
     const packagePrice = packageItem ? packageItem.total_price : 0;
+    const surchargePrice = surchargeItems.reduce((sum: number, item: any) => sum + item.total_price, 0);
+    const surchargeCount = surchargeItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
     const extraNightsPrice = [...vorabItems, ...verlaengerungItems].reduce((sum, item) => sum + item.total_price, 0);
     const otherItemsPrice = otherItems.reduce((sum: number, item: any) => sum + item.total_price, 0);
     
-    // Package-Preis
-    const pricePerPerson = booking.travelers.length > 0 ? packagePrice / booking.travelers.length : 0;
+    // Reisepreis pro Person: Ankerpreis aus dem Package (Fallback: Positionswert)
+    const pkgUnitPrice = Number((bookedPackage as { price?: number } | undefined)?.price || 0);
+    const pricePerPerson = pkgUnitPrice > 0
+      ? pkgUnitPrice
+      : (packageItem && packageItem.quantity > 1
+          ? packageItem.unit_price
+          : (booking.travelers.length > 0 ? packagePrice / booking.travelers.length : 0));
     doc.text('Reisepreis pro Person:', priceLabelX, currentY);
     doc.text('Euro', currencyX, currentY);
     doc.text(pricePerPerson.toFixed(2).replace('.', ','), amountX, currentY, { align: 'right' });
     currentY += 5;
     
+    // Einzelbelegungs-Zuschlag (falls vorhanden)
+    if (surchargePrice > 0) {
+      doc.text(`Einzelbelegungs-Zuschlag (${surchargeCount}x):`, priceLabelX, currentY);
+      doc.text('Euro', currencyX, currentY);
+      doc.text(surchargePrice.toFixed(2).replace('.', ','), amountX, currentY, { align: 'right' });
+      currentY += 5;
+    }
+    
     doc.text('Gesamtreisepreis:', priceLabelX, currentY);
     doc.text('Euro', currencyX, currentY);
-    doc.text(packagePrice.toFixed(2).replace('.', ','), amountX, currentY, { align: 'right' });
+    doc.text((packagePrice + surchargePrice).toFixed(2).replace('.', ','), amountX, currentY, { align: 'right' });
     currentY += 5;
     
     // Zusatznächte (falls vorhanden)
@@ -573,7 +633,13 @@ export async function GET(
     
     // Swiss QR-Code Daten ZUERST definieren
     const firstTraveler = booking.travelers[0];
-    const debtorName = `${firstTraveler.firstName} ${firstTraveler.lastName}`;
+    const debtorName = (customer?.name || [customer?.first_name, customer?.last_name].filter(Boolean).join(' ').trim())
+      || `${firstTraveler.firstName} ${firstTraveler.lastName}`;
+    const debtorStreet = customer?.street || '';
+    const debtorZipCity = [customer?.zip, customer?.city].filter(Boolean).join(' ');
+    const countryMap: Record<string, string> = { schweiz: 'CH', ch: 'CH', deutschland: 'DE', de: 'DE', 'österreich': 'AT', oesterreich: 'AT', at: 'AT', liechtenstein: 'LI', li: 'LI', frankreich: 'FR', fr: 'FR', italien: 'IT', it: 'IT' };
+    const rawCountry = String(customer?.country || '').trim().toLowerCase();
+    const debtorCountryCode = countryMap[rawCountry] || (rawCountry.length === 2 ? rawCountry.toUpperCase() : 'CH');
     const qrAmount = invoice.total_amount.toFixed(2);
     const creditorName = company.name;
     const creditorAddress = company.street;
@@ -758,7 +824,7 @@ export async function GET(
       creditorName, creditorAddress, `${creditorZip} ${creditorCity}`, '', '', creditorCountry,
       '', '', '', '', '', '', '',
       qrAmount, bank.currency || 'EUR', 'K',
-      debtorName, booking.email, booking.phone, '', '', 'CH',
+      debtorName, debtorStreet, debtorZipCity, '', '', debtorCountryCode,
       'NON', '', `Rechnung ${invoice.invoice_number}`, 'EPD', ''
     ].join('\r\n');
     

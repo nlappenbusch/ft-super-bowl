@@ -19,6 +19,8 @@ export interface BookingRequest {
   status: 'new' | 'in_progress' | 'booked' | 'rejected';
   total_price: number;
   notes?: string;
+  /** Verknüpfter Kundenstammsatz (customers.id). */
+  customer_id?: string | null;
   /** Affiliate-/Herkunfts-Quelle: Host der einbettenden Website (WP-Shortcode). */
   source?: string;
   offer_sent?: number;

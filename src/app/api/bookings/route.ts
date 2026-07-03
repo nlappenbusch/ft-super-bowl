@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createBooking, listBookings, addMessage } from '@/lib/bookingStore';
-import { getEventBySlug } from '@/lib/eventData';
+import { getEventBySlug, getPackageBySlug } from '@/lib/eventData';
 import { addContactToBrevoList } from '@/lib/brevo';
 import { sendGraphMail, isGraphConfigured, getMailbox, getNotifyTo } from '@/lib/graphMailer';
 import {
@@ -69,6 +69,10 @@ export async function POST(request: Request) {
         name: [firstName, lastName].filter(Boolean).join(' ') || undefined,
         phone: body.phone,
         salutation: salutation || undefined,
+        street: typeof body.street === 'string' ? body.street.slice(0, 200) : undefined,
+        zip: typeof body.zip === 'string' ? body.zip.slice(0, 20) : undefined,
+        city: typeof body.city === 'string' ? body.city.slice(0, 100) : undefined,
+        country: typeof body.country === 'string' ? body.country.slice(0, 100) : undefined,
       });
     } catch (custErr) {
       console.warn('[Customer] Verknuepfung fehlgeschlagen (non-fatal):', custErr);
@@ -84,6 +88,12 @@ export async function POST(request: Request) {
       }
     }
     const eventName = event?.name || event?.title || body.packageTitle || undefined;
+    // Paket für Reisezeitraum/Nächte (Anzeige in Team-Mail)
+    const pkgRecord = body.eventSlug && body.packageSlug ? await getPackageBySlug(body.eventSlug, body.packageSlug) : null;
+    const travelPeriodDisplay = [pkgRecord?.travel_period, pkgRecord?.nights ? `${pkgRecord.nights} Nächte` : '']
+      .filter(Boolean).join(' · ') || undefined;
+    const customerAddress = [body.street, [body.zip, body.city].filter(Boolean).join(' '), body.country]
+      .filter((x: unknown) => typeof x === 'string' && (x as string).trim()).join(', ') || undefined;
 
     // Brevo sync: Kontakt der Event-Liste zuordnen (additiv – bestehende Listen bleiben)
     if (event?.brevo_list_id) {
@@ -177,7 +187,10 @@ export async function POST(request: Request) {
           doubleRooms: body.doubleRooms,
           singleRooms: body.singleRooms,
           totalPrice: body.totalPrice,
-          message: (body.message || '') + (body.source ? '\n\nEingegangen über: ' + body.source : ''),
+          address: customerAddress,
+          travelPeriod: travelPeriodDisplay,
+          source: body.source || undefined,
+          message: body.message || '',
           consent,
         });
         const teamRes = await sendGraphMail({ to: getNotifyTo(), subject, html });

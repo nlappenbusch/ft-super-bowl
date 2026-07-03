@@ -5,7 +5,7 @@
  * Verwendet in CRM (fester Lead), Finanzen (Lead wählen ODER individuelle Buchung)
  * und Buchungen. Erstellt über POST /api/invoices.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import {
   SectionCard, Field, TextInput, TextArea, SelectInput, InputField, TextAreaField, Button, Spinner,
@@ -80,6 +80,41 @@ export default function InvoiceEditor({
 
   const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [prefillCustomer, setPrefillCustomer] = useState<{
+    name: string; salutation?: string; street?: string; zip?: string; city?: string; country?: string; email?: string; phone?: string;
+  } | null>(null);
+  const [prefillWarnings, setPrefillWarnings] = useState<string[]>([]);
+
+  // Server-Prefill: Positionen nach Preismodell (N × p.P.-Preis + M × EZ-Zuschlag),
+  // echte Package-Leistungen, Event-Name/Destination und Rechnungsempfänger.
+  const fetchPrefill = async (bookingId: string) => {
+    try {
+      const res = await fetch(`/api/invoices/prefill?bookingId=${encodeURIComponent(bookingId)}`);
+      const json = await res.json();
+      if (!json?.success || !json?.data) return;
+      const d = json.data as {
+        items: Item[];
+        meta: { event_name?: string; destination?: string; hotel_description?: string; ticket_details?: string };
+        customer: typeof prefillCustomer;
+        warnings: string[];
+      };
+      if (Array.isArray(d.items) && d.items.length) setInvoiceItems(d.items);
+      setInvoicePdfMeta((prev) => ({
+        ...prev,
+        event_name: d.meta?.event_name || prev.event_name,
+        destination: d.meta?.destination || prev.destination,
+        hotel_description: d.meta?.hotel_description || prev.hotel_description,
+        ticket_details: d.meta?.ticket_details || prev.ticket_details,
+      }));
+      setPrefillCustomer(d.customer || null);
+      setPrefillWarnings(Array.isArray(d.warnings) ? d.warnings : []);
+    } catch { /* Fallback: lokale Defaults bleiben */ }
+  };
+
+  useEffect(() => {
+    if (lead?.id) fetchPrefill(lead.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lead?.id]);
 
   // Wenn im Finanzen-Modus ein anderer Lead gewählt wird → Positionen/Meta vorbefüllen
   const applyLeadPrefill = (l?: InvoiceLead) => {
@@ -89,6 +124,9 @@ export default function InvoiceEditor({
       event_name: l?.event_slug || '',
       hotel_description: l?.package_title || '',
     }));
+    setPrefillCustomer(null);
+    setPrefillWarnings([]);
+    if (l?.id) fetchPrefill(l.id);
   };
 
   const updateInvoiceItem = (index: number, field: keyof Item, value: string | number) => {
@@ -206,6 +244,27 @@ export default function InvoiceEditor({
         </div>
       )}
 
+      {/* Rechnungsempfänger (aus der Anfrage übernommen) */}
+      {selectedLead && prefillCustomer && (
+        <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm">
+          <div className="mb-1 text-xs font-bold uppercase tracking-wider text-gray-500">Rechnungsempfänger</div>
+          <div className="font-semibold text-gray-900">
+            {[prefillCustomer.salutation, prefillCustomer.name].filter(Boolean).join(' ')}
+          </div>
+          {prefillCustomer.street || prefillCustomer.city ? (
+            <div className="text-gray-700">
+              {prefillCustomer.street}{prefillCustomer.street ? ', ' : ''}{[prefillCustomer.zip, prefillCustomer.city].filter(Boolean).join(' ')}{prefillCustomer.country ? `, ${prefillCustomer.country}` : ''}
+            </div>
+          ) : null}
+          <div className="text-gray-500">{[prefillCustomer.email, prefillCustomer.phone].filter(Boolean).join(' · ')}</div>
+        </div>
+      )}
+      {prefillWarnings.length > 0 && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          {prefillWarnings.map((w, i) => <div key={i}>⚠️ {w}</div>)}
+        </div>
+      )}
+
       {/* Invoice Items */}
       <div className="mb-4 space-y-3">
         <Field label="Rechnungspositionen">
@@ -234,7 +293,7 @@ export default function InvoiceEditor({
                     type="number"
                     value={item.unit_price}
                     onChange={(e) => updateInvoiceItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
-                    placeholder="Preis (CHF)"
+                    placeholder="Preis (EUR)"
                     min="0"
                     step="0.01"
                   />
@@ -247,7 +306,7 @@ export default function InvoiceEditor({
                   )}
                 </div>
                 <div className="col-span-12 text-right text-sm font-semibold text-gray-700">
-                  Gesamt: CHF {(item.quantity * item.unit_price).toFixed(2)}
+                  Gesamt: EUR {(item.quantity * item.unit_price).toFixed(2)}
                 </div>
               </div>
             ))}
@@ -326,7 +385,7 @@ export default function InvoiceEditor({
       <div className="mb-4 rounded-xl border-2 p-4" style={{ borderColor: '#143047' }}>
         <div className="flex justify-between text-lg font-bold">
           <span style={{ color: '#143047' }}>Gesamtbetrag:</span>
-          <span style={{ color: '#d9531e' }}>CHF {invoiceTotal.toFixed(2)}</span>
+          <span style={{ color: '#d9531e' }}>EUR {invoiceTotal.toFixed(2)}</span>
         </div>
       </div>
 
