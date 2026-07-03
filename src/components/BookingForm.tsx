@@ -450,20 +450,24 @@ export default function BookingForm() {
         <div className='grid lg:grid-cols-3 gap-8'>
           <div className='lg:col-span-2'>
             <div className='bg-white rounded-xl shadow-lg overflow-hidden'>
-              {/* ── Hotel-Galerie: 1 großes Bild + 2 Thumbnails ── */}
+              {/* ── Hotel-Galerie: feste Bildboxen (absolute imgs — können nicht ausbrechen) ── */}
               {selectedPackage.hotelImages.length > 0 && (
-                <div className='relative grid grid-cols-3 gap-1 h-52 md:h-64'>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={selectedPackage.hotelImages[0]}
-                    alt={selectedPackage.hotel}
-                    className={`h-full w-full object-cover ${selectedPackage.hotelImages.length > 1 ? 'col-span-2' : 'col-span-3'}`}
-                  />
+                <div className='relative grid grid-cols-3 gap-1 h-52 md:h-64 overflow-hidden'>
+                  <div className={`relative overflow-hidden ${selectedPackage.hotelImages.length > 1 ? 'col-span-2' : 'col-span-3'}`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={selectedPackage.hotelImages[0]}
+                      alt={selectedPackage.hotel}
+                      className='absolute inset-0 h-full w-full object-cover'
+                    />
+                  </div>
                   {selectedPackage.hotelImages.length > 1 && (
-                    <div className='grid grid-rows-2 gap-1 h-52 md:h-64'>
+                    <div className='grid grid-rows-2 gap-1 min-h-0'>
                       {selectedPackage.hotelImages.slice(1, 3).map((src, i) => (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img key={i} src={src} alt='' className='h-full w-full object-cover min-h-0' />
+                        <div key={i} className='relative overflow-hidden min-h-0'>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={src} alt='' className='absolute inset-0 h-full w-full object-cover' />
+                        </div>
                       ))}
                     </div>
                   )}
