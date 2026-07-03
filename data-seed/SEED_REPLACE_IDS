@@ -1,0 +1,5 @@
+# Einträge, die beim nächsten Seed-Lauf im Volume ERSETZT werden (Admin-Stand geht verloren).
+# Nach dem Rollout wieder leeren/ergänzen nach Bedarf.
+package-dream-hollywood
+package-shore-hotel
+package-the-eden

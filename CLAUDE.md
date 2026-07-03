@@ -33,6 +33,7 @@ Laufzeit-Lesen Content: `src/lib/contentStore.ts` (`findPackagesByEvent` etc.).
 - `data/` ist **gitignored** und ein **persistentes Volume** (`./data:/app/data`).
 - `docker-entrypoint.sh` rollt beim Start `data-seed/*.json` ins Volume — **nur wenn `data-seed/SEED_VERSION` sich ändert**. `bookings.db` & `settings.json` werden **nie** überschrieben.
 - **Daher: Content-Änderungen (events/series/packages/faqs) gehen NUR live, wenn man `data-seed/<datei>.json` aktualisiert UND `data-seed/SEED_VERSION` hochzählt.** Lokales `data/` allein reicht nicht.
+- **Der Seed ist ADDITIV (Merge nach `id`):** bestehende Volume-Einträge werden NIE überschrieben (schützt Admin-Bearbeitungen). **Updates an bestehenden Einträgen:** id in `data-seed/SEED_REPLACE_IDS` listen (eine pro Zeile, `#` = Kommentar) + `SEED_VERSION` bumpen → genau diese Einträge werden ersetzt (Admin-Stand daran geht verloren).
 - Build läuft ohne `data/` (Fallback auf Seed/Defaults), daher baut CI/Docker auch ohne Volume.
 
 ## Mail / SSO (Microsoft 365 Graph, App-only)

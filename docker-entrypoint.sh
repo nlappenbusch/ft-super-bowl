@@ -10,6 +10,9 @@
 #   * werden bookings.db und settings.json NIE angefasst (nicht Teil des Seeds).
 # "best effort": schlägt der Seed fehl, startet die App trotzdem (kein Crash-Loop).
 # Neuen Content ausrollen: data-seed/ ergänzen UND SEED_VERSION hochzählen.
+# Bestehende Einträge gezielt AKTUALISIEREN: id in data-seed/SEED_REPLACE_IDS
+# eintragen (eine pro Zeile, # = Kommentar) UND SEED_VERSION hochzählen — nur
+# diese Einträge werden im Volume ersetzt (Admin-Änderungen daran gehen verloren).
 # ─────────────────────────────────────────────────────────────────────────────
 
 SEED_DIR="/app/data-seed"
@@ -31,6 +34,16 @@ const SEED_DIR = process.env.SEED_DIR || '/app/data-seed';
 const DATA_DIR = process.env.DATA_DIR || '/app/data';
 const FILES = ['events.json', 'series.json', 'category-seo.json', 'packages.json', 'faqs.json', 'pins.json', 'pin-icons.json'];
 
+// Gezieltes Ersetzen bestehender Einträge: ids aus SEED_REPLACE_IDS (optional).
+const REPLACE_IDS = (() => {
+  try {
+    return new Set(
+      readFileSync(join(SEED_DIR, 'SEED_REPLACE_IDS'), 'utf8')
+        .split(/\r?\n/).map((s) => s.trim()).filter((s) => s && !s.startsWith('#'))
+    );
+  } catch { return new Set(); }
+})();
+
 let failed = false;
 
 for (const f of FILES) {
@@ -46,22 +59,29 @@ for (const f of FILES) {
     const seed = JSON.parse(readFileSync(sp, 'utf8'));
     const data = JSON.parse(readFileSync(dp, 'utf8'));
     let added = 0;
+    let replaced = 0;
     if (Array.isArray(seed) && Array.isArray(data)) {
       const ids = new Set(data.map((x) => x && x.id).filter(Boolean));
       for (const item of seed) {
-        if (item && item.id && !ids.has(item.id)) { data.push(item); ids.add(item.id); added++; }
+        if (!item || !item.id) continue;
+        if (!ids.has(item.id)) { data.push(item); ids.add(item.id); added++; }
+        else if (REPLACE_IDS.has(item.id)) {
+          const i = data.findIndex((x) => x && x.id === item.id);
+          if (i >= 0) { data[i] = item; replaced++; }
+        }
       }
     } else if (seed && data && typeof seed === 'object' && typeof data === 'object' && !Array.isArray(seed) && !Array.isArray(data)) {
       for (const k of Object.keys(seed)) {
         if (!(k in data)) { data[k] = seed[k]; added++; }
+        else if (REPLACE_IDS.has(k)) { data[k] = seed[k]; replaced++; }
       }
     } else {
       console.log(`[seed]   ~ ${f}: Struktur weicht ab – uebersprungen`);
       continue;
     }
-    if (added > 0) {
+    if (added > 0 || replaced > 0) {
       writeFileSync(dp, JSON.stringify(data, null, 2) + '\n');
-      console.log(`[seed]   + ${f}: ${added} neue Eintraege ergaenzt (bestehende unangetastet)`);
+      console.log(`[seed]   + ${f}: ${added} neu, ${replaced} ersetzt (übrige unangetastet)`);
     } else {
       console.log(`[seed]   = ${f}: nichts Neues`);
     }
