@@ -50,7 +50,8 @@ export async function POST(request: Request) {
       email: body.email,
       phone: body.phone,
       message: body.message || '',
-      totalPrice: body.totalPrice || 0
+      totalPrice: body.totalPrice || 0,
+      source: typeof body.source === 'string' ? body.source.slice(0, 200) : ''
     });
 
     const consent = !!body.consent;
@@ -176,7 +177,7 @@ export async function POST(request: Request) {
           doubleRooms: body.doubleRooms,
           singleRooms: body.singleRooms,
           totalPrice: body.totalPrice,
-          message: body.message || '',
+          message: (body.message || '') + (body.source ? '\n\nEingegangen über: ' + body.source : ''),
           consent,
         });
         const teamRes = await sendGraphMail({ to: getNotifyTo(), subject, html });

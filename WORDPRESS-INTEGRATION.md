@@ -397,3 +397,16 @@ name="America's Cup 2024"]` bleiben unverändert gültig — und **upgraden
 automatisch**: Sobald das Event buchbare Packages hat, liefert der Shortcode
 die Package-Karten aus; sonst wie bisher das Anfrageformular. Kein Umbau
 bestehender WordPress-Seiten nötig. `packages="0"` erzwingt das reine Formular.
+
+### Embed-Modus & Affiliate-Tracking (ab Plugin 1.6.0)
+
+Die Shortcode-Buchungslinks führen auf `…/booking?…&embed=1&ref=<host>`:
+
+- **`embed=1`** — die Buchungsseite rendert ohne Site-Menü und Footer; sie
+  beginnt mit dem orangen „Zurück"-Balken (Direktaufrufe der Buchungsseite
+  auf der eigenen Domain zeigen das Menü weiterhin).
+- **`ref=<host>`** — Host der einbettenden WordPress-Site (vom Plugin via
+  `home_url()` gesetzt). Wird bei der Anfrage gespeichert: als
+  `Quelle: <host>` in den CRM-Notizen der Buchung und in der
+  Team-Benachrichtigungsmail („Eingegangen über: …"). Das native
+  Anfrageformular sendet die Quelle ebenfalls mit (`source`-Feld).

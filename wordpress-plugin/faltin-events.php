@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Faltin Travel – Event Shortcodes
  * Description: SEO-freundliche, serverseitig gerenderte Event-Karten, Package-Karten + natives Anfrageformular. Shortcodes: [faltin_events serie="..."], [faltin_event event="..."], [faltin_packages event="..."], [faltin_anfrage event="..."].
- * Version: 1.5.0
+ * Version: 1.6.0
  * Author: Faltin Travel AG
  *
  * Die Inhalte werden serverseitig per REST-API geladen (wp_remote_get) und als
@@ -297,7 +297,8 @@ function faltin_anfrage_shortcode($atts) {
     // Einbettungen bleiben so unverändert gültig und "upgraden" automatisch.
     $want_packages = !in_array(strtolower((string)$atts['packages']), array('0', 'off', 'no', 'false'), true);
     if ($want_packages && $atts['event'] && $atts['event'] !== 'allgemeine-anfrage') {
-        $pk_url = rtrim($atts['api_url'], '/') . '/api/packages-html?event=' . rawurlencode($atts['event']);
+        $pk_url = rtrim($atts['api_url'], '/') . '/api/packages-html?event=' . rawurlencode($atts['event'])
+                . '&site=' . rawurlencode(home_url());
         $pk = faltin_events_fetch($pk_url, (int)$atts['cache']);
         if ($pk && !empty($pk['has_packages']) && !empty($pk['html'])) {
             return $pk['html'];
@@ -386,6 +387,7 @@ function faltin_anfrage_shortcode($atts) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             eventSlug: <?php echo wp_json_encode($atts['event']); ?>,
+            source: <?php echo wp_json_encode((string) wp_parse_url(home_url(), PHP_URL_HOST)); ?>,
             packageSlug: null,
             packageId: 'contact-inquiry',
             packageTitle: 'Allgemeine Anfrage – ' + <?php echo wp_json_encode($event_name); ?>,
@@ -458,7 +460,8 @@ function faltin_packages_shortcode($atts) {
 
     if (!$atts['event']) return '<!-- faltin_packages: Parameter "event" fehlt -->';
 
-    $url = rtrim($atts['api_url'], '/') . '/api/packages-html?event=' . rawurlencode($atts['event']);
+    $url = rtrim($atts['api_url'], '/') . '/api/packages-html?event=' . rawurlencode($atts['event'])
+         . '&site=' . rawurlencode(home_url());
     $data = faltin_events_fetch($url, (int)$atts['cache']);
 
     if ($data && !empty($data['has_packages']) && !empty($data['html'])) {
