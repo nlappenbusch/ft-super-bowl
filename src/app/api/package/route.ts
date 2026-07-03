@@ -22,6 +22,7 @@ export async function GET(request: Request) {
     packageName: 'Ticket- & Hotel-Package',
     stars: 4,
     nights: 4,
+    travelPeriod: 'Do. 11.02. – Mo. 15.02.2027',
     price: 8950,
     singleSupplement: 1485,
     title: 'Dream Hollywood, by Hyatt',

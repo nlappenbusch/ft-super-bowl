@@ -162,6 +162,7 @@ export interface ContentPackageRecord {
   price?: number | null;
   currency?: string | null;
   single_supplement?: number | null;
+  travel_period?: string | null;
   popular?: boolean | null;
   available_spots?: number | null;
   rating?: number | null;
