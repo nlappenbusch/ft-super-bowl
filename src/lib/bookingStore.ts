@@ -64,7 +64,8 @@ export async function createBooking(input: BookingInput) {
       message: input.message || '',
       status: 'new',
       total_price: input.totalPrice || 0,
-      notes: input.source ? 'Quelle: ' + input.source : ''
+      notes: '',
+      source: input.source || ''
     } as any);
   }
 

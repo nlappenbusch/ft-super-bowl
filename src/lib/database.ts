@@ -57,6 +57,7 @@ export function initDatabase() {
       status TEXT NOT NULL DEFAULT 'new' CHECK(status IN ('new', 'in_progress', 'booked', 'rejected')),
       total_price REAL NOT NULL DEFAULT 0,
       notes TEXT DEFAULT '',
+      source TEXT DEFAULT '',
       assigned_to TEXT,
       customer_id TEXT,
       offer_sent INTEGER NOT NULL DEFAULT 0,
@@ -410,6 +411,7 @@ export function initDatabase() {
   if (!cols.some((c) => c.name === 'customer_id')) addColumn('booking_requests', 'customer_id TEXT');
   if (!cols.some((c) => c.name === 'offer_sent')) addColumn('booking_requests', 'offer_sent INTEGER NOT NULL DEFAULT 0');
   if (!cols.some((c) => c.name === 'docs_ready')) addColumn('booking_requests', 'docs_ready INTEGER NOT NULL DEFAULT 0');
+  if (!cols.some((c) => c.name === 'source')) addColumn('booking_requests', "source TEXT DEFAULT ''");
   const icols = sqlite.prepare(`PRAGMA table_info(incentive_plans)`).all() as Array<{ name: string }>;
   if (icols.length && !icols.some((c) => c.name === 'error')) addColumn('incentive_plans', "error TEXT NOT NULL DEFAULT ''");
   if (icols.length && !icols.some((c) => c.name === 'progress')) addColumn('incentive_plans', "progress TEXT NOT NULL DEFAULT ''");
@@ -488,14 +490,15 @@ export async function insertBooking(booking: Omit<BookingRequest, 'id' | 'create
     `INSERT INTO booking_requests (
       id, created_at, updated_at, request_number, package_id, package_title, start_date,
       number_of_persons, double_rooms, single_rooms, travelers,
-      email, phone, message, status, total_price, notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      email, phone, message, status, total_price, notes, source
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, now, now, requestNumber,
       booking.package_id, booking.package_title, booking.start_date,
       booking.number_of_persons, booking.double_rooms, booking.single_rooms,
       booking.travelers, booking.email, booking.phone, booking.message,
       booking.status, booking.total_price, booking.notes,
+      (booking as { source?: string }).source || '',
     ]
   );
 

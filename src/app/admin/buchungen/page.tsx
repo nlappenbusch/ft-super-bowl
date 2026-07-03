@@ -498,6 +498,14 @@ export default function AdminDashboard() {
                 </div>
               )}
 
+              {/* Affiliate-/Herkunfts-Quelle (WP-Shortcode-Einbettung) */}
+              {selectedBooking.source && (
+                <div>
+                  <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-gray-500">Eingegangen über</h3>
+                  <Badge tone="info">{selectedBooking.source}</Badge>
+                </div>
+              )}
+
               {/* Notes */}
               <TextAreaField
                 label="Notizen (intern)"
