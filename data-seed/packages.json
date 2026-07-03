@@ -137,6 +137,190 @@
     "active": true
   },
   {
+    "id": "package-shore-hotel",
+    "event_id": "event-super-bowl-2027",
+    "slug": "shore-hotel-santa-monica",
+    "package_name": "Ticket- & Hotel-Package",
+    "title": "Shore Hotel Santa Monica",
+    "short_description": "Modernes Design-Hotel direkt gegenüber dem Pazifik – wenige Schritte vom Santa Monica Pier, mit Pool-Terrasse und Meerblick.",
+    "description": "Direkt gegenüber dem Pazifik und nur wenige Schritte vom weltbekannten Santa Monica Pier verbindet das Shore Hotel modernes Design mit entspanntem Westcoast-Lifestyle. Strand, Third Street Promenade, Cafés und Boutiquen liegen in unmittelbarer Nähe. Herzstück des Hauses ist die offene Pool-Terrasse mit Meerblick – tagsüber Sonne und Pazifikbrise, abends der perfekte Ort für einen Drink mit Blick auf das Lichterspiel des Piers. Unterbringung im Doppelzimmer von Do. 11.02. bis Mo. 15.02.2027. Adresse: 1515 Ocean Avenue, Santa Monica, CA 90401, USA.",
+    "hotel": "Shore Hotel Santa Monica",
+    "stars": 4,
+    "nights": 4,
+    "price": 9485,
+    "currency": "EUR",
+    "single_supplement": 1500,
+    "popular": false,
+    "available_spots": 12,
+    "rating": 4.6,
+    "reviews": 128,
+    "hotel_images": [
+      "/bilder-hotel/shore-hotel-1.jpg",
+      "/bilder-hotel/shore-hotel-2.jpg",
+      "/bilder-hotel/shore-hotel-3.jpg"
+    ],
+    "distances": {
+      "airport": "25 Min. / ca. 16 km (LAX)",
+      "stadium": "30 Min. / ca. 19 km (SoFi Stadium)",
+      "downtown": "35 Min. / ca. 25 km (Downtown LA)"
+    },
+    "room_categories": [
+      "Doppelzimmer",
+      "Einzelzimmer"
+    ],
+    "extension_nights": "Verlaengerungsnaechte auf Anfrage gegen Aufpreis buchbar",
+    "badge_text": "Offizielles Hospitality-Package",
+    "includes": [
+      {
+        "type": "ticket",
+        "name": "Super Bowl LXI Hospitality-Ticket",
+        "category": "500er Level",
+        "status": "OK",
+        "icon": "ticket",
+        "description": "Game Day Ticket mit reserviertem Sitzplatz im 500er Level – So. 14.02.2027, SoFi Stadium, Inglewood.",
+        "sort_order": 1
+      },
+      {
+        "type": "hotel",
+        "name": "4× Übernachtung – Shore Hotel Santa Monica",
+        "category": "Doppelzimmer",
+        "status": "OK",
+        "icon": "hotel",
+        "description": "Do. 11.02.–Mo. 15.02.2027 · Design-Hotel direkt am Pazifik mit Pool-Terrasse und Meerblick.",
+        "sort_order": 2
+      },
+      {
+        "type": "hospitality",
+        "name": "Offizielle Super Bowl Pregame-Party",
+        "category": "Catering, Getränke & Live-Entertainment",
+        "status": "OK",
+        "icon": "hospitality",
+        "description": "Zutritt zur offiziellen Pregame-Party auf dem Super Bowl Campus mit Auftritten von NFL-Legenden.",
+        "sort_order": 3
+      },
+      {
+        "type": "gift",
+        "name": "Personalisiertes Super Bowl Präsent",
+        "category": "Tickettasche, Reisebeutel & Kofferanhänger",
+        "status": "OK",
+        "icon": "gift",
+        "description": "Hochwertiges Willkommens-Set von Faltin Travel.",
+        "sort_order": 4
+      },
+      {
+        "type": "map",
+        "name": "Detaillierte Reiseinformation & LA-Reiseführer",
+        "category": "inkl. Stadtplan",
+        "status": "OK",
+        "icon": "map",
+        "description": "Los Angeles Reiseführer mit Stadtplan sowie alle Reiseunterlagen.",
+        "sort_order": 5
+      },
+      {
+        "type": "guarantee",
+        "name": "Schweizer Reisegarantie",
+        "category": "Kundengeldabsicherung",
+        "status": "OK",
+        "icon": "check",
+        "description": "Vollständige Absicherung der Reisegelder über den Garantiefonds der Schweizer Reisebranche.",
+        "sort_order": 6
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "package-the-eden",
+    "event_id": "event-super-bowl-2027",
+    "slug": "the-eden-santa-monica",
+    "package_name": "Ticket- & Hotel-Package",
+    "title": "The Eden Santa Monica",
+    "short_description": "Historisches Art-Déco-Boutique-Hotel an der Ocean Avenue – Streamline-Moderne von 1939 mit Pazifikblick und beheiztem Salzwasser-Pool.",
+    "description": "The Eden – die frühere Hotel-Shangri-La-Ikone – ist ein historisches Boutique-Hotel im Streamline-Moderne-Stil von 1939, direkt an der Ocean Avenue in Santa Monica. Großzügige Zimmer und Suiten mit Blick auf den Pazifik oder Santa Monica, viel Tageslicht und zeitlose Art-Déco-Eleganz. Das beheizte Salzwasser-Pool-Deck aus Ipe-Holz ist ganzjährig geöffnet. Strand, Santa Monica Pier und Third Street Promenade liegen nur wenige Gehminuten entfernt. Unterbringung im Doppelzimmer von Do. 11.02. bis Mo. 15.02.2027. Adresse: 1301 Ocean Avenue, Santa Monica, CA 90401, USA.",
+    "hotel": "The Eden Santa Monica",
+    "stars": 4,
+    "nights": 4,
+    "price": 8950,
+    "currency": "EUR",
+    "single_supplement": 2238,
+    "popular": false,
+    "available_spots": 12,
+    "rating": 4.7,
+    "reviews": 96,
+    "hotel_images": [
+      "/bilder-hotel/eden-hotel-1.jpg",
+      "/bilder-hotel/eden-hotel-2.jpg",
+      "/bilder-hotel/eden-hotel-3.jpg"
+    ],
+    "distances": {
+      "airport": "25 Min. / ca. 16 km (LAX)",
+      "stadium": "30 Min. / ca. 19 km (SoFi Stadium)",
+      "downtown": "35 Min. / ca. 25 km (Downtown LA)"
+    },
+    "room_categories": [
+      "Doppelzimmer",
+      "Einzelzimmer"
+    ],
+    "extension_nights": "Verlaengerungsnaechte auf Anfrage gegen Aufpreis buchbar",
+    "badge_text": "Offizielles Hospitality-Package",
+    "includes": [
+      {
+        "type": "ticket",
+        "name": "Super Bowl LXI Hospitality-Ticket",
+        "category": "500er Level",
+        "status": "OK",
+        "icon": "ticket",
+        "description": "Game Day Ticket mit reserviertem Sitzplatz im 500er Level – So. 14.02.2027, SoFi Stadium, Inglewood.",
+        "sort_order": 1
+      },
+      {
+        "type": "hotel",
+        "name": "4× Übernachtung – The Eden Santa Monica",
+        "category": "Doppelzimmer",
+        "status": "OK",
+        "icon": "hotel",
+        "description": "Do. 11.02.–Mo. 15.02.2027 · Art-Déco-Boutique-Hotel an der Ocean Avenue mit Salzwasser-Pool und Pazifikblick.",
+        "sort_order": 2
+      },
+      {
+        "type": "hospitality",
+        "name": "Offizielle Super Bowl Pregame-Party",
+        "category": "Catering, Getränke & Live-Entertainment",
+        "status": "OK",
+        "icon": "hospitality",
+        "description": "Zutritt zur offiziellen Pregame-Party auf dem Super Bowl Campus mit Auftritten von NFL-Legenden.",
+        "sort_order": 3
+      },
+      {
+        "type": "gift",
+        "name": "Personalisiertes Super Bowl Präsent",
+        "category": "Tickettasche, Reisebeutel & Kofferanhänger",
+        "status": "OK",
+        "icon": "gift",
+        "description": "Hochwertiges Willkommens-Set von Faltin Travel.",
+        "sort_order": 4
+      },
+      {
+        "type": "map",
+        "name": "Detaillierte Reiseinformation & LA-Reiseführer",
+        "category": "inkl. Stadtplan",
+        "status": "OK",
+        "icon": "map",
+        "description": "Los Angeles Reiseführer mit Stadtplan sowie alle Reiseunterlagen.",
+        "sort_order": 5
+      },
+      {
+        "type": "guarantee",
+        "name": "Schweizer Reisegarantie",
+        "category": "Kundengeldabsicherung",
+        "status": "OK",
+        "icon": "check",
+        "description": "Vollständige Absicherung der Reisegelder über den Garantiefonds der Schweizer Reisebranche.",
+        "sort_order": 6
+      }
+    ],
+    "active": true
+  },
+  {
     "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",
     "event_slug": "french-open-2027",
     "currency": "EUR",
