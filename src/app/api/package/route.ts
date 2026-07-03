@@ -235,11 +235,11 @@ export async function GET(request: Request) {
         <!-- Room Type Selection (Interactive) -->
         <div style="background: #f8f9fa; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
           <div style="font-size: 16px; font-weight: 600; color: #333; margin-bottom: 16px;">
-            Wählen Sie Ihre Zimmerkategorie:
+            Wählen Sie Ihre Belegung:
           </div>
 
           <div style="margin-bottom: 12px; font-size: 13px; color: #666;">
-            Aktuelle Auswahl: <span id="selected-room-label" style="font-weight: 700; color: #184a7b;">Doppelzimmer</span>
+            Aktuelle Auswahl: <span id="selected-room-label" style="font-weight: 700; color: #184a7b;">Doppelbelegung</span>
           </div>
           
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px;">
@@ -248,8 +248,8 @@ export async function GET(request: Request) {
         style="border: 2px solid #1d4ed8; border-radius: 8px; padding: 16px; background: #dbeafe; cursor: pointer;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                  <div style="font-weight: 600; color: #184a7b; font-size: 16px;">🛏️ Doppelzimmer</div>
-                  <div style="font-size: 13px; color: #666; margin-top: 4px;">${packageData.nights} Nächte</div>
+                  <div style="font-weight: 600; color: #184a7b; font-size: 16px;">🛏️ Doppelbelegung</div>
+                  <div style="font-size: 13px; color: #666; margin-top: 4px;">${packageData.nights} Nächte · Preis pro Person im Doppelzimmer</div>
                 </div>
                 <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
                   <span class="selected-badge">Ausgewählt</span>
@@ -265,8 +265,8 @@ export async function GET(request: Request) {
                  style="border: 1px solid #d1d5db; border-radius: 8px; padding: 16px; background: white; cursor: pointer;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                  <div style="font-weight: 600; color: #333; font-size: 16px;">🛏️ Einzelzimmer</div>
-                  <div style="font-size: 13px; color: #666; margin-top: 4px;">${packageData.nights} Nächte</div>
+                  <div style="font-weight: 600; color: #333; font-size: 16px;">🛏️ Einzelbelegung</div>
+                  <div style="font-size: 13px; color: #666; margin-top: 4px;">${packageData.nights} Nächte · ${packageData.price.toLocaleString('de-CH')} € + ${packageData.singleSupplement.toLocaleString('de-CH')} € Zuschlag</div>
                 </div>
                 <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
                   <span class="selected-badge">Ausgewählt</span>
@@ -288,7 +288,7 @@ export async function GET(request: Request) {
             </div>
             <div>
               <div style="font-size: 14px; color: #666; margin-bottom: 4px;">🏨 Übernachtungen:</div>
-              <div style="font-weight: 600; color: #333;">${packageData.nights}x im <span id="room-type-text">Doppelzimmer</span></div>
+              <div style="font-weight: 600; color: #333;">${packageData.nights}x bei <span id="room-type-text">Doppelbelegung</span></div>
             </div>
           </div>
         </div>
@@ -300,7 +300,7 @@ export async function GET(request: Request) {
               <div id="price-display" class="price-update" style="font-size: 36px; font-weight: bold; color: #184a7b;">
                 ${packageData.price.toLocaleString('de-CH')} €
               </div>
-              <div style="font-size: 14px; color: #666;">pro Person im <span id="room-label">Doppelzimmer</span></div>
+              <div style="font-size: 14px; color: #666;">pro Person bei <span id="room-label">Doppelbelegung</span></div>
             </div>
             
             ${packageData.soldOut ? `
@@ -376,7 +376,7 @@ export async function GET(request: Request) {
         priceDisplay.textContent = price.toLocaleString('de-CH') + ' €';
         
         // Update room label
-        const roomLabel = roomType === 'double' ? 'Doppelzimmer' : 'Einzelzimmer';
+        const roomLabel = roomType === 'double' ? 'Doppelbelegung' : 'Einzelbelegung';
     document.getElementById('room-label').textContent = roomLabel;
     document.getElementById('room-type-text').textContent = roomLabel;
     document.getElementById('selected-room-label').textContent = roomLabel;
