@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
-import { Star, Hotel, Calendar, Users, ChevronDown, CheckCircle2, Phone, Mail, ArrowLeft, Bed, AlertCircle, UserCircle, UserCheck } from 'lucide-react';
+import { Star, Hotel, Calendar, Users, ChevronDown, CheckCircle2, Phone, Mail, ArrowLeft, Bed, AlertCircle, UserCircle, UserCheck, MapPin, Bus, Building2, Camera } from 'lucide-react';
 import 'flag-icons/css/flag-icons.min.css';
 import EkomiWidget from '@/components/EkomiWidget';
 
@@ -40,13 +40,36 @@ interface BookingFormData {
   acceptTerms: boolean;
 }
 
-const defaultPackage = { 
-  id: 'dream-hollywood', 
-  stars: 4, 
-  nights: 4, 
-  price: 8950, 
+interface SelectedPackage {
+  id: string;
+  stars: number;
+  nights: number;
+  price: number;
+  title: string;
+  singleSurcharge: number;
+  hotel: string;
+  travelPeriod: string;
+  hotelImages: string[];
+  includes: Array<{ name: string; description?: string }>;
+  distances: { airport?: string; stadium?: string; downtown?: string };
+  extensionNights: string;
+  badgeText: string;
+}
+
+const defaultPackage: SelectedPackage = {
+  id: 'dream-hollywood',
+  stars: 4,
+  nights: 4,
+  price: 8950,
   title: 'Dream Hollywood, by Hyatt',
-  singleSurcharge: 1485
+  singleSurcharge: 1485,
+  hotel: 'Dream Hollywood, by Hyatt',
+  travelPeriod: '',
+  hotelImages: [],
+  includes: [],
+  distances: {},
+  extensionNights: 'Verlängerungsnächte auf Anfrage gegen Aufpreis buchbar',
+  badgeText: 'Offizielles Hospitality-Package'
 };
 
 // Room configuration presets based on number of persons
@@ -179,8 +202,15 @@ export default function BookingForm() {
             nights?: number;
             price?: number;
             title?: string;
+            hotel?: string;
             singleSupplement?: number;
             soldOut?: boolean;
+            travelPeriod?: string;
+            hotelImages?: string[];
+            includes?: Array<{ name: string; description?: string }>;
+            distances?: { airport?: string; stadium?: string; downtown?: string };
+            extensionNights?: string;
+            badgeText?: string;
           };
           setIsSoldOut(Boolean(pkg.soldOut));
           setSelectedPackage({
@@ -189,7 +219,14 @@ export default function BookingForm() {
             nights: pkg.nights || defaultPackage.nights,
             price: Number(pkg.price || defaultPackage.price),
             title: pkg.title || defaultPackage.title,
-            singleSurcharge: Number(pkg.singleSupplement || defaultPackage.singleSurcharge)
+            singleSurcharge: Number(pkg.singleSupplement || defaultPackage.singleSurcharge),
+            hotel: pkg.hotel || pkg.title || defaultPackage.hotel,
+            travelPeriod: pkg.travelPeriod || '',
+            hotelImages: (pkg.hotelImages || []).filter(Boolean),
+            includes: (pkg.includes || []).filter((i) => i && i.name),
+            distances: pkg.distances || {},
+            extensionNights: pkg.extensionNights || defaultPackage.extensionNights,
+            badgeText: pkg.badgeText || defaultPackage.badgeText
           });
           setValue('packageId', packageParam);
         }
@@ -388,11 +425,19 @@ export default function BookingForm() {
 
   return (
     <div className='min-h-screen bg-gray-50'>
-      {/* Back to Package Button */}
+      {/* Back Button: führt dahin zurück, wo der User herkam (auch externe Seiten); Fallback: Event-Seite */}
       <div className='bg-linear-to-r from-orange-500 to-orange-600 shadow-md'>
         <div className='container mx-auto px-4 py-3'>
-          <a 
-          href={eventSlug ? `/events/${eventSlug}` : '/'}
+          <a
+            href={eventSlug ? `/events/${eventSlug}` : '/'}
+            onClick={(e) => {
+              // Browser-History vorhanden (interner Klick ODER Ankunft von externer Seite) → echtes Zurück
+              if (typeof window !== 'undefined' && (window.history.length > 1 || document.referrer)) {
+                e.preventDefault();
+                window.history.back();
+              }
+              // sonst: Direktaufruf ohne Verlauf → Fallback-Link greift
+            }}
             className='inline-flex items-center gap-2 text-white font-semibold hover:gap-3 transition-all duration-200'
           >
             <ArrowLeft className='w-5 h-5' />
@@ -404,22 +449,86 @@ export default function BookingForm() {
       <div className='container mx-auto px-4 py-8 max-w-6xl'>
         <div className='grid lg:grid-cols-3 gap-8'>
           <div className='lg:col-span-2'>
-            <div className='bg-white rounded-xl shadow-lg p-6 md:p-8'>
+            <div className='bg-white rounded-xl shadow-lg overflow-hidden'>
+              {/* ── Hotel-Galerie: 1 großes Bild + 2 Thumbnails ── */}
+              {selectedPackage.hotelImages.length > 0 && (
+                <div className='relative grid grid-cols-3 gap-1 h-52 md:h-64'>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={selectedPackage.hotelImages[0]}
+                    alt={selectedPackage.hotel}
+                    className={`h-full w-full object-cover ${selectedPackage.hotelImages.length > 1 ? 'col-span-2' : 'col-span-3'}`}
+                  />
+                  {selectedPackage.hotelImages.length > 1 && (
+                    <div className='grid grid-rows-2 gap-1 h-52 md:h-64'>
+                      {selectedPackage.hotelImages.slice(1, 3).map((src, i) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={i} src={src} alt='' className='h-full w-full object-cover min-h-0' />
+                      ))}
+                    </div>
+                  )}
+                  <div className='absolute inset-x-0 bottom-0 h-20 bg-linear-to-t from-black/60 to-transparent pointer-events-none' />
+                  <div className='absolute left-4 bottom-3 flex items-center gap-2'>
+                    <span className='text-white font-bold text-sm drop-shadow'>{selectedPackage.hotel}</span>
+                    <span className='text-yellow-400 text-xs'>{'★'.repeat(selectedPackage.stars)}</span>
+                  </div>
+                  {selectedPackage.badgeText && (
+                    <span className='absolute left-4 top-3 rounded-full bg-white/95 px-3 py-1 text-[11px] font-bold' style={{ color: '#184a7b' }}>
+                      {selectedPackage.badgeText}
+                    </span>
+                  )}
+                  <span className='absolute right-3 bottom-3 inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-0.5 text-[11px] font-semibold text-white'>
+                    <Camera className='w-3 h-3' /> {selectedPackage.hotelImages.length} Fotos
+                  </span>
+                </div>
+              )}
+
+              <div className='p-6 md:p-8'>
               <h1 className='text-3xl font-bold text-gray-900 mb-2'>
                 Buchung: {selectedPackage.title}
               </h1>
-              <p className='text-gray-600 mb-8'>
+              <p className='text-gray-600 mb-4'>
                 Bitte Formular ausfüllen - wir melden uns in Kürze
               </p>
 
+              {/* Distanz-Chips */}
+              {(selectedPackage.distances.airport || selectedPackage.distances.stadium || selectedPackage.distances.downtown) && (
+                <div className='flex flex-wrap gap-2 mb-8'>
+                  {selectedPackage.distances.airport && (
+                    <span className='inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600'>
+                      <Bus className='w-3.5 h-3.5' /> LAX: {selectedPackage.distances.airport}
+                    </span>
+                  )}
+                  {selectedPackage.distances.stadium && (
+                    <span className='inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600'>
+                      <MapPin className='w-3.5 h-3.5' /> Stadion: {selectedPackage.distances.stadium}
+                    </span>
+                  )}
+                  {selectedPackage.distances.downtown && (
+                    <span className='inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600'>
+                      <Building2 className='w-3.5 h-3.5' /> Downtown: {selectedPackage.distances.downtown}
+                    </span>
+                  )}
+                </div>
+              )}
+
               <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
                 <div className='p-4 rounded-lg bg-gray-50 border border-gray-200'>
-                  <div className='flex items-center gap-2 mb-2 text-gray-900'>
-                    <Calendar className='w-5 h-5' style={{ color: '#184a7b' }} />
-                    <div>
-                      <div className='font-semibold'>Reisezeitraum</div>
-                      <div className='text-sm text-gray-500'>Gemäß gewähltem Package</div>
+                  <div className='flex items-center justify-between gap-2 mb-2 text-gray-900'>
+                    <div className='flex items-center gap-2'>
+                      <Calendar className='w-5 h-5' style={{ color: '#184a7b' }} />
+                      <div>
+                        <div className='font-semibold'>Reisezeitraum</div>
+                        <div className='text-sm font-semibold' style={{ color: '#184a7b' }}>
+                          {selectedPackage.travelPeriod || 'Gemäß gewähltem Package'}
+                        </div>
+                      </div>
                     </div>
+                    {selectedPackage.nights > 0 && (
+                      <span className='shrink-0 rounded-full bg-white border border-gray-200 px-3 py-1 text-xs font-bold text-gray-700'>
+                        {selectedPackage.nights} Nächte
+                      </span>
+                    )}
                   </div>
                   {/* Phase 2: Verlängerungsnächte-Hinweis */}
                   <div className='mt-3 pt-3 border-t border-gray-300'>
@@ -836,6 +945,7 @@ export default function BookingForm() {
                   </div>
                 </div>
               </form>
+              </div>
             </div>
           </div>
 
@@ -843,6 +953,15 @@ export default function BookingForm() {
             <div className='bg-white rounded-xl shadow-lg p-6 mb-6 sticky top-4'>
               <h3 className='text-xl font-bold text-gray-900 mb-4'>Ihre Auswahl</h3>
               <div className='space-y-4 mb-6'>
+                {/* Hotel-Miniatur */}
+                {selectedPackage.hotelImages[0] && (
+                  <div className='relative h-28 overflow-hidden rounded-lg'>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={selectedPackage.hotelImages[0]} alt={selectedPackage.hotel} className='h-full w-full object-cover' />
+                    <div className='absolute inset-x-0 bottom-0 h-12 bg-linear-to-t from-black/55 to-transparent' />
+                    <span className='absolute left-2.5 bottom-1.5 text-[11px] font-bold text-white drop-shadow'>{selectedPackage.hotel}</span>
+                  </div>
+                )}
                 <div className='flex items-center justify-between pb-3 border-b'>
                   <div>
                     <div className='flex items-center gap-2 mb-1'>
@@ -856,6 +975,13 @@ export default function BookingForm() {
                     </div>
                   </div>
                 </div>
+                {selectedPackage.travelPeriod && (
+                  <div className='flex items-center gap-2 -mt-1 text-sm'>
+                    <Calendar className='w-4 h-4 shrink-0' style={{ color: '#184a7b' }} />
+                    <span className='font-semibold text-gray-800'>{selectedPackage.travelPeriod}</span>
+                    {selectedPackage.nights > 0 && <span className='text-gray-500'>· {selectedPackage.nights} Nächte</span>}
+                  </div>
+                )}
                 <div className='space-y-2 text-sm'>
                   <div className='flex justify-between'>
                     <span className='text-gray-600'>Anzahl Personen:</span>
@@ -903,12 +1029,23 @@ export default function BookingForm() {
                   <CheckCircle2 className='w-5 h-5 shrink-0 mt-0.5' style={{ color: '#184a7b' }} />
                   <div className='text-sm text-gray-700'>
                     <p className='font-semibold mb-1'>Inklusive:</p>
-                    <ul className='space-y-1 text-xs'>
-                      <li> Hospitality Super Bowl Ticket</li>
-                      <li> 4 Hotelübernachtungen</li>
-                      <li> Pregame-Party mit Catering</li>
-                      <li> Schweizer Reisegarantie</li>
-                    </ul>
+                    {selectedPackage.includes.length > 0 ? (
+                      <ul className='space-y-1.5 text-xs'>
+                        {selectedPackage.includes.map((inc, i) => (
+                          <li key={i} className='flex items-start gap-1.5'>
+                            <CheckCircle2 className='w-3.5 h-3.5 shrink-0 mt-[1px]' style={{ color: '#184a7b' }} />
+                            <span>{inc.name}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <ul className='space-y-1 text-xs'>
+                        <li> Hospitality Super Bowl Ticket</li>
+                        <li> {selectedPackage.nights || 4} Hotelübernachtungen</li>
+                        <li> Pregame-Party mit Catering</li>
+                        <li> Schweizer Reisegarantie</li>
+                      </ul>
+                    )}
                   </div>
                 </div>
               </div>

@@ -201,6 +201,8 @@ export interface PackageRecord {
   hotel?: string | null;
   stars?: number | null;
   nights?: number | null;
+  /** Anzeige-Reisezeitraum, z.B. "Do. 11.02. – Mo. 15.02.2027" (Freitext). */
+  travel_period?: string | null;
   price?: number | null;
   currency?: string | null;
   single_supplement?: number | null;
@@ -230,6 +232,7 @@ export interface PackageCardData {
   packageName: string;
   stars: number;
   nights: number;
+  travelPeriod: string;
   price: number;
   singleSupplement: number;
   title: string;
@@ -439,6 +442,7 @@ export function toPackageCardData(packageRecord: PackageRecord, baseUrl: string)
     packageName: packageRecord.package_name || 'Ticket- & Hotel-Package',
     stars: packageRecord.stars || 0,
     nights: packageRecord.nights || 0,
+    travelPeriod: packageRecord.travel_period || '',
     price: Number(packageRecord.price || 0),
     singleSupplement: Number(packageRecord.single_supplement || 0),
     title: packageRecord.title || '',

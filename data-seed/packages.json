@@ -152,7 +152,8 @@
         "sort_order": 6
       }
     ],
-    "active": true
+    "active": true,
+    "travel_period": "Do. 11.02. – Mo. 15.02.2027"
   },
   {
     "id": "package-shore-hotel",
@@ -244,7 +245,8 @@
         "sort_order": 6
       }
     ],
-    "active": true
+    "active": true,
+    "travel_period": "Do. 11.02. – Mo. 15.02.2027"
   },
   {
     "id": "package-the-eden",
@@ -336,7 +338,8 @@
         "sort_order": 6
       }
     ],
-    "active": true
+    "active": true,
+    "travel_period": "Do. 11.02. – Mo. 15.02.2027"
   },
   {
     "event_id": "323aad59-ebed-4f81-ae01-5cb731a68962",

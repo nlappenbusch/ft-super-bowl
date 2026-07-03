@@ -26,6 +26,7 @@ export async function POST(request: Request) {
       price: body.price ?? null,
       currency: body.currency || 'EUR',
       single_supplement: body.single_supplement ?? null,
+      travel_period: body.travel_period || null,
       popular: Boolean(body.popular),
       available_spots: body.available_spots ?? null,
       rating: body.rating ?? null,

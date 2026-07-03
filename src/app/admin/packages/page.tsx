@@ -52,6 +52,7 @@ interface PackageFormState {
   price: string;
   currency: string;
   single_supplement: string;
+  travel_period: string;
   popular: boolean;
   available_spots: string;
   rating: string;
@@ -79,6 +80,7 @@ const emptyForm: PackageFormState = {
   price: '',
   currency: 'EUR',
   single_supplement: '',
+  travel_period: '',
   popular: false,
   available_spots: '',
   rating: '',
@@ -159,6 +161,7 @@ export default function AdminPackagesPage() {
       price: row.price?.toString() || '',
       currency: row.currency || 'EUR',
       single_supplement: row.single_supplement?.toString() || '',
+      travel_period: row.travel_period || '',
       popular: Boolean(row.popular),
       available_spots: row.available_spots?.toString() || '',
       rating: row.rating?.toString() || '',
@@ -217,6 +220,7 @@ export default function AdminPackagesPage() {
       price: form.price ? Number(form.price) : null,
       currency: form.currency || 'EUR',
       single_supplement: form.single_supplement ? Number(form.single_supplement) : null,
+      travel_period: form.travel_period || null,
       popular: form.popular,
       available_spots: form.available_spots ? Number(form.available_spots) : null,
       rating: form.rating ? Number(form.rating) : null,
@@ -501,6 +505,12 @@ export default function AdminPackagesPage() {
                       onChange={(event) => updateField('available_spots', event.target.value)}
                     />
                   </div>
+                  <InputField
+                    label="Reisezeitraum (Anzeige)"
+                    value={form.travel_period}
+                    onChange={(event) => updateField('travel_period', event.target.value)}
+                    placeholder="Do. 11.02. – Mo. 15.02.2027"
+                  />
                   <div className="grid grid-cols-2 gap-3">
                     <InputField
                       label="Rating"
