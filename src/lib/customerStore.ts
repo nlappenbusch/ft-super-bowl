@@ -62,7 +62,8 @@ export async function findCustomerIdByEmail(email: string): Promise<string | nul
 /** Legt einen Kunden zur E-Mail an oder liefert den bestehenden. */
 export async function upsertCustomerByEmail(
   email: string,
-  data?: { name?: string; firstName?: string; lastName?: string; phone?: string; salutation?: string }
+  data?: { name?: string; firstName?: string; lastName?: string; phone?: string; salutation?: string;
+    street?: string; zip?: string; city?: string; country?: string }
 ): Promise<string> {
   const e = normEmail(email);
   if (!e) throw new Error('E-Mail fehlt');
@@ -75,9 +76,10 @@ export async function upsertCustomerByEmail(
 
   const existingId = await findCustomerIdByEmail(e);
   if (existingId) {
-    if (inFirst || inLast || inName || data?.phone || data?.salutation) {
-      const cur = await dbGet<{ salutation: string; first_name: string; last_name: string; name: string; phone: string }>(
-        `SELECT salutation, first_name, last_name, name, phone FROM customers WHERE id = ?`, [existingId]
+    if (inFirst || inLast || inName || data?.phone || data?.salutation || data?.street || data?.zip || data?.city || data?.country) {
+      const cur = await dbGet<{ salutation: string; first_name: string; last_name: string; name: string; phone: string;
+        street: string; zip: string; city: string; country: string }>(
+        `SELECT salutation, first_name, last_name, name, phone, street, zip, city, country FROM customers WHERE id = ?`, [existingId]
       );
       if (cur) {
         const salutation = cur.salutation?.trim() ? cur.salutation : data?.salutation || '';
@@ -85,9 +87,14 @@ export async function upsertCustomerByEmail(
         const last_name = cur.last_name?.trim() ? cur.last_name : inLast;
         const name = cur.name?.trim() ? cur.name : (joinName(first_name, last_name) || inName);
         const phone = cur.phone?.trim() ? cur.phone : data?.phone || '';
+        // Adresse: vorhandene Admin-Daten haben Vorrang, Leeres wird gefüllt
+        const street = cur.street?.trim() ? cur.street : data?.street || '';
+        const zip = cur.zip?.trim() ? cur.zip : data?.zip || '';
+        const city = cur.city?.trim() ? cur.city : data?.city || '';
+        const country = cur.country?.trim() ? cur.country : data?.country || '';
         await dbRun(
-          `UPDATE customers SET salutation = ?, first_name = ?, last_name = ?, name = ?, phone = ?, updated_at = datetime('now') WHERE id = ?`,
-          [salutation, first_name, last_name, name, phone, existingId]
+          `UPDATE customers SET salutation = ?, first_name = ?, last_name = ?, name = ?, phone = ?, street = ?, zip = ?, city = ?, country = ?, updated_at = datetime('now') WHERE id = ?`,
+          [salutation, first_name, last_name, name, phone, street, zip, city, country, existingId]
         );
       }
     }
@@ -96,8 +103,8 @@ export async function upsertCustomerByEmail(
 
   const id = crypto.randomUUID();
   await dbRun(
-    `INSERT INTO customers (id, salutation, first_name, last_name, name, phone) VALUES (?, ?, ?, ?, ?, ?)`,
-    [id, data?.salutation || '', inFirst, inLast, inName, data?.phone || '']
+    `INSERT INTO customers (id, salutation, first_name, last_name, name, phone, street, zip, city, country) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, data?.salutation || '', inFirst, inLast, inName, data?.phone || '', data?.street || '', data?.zip || '', data?.city || '', data?.country || '']
   );
   await dbRun(`INSERT INTO customer_emails (email, customer_id, is_primary) VALUES (?, ?, 1)`, [e, id]);
   return id;
@@ -107,7 +114,8 @@ export async function upsertCustomerByEmail(
 export async function linkBookingToCustomer(
   bookingId: string,
   email: string,
-  data?: { name?: string; firstName?: string; lastName?: string; phone?: string; salutation?: string }
+  data?: { name?: string; firstName?: string; lastName?: string; phone?: string; salutation?: string;
+    street?: string; zip?: string; city?: string; country?: string }
 ): Promise<string | null> {
   const e = normEmail(email);
   if (!e || !bookingId) return null;
