@@ -4,14 +4,22 @@ import { getEventBySlug, getPackagesByEventSlug, type PackageRecord } from '@/li
 /**
  * Liefert die Package-Karten eines Events als selbstenthaltenes HTML
  * (Inline-CSS, kein JS, absolute URLs) für die WordPress-Einbettung via
- * [faltin_packages]-Shortcode. Antwortformat kompatibel zu faltin_events_fetch:
- * { success, data: { has_packages, count, event_name, html } }.
+ * [faltin_packages]/[faltin_anfrage]-Shortcode. Antwortformat kompatibel zu
+ * faltin_events_fetch: { success, data: { has_packages, count, event_name, html } }.
  * Keine aktiven Packages → has_packages:false, das Plugin rendert dann das
  * native Anfrageformular (gleiche Logik wie die eigene Event-Seite).
+ *
+ * ?site=<home_url der einbettenden Seite> → Buchungslinks erhalten
+ * &embed=1 (Buchungsseite ohne Menü/Footer) und &ref=<host> (Affiliate-
+ * Quelle, wird bei der Anfrage gespeichert).
+ *
+ * Alle CSS-Regeln sind mit !important gehärtet, damit WordPress-Themes
+ * (h3/p/ul-Margins, weiße Überschriften, List-Bullets) nichts überschreiben.
  */
 
 const NAVY = '#143047';
 const ORANGE = '#d9531e';
+const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
 function esc(s: string): string {
   return s
@@ -35,45 +43,50 @@ function fmtPrice(amount: number, currency?: string | null): string {
 
 const CHECK_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="${ORANGE}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M20 6 9 17l-5-5"/></svg>`;
 
+/* Theme-Resets: jede Regel !important, damit WP-Themes (weiße h3, Riesen-
+   Margins, ::marker-Bullets, text-transform) die Karten nicht zerlegen. */
 const STYLE = `
 <style>
-.ftpk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;margin:0;padding:0}
-.ftpk-card{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid #d8e0ea;border-radius:16px;overflow:hidden;box-shadow:0 2px 10px rgba(20,48,71,.06);transition:transform .2s ease,box-shadow .2s ease}
-.ftpk-card:hover{transform:translateY(-4px);box-shadow:0 10px 26px rgba(20,48,71,.14)}
-.ftpk-card--pop{border:2px solid ${NAVY};box-shadow:0 10px 26px rgba(20,48,71,.16)}
-.ftpk-media{position:relative;height:185px;overflow:hidden;background:#eef2f7}
-.ftpk-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;margin:0;display:block}
-.ftpk-media--so img{filter:grayscale(.55) brightness(.9)}
-.ftpk-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,48,71,.05) 40%,rgba(20,48,71,.68) 100%)}
-.ftpk-badges{position:absolute;left:12px;top:12px;display:flex;flex-wrap:wrap;gap:6px}
-.ftpk-chip{display:inline-block;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;line-height:1.3}
-.ftpk-chip--badge{background:rgba(255,255,255,.92);color:${NAVY}}
-.ftpk-chip--hl{background:${ORANGE};color:#fff}
-.ftpk-chip--so{position:absolute;right:12px;top:12px;background:rgba(20,48,71,.92);color:#fff;text-transform:uppercase;letter-spacing:.04em}
-.ftpk-hotel{position:absolute;left:12px;right:12px;bottom:10px;display:flex;justify-content:space-between;align-items:flex-end;gap:8px}
-.ftpk-hotel b{color:#fff;font-size:13px;text-shadow:0 1px 3px rgba(0,0,0,.5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ftpk-stars{color:#f5b301;font-size:11px;line-height:1.2}
-.ftpk-fotos{flex-shrink:0;background:rgba(20,48,71,.55);color:#fff;font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:999px}
-.ftpk-body{display:flex;flex-direction:column;flex:1;padding:18px 20px 20px}
-.ftpk-title{margin:0 0 4px;font-size:17px;font-weight:800;line-height:1.35;color:${NAVY}}
-.ftpk-desc{margin:0;font-size:13px;line-height:1.55;color:#5b6b7d}
-.ftpk-list{list-style:none;margin:14px 0 0;padding:14px 0 0;border-top:1px solid #eef2f7;display:flex;flex-direction:column;gap:8px}
-.ftpk-list li{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.4;color:#33404d;margin:0}
-.ftpk-foot{margin-top:auto;padding-top:14px;border-top:1px solid #eef2f7}
-.ftpk-meta{font-size:11.5px;color:#8190a0;margin:14px 0 8px}
-.ftpk-few{font-size:11.5px;font-weight:700;color:${ORANGE};margin:0 0 6px}
-.ftpk-ab{font-size:12px;color:#8190a0}
-.ftpk-price{font-size:24px;font-weight:800;line-height:1.1;color:${NAVY}}
-.ftpk-price--so{color:#8190a0}
-.ftpk-per{font-size:11.5px;color:#8190a0}
-.ftpk-cta{display:block;margin-top:12px;padding:11px 16px;border-radius:10px;text-align:center;font-size:13px;font-weight:700;text-decoration:none;border:1.5px solid ${NAVY};color:${NAVY};transition:opacity .15s}
-.ftpk-cta:hover{opacity:.85;text-decoration:none;color:${NAVY}}
-.ftpk-cta--pop{background:${ORANGE};border-color:${ORANGE};color:#fff}
-.ftpk-cta--pop:hover{color:#fff}
-.ftpk-cta--so{background:#eef2f7;border:1.5px solid #d8e0ea;color:#8190a0;cursor:not-allowed}
+.ftpk-grid{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))!important;gap:24px!important;margin:0!important;padding:0!important;font-family:${FONT}!important;line-height:1.5!important;text-align:left!important}
+.ftpk-grid *{box-sizing:border-box!important;text-shadow:none!important;text-transform:none!important;letter-spacing:normal!important}
+.ftpk-card{position:relative!important;display:flex!important;flex-direction:column!important;background:#fff!important;border:1px solid #d8e0ea!important;border-radius:16px!important;overflow:hidden!important;box-shadow:0 2px 10px rgba(20,48,71,.06)!important;transition:transform .2s ease,box-shadow .2s ease!important;margin:0!important;padding:0!important}
+.ftpk-card:hover{transform:translateY(-4px)!important;box-shadow:0 10px 26px rgba(20,48,71,.14)!important}
+.ftpk-card--pop{border:2px solid ${NAVY}!important;box-shadow:0 10px 26px rgba(20,48,71,.16)!important}
+.ftpk-media{position:relative!important;height:185px!important;overflow:hidden!important;background:#eef2f7!important;margin:0!important;padding:0!important}
+.ftpk-media img{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;object-fit:cover!important;margin:0!important;padding:0!important;display:block!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+.ftpk-media--so img{filter:grayscale(.55) brightness(.9)!important}
+.ftpk-shade{position:absolute!important;inset:0!important;background:linear-gradient(180deg,rgba(20,48,71,.05) 40%,rgba(20,48,71,.68) 100%)!important}
+.ftpk-badges{position:absolute!important;left:12px!important;top:12px!important;right:12px!important;display:flex!important;flex-wrap:wrap!important;gap:6px!important;margin:0!important;padding:0!important}
+.ftpk-chip{display:inline-block!important;padding:4px 10px!important;border-radius:999px!important;font-size:11px!important;font-weight:700!important;line-height:1.3!important;font-family:${FONT}!important;border:0!important}
+.ftpk-chip--badge{background:rgba(255,255,255,.92)!important;color:${NAVY}!important}
+.ftpk-chip--hl{background:${ORANGE}!important;color:#fff!important}
+.ftpk-chip--so{background:rgba(20,48,71,.92)!important;color:#fff!important;text-transform:uppercase!important;letter-spacing:.04em!important}
+.ftpk-hotel{position:absolute!important;left:12px!important;right:12px!important;bottom:10px!important;display:flex!important;justify-content:space-between!important;align-items:flex-end!important;gap:8px!important;margin:0!important;padding:0!important}
+.ftpk-hotel b{color:#fff!important;font-size:13px!important;font-weight:700!important;text-shadow:0 1px 3px rgba(0,0,0,.5)!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;background:transparent!important}
+.ftpk-stars{color:#f5b301!important;font-size:11px!important;line-height:1.2!important;background:transparent!important}
+.ftpk-fotos{flex-shrink:0!important;background:rgba(20,48,71,.55)!important;color:#fff!important;font-size:10.5px!important;font-weight:600!important;padding:2px 8px!important;border-radius:999px!important}
+.ftpk-body{display:flex!important;flex-direction:column!important;flex:1 1 auto!important;padding:18px 20px 20px!important;margin:0!important;background:#fff!important}
+h3.ftpk-title{margin:0 0 4px!important;padding:0!important;font-size:17px!important;font-weight:800!important;line-height:1.35!important;color:${NAVY}!important;background:transparent!important;border:0!important;font-family:${FONT}!important}
+h3.ftpk-title::before,h3.ftpk-title::after{content:none!important}
+p.ftpk-desc{margin:0!important;padding:0!important;font-size:13px!important;line-height:1.55!important;color:#5b6b7d!important;background:transparent!important;font-family:${FONT}!important}
+ul.ftpk-list{list-style:none!important;margin:14px 0 0!important;padding:14px 0 0!important;border-top:1px solid #eef2f7!important;display:flex!important;flex-direction:column!important;gap:8px!important;background:transparent!important}
+ul.ftpk-list li{display:flex!important;gap:8px!important;align-items:flex-start!important;font-size:13px!important;line-height:1.4!important;color:#33404d!important;margin:0!important;padding:0!important;background:transparent!important;list-style:none!important}
+ul.ftpk-list li::before,ul.ftpk-list li::marker{content:none!important;display:none!important}
+.ftpk-foot{margin-top:auto!important;padding-top:14px!important;border-top:1px solid #eef2f7!important}
+.ftpk-meta{font-size:11.5px!important;color:#8190a0!important;margin:14px 0 8px!important;padding:0!important}
+.ftpk-few{font-size:11.5px!important;font-weight:700!important;color:${ORANGE}!important;margin:0 0 6px!important;padding:0!important}
+.ftpk-ab{font-size:12px!important;color:#8190a0!important;margin:0!important}
+.ftpk-price{font-size:24px!important;font-weight:800!important;line-height:1.1!important;color:${NAVY}!important;margin:0!important;background:transparent!important}
+.ftpk-price--so{color:#8190a0!important}
+.ftpk-per{font-size:11.5px!important;color:#8190a0!important;margin:0!important}
+a.ftpk-cta,span.ftpk-cta{display:block!important;margin:12px 0 0!important;padding:11px 16px!important;border-radius:10px!important;text-align:center!important;font-size:13px!important;font-weight:700!important;text-decoration:none!important;border:1.5px solid ${NAVY}!important;color:${NAVY}!important;background:#fff!important;transition:opacity .15s!important;box-shadow:none!important;font-family:${FONT}!important;cursor:pointer}
+a.ftpk-cta:hover{opacity:.85!important;text-decoration:none!important;color:${NAVY}!important}
+a.ftpk-cta--pop{background:${ORANGE}!important;border-color:${ORANGE}!important;color:#fff!important}
+a.ftpk-cta--pop:hover{color:#fff!important}
+span.ftpk-cta--so{background:#eef2f7!important;border:1.5px solid #d8e0ea!important;color:#8190a0!important;cursor:not-allowed!important}
 </style>`;
 
-function renderCard(pkg: PackageRecord, base: string, eventSlug: string): string {
+function renderCard(pkg: PackageRecord, base: string, eventSlug: string, linkSuffix: string): string {
   const soldOut = pkg.available_spots === 0;
   const spots = typeof pkg.available_spots === 'number' ? pkg.available_spots : null;
   const fewSpots = !soldOut && spots !== null && spots > 0 && spots <= 10;
@@ -85,7 +98,7 @@ function renderCard(pkg: PackageRecord, base: string, eventSlug: string): string
   const stars = Math.max(0, Math.min(5, Number(pkg.stars || 0)));
   const nights = Number(pkg.nights || 0);
   const price = Number(pkg.price || 0);
-  const bookingUrl = `${base}/booking?event=${encodeURIComponent(eventSlug)}&package=${encodeURIComponent(pkg.slug || pkg.id)}&persons=2`;
+  const bookingUrl = `${base}/booking?event=${encodeURIComponent(eventSlug)}&package=${encodeURIComponent(pkg.slug || pkg.id)}&persons=2${linkSuffix}`;
 
   const media = images.length
     ? `<div class="ftpk-media${soldOut ? ' ftpk-media--so' : ''}">
@@ -94,8 +107,8 @@ function renderCard(pkg: PackageRecord, base: string, eventSlug: string): string
         <div class="ftpk-badges">
           ${pkg.badge_text ? `<span class="ftpk-chip ftpk-chip--badge">${esc(pkg.badge_text)}</span>` : ''}
           ${popular ? `<span class="ftpk-chip ftpk-chip--hl">★ Highlight</span>` : ''}
+          ${soldOut ? `<span class="ftpk-chip ftpk-chip--so">Ausgebucht</span>` : ''}
         </div>
-        ${soldOut ? `<span class="ftpk-chip ftpk-chip--so">Ausgebucht</span>` : ''}
         <div class="ftpk-hotel">
           <span style="min-width:0">
             ${pkg.hotel ? `<b>${esc(pkg.hotel)}</b>` : ''}
@@ -145,6 +158,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: false, error: 'Event nicht gefunden' }, { status: 404 });
   }
 
+  // Einbettende Seite (Affiliate-Quelle): Plugin übergibt home_url() als ?site=
+  const site = searchParams.get('site') || '';
+  let refHost = '';
+  if (site) {
+    try { refHost = new URL(site).host; } catch { refHost = site.replace(/^https?:\/\//, '').split('/')[0]; }
+  }
+  // Externe Einstiege: Buchungsseite ohne Menü (&embed=1) + Quelle (&ref=)
+  const linkSuffix = `&embed=1${refHost ? `&ref=${encodeURIComponent(refHost)}` : ''}`;
+
   const base = (event.base_url || process.env.NEXT_PUBLIC_SITE_URL || 'https://next.faltintravel.com').replace(/\/$/, '');
   const packages = (await getPackagesByEventSlug(eventSlug)).filter((p) => p.active !== false);
 
@@ -180,7 +202,7 @@ export async function GET(request: Request) {
 
   const html =
     STYLE +
-    `<div class="ftpk-grid" data-ftv="1.4.0">${packages.map((p) => renderCard(p, base, eventSlug)).join('')}</div>` +
+    `<div class="ftpk-grid" data-ftv="1.6.0">${packages.map((p) => renderCard(p, base, eventSlug, linkSuffix)).join('')}</div>` +
     `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`;
 
   return NextResponse.json({

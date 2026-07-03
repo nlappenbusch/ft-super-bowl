@@ -45,6 +45,8 @@ export interface BookingInput {
   phone: string;
   message?: string;
   totalPrice: number;
+  /** Affiliate-/Herkunfts-Quelle (Host der einbettenden Website), wird in notes gespeichert. */
+  source?: string;
 }
 
 export async function createBooking(input: BookingInput) {
@@ -62,7 +64,7 @@ export async function createBooking(input: BookingInput) {
       message: input.message || '',
       status: 'new',
       total_price: input.totalPrice || 0,
-      notes: ''
+      notes: input.source ? 'Quelle: ' + input.source : ''
     } as any);
   }
 

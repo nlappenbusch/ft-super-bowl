@@ -157,6 +157,7 @@ export default function BookingForm() {
   const [isPhoneDropdownOpen, setIsPhoneDropdownOpen] = useState(false); // Custom dropdown state
   const [isMounted, setIsMounted] = useState(false); // Fix hydration error for dynamic widgets
   const [isSoldOut, setIsSoldOut] = useState(false); // Kontingent 0 → Anfrage gesperrt
+  const [refSource, setRefSource] = useState(''); // Affiliate: Host der einbettenden Website (?ref=)
   
   const phoneCountries = [
     { code: 'ch', prefix: '+41', name: 'CH' },
@@ -190,6 +191,7 @@ export default function BookingForm() {
     const packageParam = searchParams.get('package') || '';
     setEventSlug(eventParam);
     setPackageSlug(packageParam);
+    setRefSource(searchParams.get('ref') || '');
 
     const loadPackage = async () => {
       try {
@@ -402,7 +404,8 @@ export default function BookingForm() {
           phone: data.phone,
           message: data.message,
           totalPrice: calculateTotal(),
-          consent: data.acceptTerms && data.acceptPrivacy
+          consent: data.acceptTerms && data.acceptPrivacy,
+          source: refSource || undefined
         }),
       });
 
