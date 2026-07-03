@@ -43,6 +43,19 @@ const PLUGINS: Plugin[] = [
         ],
       },
       {
+        code: '[faltin_packages]',
+        example: '[faltin_packages event="super-bowl-2027"]',
+        title: 'Package-Karten (mit Formular-Fallback)',
+        desc: 'Zeigt die buchbaren Packages des Events als Karten-Grid (Fotos, Leistungen, Preise, Ausgebucht-Status, Buchungslink). Ohne aktive Packages wird automatisch das Anfrageformular gerendert — gleiche Logik wie die Event-Seite.',
+        recommended: true,
+        params: [
+          { name: 'event', required: true, desc: 'Event-Slug, z.B. super-bowl-2027.' },
+          { name: 'name', def: '(leer)', desc: 'Anzeigename fürs Fallback-Formular.' },
+          { name: 'cache', def: '600', desc: 'Cache-Dauer in Sekunden (0 = aus).' },
+          { name: 'api_url', def: 'Standard', desc: 'API-Server überschreiben (selten nötig).' },
+        ],
+      },
+      {
         code: '[faltin_anfrage]',
         example: '[faltin_anfrage event="super-bowl-2027" title="Jetzt unverbindlich anfragen"]',
         title: 'Anfrage-/Kontaktformular',

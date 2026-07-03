@@ -370,3 +370,22 @@ https://faltintravel.com/super-bowl-2027-tickets/
 ---
 
 Möchten Sie Hilfe beim Deployment oder haben Sie Fragen zur Integration? 🚀
+
+## Package-Karten: `[faltin_packages]` (ab Plugin 1.4.0)
+
+Zeigt die buchbaren Packages eines Events als Karten-Grid — serverseitig
+gerendertes HTML aus `/api/packages-html` (Fotos, Leistungen, Preise,
+Ausgebucht-Status, Product-JSON-LD, Buchungslinks auf die Faltin-Buchungsseite).
+
+```
+[faltin_packages event="super-bowl-2027"]
+```
+
+- **Fallback-Logik wie auf der Event-Seite:** Hat das Event keine aktiven
+  Packages (oder ist die API nicht erreichbar), rendert der Shortcode
+  automatisch das native Anfrageformular (`[faltin_anfrage]`).
+- **Buchungsseite:** Die Karten-Buttons verlinken auf die menülose
+  Buchungsseite (`…/booking`). Deren „Zurück"-Button führt per Browser-History
+  zurück zur WordPress-Seite — kein iframe, keine Doppel-Pflege.
+- Design-Änderungen am Karten-Layout passieren zentral im Faltin-System;
+  WordPress muss dafür nie angefasst werden (10-Minuten-Cache via Transient).

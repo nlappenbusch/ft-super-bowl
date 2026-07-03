@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Faltin Travel – Event Shortcodes
- * Description: SEO-freundliche, serverseitig gerenderte Event-Karten + natives Anfrageformular. Shortcodes: [faltin_events serie="..."], [faltin_event event="..."], [faltin_anfrage event="..."].
- * Version: 1.3.0
+ * Description: SEO-freundliche, serverseitig gerenderte Event-Karten, Package-Karten + natives Anfrageformular. Shortcodes: [faltin_events serie="..."], [faltin_event event="..."], [faltin_packages event="..."], [faltin_anfrage event="..."].
+ * Version: 1.4.0
  * Author: Faltin Travel AG
  *
  * Die Inhalte werden serverseitig per REST-API geladen (wp_remote_get) und als
@@ -12,6 +12,7 @@
  * Shortcodes:
  *   [faltin_events serie="darts-wm" limit="6" columns="3"]
  *   [faltin_event event="super-bowl-lxi-2027"]
+ *   [faltin_packages event="super-bowl-2027"]  – Package-Karten; ohne Packages → Anfrageformular
  *
  * Optionale Parameter:
  *   api_url   – Basis-URL des Systems (Default: https://next.faltintravel.com)
@@ -408,3 +409,48 @@ function faltin_anfrage_shortcode($atts) {
     return faltin_anfrage_styles() . ob_get_clean();
 }
 add_shortcode('faltin_anfrage', 'faltin_anfrage_shortcode');
+
+/* ─── Shortcode: Package-Karten (mit Anfrageformular-Fallback) ───────────── */
+/**
+ * [faltin_packages event="super-bowl-2027"]
+ *
+ * Rendert die buchbaren Packages des Events als Karten-Grid — fertiges HTML
+ * aus dem Faltin-System (/api/packages-html): Fotos, Leistungen, Preise,
+ * Ausgebucht-Status, Buchungslinks. Design-Änderungen im System sind damit
+ * automatisch live, ohne dieses Plugin anzufassen.
+ *
+ * Hat das Event keine aktiven Packages, wird stattdessen das native
+ * Anfrageformular gerendert (gleiche Logik wie die Faltin-Event-Seite).
+ *
+ * Parameter:
+ *   event   – Event-Slug (Pflicht), z.B. super-bowl-2027
+ *   name    – Anzeigename fürs Fallback-Formular (optional)
+ *   cache   – Cache-Dauer in Sekunden (Default 600, 0 = aus)
+ *   api_url – API-Server überschreiben (selten nötig)
+ */
+function faltin_packages_shortcode($atts) {
+    $atts = shortcode_atts(array(
+        'event' => '',
+        'name' => '',
+        'cache' => 600,
+        'api_url' => FALTIN_EVENTS_DEFAULT_API,
+    ), $atts, 'faltin_packages');
+
+    if (!$atts['event']) return '<!-- faltin_packages: Parameter "event" fehlt -->';
+
+    $url = rtrim($atts['api_url'], '/') . '/api/packages-html?event=' . rawurlencode($atts['event']);
+    $data = faltin_events_fetch($url, (int)$atts['cache']);
+
+    if ($data && !empty($data['has_packages']) && !empty($data['html'])) {
+        // Fertiges, selbstenthaltenes HTML aus dem System (inkl. Styles & JSON-LD)
+        return $data['html'];
+    }
+
+    // Fallback: keine aktiven Packages (oder API nicht erreichbar) → Anfrageformular
+    return faltin_anfrage_shortcode(array(
+        'event' => $atts['event'],
+        'name' => $atts['name'] ?: (is_array($data) && !empty($data['event_name']) ? $data['event_name'] : ''),
+        'api_url' => $atts['api_url'],
+    ));
+}
+add_shortcode('faltin_packages', 'faltin_packages_shortcode');
