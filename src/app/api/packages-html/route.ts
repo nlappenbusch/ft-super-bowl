@@ -13,8 +13,12 @@ import { getEventBySlug, getPackagesByEventSlug, type PackageRecord } from '@/li
  * &embed=1 (Buchungsseite ohne Menü/Footer) und &ref=<host> (Affiliate-
  * Quelle, wird bei der Anfrage gespeichert).
  *
- * Alle CSS-Regeln sind mit !important gehärtet, damit WordPress-Themes
- * (h3/p/ul-Margins, weiße Überschriften, List-Bullets) nichts überschreiben.
+ * Theme-Festigkeit (zweistufig): (1) KEINE h3/p/ul-Tags — Theme-Selektoren
+ * auf Überschriften/Absätze/Listen greifen ins Leere; (2) alle kritischen
+ * Eigenschaften (Farbe, Font, Margins) als Inline-Styles MIT !important —
+ * das ist die höchste Stufe der CSS-Kaskade und schlägt auch Theme-Regeln,
+ * die selbst !important verwenden. Der <style>-Block liefert nur noch
+ * Layout (Grid, Hover, Media-Positionierung).
  */
 
 const NAVY = '#143047';
@@ -43,47 +47,47 @@ function fmtPrice(amount: number, currency?: string | null): string {
 
 const CHECK_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="${ORANGE}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M20 6 9 17l-5-5"/></svg>`;
 
-/* Theme-Resets: jede Regel !important, damit WP-Themes (weiße h3, Riesen-
-   Margins, ::marker-Bullets, text-transform) die Karten nicht zerlegen. */
+/* Inline-Styles mit !important — unschlagbar in der Kaskade (auch gegen
+   Theme-Regeln mit !important). Jedes sichtbare Element trägt sie direkt. */
+const S = {
+  title: `display:block !important;color:${NAVY} !important;font-size:17px !important;font-weight:800 !important;line-height:1.35 !important;margin:0 0 4px !important;padding:0 !important;background:transparent !important;text-transform:none !important;letter-spacing:normal !important;text-shadow:none !important;font-family:${FONT} !important`,
+  desc: `display:block !important;color:#5b6b7d !important;font-size:13px !important;font-weight:400 !important;line-height:1.55 !important;margin:0 !important;padding:0 !important;background:transparent !important;text-transform:none !important;text-shadow:none !important;font-family:${FONT} !important`,
+  list: `display:flex !important;flex-direction:column !important;gap:8px !important;margin:14px 0 0 !important;padding:14px 0 0 !important;border-top:1px solid #eef2f7 !important;background:transparent !important`,
+  li: `display:flex !important;gap:8px !important;align-items:flex-start !important;color:#33404d !important;font-size:13px !important;font-weight:400 !important;line-height:1.4 !important;margin:0 !important;padding:0 !important;background:transparent !important;text-shadow:none !important;font-family:${FONT} !important`,
+  meta: `display:block !important;color:#8190a0 !important;font-size:11.5px !important;font-weight:400 !important;margin:14px 0 8px !important;padding:0 !important;font-family:${FONT} !important`,
+  few: `display:block !important;color:${ORANGE} !important;font-size:11.5px !important;font-weight:700 !important;margin:0 0 6px !important;padding:0 !important;font-family:${FONT} !important`,
+  ab: `display:block !important;color:#8190a0 !important;font-size:12px !important;margin:0 !important;padding:0 !important;font-family:${FONT} !important`,
+  price: `display:block !important;color:${NAVY} !important;font-size:24px !important;font-weight:800 !important;line-height:1.1 !important;margin:0 !important;padding:0 !important;background:transparent !important;font-family:${FONT} !important`,
+  priceSo: `display:block !important;color:#8190a0 !important;font-size:24px !important;font-weight:800 !important;line-height:1.1 !important;margin:0 !important;padding:0 !important;background:transparent !important;font-family:${FONT} !important`,
+  per: `display:block !important;color:#8190a0 !important;font-size:11.5px !important;font-weight:400 !important;margin:0 !important;padding:0 !important;font-family:${FONT} !important`,
+  hotelName: `color:#fff !important;font-size:13px !important;font-weight:700 !important;text-shadow:0 1px 3px rgba(0,0,0,.5) !important;background:transparent !important;overflow:hidden !important;text-overflow:ellipsis !important;white-space:nowrap !important;font-family:${FONT} !important`,
+  stars: `display:block !important;color:#f5b301 !important;font-size:11px !important;line-height:1.2 !important;background:transparent !important;text-shadow:none !important`,
+  chipBadge: `display:inline-block !important;padding:4px 10px !important;border-radius:999px !important;font-size:11px !important;font-weight:700 !important;line-height:1.3 !important;background:rgba(255,255,255,.92) !important;color:${NAVY} !important;text-transform:none !important;letter-spacing:normal !important;text-shadow:none !important;border:0 !important;font-family:${FONT} !important`,
+  chipHl: `display:inline-block !important;padding:4px 10px !important;border-radius:999px !important;font-size:11px !important;font-weight:700 !important;line-height:1.3 !important;background:${ORANGE} !important;color:#fff !important;text-transform:none !important;letter-spacing:normal !important;text-shadow:none !important;border:0 !important;font-family:${FONT} !important`,
+  chipSo: `display:inline-block !important;padding:4px 10px !important;border-radius:999px !important;font-size:11px !important;font-weight:700 !important;line-height:1.3 !important;background:rgba(20,48,71,.92) !important;color:#fff !important;text-transform:uppercase !important;letter-spacing:.04em !important;text-shadow:none !important;border:0 !important;font-family:${FONT} !important`,
+  fotos: `flex-shrink:0 !important;display:inline-flex !important;align-items:center !important;background:rgba(20,48,71,.55) !important;color:#fff !important;font-size:10.5px !important;font-weight:600 !important;padding:2px 8px !important;border-radius:999px !important;text-shadow:none !important;font-family:${FONT} !important`,
+  cta: `display:block !important;margin:12px 0 0 !important;padding:11px 16px !important;border-radius:10px !important;text-align:center !important;font-size:13px !important;font-weight:700 !important;text-decoration:none !important;border:1.5px solid ${NAVY} !important;color:${NAVY} !important;background:#fff !important;box-shadow:none !important;text-transform:none !important;letter-spacing:normal !important;font-family:${FONT} !important;cursor:pointer !important`,
+  ctaPop: `display:block !important;margin:12px 0 0 !important;padding:11px 16px !important;border-radius:10px !important;text-align:center !important;font-size:13px !important;font-weight:700 !important;text-decoration:none !important;border:1.5px solid ${ORANGE} !important;color:#fff !important;background:${ORANGE} !important;box-shadow:none !important;text-transform:none !important;letter-spacing:normal !important;font-family:${FONT} !important;cursor:pointer !important`,
+  ctaSo: `display:block !important;margin:12px 0 0 !important;padding:11px 16px !important;border-radius:10px !important;text-align:center !important;font-size:13px !important;font-weight:700 !important;text-decoration:none !important;border:1.5px solid #d8e0ea !important;color:#8190a0 !important;background:#eef2f7 !important;box-shadow:none !important;font-family:${FONT} !important;cursor:not-allowed !important`,
+  img: `position:absolute !important;inset:0 !important;width:100% !important;height:100% !important;max-width:none !important;object-fit:cover !important;margin:0 !important;padding:0 !important;display:block !important;border:0 !important;border-radius:0 !important;box-shadow:none !important`,
+};
+
+/* Nur noch Layout (Grid, Card, Media, Hover) — Inhalte sind inline gestylt. */
 const STYLE = `
 <style>
 .ftpk-grid{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))!important;gap:24px!important;margin:0!important;padding:0!important;font-family:${FONT}!important;line-height:1.5!important;text-align:left!important}
-.ftpk-grid *{box-sizing:border-box!important;text-shadow:none!important;text-transform:none!important;letter-spacing:normal!important}
+.ftpk-grid *{box-sizing:border-box!important}
 .ftpk-card{position:relative!important;display:flex!important;flex-direction:column!important;background:#fff!important;border:1px solid #d8e0ea!important;border-radius:16px!important;overflow:hidden!important;box-shadow:0 2px 10px rgba(20,48,71,.06)!important;transition:transform .2s ease,box-shadow .2s ease!important;margin:0!important;padding:0!important}
 .ftpk-card:hover{transform:translateY(-4px)!important;box-shadow:0 10px 26px rgba(20,48,71,.14)!important}
 .ftpk-card--pop{border:2px solid ${NAVY}!important;box-shadow:0 10px 26px rgba(20,48,71,.16)!important}
 .ftpk-media{position:relative!important;height:185px!important;overflow:hidden!important;background:#eef2f7!important;margin:0!important;padding:0!important}
-.ftpk-media img{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;object-fit:cover!important;margin:0!important;padding:0!important;display:block!important;border:0!important;border-radius:0!important;box-shadow:none!important}
 .ftpk-media--so img{filter:grayscale(.55) brightness(.9)!important}
 .ftpk-shade{position:absolute!important;inset:0!important;background:linear-gradient(180deg,rgba(20,48,71,.05) 40%,rgba(20,48,71,.68) 100%)!important}
 .ftpk-badges{position:absolute!important;left:12px!important;top:12px!important;right:12px!important;display:flex!important;flex-wrap:wrap!important;gap:6px!important;margin:0!important;padding:0!important}
-.ftpk-chip{display:inline-block!important;padding:4px 10px!important;border-radius:999px!important;font-size:11px!important;font-weight:700!important;line-height:1.3!important;font-family:${FONT}!important;border:0!important}
-.ftpk-chip--badge{background:rgba(255,255,255,.92)!important;color:${NAVY}!important}
-.ftpk-chip--hl{background:${ORANGE}!important;color:#fff!important}
-.ftpk-chip--so{background:rgba(20,48,71,.92)!important;color:#fff!important;text-transform:uppercase!important;letter-spacing:.04em!important}
 .ftpk-hotel{position:absolute!important;left:12px!important;right:12px!important;bottom:10px!important;display:flex!important;justify-content:space-between!important;align-items:flex-end!important;gap:8px!important;margin:0!important;padding:0!important}
-.ftpk-hotel b{color:#fff!important;font-size:13px!important;font-weight:700!important;text-shadow:0 1px 3px rgba(0,0,0,.5)!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;background:transparent!important}
-.ftpk-stars{color:#f5b301!important;font-size:11px!important;line-height:1.2!important;background:transparent!important}
-.ftpk-fotos{flex-shrink:0!important;background:rgba(20,48,71,.55)!important;color:#fff!important;font-size:10.5px!important;font-weight:600!important;padding:2px 8px!important;border-radius:999px!important}
 .ftpk-body{display:flex!important;flex-direction:column!important;flex:1 1 auto!important;padding:18px 20px 20px!important;margin:0!important;background:#fff!important}
-h3.ftpk-title{margin:0 0 4px!important;padding:0!important;font-size:17px!important;font-weight:800!important;line-height:1.35!important;color:${NAVY}!important;background:transparent!important;border:0!important;font-family:${FONT}!important}
-h3.ftpk-title::before,h3.ftpk-title::after{content:none!important}
-p.ftpk-desc{margin:0!important;padding:0!important;font-size:13px!important;line-height:1.55!important;color:#5b6b7d!important;background:transparent!important;font-family:${FONT}!important}
-ul.ftpk-list{list-style:none!important;margin:14px 0 0!important;padding:14px 0 0!important;border-top:1px solid #eef2f7!important;display:flex!important;flex-direction:column!important;gap:8px!important;background:transparent!important}
-ul.ftpk-list li{display:flex!important;gap:8px!important;align-items:flex-start!important;font-size:13px!important;line-height:1.4!important;color:#33404d!important;margin:0!important;padding:0!important;background:transparent!important;list-style:none!important}
-ul.ftpk-list li::before,ul.ftpk-list li::marker{content:none!important;display:none!important}
 .ftpk-foot{margin-top:auto!important;padding-top:14px!important;border-top:1px solid #eef2f7!important}
-.ftpk-meta{font-size:11.5px!important;color:#8190a0!important;margin:14px 0 8px!important;padding:0!important}
-.ftpk-few{font-size:11.5px!important;font-weight:700!important;color:${ORANGE}!important;margin:0 0 6px!important;padding:0!important}
-.ftpk-ab{font-size:12px!important;color:#8190a0!important;margin:0!important}
-.ftpk-price{font-size:24px!important;font-weight:800!important;line-height:1.1!important;color:${NAVY}!important;margin:0!important;background:transparent!important}
-.ftpk-price--so{color:#8190a0!important}
-.ftpk-per{font-size:11.5px!important;color:#8190a0!important;margin:0!important}
-a.ftpk-cta,span.ftpk-cta{display:block!important;margin:12px 0 0!important;padding:11px 16px!important;border-radius:10px!important;text-align:center!important;font-size:13px!important;font-weight:700!important;text-decoration:none!important;border:1.5px solid ${NAVY}!important;color:${NAVY}!important;background:#fff!important;transition:opacity .15s!important;box-shadow:none!important;font-family:${FONT}!important;cursor:pointer}
-a.ftpk-cta:hover{opacity:.85!important;text-decoration:none!important;color:${NAVY}!important}
-a.ftpk-cta--pop{background:${ORANGE}!important;border-color:${ORANGE}!important;color:#fff!important}
-a.ftpk-cta--pop:hover{color:#fff!important}
-span.ftpk-cta--so{background:#eef2f7!important;border:1.5px solid #d8e0ea!important;color:#8190a0!important;cursor:not-allowed!important}
+a.ftpk-cta:hover{opacity:.85!important}
 </style>`;
 
 function renderCard(pkg: PackageRecord, base: string, eventSlug: string, linkSuffix: string): string {
@@ -102,19 +106,19 @@ function renderCard(pkg: PackageRecord, base: string, eventSlug: string, linkSuf
 
   const media = images.length
     ? `<div class="ftpk-media${soldOut ? ' ftpk-media--so' : ''}">
-        <img src="${esc(images[0])}" alt="${esc(pkg.hotel || pkg.title || '')}" loading="lazy" />
+        <img src="${esc(images[0])}" alt="${esc(pkg.hotel || pkg.title || '')}" loading="lazy" style="${S.img}" />
         <div class="ftpk-shade"></div>
         <div class="ftpk-badges">
-          ${pkg.badge_text ? `<span class="ftpk-chip ftpk-chip--badge">${esc(pkg.badge_text)}</span>` : ''}
-          ${popular ? `<span class="ftpk-chip ftpk-chip--hl">★ Highlight</span>` : ''}
-          ${soldOut ? `<span class="ftpk-chip ftpk-chip--so">Ausgebucht</span>` : ''}
+          ${pkg.badge_text ? `<span style="${S.chipBadge}">${esc(pkg.badge_text)}</span>` : ''}
+          ${popular ? `<span style="${S.chipHl}">★ Highlight</span>` : ''}
+          ${soldOut ? `<span style="${S.chipSo}">Ausgebucht</span>` : ''}
         </div>
         <div class="ftpk-hotel">
           <span style="min-width:0">
-            ${pkg.hotel ? `<b>${esc(pkg.hotel)}</b>` : ''}
-            ${stars ? `<span class="ftpk-stars" style="display:block">${'★'.repeat(stars)}</span>` : ''}
+            ${pkg.hotel ? `<span style="${S.hotelName}">${esc(pkg.hotel)}</span>` : ''}
+            ${stars ? `<span style="${S.stars}">${'★'.repeat(stars)}</span>` : ''}
           </span>
-          ${images.length > 1 ? `<span class="ftpk-fotos">📷 ${images.length} Fotos</span>` : ''}
+          ${images.length > 1 ? `<span style="${S.fotos}">📷 ${images.length} Fotos</span>` : ''}
         </div>
       </div>`
     : '';
@@ -125,21 +129,23 @@ function renderCard(pkg: PackageRecord, base: string, eventSlug: string, linkSuf
   ].filter(Boolean).join(' · ');
 
   const cta = soldOut
-    ? `<span class="ftpk-cta ftpk-cta--so">Ausgebucht</span>`
-    : `<a class="ftpk-cta${popular ? ' ftpk-cta--pop' : ''}" href="${esc(bookingUrl)}">Unverbindlich anfragen →</a>`;
+    ? `<span style="${S.ctaSo}">Ausgebucht</span>`
+    : `<a class="ftpk-cta" href="${esc(bookingUrl)}" style="${popular ? S.ctaPop : S.cta}">Unverbindlich anfragen →</a>`;
 
+  /* Bewusst div/span statt h3/p/ul: Theme-Selektoren auf Überschriften,
+     Absätze und Listen können hier gar nicht erst greifen. */
   return `<div class="ftpk-card${popular ? ' ftpk-card--pop' : ''}">
     ${media}
     <div class="ftpk-body">
-      <h3 class="ftpk-title">${esc(pkg.title || '')}</h3>
-      ${pkg.short_description ? `<p class="ftpk-desc">${esc(pkg.short_description)}</p>` : ''}
-      ${includes.length ? `<ul class="ftpk-list">${includes.map((i) => `<li>${CHECK_SVG}<span>${esc(i.name)}</span></li>`).join('')}</ul>` : ''}
+      <div style="${S.title}">${esc(pkg.title || '')}</div>
+      ${pkg.short_description ? `<div style="${S.desc}">${esc(pkg.short_description)}</div>` : ''}
+      ${includes.length ? `<div style="${S.list}">${includes.map((i) => `<div style="${S.li}">${CHECK_SVG}<span>${esc(i.name)}</span></div>`).join('')}</div>` : ''}
       <div class="ftpk-foot">
-        ${metaBits ? `<div class="ftpk-meta">${metaBits}</div>` : ''}
-        ${fewSpots ? `<div class="ftpk-few">Nur noch wenige Plätze verfügbar</div>` : ''}
-        <div class="ftpk-ab">ab</div>
-        <div class="ftpk-price${soldOut ? ' ftpk-price--so' : ''}">${fmtPrice(price, pkg.currency)}</div>
-        <div class="ftpk-per">pro Person im Doppelzimmer</div>
+        ${metaBits ? `<div style="${S.meta}">${metaBits}</div>` : ''}
+        ${fewSpots ? `<div style="${S.few}">Nur noch wenige Plätze verfügbar</div>` : ''}
+        <div style="${S.ab}">ab</div>
+        <div style="${soldOut ? S.priceSo : S.price}">${fmtPrice(price, pkg.currency)}</div>
+        <div style="${S.per}">pro Person im Doppelzimmer</div>
         ${cta}
       </div>
     </div>
@@ -202,7 +208,7 @@ export async function GET(request: Request) {
 
   const html =
     STYLE +
-    `<div class="ftpk-grid" data-ftv="1.6.0">${packages.map((p) => renderCard(p, base, eventSlug, linkSuffix)).join('')}</div>` +
+    `<div class="ftpk-grid" data-ftv="1.6.1">${packages.map((p) => renderCard(p, base, eventSlug, linkSuffix)).join('')}</div>` +
     `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`;
 
   return NextResponse.json({
