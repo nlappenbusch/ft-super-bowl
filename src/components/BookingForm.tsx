@@ -446,7 +446,7 @@ export default function BookingForm() {
         </div>
       </div>
 
-      <div className='container mx-auto px-4 py-8 max-w-6xl'>
+      <div className='container mx-auto px-4 py-8 max-w-[88rem]'>
         <div className='grid lg:grid-cols-3 gap-8'>
           <div className='lg:col-span-2'>
             <div className='bg-white rounded-xl shadow-lg overflow-hidden'>
