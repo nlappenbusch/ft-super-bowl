@@ -75,53 +75,53 @@ const defaultPackage: SelectedPackage = {
 // Room configuration presets based on number of persons
 const roomPresets: Record<number, Array<{ label: string; doubleRooms: number; singleRooms: number }>> = {
   1: [
-    { label: '1 × Einzelzimmer', doubleRooms: 0, singleRooms: 1 }
+    { label: '1 × Einzelbelegung', doubleRooms: 0, singleRooms: 1 }
   ],
   2: [
-    { label: '1 × Doppelzimmer', doubleRooms: 1, singleRooms: 0 },
-    { label: '2 × Einzelzimmer', doubleRooms: 0, singleRooms: 2 }
+    { label: '1 × Doppelbelegung', doubleRooms: 1, singleRooms: 0 },
+    { label: '2 × Einzelbelegung', doubleRooms: 0, singleRooms: 2 }
   ],
   3: [
-    { label: '1 × Doppelzimmer + 1 × Einzelzimmer', doubleRooms: 1, singleRooms: 1 },
-    { label: '3 × Einzelzimmer', doubleRooms: 0, singleRooms: 3 }
+    { label: '1 × Doppelbelegung + 1 × Einzelbelegung', doubleRooms: 1, singleRooms: 1 },
+    { label: '3 × Einzelbelegung', doubleRooms: 0, singleRooms: 3 }
   ],
   4: [
-    { label: '2 × Doppelzimmer', doubleRooms: 2, singleRooms: 0 },
-    { label: '1 × Doppelzimmer + 2 × Einzelzimmer', doubleRooms: 1, singleRooms: 2 },
-    { label: '4 × Einzelzimmer', doubleRooms: 0, singleRooms: 4 }
+    { label: '2 × Doppelbelegung', doubleRooms: 2, singleRooms: 0 },
+    { label: '1 × Doppelbelegung + 2 × Einzelbelegung', doubleRooms: 1, singleRooms: 2 },
+    { label: '4 × Einzelbelegung', doubleRooms: 0, singleRooms: 4 }
   ],
   5: [
-    { label: '1 × Doppelzimmer + 3 × Einzelzimmer', doubleRooms: 1, singleRooms: 3 },
-    { label: '2 × Doppelzimmer + 1 × Einzelzimmer', doubleRooms: 2, singleRooms: 1 },
-    { label: '5 × Einzelzimmer', doubleRooms: 0, singleRooms: 5 }
+    { label: '2 × Doppelbelegung + 1 × Einzelbelegung', doubleRooms: 2, singleRooms: 1 },
+    { label: '1 × Doppelbelegung + 3 × Einzelbelegung', doubleRooms: 1, singleRooms: 3 },
+    { label: '5 × Einzelbelegung', doubleRooms: 0, singleRooms: 5 }
   ],
   6: [
-    { label: '3 × Doppelzimmer', doubleRooms: 3, singleRooms: 0 },
-    { label: '2 × Doppelzimmer + 2 × Einzelzimmer', doubleRooms: 2, singleRooms: 2 },
-    { label: '1 × Doppelzimmer + 4 × Einzelzimmer', doubleRooms: 1, singleRooms: 4 },
-    { label: '6 × Einzelzimmer', doubleRooms: 0, singleRooms: 6 }
+    { label: '3 × Doppelbelegung', doubleRooms: 3, singleRooms: 0 },
+    { label: '2 × Doppelbelegung + 2 × Einzelbelegung', doubleRooms: 2, singleRooms: 2 },
+    { label: '1 × Doppelbelegung + 4 × Einzelbelegung', doubleRooms: 1, singleRooms: 4 },
+    { label: '6 × Einzelbelegung', doubleRooms: 0, singleRooms: 6 }
   ],
   7: [
-    { label: '3 × Doppelzimmer + 1 × Einzelzimmer', doubleRooms: 3, singleRooms: 1 },
-    { label: '2 × Doppelzimmer + 3 × Einzelzimmer', doubleRooms: 2, singleRooms: 3 },
-    { label: '7 × Einzelzimmer', doubleRooms: 0, singleRooms: 7 }
+    { label: '3 × Doppelbelegung + 1 × Einzelbelegung', doubleRooms: 3, singleRooms: 1 },
+    { label: '2 × Doppelbelegung + 3 × Einzelbelegung', doubleRooms: 2, singleRooms: 3 },
+    { label: '7 × Einzelbelegung', doubleRooms: 0, singleRooms: 7 }
   ],
   8: [
-    { label: '4 × Doppelzimmer', doubleRooms: 4, singleRooms: 0 },
-    { label: '3 × Doppelzimmer + 2 × Einzelzimmer', doubleRooms: 3, singleRooms: 2 },
-    { label: '2 × Doppelzimmer + 4 × Einzelzimmer', doubleRooms: 2, singleRooms: 4 },
-    { label: '8 × Einzelzimmer', doubleRooms: 0, singleRooms: 8 }
+    { label: '4 × Doppelbelegung', doubleRooms: 4, singleRooms: 0 },
+    { label: '3 × Doppelbelegung + 2 × Einzelbelegung', doubleRooms: 3, singleRooms: 2 },
+    { label: '2 × Doppelbelegung + 4 × Einzelbelegung', doubleRooms: 2, singleRooms: 4 },
+    { label: '8 × Einzelbelegung', doubleRooms: 0, singleRooms: 8 }
   ],
   9: [
-    { label: '4 × Doppelzimmer + 1 × Einzelzimmer', doubleRooms: 4, singleRooms: 1 },
-    { label: '3 × Doppelzimmer + 3 × Einzelzimmer', doubleRooms: 3, singleRooms: 3 },
-    { label: '9 × Einzelzimmer', doubleRooms: 0, singleRooms: 9 }
+    { label: '4 × Doppelbelegung + 1 × Einzelbelegung', doubleRooms: 4, singleRooms: 1 },
+    { label: '3 × Doppelbelegung + 3 × Einzelbelegung', doubleRooms: 3, singleRooms: 3 },
+    { label: '9 × Einzelbelegung', doubleRooms: 0, singleRooms: 9 }
   ],
   10: [
-    { label: '5 × Doppelzimmer', doubleRooms: 5, singleRooms: 0 },
-    { label: '4 × Doppelzimmer + 2 × Einzelzimmer', doubleRooms: 4, singleRooms: 2 },
-    { label: '3 × Doppelzimmer + 4 × Einzelzimmer', doubleRooms: 3, singleRooms: 4 },
-    { label: '10 × Einzelzimmer', doubleRooms: 0, singleRooms: 10 }
+    { label: '5 × Doppelbelegung', doubleRooms: 5, singleRooms: 0 },
+    { label: '4 × Doppelbelegung + 2 × Einzelbelegung', doubleRooms: 4, singleRooms: 2 },
+    { label: '3 × Doppelbelegung + 4 × Einzelbelegung', doubleRooms: 3, singleRooms: 4 },
+    { label: '10 × Einzelbelegung', doubleRooms: 0, singleRooms: 10 }
   ]
 };
 
@@ -318,12 +318,12 @@ export default function BookingForm() {
     } else if (totalBeds < numberOfPersons) {
       setRoomValidation({ 
         valid: false, 
-        message: `⚠️ Nicht genug Betten! ${numberOfPersons} Personen benötigen ${totalBeds < numberOfPersons ? numberOfPersons - totalBeds : 0} weitere(s) Bett(en)` 
+        message: `⚠️ Nicht genug Plätze! ${numberOfPersons} Personen benötigen ${totalBeds < numberOfPersons ? numberOfPersons - totalBeds : 0} weitere(n) Platz/Plätze` 
       });
     } else if (totalBeds > numberOfPersons) {
       setRoomValidation({ 
         valid: true, 
-        message: `ℹ️ ${totalBeds - numberOfPersons} freie(s) Bett(en)` 
+        message: `ℹ️ ${totalBeds - numberOfPersons} freie(r) Platz/Plätze` 
       });
     } else {
       setRoomValidation({ valid: true, message: '✓ Perfekte Aufteilung' });
@@ -565,7 +565,7 @@ export default function BookingForm() {
                     <label className='text-lg font-bold text-gray-900'>Zimmeraufteilung *</label>
                   </div>
                   
-                  <p className='text-sm text-gray-600 mb-4'>Wählen Sie eine passende Zimmerkombination:</p>
+                  <p className='text-sm text-gray-600 mb-4'>Wählen Sie die passende Belegung — Preis pro Person im Doppelzimmer, Einzelbelegung gegen Zuschlag:</p>
                   
                   <div className='space-y-3 mb-4'>
                     {roomPresets[numberOfPersons]?.map((preset, index) => {
@@ -605,16 +605,13 @@ export default function BookingForm() {
                                 )}
                               </div>
                               <div className='flex flex-wrap gap-3 text-xs text-gray-600'>
-                                {preset.doubleRooms > 0 && (
-                                  <div className='flex items-center gap-1'>
-                                    <Bed className='w-3.5 h-3.5' />
-                                    <span>{preset.doubleRooms} DZ × {selectedPackage.price.toLocaleString('de-DE')} € × 2</span>
-                                  </div>
-                                )}
+                                <div className='flex items-center gap-1'>
+                                  <Bed className='w-3.5 h-3.5' />
+                                  <span>{preset.doubleRooms * 2 + preset.singleRooms} × {selectedPackage.price.toLocaleString('de-DE')} € p. P.</span>
+                                </div>
                                 {preset.singleRooms > 0 && (
                                   <div className='flex items-center gap-1'>
-                                    <Bed className='w-3.5 h-3.5' />
-                                    <span>{preset.singleRooms} EZ × {(selectedPackage.price + selectedPackage.singleSurcharge).toLocaleString('de-DE')} €</span>
+                                    <span>+ {preset.singleRooms} × {selectedPackage.singleSurcharge.toLocaleString('de-DE')} € Einzelbelegungs-Zuschlag</span>
                                   </div>
                                 )}
                               </div>
@@ -641,7 +638,7 @@ export default function BookingForm() {
                           {roomValidation.message}
                         </p>
                         <p className='text-xs text-gray-600 mt-1'>
-                          Gesamt: {Number(watchDoubleRooms) || 0} DZ + {Number(watchSingleRooms) || 0} EZ = {((Number(watchDoubleRooms) || 0) * 2) + (Number(watchSingleRooms) || 0)} Betten für {numberOfPersons} {numberOfPersons === 1 ? 'Person' : 'Personen'}
+                          Gesamt: {Number(watchDoubleRooms) || 0} × Doppelbelegung + {Number(watchSingleRooms) || 0} × Einzelbelegung = {((Number(watchDoubleRooms) || 0) * 2) + (Number(watchSingleRooms) || 0)} Plätze für {numberOfPersons} {numberOfPersons === 1 ? 'Person' : 'Personen'}
                         </p>
                       </div>
                     </div>
@@ -992,12 +989,12 @@ export default function BookingForm() {
                     <span className='font-semibold'>{numberOfPersons}</span>
                   </div>
                   <div className='flex justify-between'>
-                    <span className='text-gray-600'>Doppelzimmer:</span>
-                    <span className='font-semibold'>{Number(watchDoubleRooms) || 0} DZ</span>
+                    <span className='text-gray-600'>Doppelbelegung:</span>
+                    <span className='font-semibold'>{Number(watchDoubleRooms) || 0} {(Number(watchDoubleRooms) || 0) === 1 ? 'Zimmer' : 'Zimmer'}</span>
                   </div>
                   <div className='flex justify-between'>
-                    <span className='text-gray-600'>Einzelzimmer:</span>
-                    <span className='font-semibold'>{Number(watchSingleRooms) || 0} EZ</span>
+                    <span className='text-gray-600'>Einzelbelegung:</span>
+                    <span className='font-semibold'>{Number(watchSingleRooms) || 0} Zimmer</span>
                   </div>
                   <div className='flex justify-between pt-2 border-t'>
                     <span className='text-gray-600'>Gesamt Zimmer:</span>
@@ -1005,26 +1002,29 @@ export default function BookingForm() {
                   </div>
                 </div>
                 <div className='pt-3 border-t'>
+                  {/* Stefans Preismodell: Ankerpreis p. P. im DZ, Zuschläge als eigene Position, unten Gesamtreisepreis */}
+                  <div className='flex justify-between items-center mb-2 text-sm'>
+                    <span className='text-gray-600'>Preis pro Person im Doppelzimmer</span>
+                    <span className='font-semibold text-gray-900'>{selectedPackage.price.toLocaleString('de-DE')} €</span>
+                  </div>
                   <div className='space-y-1 text-xs text-gray-600 mb-3'>
-                    {(Number(watchDoubleRooms) || 0) > 0 && (
-                      <div className='flex justify-between'>
-                        <span>{Number(watchDoubleRooms)} DZ × 2 × {selectedPackage.price.toLocaleString('de-DE')} €</span>
-                        <span className='font-semibold'>{((Number(watchDoubleRooms) || 0) * 2 * selectedPackage.price).toLocaleString('de-DE')} €</span>
-                      </div>
-                    )}
+                    <div className='flex justify-between'>
+                      <span>{(Number(watchDoubleRooms) || 0) * 2 + (Number(watchSingleRooms) || 0)} × Reisepreis pro Person</span>
+                      <span className='font-semibold'>{(((Number(watchDoubleRooms) || 0) * 2 + (Number(watchSingleRooms) || 0)) * selectedPackage.price).toLocaleString('de-DE')} €</span>
+                    </div>
                     {(Number(watchSingleRooms) || 0) > 0 && (
                       <div className='flex justify-between'>
-                        <span>{Number(watchSingleRooms)} EZ × {(selectedPackage.price + selectedPackage.singleSurcharge).toLocaleString('de-DE')} €</span>
-                        <span className='font-semibold'>{((Number(watchSingleRooms) || 0) * (selectedPackage.price + selectedPackage.singleSurcharge)).toLocaleString('de-DE')} €</span>
+                        <span>{Number(watchSingleRooms)} × Einzelbelegungs-Zuschlag ({selectedPackage.singleSurcharge.toLocaleString('de-DE')} €)</span>
+                        <span className='font-semibold'>+ {((Number(watchSingleRooms) || 0) * selectedPackage.singleSurcharge).toLocaleString('de-DE')} €</span>
                       </div>
                     )}
                   </div>
-                  <div className='flex justify-between items-center'>
-                    <span className='text-lg font-bold text-gray-900'>Gesamt:</span>
+                  <div className='flex justify-between items-center pt-2 border-t'>
+                    <span className='text-lg font-bold text-gray-900'>Gesamtreisepreis:</span>
                     <span className='text-2xl font-bold' style={{ color: '#184a7b' }}>{calculateTotal().toLocaleString('de-DE')} €</span>
                   </div>
                   <p className='text-xs text-gray-500 mt-1'>
-                    * {(Number(watchDoubleRooms) || 0) + (Number(watchSingleRooms) || 0)} {((Number(watchDoubleRooms) || 0) + (Number(watchSingleRooms) || 0)) === 1 ? 'Zimmer' : 'Zimmer'}, {numberOfPersons} {numberOfPersons === 1 ? 'Person' : 'Personen'}
+                    * {(Number(watchDoubleRooms) || 0) + (Number(watchSingleRooms) || 0)} Zimmer ({Number(watchDoubleRooms) || 0} × Doppel-, {Number(watchSingleRooms) || 0} × Einzelbelegung), {numberOfPersons} {numberOfPersons === 1 ? 'Person' : 'Personen'}
                   </p>
                 </div>
               </div>
