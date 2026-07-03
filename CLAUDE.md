@@ -58,6 +58,7 @@ Laufzeit-Lesen Content: `src/lib/contentStore.ts` (`findPackagesByEvent` etc.).
 
 ## Branch-Flow / Zusammenarbeit
 - `feature/*` oder `fix/*` → Pull Request → **CI muss grün sein** → Merge nach `main` → Prod-Deploy.
+- **Auto-Merge (seit 2026-07-03):** Repo hat `allow_auto_merge` + Branch-Protection auf `main` (Pflicht-Check: CI-Job `verify`, keine Review-Pflicht, Admins ausgenommen). Bei fertigen PRs `gh pr merge --auto --merge` setzen → merged automatisch, sobald CI grün ist.
 - Nicht direkt auf `main` pushen (außer triviale Hotfixes mit Absprache).
 - Offene Stränge im GitHub-Projects-Board pflegen.
 
