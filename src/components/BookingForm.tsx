@@ -158,6 +158,7 @@ export default function BookingForm() {
   const [isMounted, setIsMounted] = useState(false); // Fix hydration error for dynamic widgets
   const [isSoldOut, setIsSoldOut] = useState(false); // Kontingent 0 → Anfrage gesperrt
   const [refSource, setRefSource] = useState(''); // Affiliate: Host der einbettenden Website (?ref=)
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null); // Foto-Lightbox (alle Hotelbilder)
   
   const phoneCountries = [
     { code: 'ch', prefix: '+41', name: 'CH' },
@@ -185,6 +186,19 @@ export default function BookingForm() {
   const watchDoubleRooms = watch('doubleRooms');
   const watchSingleRooms = watch('singleRooms');
   const watchNumberOfPersons = watch('numberOfPersons');
+
+  // Lightbox: ESC schließt, Pfeiltasten blättern
+  useEffect(() => {
+    if (lightboxIdx === null) return;
+    const count = selectedPackage.hotelImages.length;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxIdx(null);
+      if (e.key === 'ArrowRight') setLightboxIdx((i) => (i === null ? i : (i + 1) % count));
+      if (e.key === 'ArrowLeft') setLightboxIdx((i) => (i === null ? i : (i - 1 + count) % count));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightboxIdx, selectedPackage.hotelImages.length]);
 
   useEffect(() => {
     const eventParam = searchParams.get('event') || '';
@@ -431,7 +445,47 @@ export default function BookingForm() {
   };
 
   return (
-    <div className='min-h-screen bg-gray-50'>
+    <div className='min-h-screen bg-gray-50 overflow-x-clip'>
+      {/* Foto-Lightbox: alle Hotelbilder mit Blättern (Klick, Pfeile, ESC) */}
+      {lightboxIdx !== null && selectedPackage.hotelImages.length > 0 && (
+        <div
+          className='fixed inset-0 z-[100] flex flex-col items-center justify-center p-6'
+          style={{ background: 'rgba(10,22,34,0.93)' }}
+          onClick={() => setLightboxIdx(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={selectedPackage.hotelImages[Math.min(lightboxIdx, selectedPackage.hotelImages.length - 1)]}
+            alt={selectedPackage.hotel}
+            className='max-h-[78vh] max-w-[92vw] rounded-xl object-contain shadow-2xl'
+            onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx + 1) % selectedPackage.hotelImages.length); }}
+          />
+          <div className='mt-3 text-sm font-bold text-white'>{selectedPackage.hotel}</div>
+          <div className='mt-0.5 text-xs text-white/70'>{lightboxIdx + 1} / {selectedPackage.hotelImages.length}</div>
+          <button
+            type='button'
+            aria-label='Schließen'
+            className='absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-3xl leading-none text-white'
+            onClick={(e) => { e.stopPropagation(); setLightboxIdx(null); }}
+          >×</button>
+          {selectedPackage.hotelImages.length > 1 && (
+            <>
+              <button
+                type='button'
+                aria-label='Vorheriges Foto'
+                className='absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-3xl leading-none text-white'
+                onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx - 1 + selectedPackage.hotelImages.length) % selectedPackage.hotelImages.length); }}
+              >‹</button>
+              <button
+                type='button'
+                aria-label='Nächstes Foto'
+                className='absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-3xl leading-none text-white'
+                onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx + 1) % selectedPackage.hotelImages.length); }}
+              >›</button>
+            </>
+          )}
+        </div>
+      )}
       {/* Back Button: führt dahin zurück, wo der User herkam (auch externe Seiten); Fallback: Event-Seite */}
       <div className='bg-linear-to-r from-orange-500 to-orange-600 shadow-md'>
         <div className='container mx-auto px-4 py-3'>
@@ -459,7 +513,7 @@ export default function BookingForm() {
             <div className='bg-white rounded-xl shadow-lg overflow-hidden'>
               {/* ── Hotel-Galerie: feste Bildboxen (absolute imgs — können nicht ausbrechen) ── */}
               {selectedPackage.hotelImages.length > 0 && (
-                <div className='relative grid grid-cols-3 gap-1 h-52 md:h-64 overflow-hidden'>
+                <div className='relative grid w-full min-w-0 cursor-pointer grid-cols-3 gap-1 h-52 md:h-64 overflow-hidden' onClick={() => setLightboxIdx(0)} title='Alle Fotos ansehen'>
                   <div className={`relative overflow-hidden ${selectedPackage.hotelImages.length > 1 ? 'col-span-2' : 'col-span-3'}`}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -471,7 +525,7 @@ export default function BookingForm() {
                   {selectedPackage.hotelImages.length > 1 && (
                     <div className='grid grid-rows-2 gap-1 min-h-0'>
                       {selectedPackage.hotelImages.slice(1, 3).map((src, i) => (
-                        <div key={i} className='relative overflow-hidden min-h-0'>
+                        <div key={i} className='relative overflow-hidden min-h-0 min-w-0' onClick={(e) => { e.stopPropagation(); setLightboxIdx(i + 1); }}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={src} alt='' className='absolute inset-0 h-full w-full object-cover' />
                         </div>
@@ -963,7 +1017,7 @@ export default function BookingForm() {
               <div className='space-y-4 mb-6'>
                 {/* Hotel-Miniatur */}
                 {selectedPackage.hotelImages[0] && (
-                  <div className='relative h-28 overflow-hidden rounded-lg'>
+                  <div className='relative h-28 cursor-pointer overflow-hidden rounded-lg' onClick={() => setLightboxIdx(0)} title='Alle Fotos ansehen'>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={selectedPackage.hotelImages[0]} alt={selectedPackage.hotel} className='h-full w-full object-cover' />
                     <div className='absolute inset-x-0 bottom-0 h-12 bg-linear-to-t from-black/55 to-transparent' />
