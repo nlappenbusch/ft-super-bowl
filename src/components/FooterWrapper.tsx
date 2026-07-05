@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import Footer from './Footer';
 
-const EXCLUDED_PREFIXES = ['/admin', '/embed', '/wordpress-preview', '/shortcode-test', '/tippspiel'];
+const EXCLUDED_PREFIXES = ['/admin', '/embed', '/wordpress-preview', '/shortcode-test', '/tippspiel', '/games'];
 
 /** Buchungsseite im Embed-Modus (?embed=1): ohne Site-Footer (reiner Funnel). */
 function BookingFooterGate() {
