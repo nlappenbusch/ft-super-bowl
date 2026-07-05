@@ -104,8 +104,9 @@ function renderCard(pkg: PackageRecord, base: string, eventSlug: string, linkSuf
   const price = Number(pkg.price || 0);
   const bookingUrl = `${base}/booking?event=${encodeURIComponent(eventSlug)}&package=${encodeURIComponent(pkg.slug || pkg.id)}&persons=2${linkSuffix}`;
 
+  const galleryAttr = `data-ftpk-gallery="${esc(JSON.stringify(images))}" data-ftpk-title="${esc(pkg.hotel || pkg.title || '')}"`;
   const media = images.length
-    ? `<div class="ftpk-media${soldOut ? ' ftpk-media--so' : ''}">
+    ? `<div class="ftpk-media${soldOut ? ' ftpk-media--so' : ''}" ${galleryAttr} style="cursor:pointer" title="Fotos ansehen">
         <img src="${esc(images[0])}" alt="${esc(pkg.hotel || pkg.title || '')}" loading="lazy" style="${S.img}" />
         <div class="ftpk-shade"></div>
         <div class="ftpk-badges">
@@ -118,7 +119,7 @@ function renderCard(pkg: PackageRecord, base: string, eventSlug: string, linkSuf
             ${pkg.hotel ? `<span style="${S.hotelName}">${esc(pkg.hotel)}</span>` : ''}
             ${stars ? `<span style="${S.stars}">${'★'.repeat(stars)}</span>` : ''}
           </span>
-          ${images.length > 1 ? `<span style="${S.fotos}">📷 ${images.length} Fotos</span>` : ''}
+          ${images.length > 1 ? `<span style="${S.fotos};cursor:pointer">📷 ${images.length} Fotos</span>` : ''}
         </div>
       </div>`
     : '';
@@ -130,7 +131,7 @@ function renderCard(pkg: PackageRecord, base: string, eventSlug: string, linkSuf
 
   const cta = soldOut
     ? `<span style="${S.ctaSo}">Ausgebucht</span>`
-    : `<a class="ftpk-cta" href="${esc(bookingUrl)}" style="${popular ? S.ctaPop : S.cta}">Unverbindlich anfragen →</a>`;
+    : `<a class="ftpk-cta" href="${esc(bookingUrl)}" style="${popular ? S.ctaPop : S.cta}">Weiter zur Buchung →</a>`;
 
   /* Bewusst div/span statt h3/p/ul: Theme-Selektoren auf Überschriften,
      Absätze und Listen können hier gar nicht erst greifen. */
@@ -225,9 +226,46 @@ export async function GET(request: Request) {
 
   const jsonLd = { '@context': 'https://schema.org', '@graph': [sportsEventLd, itemListLd] };
 
+  const LIGHTBOX = `<script>(function(){
+if(window.__ftpkLB)return;window.__ftpkLB=1;
+var imgs=[],idx=0,ov=null,im=null,ct=null,tt=null;
+function stop(fn){return function(e){e.stopPropagation();fn(e);};}
+function build(){
+  ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(10,22,34,.93);display:flex;align-items:center;justify-content:center;flex-direction:column;padding:24px;box-sizing:border-box';
+  im=document.createElement('img');
+  im.style.cssText='max-width:92vw;max-height:78vh;object-fit:contain;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.5)';
+  tt=document.createElement('div');
+  tt.style.cssText='color:#fff;font:700 15px -apple-system,Segoe UI,Roboto,sans-serif;margin:14px 0 2px;text-align:center';
+  ct=document.createElement('div');
+  ct.style.cssText='color:rgba(255,255,255,.7);font:400 13px -apple-system,Segoe UI,Roboto,sans-serif';
+  var x=btn('\u00d7','position:absolute;top:14px;right:18px;font-size:30px;line-height:1');x.onclick=stop(close);
+  var pv=btn('\u2039','position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:34px');pv.onclick=stop(function(){go(-1);});
+  var nx=btn('\u203a','position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:34px');nx.onclick=stop(function(){go(1);});
+  ov.appendChild(im);ov.appendChild(tt);ov.appendChild(ct);ov.appendChild(x);ov.appendChild(pv);ov.appendChild(nx);
+  ov.onclick=close;im.onclick=stop(function(){go(1);});
+  document.body.appendChild(ov);
+  document.addEventListener('keydown',key);
+}
+function btn(txt,extra){var b=document.createElement('button');b.textContent=txt;
+  b.style.cssText='background:rgba(255,255,255,.14);color:#fff;border:0;border-radius:999px;width:46px;height:46px;cursor:pointer;font-family:inherit;'+extra;return b;}
+function key(e){if(!ov)return;if(e.key==='Escape')close();if(e.key==='ArrowRight')go(1);if(e.key==='ArrowLeft')go(-1);}
+function show(){im.src=imgs[idx];ct.textContent=(idx+1)+' / '+imgs.length;}
+function go(d){idx=(idx+d+imgs.length)%imgs.length;show();}
+function close(){if(ov){document.removeEventListener('keydown',key);ov.remove();ov=null;}}
+document.addEventListener('click',function(e){
+  var t=e.target&&e.target.closest?e.target.closest('[data-ftpk-gallery]'):null;
+  if(!t)return;e.preventDefault();e.stopPropagation();
+  try{imgs=JSON.parse(t.getAttribute('data-ftpk-gallery'))||[];}catch(err){return;}
+  if(!imgs.length)return;idx=0;
+  if(!ov)build();tt.textContent=t.getAttribute('data-ftpk-title')||'';show();
+});
+})();</script>`;
+
   const html =
     STYLE +
-    `<div class="ftpk-grid" data-ftv="1.6.2">${packages.map((p) => renderCard(p, base, eventSlug, linkSuffix)).join('')}</div>` +
+    `<div class="ftpk-grid" data-ftv="1.6.3">${packages.map((p) => renderCard(p, base, eventSlug, linkSuffix)).join('')}</div>` +
+    LIGHTBOX +
     `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`;
 
   return NextResponse.json({
