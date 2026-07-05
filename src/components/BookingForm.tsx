@@ -611,8 +611,9 @@ export default function BookingForm() {
                     Anzahl Reisende *
                   </label>
                   <div className='relative'>
-                    <Users className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5' />
-                    <select {...register('numberOfPersons', { required: true, min: 1 })} className='w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
+                    <Users className='pointer-events-none absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5' />
+                    <ChevronDown className='pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4' />
+                    <select {...register('numberOfPersons', { required: true, min: 1 })} className='w-full appearance-none bg-white pl-12 pr-9 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'>
                       {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
                         <option key={num} value={num}>{num} {num === 1 ? 'Person' : 'Personen'}</option>
                       ))}
@@ -656,11 +657,11 @@ export default function BookingForm() {
                               onChange={() => handlePresetChange(String(index))}
                               className='mt-1 w-4 h-4 text-blue-600'
                             />
-                            <div className='flex-1'>
-                              <div className='flex items-center gap-2 mb-1'>
+                            <div className='min-w-0 flex-1'>
+                              <div className='mb-1 flex flex-wrap items-center gap-x-2 gap-y-1'>
                                 <div className='font-semibold text-gray-900'>{preset.label}</div>
                                 {index === 0 && (
-                                  <span className='px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full'>
+                                  <span className='shrink-0 whitespace-nowrap px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full'>
                                     ⭐ EMPFOHLEN
                                   </span>
                                 )}
@@ -678,8 +679,8 @@ export default function BookingForm() {
                               </div>
                             </div>
                           </div>
-                          <div className='text-right ml-4'>
-                            <div className='font-bold text-lg' style={{ color: '#184a7b' }}>{totalPrice.toLocaleString('de-DE')} €</div>
+                          <div className='ml-3 shrink-0 text-right'>
+                            <div className='whitespace-nowrap font-bold text-lg' style={{ color: '#184a7b' }}>{totalPrice.toLocaleString('de-DE')} €</div>
                             <div className='text-xs text-gray-500'>Gesamt</div>
                           </div>
                         </label>
@@ -745,7 +746,7 @@ export default function BookingForm() {
                     <div className='grid md:grid-cols-2 gap-4'>
                       <div>
                         <label className='block text-sm font-semibold text-gray-700 mb-2'>Geburtsdatum *</label>
-                        <input type='date' {...register('mainBookerBirthDate', { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white' />
+                        <input type='date' {...register('mainBookerBirthDate', { required: true })} className='w-full min-w-0 max-w-full appearance-none px-4 py-3 border border-gray-300 rounded-lg bg-white' />
                         {errors.mainBookerBirthDate && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
                       </div>
                       <div>
@@ -936,7 +937,7 @@ export default function BookingForm() {
                     <div className='grid md:grid-cols-2 gap-4'>
                       <div>
                         <label className='block text-sm font-semibold text-gray-700 mb-2'>Geburtsdatum *</label>
-                        <input type='date' {...register(`travelers.${index}.birthDate`, { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white' />
+                        <input type='date' {...register(`travelers.${index}.birthDate`, { required: true })} className='w-full min-w-0 max-w-full appearance-none px-4 py-3 border border-gray-300 rounded-lg bg-white' />
                       </div>
                       <div>
                         <label className='block text-sm font-semibold text-gray-700 mb-2'>Passnummer (optional)</label>
