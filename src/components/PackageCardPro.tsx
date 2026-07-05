@@ -57,7 +57,7 @@ export default function PackageCardPro({
   const lowSpots = !soldOut && typeof availableSpots === 'number' && availableSpots > 0 && availableSpots <= 10;
   const photos = (images || []).filter(Boolean);
   const heroImg = photos[Math.min(imgIdx, Math.max(photos.length - 1, 0))];
-  const href = `/booking?${eventSlug ? `event=${encodeURIComponent(eventSlug)}&` : ''}package=${encodeURIComponent(id)}&persons=2`;
+  const href = `/booking?${eventSlug ? `event=${encodeURIComponent(eventSlug)}&` : ''}package=${encodeURIComponent(id)}&persons=1`;
 
   return (
     <div

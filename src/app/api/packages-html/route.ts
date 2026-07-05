@@ -102,7 +102,7 @@ function renderCard(pkg: PackageRecord, base: string, eventSlug: string, linkSuf
   const stars = Math.max(0, Math.min(5, Number(pkg.stars || 0)));
   const nights = Number(pkg.nights || 0);
   const price = Number(pkg.price || 0);
-  const bookingUrl = `${base}/booking?event=${encodeURIComponent(eventSlug)}&package=${encodeURIComponent(pkg.slug || pkg.id)}&persons=2${linkSuffix}`;
+  const bookingUrl = `${base}/booking?event=${encodeURIComponent(eventSlug)}&package=${encodeURIComponent(pkg.slug || pkg.id)}&persons=1${linkSuffix}`;
 
   const galleryAttr = `data-ftpk-gallery="${esc(JSON.stringify(images))}" data-ftpk-title="${esc(pkg.hotel || pkg.title || '')}"`;
   const media = images.length

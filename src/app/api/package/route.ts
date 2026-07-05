@@ -201,8 +201,8 @@ export async function GET(request: Request) {
           <div style="margin-top: 14px; padding: 10px 12px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
             <div style="font-size: 13px; color: #1f2937; font-weight: 600;">Personen wählen (Preissicht)</div>
             <select id="person-count" onchange="window.superbowlSelectPersons_${packageData.id}(this.value)" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5f5; color: #1f2937; font-weight: 600;">
-              <option value="1">1 Person</option>
-              <option value="2" selected>2 Personen</option>
+              <option value="1" selected>1 Person</option>
+              <option value="2">2 Personen</option>
               <option value="3">3 Personen</option>
               <option value="4">4 Personen</option>
               <option value="5">5 Personen</option>
@@ -353,7 +353,7 @@ export async function GET(request: Request) {
         const priceSingle = ${packageData.price + packageData.singleSupplement};
         const packageId = '${packageData.id}';
         const nights = ${packageData.nights};
-        const personCount = Number(document.getElementById('person-count')?.value || 2);
+        const personCount = Number(document.getElementById('person-count')?.value || 1);
         
   // Update UI
   const roomDouble = document.getElementById('room-double');

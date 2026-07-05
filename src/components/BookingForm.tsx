@@ -146,7 +146,7 @@ export default function BookingForm() {
   const [eventSlug, setEventSlug] = useState('');
   const [packageSlug, setPackageSlug] = useState('');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [numberOfPersons, setNumberOfPersons] = useState(2);
+  const [numberOfPersons, setNumberOfPersons] = useState(1);
   const [roomValidation, setRoomValidation] = useState({ valid: true, message: '' });
   const [selectedPreset, setSelectedPreset] = useState<string>('0'); // Index of selected preset
   const [isSubmitHovered, setIsSubmitHovered] = useState(false);
@@ -176,10 +176,10 @@ export default function BookingForm() {
     defaultValues: {
       packageId: defaultPackage.id,
       startDate: '',
-      doubleRooms: 1,
-      singleRooms: 0,
-      numberOfPersons: 2,
-      travelers: Array(2).fill({ salutation: '', firstName: '', lastName: '', birthDate: '', passportNumber: '' })
+      doubleRooms: 0,
+      singleRooms: 1,
+      numberOfPersons: 1,
+      travelers: Array(1).fill({ salutation: '', firstName: '', lastName: '', birthDate: '', passportNumber: '' })
     }
   });
 
@@ -508,8 +508,8 @@ export default function BookingForm() {
       </div>
 
       <div className='container mx-auto px-4 py-8 max-w-[88rem]'>
-        <div className='grid lg:grid-cols-3 gap-8'>
-          <div className='lg:col-span-2'>
+        <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
+          <div className='lg:col-span-2 min-w-0 break-words'>
             <div className='bg-white rounded-xl shadow-lg overflow-hidden'>
               {/* ── Hotel-Galerie: feste Bildboxen (absolute imgs — können nicht ausbrechen) ── */}
               {selectedPackage.hotelImages.length > 0 && (
@@ -1011,7 +1011,7 @@ export default function BookingForm() {
             </div>
           </div>
 
-          <div className='lg:col-span-1'>
+          <div className='lg:col-span-1 min-w-0 break-words'>
             <div className='bg-white rounded-xl shadow-lg p-6 mb-6 sticky top-4'>
               <h3 className='text-xl font-bold text-gray-900 mb-4'>Ihre Auswahl</h3>
               <div className='space-y-4 mb-6'>
@@ -1116,7 +1116,7 @@ export default function BookingForm() {
               </div>
 
               {/* eKomi Trust Badge */}
-              <div className='mt-6 bg-white rounded-lg p-4 shadow-sm'>
+              <div className='mt-6 max-w-full overflow-hidden bg-white rounded-lg p-4 shadow-sm'>
                 <p className='text-xs text-gray-600 text-center mb-3 font-semibold'>Vertrauen Sie auf Faltin Travel</p>
                 {isMounted && (
                   <EkomiWidget token="sf11936169930865af963" className='min-h-[66px]' />
