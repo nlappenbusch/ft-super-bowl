@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Inbox, KanbanSquare, Wallet,
   CalendarDays, Layers, Package, HelpCircle, Tag, MapPin,
-  Mail, Settings, LogOut, Menu,
+  Mail, Settings, LogOut, Menu, Bell, AtSign, MessageSquare, StickyNote, UserPlus, Check,
   Users, Timer, Plane, ListTodo, Trophy, Sparkles, Contact, Activity, Globe, Code2, Wand2, KeyRound } from 'lucide-react';
 import { COLORS } from './ui';
 
@@ -76,6 +76,120 @@ const NAV: NavGroup[] = [
 function isActive(pathname: string, item: NavItem): boolean {
   if (item.exact) return pathname === item.href;
   return pathname === item.href || pathname.startsWith(item.href + '/');
+}
+
+// ==================== Benachrichtigungs-Center (Glocke) ====================
+
+interface Notif {
+  id: string;
+  type: 'task_assigned' | 'task_message' | 'task_note' | 'mention' | 'info';
+  task_id: string | null;
+  title: string;
+  body: string;
+  is_read: number;
+  created_at: string;
+}
+
+const NOTIF_ICON: Record<Notif['type'], React.ReactNode> = {
+  task_assigned: <UserPlus className="h-3.5 w-3.5" />,
+  task_message: <MessageSquare className="h-3.5 w-3.5" />,
+  task_note: <StickyNote className="h-3.5 w-3.5" />,
+  mention: <AtSign className="h-3.5 w-3.5" />,
+  info: <Bell className="h-3.5 w-3.5" />,
+};
+
+function NotificationBell() {
+  const [items, setItems] = useState<Notif[]>([]);
+  const [unread, setUnread] = useState(0);
+  const [open, setOpen] = useState(false);
+
+  const load = async () => {
+    try {
+      const r = await fetch('/api/admin/notifications?limit=15').then((x) => x.json());
+      if (r?.success) { setItems(r.data || []); setUnread(r.unread || 0); }
+    } catch { /* Netzwerkfehler still ignorieren */ }
+  };
+
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 45000);
+    return () => clearInterval(t);
+  }, []);
+
+  const openItem = async (n: Notif) => {
+    try {
+      await fetch('/api/admin/notifications', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: [n.id] }),
+      });
+    } catch { /* ignore */ }
+    setOpen(false);
+    if (n.task_id) window.location.href = `/admin/aufgaben?task=${n.task_id}`;
+    else load();
+  };
+
+  const markAll = async () => {
+    try {
+      await fetch('/api/admin/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    } catch { /* ignore */ }
+    load();
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="relative rounded-lg p-2 text-gray-600 transition hover:bg-gray-100"
+        aria-label="Benachrichtigungen"
+        title="Benachrichtigungen"
+      >
+        <Bell className="h-5 w-5" />
+        {unread > 0 && (
+          <span
+            className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
+            style={{ background: COLORS.danger }}
+          >
+            {unread > 9 ? '9+' : unread}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border bg-white shadow-xl" style={{ borderColor: COLORS.stroke }}>
+            <div className="flex items-center justify-between border-b px-3 py-2" style={{ borderColor: COLORS.stroke }}>
+              <span className="text-xs font-bold" style={{ color: COLORS.navy }}>Benachrichtigungen</span>
+              {unread > 0 && (
+                <button onClick={markAll} className="flex items-center gap-1 text-[11px] font-medium hover:underline" style={{ color: COLORS.accent }}>
+                  <Check className="h-3 w-3" /> Alle als gelesen
+                </button>
+              )}
+            </div>
+            <div className="max-h-96 overflow-y-auto">
+              {items.length === 0 && (
+                <p className="px-3 py-6 text-center text-xs" style={{ color: 'rgba(20,48,71,0.55)' }}>Keine Benachrichtigungen.</p>
+              )}
+              {items.map((n) => (
+                <button
+                  key={n.id}
+                  onClick={() => openItem(n)}
+                  className="block w-full border-b px-3 py-2.5 text-left transition hover:bg-gray-50"
+                  style={{ borderColor: COLORS.stroke, background: n.is_read ? '#fff' : 'rgba(233,90,12,0.05)' }}
+                >
+                  <div className="flex items-center gap-1.5 text-[11px]" style={{ color: 'rgba(20,48,71,0.55)' }}>
+                    {NOTIF_ICON[n.type] || NOTIF_ICON.info}
+                    <span className="ml-auto tabular-nums">{(n.created_at || '').slice(0, 16).replace('T', ' ')}</span>
+                  </div>
+                  <div className="mt-0.5 text-xs font-semibold" style={{ color: COLORS.navy }}>{n.title}</div>
+                  {n.body && <div className="mt-0.5 line-clamp-2 text-[11px]" style={{ color: 'rgba(20,48,71,0.6)' }}>{n.body}</div>}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 function SidebarContent({ pathname, onNavigate, user }: { pathname: string; onNavigate?: () => void; user: { name: string; src: string } | null }) {
@@ -178,6 +292,7 @@ export default function AdminShell({ title, children }: AdminShellProps) {
                 <Menu className="h-5 w-5" />
               </button>
               <h1 className="text-sm font-bold" style={{ color: COLORS.navy }}>{title}</h1>
+              <div className="ml-auto"><NotificationBell /></div>
             </div>
           </header>
 

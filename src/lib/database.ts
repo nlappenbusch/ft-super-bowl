@@ -274,7 +274,7 @@ export function initDatabase() {
       booking_id TEXT,
       due_date TEXT,
       priority TEXT NOT NULL DEFAULT 'normal' CHECK(priority IN ('niedrig','normal','hoch')),
-      status TEXT NOT NULL DEFAULT 'offen' CHECK(status IN ('offen','in_arbeit','erledigt')),
+      status TEXT NOT NULL DEFAULT 'offen' CHECK(status IN ('offen','in_arbeit','warten_requester','warten_dritte','erledigt')),
       created_by TEXT
     );
 
@@ -340,6 +340,19 @@ export function initDatabase() {
       revoked INTEGER NOT NULL DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
+
+    CREATE TABLE IF NOT EXISTS admin_notifications (
+      id TEXT PRIMARY KEY,
+      employee_id TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'info',
+      task_id TEXT,
+      title TEXT NOT NULL DEFAULT '',
+      body TEXT NOT NULL DEFAULT '',
+      is_read INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      created_by TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX IF NOT EXISTS idx_admin_notifications_emp ON admin_notifications(employee_id, is_read);
 
     CREATE TABLE IF NOT EXISTS tippspiel_users (
       id TEXT PRIMARY KEY,
@@ -427,6 +440,39 @@ export function initDatabase() {
   // Ticket-System: fortlaufende Ticketnummer + Zeit-Datum (Bestands-DBs nachrüsten)
   const stcols = sqlite.prepare(`PRAGMA table_info(staff_tasks)`).all() as Array<{ name: string }>;
   if (stcols.length && !stcols.some((c) => c.name === 'ticket_number')) addColumn('staff_tasks', 'ticket_number INTEGER');
+
+  // Neue Warte-Status: alter CHECK-Constraint kennt sie nicht → Tabelle einmalig neu aufbauen.
+  try {
+    const ddl = sqlite.prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='staff_tasks'`).get() as { sql: string } | undefined;
+    if (ddl?.sql && !ddl.sql.includes('warten_requester')) {
+      sqlite.exec(`
+        BEGIN;
+        ALTER TABLE staff_tasks RENAME TO staff_tasks_old;
+        CREATE TABLE staff_tasks (
+          id TEXT PRIMARY KEY,
+          ticket_number INTEGER,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+          title TEXT NOT NULL,
+          description TEXT NOT NULL DEFAULT '',
+          assignee_id TEXT,
+          booking_id TEXT,
+          due_date TEXT,
+          priority TEXT NOT NULL DEFAULT 'normal' CHECK(priority IN ('niedrig','normal','hoch')),
+          status TEXT NOT NULL DEFAULT 'offen' CHECK(status IN ('offen','in_arbeit','warten_requester','warten_dritte','erledigt')),
+          created_by TEXT
+        );
+        INSERT INTO staff_tasks (id, ticket_number, created_at, updated_at, title, description, assignee_id, booking_id, due_date, priority, status, created_by)
+          SELECT id, ticket_number, created_at, updated_at, title, description, assignee_id, booking_id, due_date, priority, status, created_by FROM staff_tasks_old;
+        DROP TABLE staff_tasks_old;
+        CREATE INDEX IF NOT EXISTS idx_staff_tasks_assignee ON staff_tasks(assignee_id, status);
+        COMMIT;
+      `);
+    }
+  } catch (e) {
+    try { sqlite.exec('ROLLBACK'); } catch { /* keine offene Transaktion */ }
+    console.warn('[sqlite] staff_tasks-Status-Migration:', (e as Error).message);
+  }
   const ttcols = sqlite.prepare(`PRAGMA table_info(task_time)`).all() as Array<{ name: string }>;
   if (ttcols.length && !ttcols.some((c) => c.name === 'work_date')) addColumn('task_time', "work_date TEXT NOT NULL DEFAULT ''");
   // Backfill: bestehende Tasks ohne Nummer fortlaufend ab 10 nummerieren (nach Erstellzeit).

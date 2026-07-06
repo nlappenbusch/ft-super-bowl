@@ -4,16 +4,20 @@ import { useEffect, useState, useRef } from 'react';
 import { X, Plus, Trash2, Check, Paperclip, Download, Clock, Mail, Send, StickyNote, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { Button, TextArea, Spinner, Badge, COLORS } from './ui';
 
+type TaskStatus = 'offen' | 'in_arbeit' | 'warten_requester' | 'warten_dritte' | 'erledigt';
+
 interface Task {
   id: string;
   ticket_number?: number | null;
   title: string;
   description: string;
-  status: 'offen' | 'in_arbeit' | 'erledigt';
+  status: TaskStatus;
   priority: 'niedrig' | 'normal' | 'hoch';
   due_date: string | null;
   assignee_id?: string | null;
   booking_id?: string | null;
+  created_by?: string | null;
+  created_at?: string;
 }
 interface Subtask { id: string; title: string; done: number }
 interface Att { id: string; filename: string; mime: string; size: number }
@@ -22,7 +26,13 @@ interface Msg { id: string; direction: 'in' | 'out' | 'note'; from_email: string
 interface Emp { id: string; name: string; email?: string; active?: boolean }
 
 const PRIO_TONE = { niedrig: 'muted', normal: 'info', hoch: 'danger' } as const;
-const STATUS_LABEL = { offen: 'Offen', in_arbeit: 'In Arbeit', erledigt: 'Erledigt' } as const;
+const STATUS_LABEL: Record<TaskStatus, string> = {
+  offen: 'Offen',
+  in_arbeit: 'In Arbeit',
+  warten_requester: 'Warten auf Requester',
+  warten_dritte: 'Warten auf Dritte',
+  erledigt: 'Erledigt',
+};
 
 function fmtMin(m: number): string {
   if (!m) return '0 min';
@@ -41,6 +51,7 @@ function todayISO(): string {
 export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; onClose: () => void; onChanged?: () => void }) {
   const [desc, setDesc] = useState(task.description || '');
   const [savingDesc, setSavingDesc] = useState(false);
+  const [status, setStatus] = useState<TaskStatus>(task.status);
   const [subs, setSubs] = useState<Subtask[]>([]);
   const [newSub, setNewSub] = useState('');
   const [loading, setLoading] = useState(true);
@@ -81,18 +92,28 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
   };
   useEffect(() => { loadSubs(); loadAtts(); loadTimes(); loadMsgs(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [task.id]);
 
-  // Mitarbeiter für den Standard-Empfänger (intern) laden + vorbelegen.
+  // Mitarbeiter laden + Standard-Empfänger vorbelegen: Ticket-Ersteller > Assignee > erster aktiver.
   useEffect(() => {
     fetch('/api/admin/team').then((r) => r.json()).then((r) => {
       if (!r.success) return;
       const list: Emp[] = r.data.map((e: Emp) => ({ id: e.id, name: e.name, email: e.email, active: e.active }));
       setEmps(list);
+      const creatorName = (task.created_by || '').trim().toLowerCase();
+      const creator = creatorName ? list.find((e) => e.name.trim().toLowerCase() === creatorName) : null;
       const assignee = task.assignee_id ? list.find((e) => e.id === task.assignee_id) : null;
       const fallback = list.find((e) => e.active && e.email) || list.find((e) => e.email);
-      setToEmail((assignee?.email || fallback?.email || '').trim());
+      setToEmail((creator?.email || assignee?.email || fallback?.email || '').trim());
     }).catch(() => {});
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [task.id]);
+
+  const changeStatus = async (s: TaskStatus) => {
+    setStatus(s);
+    await fetch(`/api/admin/tasks/${task.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: s }),
+    }).catch(() => {});
+    onChanged?.();
+  };
 
   const saveDesc = async () => {
     setSavingDesc(true);
@@ -184,11 +205,26 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
           </button>
         </div>
 
-        <div className="mb-6 flex flex-wrap items-center gap-2">
-          <Badge tone="muted">{STATUS_LABEL[task.status]}</Badge>
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <select
+            value={status}
+            onChange={(e) => changeStatus(e.target.value as TaskStatus)}
+            className="rounded-lg border px-2 py-1 text-xs font-medium focus:outline-none"
+            style={{ borderColor: COLORS.stroke, color: COLORS.navy }}
+            title="Status ändern"
+          >
+            {(Object.keys(STATUS_LABEL) as TaskStatus[]).map((s) => (
+              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+            ))}
+          </select>
           <Badge tone={PRIO_TONE[task.priority]}>{task.priority}</Badge>
           {task.due_date && <span className="text-xs" style={{ color: COLORS.textMuted }}>📅 {task.due_date}</span>}
         </div>
+        {(task.created_by || task.created_at) && (
+          <p className="mb-6 text-xs" style={{ color: COLORS.textMuted }}>
+            Erstellt{task.created_by ? ` von ${task.created_by}` : ''}{task.created_at ? ` am ${task.created_at.slice(0, 10)}` : ''}
+          </p>
+        )}
 
         {/* Beschreibung */}
         <div className="mb-6">
@@ -343,7 +379,7 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
               <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={`Betreff (optional) – Ticketnummer wird automatisch ergänzt`} className="w-full rounded-lg border px-3 py-1.5 text-sm focus:outline-none" style={{ borderColor: COLORS.stroke }} />
             </div>
           )}
-          <TextArea rows={3} value={msgBody} onChange={(e) => setMsgBody(e.target.value)} placeholder={mode === 'email' ? 'Nachricht an den Empfänger…' : 'Interne Notiz…'} className="mt-2" />
+          <TextArea rows={3} value={msgBody} onChange={(e) => setMsgBody(e.target.value)} placeholder={mode === 'email' ? 'Nachricht an den Empfänger… (@Name benachrichtigt Kolleg:innen)' : 'Interne Notiz… (@Name benachrichtigt Kolleg:innen)'} className="mt-2" />
           {msgErr && <p className="mt-1 text-xs" style={{ color: COLORS.danger }}>{msgErr}</p>}
           <div className="mt-2">
             <Button size="sm" variant="accent" onClick={sendMsg} disabled={sending || !msgBody.trim() || (mode === 'email' && !toEmail.trim())}>
