@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { updateTaskTime } from '@/lib/staffStore';
+import { updateTaskTime, deleteTaskTime } from '@/lib/staffStore';
 
 /**
  * PATCH /api/admin/time-entries/[id] { minutes?, note?, work_date?, employee_id? }
@@ -18,4 +18,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!result) return NextResponse.json({ success: false, error: 'Zeiteintrag nicht gefunden' }, { status: 404 });
   if ('error' in result) return NextResponse.json({ success: false, error: result.error }, { status: 400 });
   return NextResponse.json({ success: true, data: result });
+}
+
+/** DELETE — nur offene (nicht rapportierte) Einträge; rapportierte sind gesperrt. */
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const ok = await deleteTaskTime(id);
+  if (!ok) return NextResponse.json({ success: false, error: 'Eintrag nicht gefunden oder bereits rapportiert' }, { status: 400 });
+  return NextResponse.json({ success: true });
 }

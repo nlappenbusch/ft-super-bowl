@@ -6,7 +6,7 @@ import {
   PageHeader, Card, SectionCard, Button, Field, TextInput, SelectInput, Badge, Spinner, StatCard, COLORS,
 } from '@/components/admin/ui';
 import {
-  FileClock, Hourglass, CheckCircle2, FileText, Trash2, Plus, RotateCcw, Lock, X, Pencil, Check,
+  FileClock, Hourglass, CheckCircle2, FileText, Trash2, Plus, RotateCcw, Lock, X, Pencil, Check, Users,
 } from 'lucide-react';
 
 interface TimeEntry {
@@ -104,6 +104,10 @@ export default function RapportePage() {
   // Stammdaten-Editor am Rapport-Entwurf (Titel/Stundensatz/Währung)
   const [meta, setMeta] = useState<{ title: string; rate: string; currency: string } | null>(null);
   const [savingMeta, setSavingMeta] = useState(false);
+
+  // Batch-Aktionen auf der Checkbox-Auswahl (Mitarbeiter zuweisen / löschen)
+  const [batchEmp, setBatchEmp] = useState('');
+  const [batchBusy, setBatchBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -309,6 +313,55 @@ export default function RapportePage() {
     </span>
   );
 
+  const batchAssign = async () => {
+    if (!selEntries.length) return;
+    setBatchBusy(true);
+    setErr('');
+    try {
+      const results = await Promise.all(selEntries.map((e) =>
+        fetch(`/api/admin/time-entries/${e.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ employee_id: batchEmp || null }),
+        }).then((x) => x.json()).catch(() => ({ success: false }))
+      ));
+      const failed = results.filter((r) => !r.success).length;
+      if (failed) setErr(`${failed} von ${selEntries.length} Einträgen konnten nicht zugewiesen werden`);
+      setSel(new Set());
+      await load();
+    } finally {
+      setBatchBusy(false);
+    }
+  };
+
+  const batchDelete = async () => {
+    if (!selEntries.length) return;
+    if (!confirm(`${selEntries.length} ${selEntries.length === 1 ? 'Zeiteintrag' : 'Zeiteinträge'} (${fmtMin(selMinutes)}) unwiderruflich löschen?`)) return;
+    setBatchBusy(true);
+    setErr('');
+    try {
+      const results = await Promise.all(selEntries.map((e) =>
+        fetch(`/api/admin/time-entries/${e.id}`, { method: 'DELETE' })
+          .then((x) => x.json()).catch(() => ({ success: false }))
+      ));
+      const failed = results.filter((r) => !r.success).length;
+      if (failed) setErr(`${failed} von ${selEntries.length} Einträgen konnten nicht gelöscht werden`);
+      setSel(new Set());
+      await load();
+    } finally {
+      setBatchBusy(false);
+    }
+  };
+
+  const delEntry = async (e: TimeEntry) => {
+    if (!confirm(`Zeiteintrag vom ${fmtDate(e.work_date)} (${fmtMin(e.minutes)}) löschen?`)) return;
+    setErr('');
+    const r = await fetch(`/api/admin/time-entries/${e.id}`, { method: 'DELETE' }).then((x) => x.json());
+    if (!r.success) { setErr(r.error || 'Fehler beim Löschen'); return; }
+    setSel((prev) => { const next = new Set(prev); next.delete(e.id); return next; });
+    await load();
+  };
+
   const reportAmount = (r: Report): string => {
     if (r.hourly_rate == null || r.total_minutes == null) return '–';
     return `${fmtMoney((r.total_minutes / 60) * r.hourly_rate)} ${r.currency}`;
@@ -439,9 +492,14 @@ export default function RapportePage() {
                         )}
                         <td className="py-2 pl-2 text-right whitespace-nowrap">
                           {isEdit ? editActions : (
-                            <Button size="sm" variant="ghost" onClick={(ev) => { ev.stopPropagation(); startEdit(e); }} aria-label="Bearbeiten">
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
+                            <span className="inline-flex items-center gap-1">
+                              <Button size="sm" variant="ghost" onClick={(ev) => { ev.stopPropagation(); startEdit(e); }} aria-label="Bearbeiten">
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={(ev) => { ev.stopPropagation(); delEntry(e); }} aria-label="Löschen">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </span>
                           )}
                         </td>
                       </tr>
@@ -458,6 +516,22 @@ export default function RapportePage() {
                   ? `${sel.size} ${sel.size === 1 ? 'Eintrag' : 'Einträge'} · ${fmtMin(selMinutes)} ausgewählt`
                   : 'Einträge auswählen, um einen Rapport zu erstellen'}
               </div>
+              {sel.size > 0 && (
+                <div className="mb-3 flex flex-wrap items-end gap-3 border-b pb-3" style={{ borderColor: COLORS.stroke }}>
+                  <Field label="Mitarbeiter für Auswahl setzen">
+                    <SelectInput value={batchEmp} onChange={(e) => setBatchEmp(e.target.value)} className="w-48">
+                      <option value="">Extern (API)</option>
+                      {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+                    </SelectInput>
+                  </Field>
+                  <Button size="sm" variant="secondary" onClick={batchAssign} disabled={batchBusy}>
+                    {batchBusy ? <Spinner className="h-4 w-4" /> : <Users className="h-4 w-4" />} Zuweisen
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={batchDelete} disabled={batchBusy}>
+                    <Trash2 className="h-4 w-4" /> Auswahl löschen
+                  </Button>
+                </div>
+              )}
               <div className="flex flex-wrap items-end gap-3">
                 <Field label="Titel (optional)">
                   <TextInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder="z. B. Entwicklung Juni 2026" className="w-64" />
