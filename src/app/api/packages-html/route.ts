@@ -107,7 +107,7 @@ function renderCard(pkg: PackageRecord, base: string, eventSlug: string, linkSuf
   const galleryAttr = `data-ftpk-gallery="${esc(JSON.stringify(images))}" data-ftpk-title="${esc(pkg.hotel || pkg.title || '')}"`;
   const media = images.length
     ? `<div class="ftpk-media${soldOut ? ' ftpk-media--so' : ''}" ${galleryAttr} style="cursor:pointer" title="Fotos ansehen">
-        <img src="${esc(images[0])}" alt="${esc(pkg.hotel || pkg.title || '')}" loading="lazy" style="${S.img}" />
+        <img src="${esc(images[0])}" alt="${esc(pkg.hotel || pkg.title || '')}" loading="lazy" style="${S.img}" onerror="this.style.display='none'" />
         <div class="ftpk-shade"></div>
         <div class="ftpk-badges">
           ${pkg.badge_text ? `<span style="${S.chipBadge}">${esc(pkg.badge_text)}</span>` : ''}
@@ -264,7 +264,7 @@ document.addEventListener('click',function(e){
 
   const html =
     STYLE +
-    `<div class="ftpk-grid" data-ftv="1.6.3">${packages.map((p) => renderCard(p, base, eventSlug, linkSuffix)).join('')}</div>` +
+    `<div class="ftpk-grid" data-ftv="1.6.4">${packages.map((p) => renderCard(p, base, eventSlug, linkSuffix)).join('')}</div>` +
     LIGHTBOX +
     `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`;
 
