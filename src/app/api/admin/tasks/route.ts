@@ -2,13 +2,14 @@ import { NextResponse } from 'next/server';
 import { getSessionEmployee } from '@/lib/serverSession';
 import { listStaffTasks, createStaffTask, addNotification, formatTicketNo } from '@/lib/staffStore';
 
-/** GET ?assignee=<id>&status=<status>&booking=<id> → Aufgabenliste. */
+/** GET ?assignee=<id>&status=<status>&booking=<id>&project=<id|none> → Aufgabenliste. */
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const tasks = await listStaffTasks({
     assignee_id: url.searchParams.get('assignee') || undefined,
     status: url.searchParams.get('status') || undefined,
     booking_id: url.searchParams.get('booking') || undefined,
+    project_id: url.searchParams.get('project') || undefined,
   });
   return NextResponse.json({ success: true, data: tasks });
 }

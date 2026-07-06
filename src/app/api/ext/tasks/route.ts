@@ -4,7 +4,7 @@ import { listStaffTasks, createStaffTask, formatTicketNo, type StaffTask } from 
 
 const withTicket = (t: StaffTask) => ({ ...t, ticket_no: formatTicketNo(t.ticket_number) });
 
-/** GET /api/ext/tasks?status=&assignee=&booking= → Ticket-Liste. */
+/** GET /api/ext/tasks?status=&assignee=&booking=&project= → Ticket-Liste. */
 export async function GET(req: Request) {
   const a = await apiKeyOr401(req); if ('res' in a) return a.res;
   const url = new URL(req.url);
@@ -12,11 +12,12 @@ export async function GET(req: Request) {
     status: url.searchParams.get('status') || undefined,
     assignee_id: url.searchParams.get('assignee') || undefined,
     booking_id: url.searchParams.get('booking') || undefined,
+    project_id: url.searchParams.get('project') || undefined,
   });
   return NextResponse.json({ success: true, data: tasks.map(withTicket) });
 }
 
-/** POST /api/ext/tasks { title, description?, priority?, due_date?, assignee_id?, booking_id? } */
+/** POST /api/ext/tasks { title, description?, priority?, due_date?, assignee_id?, booking_id?, project_id? } */
 export async function POST(req: Request) {
   const a = await apiKeyOr401(req); if ('res' in a) return a.res;
   const body = await req.json().catch(() => ({}));
@@ -28,6 +29,7 @@ export async function POST(req: Request) {
     due_date: body.due_date || null,
     assignee_id: body.assignee_id || null,
     booking_id: body.booking_id || null,
+    project_id: body.project_id || null,
     created_by: `API: ${a.key.name}`,
   });
   return NextResponse.json({ success: true, data: withTicket(task) });

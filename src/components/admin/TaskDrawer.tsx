@@ -18,7 +18,10 @@ interface Task {
   booking_id?: string | null;
   created_by?: string | null;
   created_at?: string;
+  project_id?: string | null;
 }
+
+interface ProjectLite { id: string; name: string }
 interface Subtask { id: string; title: string; done: number }
 interface Att { id: string; filename: string; mime: string; size: number }
 interface TimeEntry { id: string; minutes: number; note: string; work_date?: string; report_id?: string | null; report_number?: number | null }
@@ -52,6 +55,8 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
   const [desc, setDesc] = useState(task.description || '');
   const [savingDesc, setSavingDesc] = useState(false);
   const [status, setStatus] = useState<TaskStatus>(task.status);
+  const [projectId, setProjectId] = useState<string>(task.project_id || '');
+  const [projects, setProjects] = useState<ProjectLite[]>([]);
   const [subs, setSubs] = useState<Subtask[]>([]);
   const [newSub, setNewSub] = useState('');
   const [loading, setLoading] = useState(true);
@@ -92,6 +97,13 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
   };
   useEffect(() => { loadSubs(); loadAtts(); loadTimes(); loadMsgs(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [task.id]);
 
+  useEffect(() => {
+    setProjectId(task.project_id || '');
+    fetch('/api/admin/projects').then((r) => r.json()).then((r) => {
+      if (r.success) setProjects(r.data.map((p: ProjectLite) => ({ id: p.id, name: p.name })));
+    }).catch(() => {});
+  }, [task.id, task.project_id]);
+
   // Mitarbeiter laden + Standard-Empfänger vorbelegen: Ticket-Ersteller > Assignee > erster aktiver.
   useEffect(() => {
     fetch('/api/admin/team').then((r) => r.json()).then((r) => {
@@ -111,6 +123,14 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
     setStatus(s);
     await fetch(`/api/admin/tasks/${task.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: s }),
+    }).catch(() => {});
+    onChanged?.();
+  };
+
+  const changeProject = async (p: string) => {
+    setProjectId(p);
+    await fetch(`/api/admin/tasks/${task.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_id: p || null }),
     }).catch(() => {});
     onChanged?.();
   };
@@ -216,6 +236,16 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
             {(Object.keys(STATUS_LABEL) as TaskStatus[]).map((s) => (
               <option key={s} value={s}>{STATUS_LABEL[s]}</option>
             ))}
+          </select>
+          <select
+            value={projectId}
+            onChange={(e) => changeProject(e.target.value)}
+            className="rounded-lg border px-2 py-1 text-xs font-medium focus:outline-none"
+            style={{ borderColor: COLORS.stroke, color: COLORS.navy }}
+            title="Projekt zuordnen"
+          >
+            <option value="">🗂 Kein Projekt</option>
+            {projects.map((p) => <option key={p.id} value={p.id}>🗂 {p.name}</option>)}
           </select>
           <Badge tone={PRIO_TONE[task.priority]}>{task.priority}</Badge>
           {task.due_date && <span className="text-xs" style={{ color: COLORS.textMuted }}>📅 {task.due_date}</span>}

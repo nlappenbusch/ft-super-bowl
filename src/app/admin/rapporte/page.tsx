@@ -20,9 +20,13 @@ interface TimeEntry {
   ticket_number: number | null;
   task_title: string;
   employee_name: string | null;
+  project_id: string | null;
+  project_name: string | null;
   report_number: number | null;
   report_status: 'entwurf' | 'final' | null;
 }
+
+interface ProjectLite { id: string; name: string }
 
 interface Stats { open_count: number; open_minutes: number; reported_count: number; reported_minutes: number }
 
@@ -79,6 +83,8 @@ export default function RapportePage() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [employee, setEmployee] = useState('');
+  const [project, setProject] = useState('');
+  const [projects, setProjects] = useState<ProjectLite[]>([]);
 
   // Auswahl + Rapport-Anlage
   const [sel, setSel] = useState<Set<string>>(new Set());
@@ -107,6 +113,7 @@ export default function RapportePage() {
       if (from) q.set('from', from);
       if (to) q.set('to', to);
       if (employee) q.set('employee', employee);
+      if (project) q.set('project', project);
       const [re, rr] = await Promise.all([
         fetch(`/api/admin/time-entries?${q}`).then((x) => x.json()),
         fetch('/api/admin/time-reports').then((x) => x.json()),
@@ -116,13 +123,16 @@ export default function RapportePage() {
     } finally {
       setLoading(false);
     }
-  }, [from, to, employee]);
+  }, [from, to, employee, project]);
 
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
     fetch('/api/admin/team').then((r) => r.json()).then((r) => {
       if (r.success) setEmployees(r.data.map((e: EmployeeLite) => ({ id: e.id, name: e.name })));
+    }).catch(() => {});
+    fetch('/api/admin/projects').then((r) => r.json()).then((r) => {
+      if (r.success) setProjects(r.data.map((p: ProjectLite) => ({ id: p.id, name: p.name })));
     }).catch(() => {});
   }, []);
 
@@ -360,8 +370,15 @@ export default function RapportePage() {
               {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
             </SelectInput>
           </Field>
-          {(from || to || employee) && (
-            <Button size="sm" variant="ghost" onClick={() => { setFrom(''); setTo(''); setEmployee(''); }}>
+          <Field label="Projekt">
+            <SelectInput value={project} onChange={(e) => setProject(e.target.value)} className="w-52">
+              <option value="">Alle</option>
+              <option value="none">Ohne Projekt</option>
+              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </SelectInput>
+          </Field>
+          {(from || to || employee || project) && (
+            <Button size="sm" variant="ghost" onClick={() => { setFrom(''); setTo(''); setEmployee(''); setProject(''); }}>
               <X className="h-3.5 w-3.5" /> Filter zurücksetzen
             </Button>
           )}
@@ -371,7 +388,7 @@ export default function RapportePage() {
           <div className="flex justify-center py-10"><Spinner /></div>
         ) : openEntries.length === 0 ? (
           <p className="text-sm" style={{ color: COLORS.textMuted }}>
-            Keine offenen Zeiten {from || to || employee ? 'im gewählten Filter' : ''} — alles rapportiert. 🎉
+            Keine offenen Zeiten {from || to || employee || project ? 'im gewählten Filter' : ''} — alles rapportiert. 🎉
           </p>
         ) : (
           <>
@@ -409,6 +426,7 @@ export default function RapportePage() {
                         <td className="py-2 pr-4">
                           <span className="font-semibold whitespace-nowrap" style={{ color: COLORS.navy }}>{ticketNo(e.ticket_number) || '–'}</span>
                           <span className="ml-2 hidden text-xs sm:inline" style={{ color: COLORS.textMuted }}>{e.task_title}</span>
+                          {e.project_name && <div className="text-[11px] font-medium" style={{ color: COLORS.accent }}>🗂 {e.project_name}</div>}
                         </td>
                         {isEdit && editCell ? editCell.emp : (
                           <td className="py-2 pr-4 whitespace-nowrap">{e.employee_name || <span style={{ color: COLORS.textMuted }}>Extern (API)</span>}</td>
@@ -614,6 +632,7 @@ export default function RapportePage() {
                         <td className="py-2 pr-4">
                           <span className="font-semibold whitespace-nowrap" style={{ color: COLORS.navy }}>{ticketNo(e.ticket_number) || '–'}</span>
                           <span className="ml-2 hidden text-xs sm:inline" style={{ color: COLORS.textMuted }}>{e.task_title}</span>
+                          {e.project_name && <div className="text-[11px] font-medium" style={{ color: COLORS.accent }}>🗂 {e.project_name}</div>}
                         </td>
                         {isEdit && editCell ? editCell.emp : (
                           <td className="py-2 pr-4 whitespace-nowrap">{e.employee_name || <span style={{ color: COLORS.textMuted }}>Extern (API)</span>}</td>
