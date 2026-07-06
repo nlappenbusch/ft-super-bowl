@@ -27,7 +27,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         type: 'task_assigned',
         task_id: id,
         title: `${formatTicketNo(updated.ticket_number) || 'Ticket'} wurde dir zugewiesen – ${updated.title}`,
-        body: (updated.description || '').slice(0, 300),
+        body: (updated.description || '').slice(0, 2000),
         created_by: actorName,
       }).catch(() => { /* Benachrichtigung nie blockierend */ });
     }
