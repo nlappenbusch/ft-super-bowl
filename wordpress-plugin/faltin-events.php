@@ -2,8 +2,16 @@
 /**
  * Plugin Name: Faltin Travel – Event Shortcodes
  * Description: SEO-freundliche, serverseitig gerenderte Event-Karten, Package-Karten + natives Anfrageformular. Shortcodes: [faltin_events serie="..."], [faltin_event event="..."], [faltin_packages event="..."], [faltin_anfrage event="..."].
- * Version: 1.8.2
+ * Version: 1.8.3
  * Author: Faltin Travel AG
+ *
+ * 1.8.3: Wartungsbox cache-sicher: (1) DONOTCACHEPAGE + nocache_headers, damit
+ *        Page-Caches (WP Rocket, SuperCache, LiteSpeed, W3TC) die Wartungs-
+ *        Variante nicht einfrieren. (2) Selbstheilungs-Script: bereits gecachte
+ *        Kopien prüfen /api/health der Plattform aus dem Browser und laden die
+ *        Seite bei Erreichbarkeit einmalig mit Cache-Buster neu (sessionStorage-
+ *        Guard gegen Reload-Schleifen). Behebt: Handy zeigte eingefrorene
+ *        Wartungsbox aus dem Mobile-Cache, obwohl die Plattform längst online war.
  *
  * 1.8.0: Deploy-/Ausfall-Fallback: (1) Letzter guter API-Stand wird 7 Tage als
  *        Backup-Transient vorgehalten und bei nicht erreichbarer Plattform
@@ -76,7 +84,31 @@ function faltin_events_fetch($url, $cache_seconds = 600) {
 /* ─── Wartungshinweis (Plattform nicht erreichbar, kein Cache-Stand) ─────── */
 
 function faltin_events_maintenance_box() {
-    return '<div class="ft-maintenance" style="margin:16px 0;padding:22px 24px;border:1px solid #e5e7eb;border-radius:14px;background:#f8fafc">'
+    // Page-Caches (WP Rocket, SuperCache, LiteSpeed, W3TC) sollen die
+    // Wartungs-Variante der Seite NICHT einfrieren.
+    if (!defined('DONOTCACHEPAGE')) define('DONOTCACHEPAGE', true);
+    if (!headers_sent()) nocache_headers();
+
+    // Selbstheilung fuer bereits gecachte Kopien: Health-Check aus dem Browser;
+    // ist die Plattform erreichbar, einmaliger Cache-Buster-Reload
+    // (sessionStorage-Guard verhindert Reload-Schleifen, falls wirklich down).
+    static $script_done = false;
+    $script = '';
+    if (!$script_done) {
+        $script_done = true;
+        $health = FALTIN_EVENTS_DEFAULT_API . '/api/health';
+        $script = "<script>(function(){if(window.__ftMaintHeal)return;window.__ftMaintHeal=1;"
+            . "try{if(sessionStorage.getItem('ft-maint-healed'))return;}catch(e){}"
+            . "fetch('" . esc_js($health) . "',{mode:'cors',cache:'no-store'})"
+            . ".then(function(r){if(!r.ok)throw 0;return r.json();})"
+            . ".then(function(){try{sessionStorage.setItem('ft-maint-healed','1');}catch(e){}"
+            . "var u=new URL(window.location.href);u.searchParams.set('ftup',String(Date.now()));"
+            . "window.location.replace(u.toString());})"
+            . ".catch(function(){});})();</script>";
+    }
+
+    return $script
+        . '<div class="ft-maintenance" style="margin:16px 0;padding:22px 24px;border:1px solid #e5e7eb;border-radius:14px;background:#f8fafc">'
         . '<p style="margin:0 0 6px;font-size:17px;font-weight:700;color:#143047 !important">Unser Buchungsmodul wird gerade aktualisiert.</p>'
         . '<p style="margin:0 0 14px;font-size:14px;line-height:1.55;color:#3f5468 !important">Es ist in wenigen Augenblicken wieder erreichbar – laden Sie die Seite einfach gleich neu. In dringenden Fällen sind wir direkt für Sie da:</p>'
         . '<div style="display:flex;flex-wrap:wrap;gap:10px 26px;font-size:14px;color:#143047 !important">'
