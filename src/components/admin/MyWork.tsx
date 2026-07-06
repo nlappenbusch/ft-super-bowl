@@ -59,8 +59,8 @@ const BSTATUS: Record<string, { label: string; tone: 'accent' | 'info' | 'muted'
 const TSTATUS: Record<string, { label: string; tone: 'accent' | 'info' | 'muted' }> = {
   offen: { label: 'Offen', tone: 'accent' },
   in_arbeit: { label: 'In Arbeit', tone: 'info' },
-  warten_requester: { label: 'Warten auf Requester', tone: 'muted' },
-  warten_dritte: { label: 'Warten auf Dritte', tone: 'muted' },
+  warten_requester: { label: 'Wartet auf Rückmeldung', tone: 'muted' },
+  warten_dritte: { label: 'Wartet auf Extern', tone: 'muted' },
 };
 
 export default function MyWork() {
