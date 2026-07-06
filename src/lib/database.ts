@@ -333,6 +333,14 @@ export function initDatabase() {
       finalized_at TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'aktiv' CHECK(status IN ('aktiv','archiviert')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS task_messages (
       id TEXT PRIMARY KEY,
       task_id TEXT NOT NULL,
@@ -495,6 +503,8 @@ export function initDatabase() {
   const ttcols = sqlite.prepare(`PRAGMA table_info(task_time)`).all() as Array<{ name: string }>;
   if (ttcols.length && !ttcols.some((c) => c.name === 'work_date')) addColumn('task_time', "work_date TEXT NOT NULL DEFAULT ''");
   if (ttcols.length && !ttcols.some((c) => c.name === 'report_id')) addColumn('task_time', 'report_id TEXT');
+  const stcols2 = sqlite.prepare(`PRAGMA table_info(staff_tasks)`).all() as Array<{ name: string }>;
+  if (stcols2.length && !stcols2.some((c) => c.name === 'project_id')) addColumn('staff_tasks', 'project_id TEXT');
   // Backfill: bestehende Tasks ohne Nummer fortlaufend ab 10 nummerieren (nach Erstellzeit).
   try {
     const missing = sqlite.prepare(`SELECT id FROM staff_tasks WHERE ticket_number IS NULL ORDER BY created_at, id`).all() as Array<{ id: string }>;

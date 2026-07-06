@@ -24,7 +24,11 @@ interface StaffTask {
   priority: 'niedrig' | 'normal' | 'hoch';
   status: TaskStatus;
   created_by: string | null;
+  project_id?: string | null;
+  project_name?: string | null;
 }
+
+interface ProjectLite { id: string; name: string }
 
 function ticketNo(n: number | null): string {
   return n && n > 0 ? `TASK-${String(n).padStart(5, '0')}` : '';
@@ -139,6 +143,15 @@ function TaskCard({
         )}
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs" style={{ color: COLORS.textMuted }}>
           <span>👤 {empName(t.assignee_id)}</span>
+          {t.project_name && (
+            <span
+              className="rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+              style={{ borderColor: '#c7d7ea', background: '#eef4fb', color: COLORS.navy }}
+              title="Projekt"
+            >
+              🗂 {t.project_name}
+            </span>
+          )}
           {t.created_by && <span title="Erstellt von">✍️ {t.created_by}</span>}
           {t.due_date && (
             <span style={{ color: t.due_date < today && t.status !== 'erledigt' ? COLORS.danger : undefined }}>📅 {t.due_date}</span>
@@ -168,9 +181,11 @@ function TaskCard({
 export default function AufgabenPage() {
   const [tasks, setTasks] = useState<StaffTask[]>([]);
   const [employees, setEmployees] = useState<EmployeeLite[]>([]);
+  const [projects, setProjects] = useState<ProjectLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterAssignee, setFilterAssignee] = useState('');
-  const [form, setForm] = useState({ title: '', description: '', assignee_id: '', due_date: '', priority: 'normal' });
+  const [filterProject, setFilterProject] = useState('');
+  const [form, setForm] = useState({ title: '', description: '', assignee_id: '', due_date: '', priority: 'normal', project_id: '' });
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<StaffTask | null>(null);
 
@@ -179,19 +194,39 @@ export default function AufgabenPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const q = filterAssignee ? `?assignee=${encodeURIComponent(filterAssignee)}` : '';
-      const r = await fetch(`/api/admin/tasks${q}`).then((x) => x.json());
+      const q = new URLSearchParams();
+      if (filterAssignee) q.set('assignee', filterAssignee);
+      if (filterProject) q.set('project', filterProject);
+      const r = await fetch(`/api/admin/tasks?${q}`).then((x) => x.json());
       if (r.success) setTasks(r.data);
     } finally {
       setLoading(false);
     }
-  }, [filterAssignee]);
+  }, [filterAssignee, filterProject]);
+
+  const loadProjects = useCallback(async () => {
+    const r = await fetch('/api/admin/projects').then((x) => x.json()).catch(() => null);
+    if (r?.success) setProjects(r.data.map((p: ProjectLite) => ({ id: p.id, name: p.name })));
+  }, []);
 
   useEffect(() => {
     fetch('/api/admin/team').then((r) => r.json()).then((r) => {
       if (r.success) setEmployees(r.data.map((e: EmployeeLite) => ({ id: e.id, name: e.name })));
     }).catch(() => {});
-  }, []);
+    loadProjects();
+  }, [loadProjects]);
+
+  /** "+ Neues Projekt…" in Selects: Name abfragen, anlegen, direkt auswählen. */
+  const newProject = async (): Promise<string> => {
+    const name = (window.prompt('Name des neuen Projekts:') || '').trim();
+    if (!name) return '';
+    const r = await fetch('/api/admin/projects', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
+    }).then((x) => x.json());
+    if (!r.success) { alert(r.error || 'Projekt konnte nicht angelegt werden'); return ''; }
+    await loadProjects();
+    return r.data.id;
+  };
 
   useEffect(() => { load(); }, [load]);
 
@@ -221,9 +256,10 @@ export default function AufgabenPage() {
           assignee_id: form.assignee_id || null,
           due_date: form.due_date || null,
           priority: form.priority,
+          project_id: form.project_id || null,
         }),
       });
-      setForm({ title: '', description: '', assignee_id: '', due_date: '', priority: 'normal' });
+      setForm({ title: '', description: '', assignee_id: '', due_date: '', priority: 'normal', project_id: form.project_id });
       await load();
     } finally {
       setSaving(false);
@@ -289,10 +325,17 @@ export default function AufgabenPage() {
         title="Aufgaben"
         description="Interne Tasks – per Drag & Drop verschieben, zuweisen, mit Fälligkeit und Priorität."
         actions={
-          <SelectInput value={filterAssignee} onChange={(e) => setFilterAssignee(e.target.value)} className="w-48">
-            <option value="">Alle Mitarbeiter</option>
-            {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-          </SelectInput>
+          <div className="flex flex-wrap items-center gap-2">
+            <SelectInput value={filterProject} onChange={(e) => setFilterProject(e.target.value)} className="w-52">
+              <option value="">Alle Projekte</option>
+              <option value="none">Ohne Projekt</option>
+              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </SelectInput>
+            <SelectInput value={filterAssignee} onChange={(e) => setFilterAssignee(e.target.value)} className="w-48">
+              <option value="">Alle Mitarbeiter</option>
+              {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+            </SelectInput>
+          </div>
         }
       />
 
@@ -311,8 +354,26 @@ export default function AufgabenPage() {
           <Field label="Fällig am">
             <TextInput type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
           </Field>
-          <Field label="Beschreibung" className="sm:col-span-3">
+          <Field label="Beschreibung" className="sm:col-span-2">
             <TextArea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          </Field>
+          <Field label="Projekt">
+            <SelectInput
+              value={form.project_id}
+              onChange={async (e) => {
+                const v = e.target.value;
+                if (v === '__new__') {
+                  const id = await newProject();
+                  setForm((f) => ({ ...f, project_id: id }));
+                } else {
+                  setForm({ ...form, project_id: v });
+                }
+              }}
+            >
+              <option value="">Kein Projekt</option>
+              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              <option value="__new__">＋ Neues Projekt…</option>
+            </SelectInput>
           </Field>
           <Field label="Priorität">
             <SelectInput value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>

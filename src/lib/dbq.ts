@@ -299,6 +299,16 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
         finalized_at text
       )`);
 
+      // Projekte (Zuordnung von Tickets/Zeiten für Rapporte und Übersichten)
+      await pool.query(`CREATE TABLE IF NOT EXISTS projects (
+        id text PRIMARY KEY,
+        name text NOT NULL,
+        description text NOT NULL DEFAULT '',
+        status text NOT NULL DEFAULT 'aktiv',
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`);
+      await pool.query(`ALTER TABLE staff_tasks ADD COLUMN IF NOT EXISTS project_id text`);
+
       // Ticket-System: fortlaufende Ticketnummer + Mail-Verlauf
       await pool.query(`ALTER TABLE staff_tasks ADD COLUMN IF NOT EXISTS ticket_number integer`);
       await pool.query(`CREATE TABLE IF NOT EXISTS task_messages (

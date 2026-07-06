@@ -152,46 +152,69 @@ async function renderPdf(_req: Request, { params }: { params: Promise<{ id: stri
   }
   y += 4;
 
-  // ─── Positionen, gruppiert nach Ticket ───
-  const groups = new Map<string, { label: string; items: TimeEntryDetail[] }>();
+  // ─── Positionen: Projekt → Ticket → Einträge ───
+  const projectGroups = new Map<string, { label: string; tickets: Map<string, { label: string; items: TimeEntryDetail[] }> }>();
   for (const e of entries) {
-    const key = e.task_id;
-    if (!groups.has(key)) {
-      const ticket = formatTicketNo(e.ticket_number);
-      groups.set(key, { label: `${ticket ? `${ticket} · ` : ''}${e.task_title || 'Ohne Ticket'}`, items: [] });
+    const pKey = e.project_id || '__none__';
+    if (!projectGroups.has(pKey)) {
+      projectGroups.set(pKey, { label: e.project_name || 'Ohne Projekt', tickets: new Map() });
     }
-    groups.get(key)!.items.push(e);
+    const tickets = projectGroups.get(pKey)!.tickets;
+    if (!tickets.has(e.task_id)) {
+      const ticket = formatTicketNo(e.ticket_number);
+      tickets.set(e.task_id, { label: `${ticket ? `${ticket} · ` : ''}${e.task_title || 'Ohne Ticket'}`, items: [] });
+    }
+    tickets.get(e.task_id)!.items.push(e);
   }
+  // Projekt-Ebene nur zeigen, wenn mindestens ein Eintrag einem Projekt zugeordnet ist.
+  const showProjects = [...projectGroups.keys()].some((k) => k !== '__none__');
 
   tableHead();
   doc.setFontSize(9);
 
-  for (const group of groups.values()) {
-    ensureSpace(14);
-    // Gruppenkopf
-    doc.setFillColor(244, 246, 249);
-    doc.rect(M - 2, y - 4, CONTENT_W + 4, 6.5, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...NAVY);
-    const groupSum = group.items.reduce((s, e) => s + (e.minutes || 0), 0);
-    doc.text(doc.splitTextToSize(group.label, CONTENT_W - 30)[0], M, y);
-    doc.text(fmtHM(groupSum), COL_TIME_R, y, { align: 'right' });
-    y += 7;
-
-    for (const e of group.items) {
-      const noteLines = doc.splitTextToSize(e.note || '–', NOTE_W);
-      const rowH = Math.max(noteLines.length * 4.2, 4.2) + 2.2;
-      ensureSpace(rowH + 2);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...NAVY);
-      doc.text(fmtDate(e.work_date), COL_DATE, y);
-      doc.text(employeeLabel(e), COL_EMP, y);
-      doc.text(noteLines, COL_NOTE, y);
+  for (const pg of projectGroups.values()) {
+    if (showProjects) {
+      ensureSpace(16);
+      const pSum = [...pg.tickets.values()].reduce((s, g) => s + g.items.reduce((x, e) => x + (e.minutes || 0), 0), 0);
+      doc.setFillColor(...ORANGE);
+      doc.rect(M - 2, y - 4.2, 2.2, 7, 'F');
       doc.setFont('helvetica', 'bold');
-      doc.text(fmtHM(e.minutes || 0), COL_TIME_R, y, { align: 'right' });
-      y += rowH;
+      doc.setFontSize(10.5);
+      doc.setTextColor(...NAVY);
+      doc.text(doc.splitTextToSize(`Projekt: ${pg.label}`, CONTENT_W - 34)[0], M + 3, y);
+      doc.text(fmtHM(pSum), COL_TIME_R, y, { align: 'right' });
+      doc.setFontSize(9);
+      y += 8;
     }
-    y += 2;
+
+    for (const group of pg.tickets.values()) {
+      ensureSpace(14);
+      // Ticket-Gruppenkopf
+      doc.setFillColor(244, 246, 249);
+      doc.rect(M - 2, y - 4, CONTENT_W + 4, 6.5, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...NAVY);
+      const groupSum = group.items.reduce((s, e) => s + (e.minutes || 0), 0);
+      doc.text(doc.splitTextToSize(group.label, CONTENT_W - 30)[0], M, y);
+      doc.text(fmtHM(groupSum), COL_TIME_R, y, { align: 'right' });
+      y += 7;
+
+      for (const e of group.items) {
+        const noteLines = doc.splitTextToSize(e.note || '–', NOTE_W);
+        const rowH = Math.max(noteLines.length * 4.2, 4.2) + 2.2;
+        ensureSpace(rowH + 2);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...NAVY);
+        doc.text(fmtDate(e.work_date), COL_DATE, y);
+        doc.text(employeeLabel(e), COL_EMP, y);
+        doc.text(noteLines, COL_NOTE, y);
+        doc.setFont('helvetica', 'bold');
+        doc.text(fmtHM(e.minutes || 0), COL_TIME_R, y, { align: 'right' });
+        y += rowH;
+      }
+      y += 2;
+    }
+    if (showProjects) y += 3;
   }
 
   // ─── Summen ───

@@ -388,6 +388,9 @@ export interface StaffTask {
   priority: 'niedrig' | 'normal' | 'hoch';
   status: TaskStatus;
   created_by: string | null;
+  project_id: string | null;
+  /** Aus dem Join in listStaffTasks (LEFT JOIN projects). */
+  project_name?: string | null;
 }
 
 /** Formatiert die fortlaufende Ticketnummer, z.B. 10 → "TASK-00010". */
@@ -403,11 +406,12 @@ export async function createStaffTask(input: Partial<StaffTask> & { title: strin
     const row = await q.get<{ n: number }>(`SELECT COALESCE(MAX(ticket_number), 9) + 1 AS n FROM staff_tasks`);
     const next = row?.n ?? 10;
     await q.run(`
-      INSERT INTO staff_tasks (id, ticket_number, title, description, assignee_id, booking_id, due_date, priority, status, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO staff_tasks (id, ticket_number, title, description, assignee_id, booking_id, due_date, priority, status, created_by, project_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [id, next, input.title, input.description || '', input.assignee_id || null,
       input.booking_id || null, input.due_date || null,
-      input.priority || 'normal', input.status || 'offen', input.created_by || null]);
+      input.priority || 'normal', input.status || 'offen', input.created_by || null,
+      input.project_id || null]);
   });
   return (await dbGet<StaffTask>('SELECT * FROM staff_tasks WHERE id = ?', [id]))!;
 }
@@ -423,14 +427,15 @@ export async function updateStaffTask(id: string, u: Partial<StaffTask>): Promis
   await dbRun(`
     UPDATE staff_tasks SET
       title = ?, description = ?, assignee_id = ?, booking_id = ?, due_date = ?,
-      priority = ?, status = ?, updated_at = datetime('now')
+      priority = ?, status = ?, project_id = ?, updated_at = datetime('now')
     WHERE id = ?
   `, [
     u.title ?? cur.title, u.description ?? cur.description,
     u.assignee_id !== undefined ? u.assignee_id : cur.assignee_id,
     u.booking_id !== undefined ? u.booking_id : cur.booking_id,
     u.due_date !== undefined ? u.due_date : cur.due_date,
-    u.priority ?? cur.priority, u.status ?? cur.status, id,
+    u.priority ?? cur.priority, u.status ?? cur.status,
+    u.project_id !== undefined ? u.project_id : cur.project_id, id,
   ]);
   return (await dbGet<StaffTask>('SELECT * FROM staff_tasks WHERE id = ?', [id])) ?? null;
 }
@@ -443,14 +448,20 @@ export async function deleteStaffTask(id: string): Promise<boolean> {
   return (await dbRun('DELETE FROM staff_tasks WHERE id = ?', [id])).changes > 0;
 }
 
-export async function listStaffTasks(filter?: { assignee_id?: string; status?: string; booking_id?: string }): Promise<StaffTask[]> {
+export async function listStaffTasks(filter?: { assignee_id?: string; status?: string; booking_id?: string; project_id?: string }): Promise<StaffTask[]> {
   const where: string[] = [];
   const params: string[] = [];
-  if (filter?.assignee_id) { where.push('assignee_id = ?'); params.push(filter.assignee_id); }
-  if (filter?.status) { where.push('status = ?'); params.push(filter.status); }
-  if (filter?.booking_id) { where.push('booking_id = ?'); params.push(filter.booking_id); }
-  const sql = `SELECT * FROM staff_tasks ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
-    ORDER BY CASE status WHEN 'erledigt' THEN 1 ELSE 0 END, due_date IS NULL, due_date, created_at DESC`;
+  if (filter?.assignee_id) { where.push('t.assignee_id = ?'); params.push(filter.assignee_id); }
+  if (filter?.status) { where.push('t.status = ?'); params.push(filter.status); }
+  if (filter?.booking_id) { where.push('t.booking_id = ?'); params.push(filter.booking_id); }
+  if (filter?.project_id) {
+    if (filter.project_id === 'none') where.push('t.project_id IS NULL');
+    else { where.push('t.project_id = ?'); params.push(filter.project_id); }
+  }
+  const sql = `SELECT t.*, p.name AS project_name
+    FROM staff_tasks t LEFT JOIN projects p ON p.id = t.project_id
+    ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+    ORDER BY CASE t.status WHEN 'erledigt' THEN 1 ELSE 0 END, t.due_date IS NULL, t.due_date, t.created_at DESC`;
   return dbAll<StaffTask>(sql, params);
 }
 
@@ -590,6 +601,66 @@ export async function updateTaskTime(
   });
 }
 
+// ==================== PROJEKTE (Zuordnung von Tickets/Zeiten) ====================
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  status: 'aktiv' | 'archiviert';
+  created_at: string;
+}
+
+export interface ProjectSummary extends Project {
+  task_count: number;
+  total_minutes: number;
+}
+
+export async function listProjects(): Promise<ProjectSummary[]> {
+  return dbAll<ProjectSummary>(`
+    SELECT p.*, COUNT(DISTINCT s.id) AS task_count, COALESCE(SUM(t.minutes), 0) AS total_minutes
+    FROM projects p
+    LEFT JOIN staff_tasks s ON s.project_id = p.id
+    LEFT JOIN task_time t ON t.task_id = s.id
+    GROUP BY p.id
+    ORDER BY lower(p.name)
+  `);
+}
+
+export async function getProject(id: string): Promise<Project | null> {
+  return (await dbGet<Project>('SELECT * FROM projects WHERE id = ?', [id])) ?? null;
+}
+
+export async function createProject(input: { name: string; description?: string }): Promise<Project | { error: string }> {
+  const name = (input.name || '').trim();
+  if (!name) return { error: 'Projektname erforderlich' };
+  const existing = await dbGet<Project>('SELECT * FROM projects WHERE lower(name) = lower(?)', [name]);
+  if (existing) return { error: `Projekt "${existing.name}" existiert bereits` };
+  const id = crypto.randomUUID();
+  await dbRun('INSERT INTO projects (id, name, description) VALUES (?, ?, ?)', [id, name, (input.description || '').trim()]);
+  return (await dbGet<Project>('SELECT * FROM projects WHERE id = ?', [id]))!;
+}
+
+export async function updateProject(id: string, u: { name?: string; description?: string; status?: string }): Promise<Project | { error: string } | null> {
+  const cur = await getProject(id);
+  if (!cur) return null;
+  const name = u.name !== undefined ? String(u.name).trim() : cur.name;
+  if (!name) return { error: 'Projektname erforderlich' };
+  const status = u.status !== undefined ? String(u.status) : cur.status;
+  if (!['aktiv', 'archiviert'].includes(status)) return { error: 'Ungültiger Status' };
+  await dbRun('UPDATE projects SET name = ?, description = ?, status = ? WHERE id = ?',
+    [name, u.description !== undefined ? String(u.description) : cur.description, status, id]);
+  return getProject(id);
+}
+
+/** Projekt löschen — zugeordnete Tickets bleiben bestehen (Zuordnung wird entfernt). */
+export async function deleteProject(id: string): Promise<boolean> {
+  return withTx(async (q) => {
+    await q.run('UPDATE staff_tasks SET project_id = NULL WHERE project_id = ?', [id]);
+    return (await q.run('DELETE FROM projects WHERE id = ?', [id])).changes > 0;
+  });
+}
+
 // ==================== ZEIT-RAPPORTE (abrechenbare Zeiten) ====================
 
 export type TimeReportStatus = 'entwurf' | 'final';
@@ -619,6 +690,8 @@ export interface TimeEntryDetail extends TaskTimeEntry {
   ticket_number: number | null;
   task_title: string;
   employee_name: string | null;
+  project_id: string | null;
+  project_name: string | null;
 }
 
 export function formatReportNo(n?: number | null): string {
@@ -627,20 +700,26 @@ export function formatReportNo(n?: number | null): string {
 
 const TIME_ENTRY_DETAIL_SQL = `
   SELECT t.*, s.ticket_number AS ticket_number, s.title AS task_title,
+         s.project_id AS project_id, p.name AS project_name,
          e.name AS employee_name, r.report_number AS report_number, r.status AS report_status
   FROM task_time t
   LEFT JOIN staff_tasks s ON s.id = t.task_id
+  LEFT JOIN projects p ON p.id = s.project_id
   LEFT JOIN employees e ON e.id = t.employee_id
   LEFT JOIN time_reports r ON r.id = t.report_id
 `;
 
-/** Alle Ticket-Zeitbuchungen (über alle Tickets), filterbar nach Zeitraum/Mitarbeiter/Rapport-Status. */
-export async function listTaskTimeEntries(f: { from?: string; to?: string; employee_id?: string; reported?: 'open' | 'reported' } = {}): Promise<TimeEntryDetail[]> {
+/** Alle Ticket-Zeitbuchungen (über alle Tickets), filterbar nach Zeitraum/Mitarbeiter/Projekt/Rapport-Status. */
+export async function listTaskTimeEntries(f: { from?: string; to?: string; employee_id?: string; project_id?: string; reported?: 'open' | 'reported' } = {}): Promise<TimeEntryDetail[]> {
   const where: string[] = [];
   const params: unknown[] = [];
   if (f.from) { where.push('t.work_date >= ?'); params.push(f.from); }
   if (f.to) { where.push('t.work_date <= ?'); params.push(f.to); }
   if (f.employee_id) { where.push('t.employee_id = ?'); params.push(f.employee_id); }
+  if (f.project_id) {
+    if (f.project_id === 'none') where.push('s.project_id IS NULL');
+    else { where.push('s.project_id = ?'); params.push(f.project_id); }
+  }
   if (f.reported === 'open') where.push('t.report_id IS NULL');
   if (f.reported === 'reported') where.push('t.report_id IS NOT NULL');
   return dbAll<TimeEntryDetail>(

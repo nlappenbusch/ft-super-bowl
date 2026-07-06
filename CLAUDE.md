@@ -73,6 +73,8 @@ Ablauf pro PR (externe API, Basis `https://next.faltintravel.com`, Auth-Header
 
 1. **Ticket anlegen** (bei Arbeitsbeginn): `POST /api/ext/tasks`
    `{ "title": "<Kurzbeschreibung>", "description": "<Kontext/Anforderung>", "priority": "normal" }`
+   — optional `"project_id"` zur Projekt-Zuordnung (Projekte: `GET/POST /api/ext/projects`;
+   Zeiten werden im Rapport nach Projekt → Ticket gruppiert).
 2. **Status pflegen**: `PATCH /api/ext/tasks/<id>` `{ "status": "in_arbeit" }` —
    Werte: `offen | in_arbeit | warten_requester | warten_dritte | erledigt`.
 3. **PR verlinken**: `POST /api/ext/tasks/<id>/messages` `{ "kind": "note", "body": "PR: <url> – Claude" }`
