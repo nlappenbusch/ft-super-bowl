@@ -16,6 +16,9 @@ import path from 'path';
 
 const DATA_DIR = path.join(process.cwd(), 'data', 'uploads', 'auto-reply');
 
+/** Max. Größe pro PDF-Anhang (3,5 MB). Große Mails gehen via Graph Draft + Upload-Session raus. */
+export const MAX_AUTO_REPLY_PDF_BYTES = Math.floor(3.5 * 1024 * 1024);
+
 export interface AutoReplyPdfMeta {
   /** Gespeicherter Dateiname (im Event-Datensatz hinterlegt) */
   file: string;
@@ -49,9 +52,10 @@ export async function saveAutoReplyPdf(file: File, eventSlug?: string): Promise<
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  // Graph fileAttachment (inline) ist auf ~3 MB begrenzt.
-  if (bytes.length > 3 * 1024 * 1024) {
-    throw new Error('PDF ist zu groß (max. 3 MB für den Mail-Anhang).');
+  // Versand großer Anhänge läuft über die Graph Upload-Session (graphMailer.ts),
+  // daher gilt nur noch das eigene Limit pro Datei.
+  if (bytes.length > MAX_AUTO_REPLY_PDF_BYTES) {
+    throw new Error('PDF ist zu groß (max. 3,5 MB pro Anhang).');
   }
 
   await mkdir(DATA_DIR, { recursive: true });

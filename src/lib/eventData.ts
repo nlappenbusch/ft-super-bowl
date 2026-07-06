@@ -153,10 +153,12 @@ export interface EventRecord {
   auto_reply_subject?: string | null;
   /** Nachrichtentext der Auto-Antwort (wird ins Markendesign gepackt). */
   auto_reply_message?: string | null;
-  /** Gespeicherter Dateiname der angehängten PDF (data/uploads/auto-reply/). */
+  /** Gespeicherter Dateiname der angehängten PDF (data/uploads/auto-reply/). Legacy-Einzelfeld. */
   auto_reply_pdf?: string | null;
-  /** Anzeigename der PDF (wird als Anhang-Name in der Mail genutzt). */
+  /** Anzeigename der PDF (wird als Anhang-Name in der Mail genutzt). Legacy-Einzelfeld. */
   auto_reply_pdf_name?: string | null;
+  /** Mehrere Auto-Antwort-PDFs (je { file, name, size? }). Hat Vorrang vor den Legacy-Feldern. */
+  auto_reply_pdfs?: Array<{ file: string; name: string; size?: number }> | null;
 }
 
 export interface SeriesRecord {

@@ -119,6 +119,8 @@ export interface ContentEventRecord {
   auto_reply_message?: string | null;
   auto_reply_pdf?: string | null;
   auto_reply_pdf_name?: string | null;
+  /** Mehrere Auto-Antwort-PDFs (je { file, name, size? }). Hat Vorrang vor den Legacy-Feldern auto_reply_pdf/auto_reply_pdf_name. */
+  auto_reply_pdfs?: Array<{ file: string; name: string; size?: number }> | null;
 }
 
 export interface ContentPackageInclude {
