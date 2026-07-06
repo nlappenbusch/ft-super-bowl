@@ -46,6 +46,7 @@ export function initDatabase() {
       booking_number TEXT,
       event_slug TEXT DEFAULT '',
       package_slug TEXT DEFAULT '',
+      travel_period TEXT DEFAULT '',
       package_id TEXT NOT NULL,
       package_title TEXT NOT NULL,
       start_date TEXT NOT NULL,
@@ -429,6 +430,7 @@ export function initDatabase() {
   if (!cols.some((c) => c.name === 'source')) addColumn('booking_requests', "source TEXT DEFAULT ''");
   if (!cols.some((c) => c.name === 'event_slug')) addColumn('booking_requests', "event_slug TEXT DEFAULT ''");
   if (!cols.some((c) => c.name === 'package_slug')) addColumn('booking_requests', "package_slug TEXT DEFAULT ''");
+  if (!cols.some((c) => c.name === 'travel_period')) addColumn('booking_requests', "travel_period TEXT DEFAULT ''");
   const icols = sqlite.prepare(`PRAGMA table_info(incentive_plans)`).all() as Array<{ name: string }>;
   if (icols.length && !icols.some((c) => c.name === 'error')) addColumn('incentive_plans', "error TEXT NOT NULL DEFAULT ''");
   if (icols.length && !icols.some((c) => c.name === 'progress')) addColumn('incentive_plans', "progress TEXT NOT NULL DEFAULT ''");
@@ -538,14 +540,15 @@ export async function insertBooking(booking: Omit<BookingRequest, 'id' | 'create
 
   await dbRun(
     `INSERT INTO booking_requests (
-      id, created_at, updated_at, request_number, event_slug, package_slug, package_id, package_title, start_date,
+      id, created_at, updated_at, request_number, event_slug, package_slug, travel_period, package_id, package_title, start_date,
       number_of_persons, double_rooms, single_rooms, travelers,
       email, phone, message, status, total_price, notes, source
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, now, now, requestNumber,
       (booking as { event_slug?: string }).event_slug || '',
       (booking as { package_slug?: string }).package_slug || '',
+      (booking as { travel_period?: string }).travel_period || '',
       booking.package_id, booking.package_title, booking.start_date,
       booking.number_of_persons, booking.double_rooms, booking.single_rooms,
       booking.travelers, booking.email, booking.phone, booking.message,
@@ -601,13 +604,19 @@ export async function messageExistsByGraphId(graphId: string): Promise<boolean> 
   return !!row;
 }
 
+const BOOKING_WITH_CUSTOMER_SQL = `
+  SELECT b.*, c.name AS customer_name, c.salutation AS customer_salutation,
+         c.street AS customer_street, c.zip AS customer_zip,
+         c.city AS customer_city, c.country AS customer_country
+  FROM booking_requests b LEFT JOIN customers c ON b.customer_id = c.id`;
+
 export async function getAllBookings(): Promise<BookingRequest[]> {
-  const rows = await dbAll<BookingRow>('SELECT * FROM booking_requests ORDER BY created_at DESC');
+  const rows = await dbAll<BookingRow>(`${BOOKING_WITH_CUSTOMER_SQL} ORDER BY b.created_at DESC`);
   return rows.map((row) => ({ ...row, travelers: JSON.parse(row.travelers) as Traveler[] }));
 }
 
 export async function getBookingById(id: string): Promise<BookingRequest | undefined> {
-  const row = await dbGet<BookingRow>('SELECT * FROM booking_requests WHERE id = ?', [id]);
+  const row = await dbGet<BookingRow>(`${BOOKING_WITH_CUSTOMER_SQL} WHERE b.id = ?`, [id]);
   if (!row) return undefined;
   return { ...row, travelers: JSON.parse(row.travelers) as Traveler[] };
 }
