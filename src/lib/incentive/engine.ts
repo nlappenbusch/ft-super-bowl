@@ -29,12 +29,16 @@ function briefContext(b: IncentiveBrief, period: DateRange): string {
 
 async function callJson(userText: string, maxTokens: number): Promise<Record<string, unknown>> {
   let lastErr = '';
-  for (let attempt = 0; attempt < 2; attempt++) {
+  let lastStopReason = '';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    // Wurde die vorherige Antwort wegen max_tokens abgeschnitten, Budget für den nächsten Versuch erhöhen.
+    if (attempt > 0 && lastStopReason === 'max_tokens') maxTokens = Math.min(Math.ceil(maxTokens * 1.8), 8000);
     const extra = attempt === 0 ? '' : '\n\nWICHTIG: Antworte AUSSCHLIESSLICH mit EINEM einzigen, vollständigen, gültigen JSON-Objekt. Kein Markdown, keine Code-Fences, keine Kommentare, keine abschließenden Kommata. Halte die Texte kompakt, damit das JSON vollständig bleibt.';
     const res = await anthropicMessage({ system: SYSTEM, userText: userText + extra, maxTokens });
     if (!res.ok) throw new Error(res.error || 'KI-Aufruf fehlgeschlagen');
     const parsed = parseJsonLoose(res.text || '');
     if (parsed) return parsed as Record<string, unknown>;
+    lastStopReason = res.stopReason || '';
     lastErr = 'KI-Antwort war kein gültiges JSON';
   }
   throw new Error(lastErr || 'KI-Antwort war kein gültiges JSON');
@@ -87,7 +91,7 @@ async function buildItinerary(b: IncentiveBrief, dest: DestinationOption, period
 async function feasibilityCheck(b: IncentiveBrief, dest: DestinationOption, itin: { days: DayPlan[]; logistics: string }): Promise<Feasibility> {
   const compact = itin.days.map((d) => `Tag ${d.day}: ${d.title} | ${d.morning} / ${d.afternoon} / ${d.evening} | Transport: ${d.transport || '-'}`).join('\n');
   const userText = `Prüfe diese ${b.days}-tägige Incentive-Reise nach ${dest.name} für ${b.groupSize} Personen auf MACHBARKEIT und KONSISTENZ: realistische Reisezeiten/Wege, sinnvolle Reihenfolge, Saison/Wetter, Gruppentauglichkeit, Budget-Plausibilität (${b.budgetLevel}). Sei kritisch aber konstruktiv.\n\nLOGISTIK: ${itin.logistics}\nABLAUF:\n${compact}\n\nSchema:\n{ "ok": boolean, "score": number (0-100), "issues": string[] (konkrete Risiken/Konflikte, leer wenn keine), "notes": string (1-2 Sätze Gesamteinschätzung) }`;
-  const j = await callJson(userText, 1200);
+  const j = await callJson(userText, 2200);
   return {
     ok: Boolean(j.ok),
     score: Number(j.score) || 0,

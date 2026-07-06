@@ -28,6 +28,8 @@ export interface AiCallResult {
   ok: boolean;
   text?: string;
   error?: string;
+  /** stop_reason der Anthropic-API (z.B. 'end_turn', 'max_tokens') – hilfreich, um Truncation zu erkennen. */
+  stopReason?: string;
 }
 
 export async function anthropicMessage(opts: {
@@ -70,13 +72,13 @@ export async function anthropicMessage(opts: {
       const t = await res.text().catch(() => '');
       return { ok: false, error: `Anthropic ${res.status}: ${t.slice(0, 400)}` };
     }
-    const j = (await res.json()) as { content?: Array<{ type: string; text?: string }> };
+    const j = (await res.json()) as { content?: Array<{ type: string; text?: string }>; stop_reason?: string };
     const text = (j.content || [])
       .filter((b) => b.type === 'text')
       .map((b) => b.text || '')
       .join('\n')
       .trim();
-    return { ok: true, text };
+    return { ok: true, text, stopReason: j.stop_reason ? String(j.stop_reason) : undefined };
   } catch (e) {
     const msg = (e as Error).name === 'AbortError' ? 'Zeitüberschreitung beim KI-Aufruf (>150s).' : (e as Error).message;
     return { ok: false, error: msg };
@@ -89,7 +91,12 @@ export function parseJsonLoose(text: string): any | null {
   if (!text) return null;
   let t = text.trim();
   const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fence) t = fence[1].trim();
+  if (fence) {
+    t = fence[1].trim();
+  } else if (t.startsWith('```')) {
+    // Unabgeschlossene Code-Fence (z.B. bei abgeschnittener Antwort): erste Zeile und ggf. schließende Fence entfernen.
+    t = t.replace(/^```[^\n]*\n?/, '').replace(/```\s*$/, '').trim();
+  }
   const start = t.indexOf('{');
   const end = t.lastIndexOf('}');
   if (start === -1 || end === -1 || end < start) return null;
