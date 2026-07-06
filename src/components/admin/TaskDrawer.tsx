@@ -21,7 +21,7 @@ interface Task {
 }
 interface Subtask { id: string; title: string; done: number }
 interface Att { id: string; filename: string; mime: string; size: number }
-interface TimeEntry { id: string; minutes: number; note: string; work_date?: string }
+interface TimeEntry { id: string; minutes: number; note: string; work_date?: string; report_id?: string | null; report_number?: number | null }
 interface Msg { id: string; direction: 'in' | 'out' | 'note'; from_email: string; to_email: string; subject: string; body: string; created_at: string; created_by: string }
 interface Emp { id: string; name: string; email?: string; active?: boolean }
 
@@ -323,7 +323,14 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
                   {t.work_date && <span className="tabular-nums" style={{ color: COLORS.textMuted }}>{t.work_date}</span>}
                   <span className="tabular-nums font-semibold" style={{ color: COLORS.navy }}>{fmtMin(t.minutes)}</span>
                   <span className="flex-1 truncate" style={{ color: COLORS.textMuted }}>{t.note}</span>
-                  <button onClick={() => delTime(t)} className="opacity-0 transition group-hover:opacity-100" title="Löschen"><Trash2 className="h-3 w-3" style={{ color: COLORS.textMuted }} /></button>
+                  {t.report_id ? (
+                    <Badge tone="ok">{t.report_number ? `RAP-${String(t.report_number).padStart(4, '0')}` : 'rapportiert'}</Badge>
+                  ) : (
+                    <>
+                      <Badge tone="warn">offen</Badge>
+                      <button onClick={() => delTime(t)} className="opacity-0 transition group-hover:opacity-100" title="Löschen"><Trash2 className="h-3 w-3" style={{ color: COLORS.textMuted }} /></button>
+                    </>
+                  )}
                 </div>
               ))}
             </div>

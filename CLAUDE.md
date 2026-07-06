@@ -62,6 +62,34 @@ Laufzeit-Lesen Content: `src/lib/contentStore.ts` (`findPackagesByEvent` etc.).
 - Nicht direkt auf `main` pushen (außer triviale Hotfixes mit Absprache).
 - Offene Stränge im GitHub-Projects-Board pflegen.
 
+## Ticket- & Zeiterfassungs-Pflicht (für alle KI-/Dev-Sessions) — WICHTIG
+**Jede PR-würdige Änderung** (neue Funktion, Fix, Refactoring — alles, was zu einem PR führt)
+bekommt ein Ticket im Admin-Aufgabensystem, und darauf werden **realistische Zeiten gebucht**.
+Zweck: Zeiterfassung/Nachvollziehbarkeit im Admin-Panel (`/admin/aufgaben`).
+
+Ablauf pro PR (externe API, Basis `https://next.faltintravel.com`, Auth-Header
+`Authorization: Bearer ftk_…` — Key wird unter `/admin/api-keys` erstellt und liegt lokal in
+`~/.config/faltin-travel/ext-api-key`, NIEMALS ins Repo committen):
+
+1. **Ticket anlegen** (bei Arbeitsbeginn): `POST /api/ext/tasks`
+   `{ "title": "<Kurzbeschreibung>", "description": "<Kontext/Anforderung>", "priority": "normal" }`
+2. **Status pflegen**: `PATCH /api/ext/tasks/<id>` `{ "status": "in_arbeit" }` —
+   Werte: `offen | in_arbeit | warten_requester | warten_dritte | erledigt`.
+3. **PR verlinken**: `POST /api/ext/tasks/<id>/messages` `{ "kind": "note", "body": "PR: <url> – Claude" }`
+   (Notizen mit „– Claude" signieren; `kind:"note"` verwenden, sonst geht eine Mail raus!)
+4. **Zeit buchen**: `POST /api/ext/tasks/<id>/time` `{ "minutes": <n>, "note": "<was>" }` —
+   ehrlich geschätzte Bearbeitungszeit der Session (Analyse + Umsetzung + Verifikation),
+   gern mehrere Buchungen bei mehreren Arbeitsblöcken.
+5. **`erledigt` erst, wenn der PR gemerged UND deployed ist** — nicht beim PR-Erstellen.
+
+Ticket-Nummern (`TASK-XXXXX`) im PR-Text erwähnen. Kein Ticket nötig für reine
+Konversation/Analysen ohne Code-Änderung.
+
+**Abrechnung:** Gebuchte Zeiten werden unter `/admin/rapporte` zu Rapporten (RAP-XXXX)
+zusammengefasst und als PDF abgerechnet — Zeit-Notizen daher aussagekräftig formulieren
+(was wurde getan, nicht nur "Arbeit"). Rapportierte Einträge sind gesperrt und können
+nicht mehr gelöscht werden.
+
 ## Hinweise für KI-Agenten in dieser Umgebung
 - **Große bestehende Dateien** nicht blind mit dem Host-Editor überschreiben — auf dem bash-Mount kann es zu Truncation kommen. Für Edits an großen Dateien: bash + Python in-place. Neue Dateien via Write sind ok. Nach Edits `tsc` prüfen.
 - **`tsc --noEmit` auf dem Mount** zeigt manchmal Fehler in `.next/dev/types/*` (Artefakte eines laufenden `next dev`) — das ist KEIN Quellcode-Fehler. Gegencheck mit tsconfig, die `.next` ausschließt.

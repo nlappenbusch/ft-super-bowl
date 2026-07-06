@@ -279,7 +279,25 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
         created_at timestamptz NOT NULL DEFAULT now()
       )`);
       await pool.query(`ALTER TABLE task_time ADD COLUMN IF NOT EXISTS work_date text NOT NULL DEFAULT ''`);
+      await pool.query(`ALTER TABLE task_time ADD COLUMN IF NOT EXISTS report_id text`);
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_task_time_task ON task_time(task_id)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_task_time_report ON task_time(report_id)`);
+
+      // Zeit-Rapporte (abrechenbare Ticket-Zeiten)
+      await pool.query(`CREATE TABLE IF NOT EXISTS time_reports (
+        id text PRIMARY KEY,
+        report_number integer,
+        title text NOT NULL DEFAULT '',
+        period_from text NOT NULL DEFAULT '',
+        period_to text NOT NULL DEFAULT '',
+        hourly_rate double precision,
+        currency text NOT NULL DEFAULT 'EUR',
+        status text NOT NULL DEFAULT 'entwurf',
+        note text NOT NULL DEFAULT '',
+        created_by text NOT NULL DEFAULT '',
+        created_at timestamptz NOT NULL DEFAULT now(),
+        finalized_at text
+      )`);
 
       // Ticket-System: fortlaufende Ticketnummer + Mail-Verlauf
       await pool.query(`ALTER TABLE staff_tasks ADD COLUMN IF NOT EXISTS ticket_number integer`);
