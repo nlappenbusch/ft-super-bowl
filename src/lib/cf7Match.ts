@@ -5,10 +5,14 @@
  */
 import { getEventsList, getSeriesList } from './eventData';
 
-// Wörter, die fürs Matching irrelevant sind (CF7-Titel enthalten oft Generika).
+// Wörter, die fürs Matching irrelevant sind (CF7-/Seitentitel enthalten oft Generika).
 const STOP = new Set([
-  'contact', 'form', 'formular', 'kontakt', 'anfrage', 'anfragen', 'the', 'und', 'and',
-  'der', 'die', 'das', 'reise', 'reisen', 'travel', 'faltin', 'tickets', 'ticket', 'hospitality',
+  'contact', 'form', 'formular', 'formulare', 'kontakt', 'kontaktformular',
+  'anfrage', 'anfragen', 'anfrageseite', 'the', 'und', 'and', 'der', 'die', 'das',
+  'reise', 'reisen', 'travel', 'faltin', 'tickets', 'ticket', 'hospitality',
+  'packages', 'package', 'pauschalreise', 'pauschalreisen', 'angebot', 'angebote',
+  'offer', 'offers', 'booking', 'buchen', 'buchung', 'seite', 'page', 'kopie', 'copy',
+  'neu', 'new', 'de', 'en', 'fr', 'it',
 ]);
 
 function norm(s: string): string {
@@ -16,14 +20,21 @@ function norm(s: string): string {
     .toLowerCase()
     .normalize('NFD').replace(/[̀-ͯ]/g, '')    // Diakritika
     .replace(/\b(19|20)\d{2}\b/g, ' ')                   // Jahreszahlen raus
-    .replace(/[^a-z0-9\s]/g, ' ')                        // Sonderzeichen (inkl. _) raus
+    .replace(/[^a-z0-9\s]/g, ' ')                        // Sonderzeichen (inkl. _ und Bindestriche) raus
     .replace(/\s+/g, ' ').trim();
 }
 
 function tokens(s: string): string[] {
-  return norm(s).split(' ').filter((t) => t.length > 1 && !STOP.has(t));
+  // Reine Zahlen (z. B. "Kontaktformular 12") tragen nichts bei und verwässern den Score nur.
+  return norm(s).split(' ').filter((t) => t.length > 1 && !/^\d+$/.test(t) && !STOP.has(t));
 }
 
+export interface MatchItem {
+  title: string;
+  id?: string;
+  /** Titel der Seiten, auf denen das Formular eingebettet ist — zusätzlicher Match-Kontext. */
+  pages?: string[];
+}
 export interface MatchSuggestion {
   event_slug: string;
   event_name: string;
@@ -39,33 +50,63 @@ export interface MatchResult {
 }
 
 const THRESHOLD = 0.34;
+// Score, wenn der komplette Event-Name in einem (ggf. verrauschten) Titel enthalten ist.
+const CONTAINMENT_SCORE = 0.85;
 
-export async function suggestForTitles(items: { title: string; id?: string }[]): Promise<MatchResult[]> {
+interface Candidate {
+  slug: string;
+  name: string;
+  seriesSlug: string | null;
+  tok: Set<string>;
+  nameTok: string[];
+}
+
+function scoreAgainst(tt: string[], candidates: Candidate[]): { c: Candidate; score: number }[] {
+  const ttSet = new Set(tt);
+  return candidates.map((c) => {
+    let overlap = 0;
+    for (const t of tt) if (c.tok.has(t)) overlap++;
+    // Basis-Score: Anteil der Titel-Tokens, die im Event vorkommen (0..1)
+    let score = overlap / tt.length;
+    // Containment-Bonus: Steht der komplette Event-Name im Titel, ist das ein starkes
+    // Signal — Rauschwörter ("Kombi", Sprachkürzel, …) drücken den Score dann nicht
+    // mehr unter die Schwelle.
+    if (score < CONTAINMENT_SCORE && c.nameTok.length > 0 && c.nameTok.every((t) => ttSet.has(t))) {
+      score = CONTAINMENT_SCORE;
+    }
+    return { c, score };
+  }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score);
+}
+
+export async function suggestForTitles(items: MatchItem[]): Promise<MatchResult[]> {
   const [events, series] = await Promise.all([getEventsList(), getSeriesList()]);
   const seriesById = new Map(series.map((s) => [s.id, s]));
 
-  const candidates = events
+  const candidates: Candidate[] = events
     .filter((e) => (e.status || 'active') !== 'archived')
     .map((e) => {
       const s = e.series_id ? seriesById.get(e.series_id) : null;
       const name = e.name || e.title || e.slug;
       const tok = new Set(tokens([e.name, e.title, s?.title, e.slug.replace(/-/g, ' '), s?.slug?.replace(/-/g, ' ')].filter(Boolean).join(' ')));
-      return { slug: e.slug, name, seriesSlug: s?.slug || null, tok };
+      const nameTok = tokens(name);
+      return { slug: e.slug, name, seriesSlug: s?.slug || null, tok, nameTok };
     });
 
-  return items.map(({ title, id }) => {
-    const tt = tokens(title);
-    if (!tt.length || candidates.length === 0) return { title, id, suggestion: null, alternatives: [] };
+  return items.map(({ title, id, pages }) => {
+    // Formular-Titel zuerst; Titel der Seiten, auf denen das Formular steht, als
+    // Fallback-Kontext (hilft bei generischen Formulartiteln wie "Kontaktformular 12").
+    const texts = [title, ...(pages || [])].map((t) => String(t || '')).filter((t) => t.trim());
+    if (!texts.length || candidates.length === 0) return { title, id, suggestion: null, alternatives: [] };
 
-    const scored = candidates.map((c) => {
-      let overlap = 0;
-      for (const t of tt) if (c.tok.has(t)) overlap++;
-      // Score: Anteil der CF7-Tokens, die im Event vorkommen (0..1)
-      const score = overlap / tt.length;
-      return { c, score };
-    }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score);
+    let scored: { c: Candidate; score: number }[] = [];
+    for (const text of texts) {
+      const tt = tokens(text);
+      if (!tt.length) continue;
+      const s = scoreAgainst(tt, candidates);
+      if ((s[0]?.score || 0) > (scored[0]?.score || 0)) scored = s;
+    }
 
-    const toSug = (x: { c: typeof candidates[number]; score: number }): MatchSuggestion => ({
+    const toSug = (x: { c: Candidate; score: number }): MatchSuggestion => ({
       event_slug: x.c.slug,
       event_name: x.c.name,
       series_slug: x.c.seriesSlug,

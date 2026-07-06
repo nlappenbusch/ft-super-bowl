@@ -2,8 +2,12 @@
 /**
  * Plugin Name: Faltin Travel – Event Shortcodes
  * Description: SEO-freundliche, serverseitig gerenderte Event-Karten, Package-Karten + natives Anfrageformular. Shortcodes: [faltin_events serie="..."], [faltin_event event="..."], [faltin_packages event="..."], [faltin_anfrage event="..."].
- * Version: 1.7.0
+ * Version: 1.7.1
  * Author: Faltin Travel AG
+ *
+ * 1.7.1: [faltin_anfrage] ohne name="…" zeigt nicht mehr den rohen Slug
+ *        ("karneval-in-rio-2026"), sondern einen lesbaren Eventnamen
+ *        ("Karneval in Rio 2026") im Intro-Text an.
  *
  * Die Inhalte werden serverseitig per REST-API geladen (wp_remote_get) und als
  * echtes HTML ausgegeben – kein iframe, kein Client-JS nötig. Google sieht die
@@ -309,7 +313,16 @@ function faltin_anfrage_shortcode($atts) {
     $instance++;
     $id = 'ft-af-' . $instance;
     $api = rtrim($atts['api_url'], '/') . '/api/bookings';
-    $event_name = $atts['name'] ?: $atts['event'];
+    // Ohne name="…" den Slug in einen lesbaren Namen wandeln ("karneval-in-rio-2026" → "Karneval in Rio 2026")
+    $event_name = $atts['name'];
+    if ($event_name === '' && $atts['event']) {
+        $event_name = ucwords(str_replace('-', ' ', (string)$atts['event']));
+        // Kleine Füllwörter wieder kleinschreiben (In/Der/Und …)
+        $event_name = preg_replace_callback('/\s(In|Im|Der|Die|Das|Und|Von|De|La|Le|Of|The|And)\s/', function ($m) {
+            return ' ' . strtolower($m[1]) . ' ';
+        }, $event_name);
+    }
+    if ($event_name === '') $event_name = $atts['event'];
     $intro = $atts['intro']
         ? esc_html($atts['intro'])
         : 'Kontaktieren Sie uns direkt — wir erstellen Ihnen ein individuelles Angebot für <strong>' . esc_html($event_name) . '</strong>.';
