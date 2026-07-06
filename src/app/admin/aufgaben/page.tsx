@@ -110,9 +110,17 @@ function TaskCard({
             >
               <GripVertical className="h-4 w-4" style={{ color: COLORS.textMuted }} />
             </span>
-            <div className="min-w-0 cursor-pointer" onClick={() => onOpen(t)} title="Details öffnen">
+            <div className="min-w-0 cursor-pointer" onClick={() => onOpen(t)} title="Vorschau öffnen">
               {ticketNo(t.ticket_number) && (
-                <span className="mb-0.5 inline-block font-mono text-[10px] font-bold tracking-wide" style={{ color: COLORS.accent }}>{ticketNo(t.ticket_number)}</span>
+                <Link
+                  href={`/admin/aufgaben/${t.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mb-0.5 inline-block font-mono text-[10px] font-bold tracking-wide hover:underline"
+                  style={{ color: COLORS.accent }}
+                  title="In Vollansicht öffnen"
+                >
+                  {ticketNo(t.ticket_number)}
+                </Link>
               )}
               <div className="font-semibold" style={{ color: COLORS.navy }}>{t.title}</div>
               {t.description && (

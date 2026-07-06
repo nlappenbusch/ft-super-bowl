@@ -19,7 +19,7 @@ import {
 import { findBookingByRequestNumber, graphMessageExists, addMessage } from './bookingStore';
 import {
   findTaskByTicketNumber, taskGraphMessageExists, addTaskMessage,
-  createStaffTask, formatTicketNo,
+  createStaffTask, formatTicketNo, notifyTaskParticipants,
 } from './staffStore';
 import { parseRequestNumber, parseTicketNumber } from './emailTemplates';
 import { getSettings } from './settingsStore';
@@ -253,15 +253,22 @@ export async function runInboundPoll(): Promise<InboundPollResult> {
       }
       const task = await findTaskByTicketNumber(ticketNo);
       if (task) {
+        const replyBody = stripQuotedReply(m.bodyHtml || m.bodyPreview);
         await addTaskMessage({
           task_id: task.id,
           direction: 'in',
           from_email: m.fromAddress,
           to_email: '',
           subject: m.subject,
-          body: stripQuotedReply(m.bodyHtml || m.bodyPreview),
+          body: replyBody,
           graph_message_id: m.id,
         });
+        // Beteiligte (Assignee/Ersteller) über die neue Antwort informieren (Glocke + E-Mail).
+        await notifyTaskParticipants(task, {
+          type: 'task_message',
+          body: replyBody,
+          actorName: m.fromAddress,
+        }).catch(() => { /* nie blockierend */ });
         await markMessageRead(m.id);
         matched++;
         continue;

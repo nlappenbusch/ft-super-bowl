@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { X, Plus, Trash2, Check, Paperclip, Download, Clock, Mail, Send, StickyNote, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
-import { Button, TextArea, Spinner, Badge, COLORS } from './ui';
+import Link from 'next/link';
+import { X, Plus, Trash2, Check, Paperclip, Download, Clock, Mail, Send, StickyNote, ArrowDownLeft, ArrowUpRight, Maximize2 } from 'lucide-react';
+import { Button, TextArea, Spinner, Badge, Card, COLORS } from './ui';
 
 type TaskStatus = 'offen' | 'in_arbeit' | 'warten_requester' | 'warten_dritte' | 'erledigt';
 
@@ -51,7 +52,17 @@ function todayISO(): string {
   return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Zurich' }).format(new Date());
 }
 
-export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; onClose: () => void; onChanged?: () => void }) {
+/**
+ * Ticket-Detail — zwei Darstellungen:
+ * variant="drawer" (Default): Vorschau als Seitenleiste über dem Board.
+ * variant="page": Vollansicht (zweispaltig) für /admin/aufgaben/[id].
+ */
+export default function TaskDrawer({ task, onClose, onChanged, variant = 'drawer' }: {
+  task: Task;
+  onClose: () => void;
+  onChanged?: () => void;
+  variant?: 'drawer' | 'page';
+}) {
   const [desc, setDesc] = useState(task.description || '');
   const [savingDesc, setSavingDesc] = useState(false);
   const [status, setStatus] = useState<TaskStatus>(task.status);
@@ -208,23 +219,31 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
   const doneCount = subs.filter((s) => s.done).length;
   const pct = subs.length ? Math.round((doneCount / subs.length) * 100) : 0;
 
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end" style={{ background: 'rgba(0,0,0,0.35)' }} onClick={onClose}>
-      <div className="h-full w-full max-w-md overflow-y-auto bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            {ticketNo(task.ticket_number) && (
-              <span className="mb-1 inline-block rounded px-1.5 py-0.5 font-mono text-[11px] font-bold tracking-wide" style={{ background: COLORS.surfaceMuted, color: COLORS.accent }}>
-                {ticketNo(task.ticket_number)}
-              </span>
-            )}
-            <h2 className="text-lg font-bold" style={{ color: COLORS.navy }}>{task.title}</h2>
-          </div>
+  const headerEl = (
+    <div className="mb-4 flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        {ticketNo(task.ticket_number) && (
+          <span className="mb-1 inline-block rounded px-1.5 py-0.5 font-mono text-[11px] font-bold tracking-wide" style={{ background: COLORS.surfaceMuted, color: COLORS.accent }}>
+            {ticketNo(task.ticket_number)}
+          </span>
+        )}
+        <h2 className={variant === 'page' ? 'text-2xl font-bold' : 'text-lg font-bold'} style={{ color: COLORS.navy }}>{task.title}</h2>
+      </div>
+      {variant === 'drawer' && (
+        <div className="flex shrink-0 items-center gap-1">
+          <Link href={`/admin/aufgaben/${task.id}`} className="rounded-lg p-1 transition hover:bg-gray-100" title="In Vollansicht öffnen">
+            <Maximize2 className="h-5 w-5" style={{ color: COLORS.textMuted }} />
+          </Link>
           <button onClick={onClose} className="rounded-lg p-1 transition hover:bg-gray-100" title="Schließen">
             <X className="h-5 w-5" style={{ color: COLORS.textMuted }} />
           </button>
         </div>
+      )}
+    </div>
+  );
 
+  const metaEl = (
+    <>
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <select
             value={status}
@@ -251,13 +270,15 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
           {task.due_date && <span className="text-xs" style={{ color: COLORS.textMuted }}>📅 {task.due_date}</span>}
         </div>
         {(task.created_by || task.created_at) && (
-          <p className="mb-6 text-xs" style={{ color: COLORS.textMuted }}>
+          <p className="mt-1 text-xs" style={{ color: COLORS.textMuted }}>
             Erstellt{task.created_by ? ` von ${task.created_by}` : ''}{task.created_at ? ` am ${task.created_at.slice(0, 10)}` : ''}
           </p>
         )}
+    </>
+  );
 
-        {/* Beschreibung */}
-        <div className="mb-6">
+  const descEl = (
+        <div>
           <label className="mb-1 block text-xs font-semibold" style={{ color: COLORS.textMuted }}>Beschreibung</label>
           <TextArea rows={Math.min(16, Math.max(4, desc.split('\n').length + 1))} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Notizen, Kontext, Links…" />
           <div className="mt-2">
@@ -266,8 +287,9 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
             </Button>
           </div>
         </div>
+  );
 
-        {/* Subtasks */}
+  const subsEl = (
         <div>
           <div className="mb-2 flex items-center justify-between">
             <label className="text-xs font-semibold" style={{ color: COLORS.textMuted }}>Subtasks</label>
@@ -311,9 +333,10 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
             <Button size="sm" variant="ghost" onClick={addSub} disabled={!newSub.trim()}><Plus className="h-4 w-4" /></Button>
           </div>
         </div>
+  );
 
-        {/* Datei-Anhänge */}
-        <div className="mt-6">
+  const attsEl = (
+        <div>
           <label className="mb-2 block text-xs font-semibold" style={{ color: COLORS.textMuted }}>Dateien</label>
           <input ref={fileRef} type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onUpload(f); }} />
           <Button size="sm" variant="secondary" onClick={() => fileRef.current?.click()} disabled={uploading}>
@@ -333,9 +356,10 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
             </div>
           )}
         </div>
+  );
 
-        {/* Zeit */}
-        <div className="mt-6">
+  const timeEl = (
+        <div>
           <div className="mb-2 flex items-center justify-between">
             <label className="text-xs font-semibold" style={{ color: COLORS.textMuted }}>Zeit</label>
             <span className="text-xs font-bold tabular-nums" style={{ color: COLORS.navy }}>{fmtMin(totalMin)} gebucht</span>
@@ -366,9 +390,10 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
             </div>
           )}
         </div>
+  );
 
-        {/* Mails & Verlauf */}
-        <div className="mt-6">
+  const msgEl = (
+        <div>
           <label className="mb-2 block text-xs font-semibold" style={{ color: COLORS.textMuted }}>Mails & Verlauf</label>
 
           {/* Verlauf */}
@@ -425,6 +450,40 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
             </Button>
           </div>
         </div>
+  );
+
+  // ── Vollansicht: zweispaltiges Seiten-Layout (Verlauf links, Meta rechts) ──
+  if (variant === 'page') {
+    return (
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0 space-y-6">
+          <Card>
+            {headerEl}
+            {metaEl}
+          </Card>
+          <Card>{descEl}</Card>
+          <Card>{msgEl}</Card>
+        </div>
+        <div className="min-w-0 space-y-6">
+          <Card>{subsEl}</Card>
+          <Card>{attsEl}</Card>
+          <Card>{timeEl}</Card>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Drawer: Vorschau in der Seitenleiste über dem Board ──
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end" style={{ background: 'rgba(0,0,0,0.35)' }} onClick={onClose}>
+      <div className="h-full w-full max-w-md overflow-y-auto bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        {headerEl}
+        {metaEl}
+        <div className="mt-4">{descEl}</div>
+        <div className="mt-6">{subsEl}</div>
+        <div className="mt-6">{attsEl}</div>
+        <div className="mt-6">{timeEl}</div>
+        <div className="mt-6">{msgEl}</div>
       </div>
     </div>
   );

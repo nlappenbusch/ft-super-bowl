@@ -5,6 +5,14 @@ import {
 } from '@/lib/staffStore';
 import { getSessionEmployee } from '@/lib/serverSession';
 
+/** GET → einzelnes Ticket (inkl. Projekt-Name) für die Vollansicht. */
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const task = await getStaffTask(id);
+  if (!task) return NextResponse.json({ success: false, error: 'Aufgabe nicht gefunden' }, { status: 404 });
+  return NextResponse.json({ success: true, data: task });
+}
+
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await req.json();

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { apiKeyOr401 } from '@/lib/extAuth';
-import { getStaffTask, listTaskMessages, addTaskMessage, formatTicketNo } from '@/lib/staffStore';
+import { getStaffTask, listTaskMessages, addTaskMessage, formatTicketNo, notifyTaskParticipants } from '@/lib/staffStore';
 import { sendGraphMail, isGraphConfigured, getMailbox, getFromName } from '@/lib/graphMailer';
 import { taskEmailHtml, taskSubjectTag } from '@/lib/emailTemplates';
 
@@ -28,6 +28,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   if (kind === 'note') {
     const saved = await addTaskMessage({ task_id: id, direction: 'note', from_email: agentName, body: text, created_by: agentName });
+    // Beteiligte informieren (Glocke + E-Mail) — wie bei Notizen aus dem Admin.
+    await notifyTaskParticipants(task, { type: 'task_note', body: text, actorName: agentName }).catch(() => {});
     return NextResponse.json({ success: true, data: saved });
   }
 

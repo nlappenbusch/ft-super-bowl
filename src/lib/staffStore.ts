@@ -441,7 +441,10 @@ export async function updateStaffTask(id: string, u: Partial<StaffTask>): Promis
 }
 
 export async function getStaffTask(id: string): Promise<StaffTask | null> {
-  return (await dbGet<StaffTask>('SELECT * FROM staff_tasks WHERE id = ?', [id])) ?? null;
+  return (await dbGet<StaffTask>(`
+    SELECT t.*, p.name AS project_name
+    FROM staff_tasks t LEFT JOIN projects p ON p.id = t.project_id
+    WHERE t.id = ?`, [id])) ?? null;
 }
 
 export async function deleteStaffTask(id: string): Promise<boolean> {
@@ -994,6 +997,8 @@ export async function notifyTaskParticipants(task: StaffTask, opts: {
   type: 'task_message' | 'task_note';
   body: string;
   actorName: string;
+  /** Beteiligte zusätzlich per E-Mail informieren (Standard: an). */
+  email?: boolean;
 }): Promise<void> {
   const ticket = formatTicketNo(task.ticket_number) || 'Ticket';
   const actorLc = (opts.actorName || '').trim().toLowerCase();
@@ -1008,9 +1013,12 @@ export async function notifyTaskParticipants(task: StaffTask, opts: {
   for (const m of await resolveMentions(opts.body)) targets.set(m.id, 'mention');
 
   const label = opts.type === 'task_note' ? 'Neue Notiz' : 'Neue Nachricht';
+  const mailTo: Array<{ name: string; email: string; mentioned: boolean }> = [];
   for (const [empId, type] of targets) {
     const emp = await getEmployee(empId);
-    if (!emp || emp.name.trim().toLowerCase() === actorLc) continue;
+    // Actor nie selbst benachrichtigen — actorName kann Anzeigename ODER (bei
+    // Inbound-Antworten) die E-Mail-Adresse des Absenders sein.
+    if (!emp || emp.name.trim().toLowerCase() === actorLc || (emp.email || '').trim().toLowerCase() === actorLc) continue;
     await addNotification({
       employee_id: empId,
       type,
@@ -1021,5 +1029,34 @@ export async function notifyTaskParticipants(task: StaffTask, opts: {
       body: opts.body.slice(0, 2000),
       created_by: opts.actorName || '',
     }).catch(() => { /* Benachrichtigung darf den Hauptfluss nie brechen */ });
+    if (emp.email) mailTo.push({ name: emp.name, email: emp.email, mentioned: type === 'mention' });
+  }
+
+  // Beteiligte per E-Mail informieren (Assignee, Ersteller, @Erwähnte) — nie blockierend.
+  if (opts.email !== false && mailTo.length) {
+    try {
+      // Dynamische Imports: kein statischer Zyklus staffStore ↔ Mail-Schicht.
+      const { isGraphConfigured, sendGraphMail } = await import('./graphMailer');
+      const { taskNotifyEmailHtml, taskSubjectTag } = await import('./emailTemplates');
+      const { getSettings } = await import('./settingsStore');
+      if (!isGraphConfigured()) return;
+      const base = (getSettings().mail?.login_base_url || 'https://next.faltintravel.com').replace(/\/+$/, '');
+      const ticketUrl = `${base}/admin/aufgaben/${task.id}`;
+      const subject = `${label} ${taskSubjectTag(ticket)} – ${task.title}`.slice(0, 200);
+      for (const rcpt of mailTo) {
+        const html = taskNotifyEmailHtml({
+          bodyText: opts.body,
+          ticketNo: ticket,
+          taskTitle: task.title,
+          actorName: opts.actorName || undefined,
+          kindLabel: rcpt.mentioned ? `${opts.actorName || 'Jemand'} hat dich erwähnt` : label,
+          ticketUrl,
+        });
+        await sendGraphMail({ to: rcpt.email, toName: rcpt.name, subject, html })
+          .catch(() => { /* Mail darf den Hauptfluss nie brechen */ });
+      }
+    } catch (e) {
+      console.warn('[task-notify] E-Mail-Versand fehlgeschlagen:', (e as Error).message);
+    }
   }
 }

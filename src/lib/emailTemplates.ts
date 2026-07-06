@@ -444,6 +444,37 @@ export interface TaskEmailInput {
   agentName?: string;
 }
 
+export interface TaskNotifyEmailInput {
+  bodyText: string;
+  ticketNo: string;       // z.B. "TASK-00010"
+  taskTitle?: string;
+  actorName?: string;
+  kindLabel: string;      // z.B. "Neue Notiz" | "Neue Antwort"
+  ticketUrl: string;      // Vollansicht des Tickets
+}
+
+/**
+ * Interne Benachrichtigungs-Mail an Ticket-Beteiligte (Assignee, Ersteller,
+ * @Erwähnte) bei neuen Notizen/Antworten — mit Button zur Ticket-Vollansicht.
+ * Ticketnummer im Betreff sorgt dafür, dass Antworten am Ticket landen.
+ */
+export function taskNotifyEmailHtml(input: TaskNotifyEmailInput): string {
+  const bodyHtml = escapeHtml(input.bodyText).replace(/\n/g, '<br>');
+  const inner = `
+    <p style="margin:0 0 4px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;">
+      ${escapeHtml(input.kindLabel)} · Ticket ${escapeHtml(input.ticketNo)}${input.taskTitle ? ' · ' + escapeHtml(input.taskTitle) : ''}
+    </p>
+    ${input.actorName ? `<p style="margin:8px 0 0;font-size:13px;color:#6b7280;">von <strong style="color:${NAVY};">${escapeHtml(input.actorName)}</strong></p>` : ''}
+    <div style="margin:14px 0 0;padding:14px 16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;font-size:15px;line-height:1.7;color:#374151;">${bodyHtml}</div>
+    <p style="margin:22px 0 0;">
+      <a href="${input.ticketUrl}" style="display:inline-block;background:#d9531e;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:10px;">Ticket öffnen</a>
+    </p>
+    <p style="margin:22px 0 0;font-size:11px;line-height:1.6;color:#9ca3af;">
+      Interne Benachrichtigung — wer direkt auf diese Mail antwortet, dessen Antwort wird über die Kennung <strong>${escapeHtml(input.ticketNo)}</strong> im Betreff automatisch dem Ticket zugeordnet.
+    </p>`;
+  return layout(inner, `${input.kindLabel} ${input.ticketNo}: ${input.bodyText.slice(0, 100)}`);
+}
+
 /**
  * Marken-Hülle für eine vom Ticket aus gesendete Mail. Die Ticketnummer steht im
  * Betreff (Threading) und als dezenter Hinweis im Footer, damit Antworten via
