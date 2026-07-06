@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Faltin Travel – Event Shortcodes
  * Description: SEO-freundliche, serverseitig gerenderte Event-Karten, Package-Karten + natives Anfrageformular. Shortcodes: [faltin_events serie="..."], [faltin_event event="..."], [faltin_packages event="..."], [faltin_anfrage event="..."].
- * Version: 1.8.0
+ * Version: 1.8.1
  * Author: Faltin Travel AG
  *
  * 1.8.0: Deploy-/Ausfall-Fallback: (1) Letzter guter API-Stand wird 7 Tage als
@@ -337,6 +337,10 @@ function faltin_anfrage_shortcode($atts) {
         if ($pk && !empty($pk['has_packages']) && !empty($pk['html'])) {
             return $pk['html'];
         }
+        // Plattform nicht erreichbar (Deploy) → Wartungshinweis statt Formular
+        if (!is_array($pk)) {
+            return faltin_events_maintenance_box();
+        }
     }
 
     static $instance = 0;
@@ -533,7 +537,13 @@ function faltin_packages_shortcode($atts) {
         return $data['html'];
     }
 
-    // Fallback: keine aktiven Packages (oder API nicht erreichbar) → Anfrageformular
+    // Plattform nicht erreichbar (Deploy) und kein Backup-Stand → Wartungshinweis
+    // statt eines Formulars, dessen Absenden ohnehin scheitern würde.
+    if (!is_array($data)) {
+        return faltin_events_maintenance_box();
+    }
+
+    // Keine aktiven Packages → Anfrageformular
     return faltin_anfrage_shortcode(array(
         'event' => $atts['event'],
         'name' => $atts['name'] ?: (is_array($data) && !empty($data['event_name']) ? $data['event_name'] : ''),
