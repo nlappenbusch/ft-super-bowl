@@ -39,11 +39,29 @@ function fmtDate(d: string): string {
   return m ? `${m[3]}.${m[2]}.${m[1]}` : (d || '–');
 }
 
+/** Timestamp → 'YYYY-MM-DD': unter Postgres kommt timestamptz als Date-Objekt, unter SQLite als String. */
+function toDay(v: unknown): string {
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  return String(v ?? '').slice(0, 10);
+}
+
 function employeeLabel(e: TimeEntryDetail): string {
   return e.employee_name || 'Extern (API)';
 }
 
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  try {
+    return await renderPdf(req, ctx);
+  } catch (e) {
+    console.error('[time-report-pdf]', e);
+    return NextResponse.json(
+      { success: false, error: `PDF-Erstellung fehlgeschlagen: ${e instanceof Error ? e.message : String(e)}` },
+      { status: 500 }
+    );
+  }
+}
+
+async function renderPdf(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const data = await getTimeReport(id);
   if (!data) return NextResponse.json({ success: false, error: 'Rapport nicht gefunden' }, { status: 404 });
@@ -111,8 +129,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const meta: Array<[string, string]> = [
     ['Titel', report.title || '–'],
     ['Zeitraum', report.period_from ? `${fmtDate(report.period_from)} – ${fmtDate(report.period_to)}` : '–'],
-    ['Erstellt am', fmtDate(report.created_at?.slice(0, 10) || '')],
-    ['Status', report.status === 'final' ? `Finalisiert${report.finalized_at ? ` am ${fmtDate(report.finalized_at.slice(0, 10))}` : ''}` : 'Entwurf'],
+    ['Erstellt am', fmtDate(toDay(report.created_at))],
+    ['Status', report.status === 'final' ? `Finalisiert${report.finalized_at ? ` am ${fmtDate(toDay(report.finalized_at))}` : ''}` : 'Entwurf'],
   ];
   if (rate != null) meta.push(['Stundensatz', `${fmtMoney(rate)} ${report.currency}/h`]);
   for (const [k, v] of meta) {
