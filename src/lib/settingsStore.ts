@@ -121,6 +121,10 @@ export interface MailSettings {
   brevo_api_key: string;
   login_base_url: string;
   notify_to: string;
+  /** Unzugeordnete Inbound-Mails automatisch als Ticket (StaffTask) anlegen */
+  ticket_auto_create?: boolean;
+  /** Komma-getrennte Absender-Domain-Allowlist für Auto-Create (leer = alle Absender) */
+  ticket_auto_create_domains?: string;
 }
 
 const DEFAULT_SETTINGS: AllSettings = {
@@ -185,6 +189,8 @@ const DEFAULT_SETTINGS: AllSettings = {
     brevo_api_key: '',
     login_base_url: '',
     notify_to: '',
+    ticket_auto_create: false,
+    ticket_auto_create_domains: 'faltintravel.com',
   },
   ai: {
     anthropic_api_key: '',

@@ -2,17 +2,27 @@
  * inboundPoll.ts
  * ─────────────────────────────────────────────────────────────────────────────
  * Kernlogik für das Inbound-Polling: liest ungelesene Mails aus dem
- * request@-Postfach, ordnet sie über die RQ-Nummer im Betreff der passenden
- * Anfrage zu, protokolliert sie im CRM und markiert sie als gelesen.
+ * request@-Postfach, ordnet sie über die RQ-/TASK-Nummer im Betreff der
+ * passenden Anfrage bzw. dem Ticket zu, protokolliert sie im CRM und markiert
+ * sie als gelesen. Optional (settings.mail.ticket_auto_create) werden
+ * unzugeordnete Mails automatisch als neues Ticket angelegt (Mail-to-Ticket).
  *
- * Wird sowohl vom geschützten Cron-Endpoint (/api/inbound/poll) als auch vom
- * Admin-Panel (/api/admin/mail/poll) genutzt.
+ * Wird vom geschützten Cron-Endpoint (/api/inbound/poll), vom Admin-Panel
+ * (/api/admin/mail/poll) und vom internen Scheduler (src/instrumentation.ts)
+ * genutzt.
  * ─────────────────────────────────────────────────────────────────────────────
  */
-import { listInboxMessages, markMessageRead, isGraphConfigured, getMailbox } from './graphMailer';
+import {
+  listInboxMessages, markMessageRead, isGraphConfigured, getMailbox, getFromName,
+  sendGraphMail, type GraphInboxMessage,
+} from './graphMailer';
 import { findBookingByRequestNumber, graphMessageExists, addMessage } from './bookingStore';
-import { findTaskByTicketNumber, taskGraphMessageExists, addTaskMessage } from './staffStore';
+import {
+  findTaskByTicketNumber, taskGraphMessageExists, addTaskMessage,
+  createStaffTask, formatTicketNo,
+} from './staffStore';
 import { parseRequestNumber, parseTicketNumber } from './emailTemplates';
+import { getSettings } from './settingsStore';
 
 /**
  * Entfernt den zitierten Original-Verlauf aus einer eingehenden Antwort, sodass
@@ -47,25 +57,129 @@ export function stripQuotedReply(raw: string): string {
   return textOnly.length < 1 ? raw : head;
 }
 
+/** Grober HTML→Text-Konverter für die Ticket-Beschreibung (kein perfektes Parsing nötig). */
+function htmlToText(html: string): string {
+  if (!html) return '';
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|tr|li|h[1-6]|blockquote)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;| /g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/** Erkennt automatisierte Absender (Bounces, Autoresponder), aus denen kein Ticket entstehen soll. */
+function looksAutomated(fromAddress: string, subject: string): boolean {
+  if (/(noreply|no-reply|mailer-daemon)/i.test(fromAddress)) return true;
+  if (/^(automatische antwort|automatic reply|autoreply|out of office|abwesenheit)/i.test((subject || '').trim())) return true;
+  return false;
+}
+
+/** Prüft, ob die Absender-Domain in der Komma-Allowlist steht (leer = alle erlaubt). */
+function senderDomainAllowed(fromAddress: string, allowlist: string): boolean {
+  const domains = (allowlist || '')
+    .split(',')
+    .map((d) => d.trim().toLowerCase().replace(/^@/, ''))
+    .filter(Boolean);
+  if (domains.length === 0) return true;
+  const at = (fromAddress || '').lastIndexOf('@');
+  if (at < 0) return false;
+  const domain = fromAddress.slice(at + 1).toLowerCase();
+  return domains.includes(domain);
+}
+
+/**
+ * Legt aus einer unzugeordneten Mail ein neues Ticket an, protokolliert die Mail
+ * als Ticket-Nachricht und schickt (best effort) eine Bestätigung mit der
+ * TASK-Nummer im Betreff, damit Antworten künftig automatisch zugeordnet werden.
+ */
+async function createTicketFromMail(m: GraphInboxMessage, mailbox: string): Promise<void> {
+  const subject = (m.subject || '').trim();
+  const rawBody = stripQuotedReply(m.bodyHtml || m.bodyPreview);
+  const textBody = htmlToText(rawBody) || m.bodyPreview || '';
+  const fromLabel = m.fromName ? `${m.fromName} <${m.fromAddress}>` : m.fromAddress;
+
+  const task = await createStaffTask({
+    title: subject || 'Mail ohne Betreff',
+    description: `Von: ${fromLabel}\n\n${textBody}`,
+    created_by: `Mail: ${m.fromAddress}`,
+  });
+
+  await addTaskMessage({
+    task_id: task.id,
+    direction: 'in',
+    from_email: m.fromAddress,
+    to_email: mailbox,
+    subject: m.subject,
+    body: rawBody,
+    graph_message_id: m.id,
+    created_by: m.fromAddress,
+  });
+
+  // Bestätigungsmail (best effort) — TASK-Nummer im Betreff sorgt für Auto-Zuordnung der Antworten.
+  try {
+    const ticketNo = formatTicketNo(task.ticket_number);
+    const confirmSubject = `[${ticketNo}] ${subject || 'Ihre Anfrage'}`;
+    const html =
+      `<p>Guten Tag,</p>` +
+      `<p>vielen Dank für Ihre Nachricht. Ihr Ticket <strong>${ticketNo}</strong> wurde erstellt und wird bearbeitet. ` +
+      `Bitte behalten Sie die Ticketnummer im Betreff, damit Antworten zugeordnet werden.</p>` +
+      `<p>Freundliche Grüsse<br/>${getFromName()}</p>`;
+    const sent = await sendGraphMail({
+      to: m.fromAddress,
+      toName: m.fromName || undefined,
+      subject: confirmSubject,
+      html,
+    });
+    if (sent.success) {
+      await addTaskMessage({
+        task_id: task.id,
+        direction: 'out',
+        from_email: mailbox,
+        to_email: m.fromAddress,
+        subject: confirmSubject,
+        body: html,
+        created_by: 'System (Auto-Create)',
+      });
+    }
+  } catch (err) {
+    console.error('[inbound-poll] Bestätigungsmail fehlgeschlagen:', err);
+  }
+}
+
 export interface InboundPollResult {
   success: boolean;
   configured: boolean;
   scanned: number;
   matched: number;
   skipped: number;
+  /** Anzahl automatisch erstellter Tickets (Mail-to-Ticket) */
+  created: number;
   unmatched: string[];
 }
 
 export async function runInboundPoll(): Promise<InboundPollResult> {
   if (!isGraphConfigured()) {
-    return { success: false, configured: false, scanned: 0, matched: 0, skipped: 0, unmatched: [] };
+    return { success: false, configured: false, scanned: 0, matched: 0, skipped: 0, created: 0, unmatched: [] };
   }
 
   const messages = await listInboxMessages(true, 25);
   const selfAddr = getMailbox().toLowerCase();
   let matched = 0;
   let skipped = 0;
+  let created = 0;
   const unmatched: string[] = [];
+  /** Unzugeordnete Mails als Kandidaten für die automatische Ticket-Erstellung. */
+  const unmatchedMsgs: Array<{ msg: GraphInboxMessage; label: string }> = [];
 
   for (const m of messages) {
     // Eigene/interne Mails (Bestätigungen, Team-Benachrichtigungen) überspringen
@@ -77,7 +191,7 @@ export async function runInboundPoll(): Promise<InboundPollResult> {
     const rq = parseRequestNumber(m.subject) || parseRequestNumber(m.bodyPreview);
     const ticketNo = parseTicketNumber(m.subject) || parseTicketNumber(m.bodyPreview);
     if (!rq && !ticketNo) {
-      unmatched.push(m.subject);
+      unmatchedMsgs.push({ msg: m, label: m.subject });
       continue;
     }
 
@@ -130,8 +244,34 @@ export async function runInboundPoll(): Promise<InboundPollResult> {
       }
     }
 
-    unmatched.push(`${rq || `TASK-${ticketNo}`}: ${m.subject}`);
+    unmatchedMsgs.push({ msg: m, label: `${rq || `TASK-${ticketNo}`}: ${m.subject}` });
   }
 
-  return { success: true, configured: true, scanned: messages.length, matched, skipped, unmatched };
+  // ── Mail-to-Ticket: aus unzugeordneten Mails automatisch Tickets erstellen ──
+  const mailSettings = getSettings().mail;
+  const autoCreate = !!mailSettings.ticket_auto_create;
+  const allowlist = mailSettings.ticket_auto_create_domains ?? '';
+
+  for (const { msg, label } of unmatchedMsgs) {
+    if (!autoCreate || !senderDomainAllowed(msg.fromAddress, allowlist) || looksAutomated(msg.fromAddress, msg.subject)) {
+      unmatched.push(label);
+      continue;
+    }
+    try {
+      // Dedupe: Mail wurde bereits als Ticket-Nachricht verarbeitet.
+      if (await taskGraphMessageExists(msg.id)) {
+        skipped++;
+        await markMessageRead(msg.id);
+        continue;
+      }
+      await createTicketFromMail(msg, selfAddr);
+      await markMessageRead(msg.id);
+      created++;
+    } catch (err) {
+      console.error('[inbound-poll] Ticket-Auto-Create fehlgeschlagen:', err);
+      unmatched.push(label);
+    }
+  }
+
+  return { success: true, configured: true, scanned: messages.length, matched, skipped, created, unmatched };
 }
