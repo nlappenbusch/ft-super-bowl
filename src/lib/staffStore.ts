@@ -371,6 +371,10 @@ export async function vacationPlanner(year: number) {
 
 // ==================== STAFF TASKS ====================
 
+/** Alle gültigen Ticket-Status (Reihenfolge = Board-Spalten). */
+export const TASK_STATUS_VALUES = ['offen', 'in_arbeit', 'warten_requester', 'warten_dritte', 'erledigt'] as const;
+export type TaskStatus = (typeof TASK_STATUS_VALUES)[number];
+
 export interface StaffTask {
   id: string;
   ticket_number: number | null;
@@ -382,7 +386,7 @@ export interface StaffTask {
   booking_id: string | null;
   due_date: string | null;
   priority: 'niedrig' | 'normal' | 'hoch';
-  status: 'offen' | 'in_arbeit' | 'erledigt';
+  status: TaskStatus;
   created_by: string | null;
 }
 
@@ -577,4 +581,123 @@ export async function addTaskMessage(m: {
 export async function taskGraphMessageExists(graphMessageId: string): Promise<boolean> {
   const r = await dbGet<{ id: string }>('SELECT id FROM task_messages WHERE graph_message_id = ?', [graphMessageId]);
   return !!r;
+}
+
+// ==================== NOTIFICATIONS (Benachrichtigungs-Center) ====================
+
+export interface AdminNotification {
+  id: string;
+  employee_id: string;
+  type: 'task_assigned' | 'task_message' | 'task_note' | 'mention' | 'info';
+  task_id: string | null;
+  title: string;
+  body: string;
+  is_read: number; // 0 | 1
+  created_at: string;
+  created_by: string;
+}
+
+export async function addNotification(n: {
+  employee_id: string;
+  type: AdminNotification['type'];
+  task_id?: string | null;
+  title: string;
+  body?: string;
+  created_by?: string;
+}): Promise<void> {
+  await dbRun(
+    `INSERT INTO admin_notifications (id, employee_id, type, task_id, title, body, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [crypto.randomUUID(), n.employee_id, n.type, n.task_id || null, n.title, n.body || '', n.created_by || ''],
+  );
+}
+
+export async function listNotifications(employeeId: string, opts?: { unreadOnly?: boolean; limit?: number }): Promise<AdminNotification[]> {
+  const limit = Math.min(Math.max(opts?.limit ?? 30, 1), 100);
+  return dbAll<AdminNotification>(
+    `SELECT * FROM admin_notifications WHERE employee_id = ? ${opts?.unreadOnly ? 'AND is_read = 0' : ''}
+     ORDER BY created_at DESC LIMIT ${limit}`,
+    [employeeId],
+  );
+}
+
+export async function countUnreadNotifications(employeeId: string): Promise<number> {
+  const r = await dbGet<{ n: number }>('SELECT COUNT(*) AS n FROM admin_notifications WHERE employee_id = ? AND is_read = 0', [employeeId]);
+  return r?.n ?? 0;
+}
+
+/** Markiert Benachrichtigungen als gelesen; ohne ids = alle des Mitarbeiters. */
+export async function markNotificationsRead(employeeId: string, ids?: string[]): Promise<number> {
+  if (ids && ids.length) {
+    let changed = 0;
+    for (const id of ids) {
+      changed += (await dbRun('UPDATE admin_notifications SET is_read = 1 WHERE id = ? AND employee_id = ?', [id, employeeId])).changes;
+    }
+    return changed;
+  }
+  return (await dbRun('UPDATE admin_notifications SET is_read = 1 WHERE employee_id = ? AND is_read = 0', [employeeId])).changes;
+}
+
+/** Findet einen Mitarbeiter über den Anzeigenamen (case-insensitive) – z.B. für created_by-Strings. */
+export async function findEmployeeByName(name: string): Promise<Employee | null> {
+  const n = (name || '').trim().toLowerCase();
+  if (!n) return null;
+  const all = await listEmployees(true);
+  return all.find((e) => e.name.trim().toLowerCase() === n) || null;
+}
+
+/**
+ * Erkennt @Erwähnungen in einem Text (voller Name oder Vorname, case-insensitive)
+ * und liefert die passenden aktiven Mitarbeiter.
+ */
+export async function resolveMentions(text: string): Promise<Employee[]> {
+  if (!text || !text.includes('@')) return [];
+  const emps = await listEmployees(false);
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return emps.filter((e) => {
+    const full = e.name.trim();
+    if (!full) return false;
+    const first = full.split(/\s+/)[0];
+    const rxFull = new RegExp(`@${esc(full).replace(/\\?\s+/g, '\\s+')}`, 'i');
+    const rxFirst = new RegExp(`@${esc(first)}(?![\\wäöüß])`, 'i');
+    return rxFull.test(text) || rxFirst.test(text);
+  });
+}
+
+/**
+ * Benachrichtigt die Beteiligten eines Tickets (Ersteller + Assignee) sowie
+ * @Erwähnte über eine neue Nachricht/Notiz. Der Autor selbst wird ausgelassen.
+ */
+export async function notifyTaskParticipants(task: StaffTask, opts: {
+  type: 'task_message' | 'task_note';
+  body: string;
+  actorName: string;
+}): Promise<void> {
+  const ticket = formatTicketNo(task.ticket_number) || 'Ticket';
+  const actorLc = (opts.actorName || '').trim().toLowerCase();
+  const targets = new Map<string, AdminNotification['type']>();
+
+  // Ersteller (created_by ist ein Anzeigename) + Assignee
+  const creator = task.created_by ? await findEmployeeByName(task.created_by) : null;
+  if (creator) targets.set(creator.id, opts.type);
+  if (task.assignee_id) targets.set(task.assignee_id, opts.type);
+
+  // @Erwähnungen gewinnen gegenüber dem generischen Typ
+  for (const m of await resolveMentions(opts.body)) targets.set(m.id, 'mention');
+
+  const label = opts.type === 'task_note' ? 'Neue Notiz' : 'Neue Nachricht';
+  for (const [empId, type] of targets) {
+    const emp = await getEmployee(empId);
+    if (!emp || emp.name.trim().toLowerCase() === actorLc) continue;
+    await addNotification({
+      employee_id: empId,
+      type,
+      task_id: task.id,
+      title: type === 'mention'
+        ? `${opts.actorName || 'Jemand'} hat dich in ${ticket} erwähnt`
+        : `${label} in ${ticket} – ${task.title}`,
+      body: opts.body.slice(0, 300),
+      created_by: opts.actorName || '',
+    }).catch(() => { /* Benachrichtigung darf den Hauptfluss nie brechen */ });
+  }
 }

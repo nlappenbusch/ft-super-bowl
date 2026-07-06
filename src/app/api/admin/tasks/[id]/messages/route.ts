@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSessionEmployee } from '@/lib/serverSession';
-import { getStaffTask, listTaskMessages, addTaskMessage, formatTicketNo } from '@/lib/staffStore';
+import { getStaffTask, listTaskMessages, addTaskMessage, formatTicketNo, notifyTaskParticipants } from '@/lib/staffStore';
 import { sendGraphMail, isGraphConfigured, getMailbox, getFromName } from '@/lib/graphMailer';
 import { taskEmailHtml, taskSubjectTag } from '@/lib/emailTemplates';
 
@@ -41,6 +41,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       body: text,
       created_by: agentName || '',
     });
+    await notifyTaskParticipants(task, { type: 'task_note', body: text, actorName: agentName || '' }).catch(() => {});
     return NextResponse.json({ success: true, data: saved });
   }
 
@@ -70,5 +71,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     body: text,
     created_by: agentName || '',
   });
+  await notifyTaskParticipants(task, { type: 'task_message', body: text, actorName: agentName || '' }).catch(() => {});
   return NextResponse.json({ success: true, data: saved });
 }

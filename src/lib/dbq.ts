@@ -307,6 +307,25 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
         revoked integer NOT NULL DEFAULT 0
       )`);
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash)`);
+      // Benachrichtigungs-Center (Glocke im Admin)
+      await pool.query(`CREATE TABLE IF NOT EXISTS admin_notifications (
+        id text PRIMARY KEY,
+        employee_id text NOT NULL,
+        type text NOT NULL DEFAULT 'info',
+        task_id text,
+        title text NOT NULL DEFAULT '',
+        body text NOT NULL DEFAULT '',
+        is_read integer NOT NULL DEFAULT 0,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        created_by text NOT NULL DEFAULT ''
+      )`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_admin_notifications_emp ON admin_notifications(employee_id, is_read)`);
+      // Ticket-Status: Warte-Status ergänzen (alter CHECK – falls vorhanden – ersetzen)
+      try {
+        await pool.query(`ALTER TABLE staff_tasks DROP CONSTRAINT IF EXISTS staff_tasks_status_check`);
+        await pool.query(`ALTER TABLE staff_tasks ADD CONSTRAINT staff_tasks_status_check
+          CHECK (status IN ('offen','in_arbeit','warten_requester','warten_dritte','erledigt'))`);
+      } catch (e) { console.warn('[pg] staff_tasks-Status-Constraint:', (e as Error).message); }
       // Backfill: bestehende Tasks ohne Nummer fortlaufend ab 10 nummerieren.
       await pool.query(`
         WITH ordered AS (

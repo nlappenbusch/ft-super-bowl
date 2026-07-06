@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSessionEmployee } from '@/lib/serverSession';
-import { listStaffTasks, createStaffTask } from '@/lib/staffStore';
+import { listStaffTasks, createStaffTask, addNotification, formatTicketNo } from '@/lib/staffStore';
 
 /** GET ?assignee=<id>&status=<status>&booking=<id> → Aufgabenliste. */
 export async function GET(req: Request) {
@@ -21,5 +21,18 @@ export async function POST(req: Request) {
   const body = await req.json();
   if (!body.title) return NextResponse.json({ success: false, error: 'title erforderlich' }, { status: 400 });
   const task = await createStaffTask({ ...body, created_by: ctx.session.name });
+
+  // Direkt bei Anlage zugewiesen → Assignee benachrichtigen (außer Selbstzuweisung).
+  if (task.assignee_id && task.assignee_id !== ctx.employee?.id) {
+    await addNotification({
+      employee_id: task.assignee_id,
+      type: 'task_assigned',
+      task_id: task.id,
+      title: `${formatTicketNo(task.ticket_number) || 'Ticket'} wurde dir zugewiesen – ${task.title}`,
+      body: (task.description || '').slice(0, 300),
+      created_by: ctx.session.name,
+    }).catch(() => { /* nie blockierend */ });
+  }
+
   return NextResponse.json({ success: true, data: task });
 }

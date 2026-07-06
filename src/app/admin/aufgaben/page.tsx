@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState, type ReactNode, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import AdminShell from '@/components/admin/AdminShell';
 import {
   PageHeader, Card, SectionCard, Button, Field, TextInput, SelectInput, TextArea, Badge, Spinner, COLORS,
@@ -10,16 +10,19 @@ import Link from 'next/link';
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import TaskDrawer from '@/components/admin/TaskDrawer';
 
+type TaskStatus = 'offen' | 'in_arbeit' | 'warten_requester' | 'warten_dritte' | 'erledigt';
+
 interface StaffTask {
   id: string;
   ticket_number: number | null;
+  created_at?: string;
   title: string;
   description: string;
   assignee_id: string | null;
   booking_id: string | null;
   due_date: string | null;
   priority: 'niedrig' | 'normal' | 'hoch';
-  status: 'offen' | 'in_arbeit' | 'erledigt';
+  status: TaskStatus;
   created_by: string | null;
 }
 
@@ -32,6 +35,8 @@ interface EmployeeLite { id: string; name: string }
 const COLUMNS: Array<{ id: StaffTask['status']; label: string }> = [
   { id: 'offen', label: 'Offen' },
   { id: 'in_arbeit', label: 'In Arbeit' },
+  { id: 'warten_requester', label: 'Warten auf Requester' },
+  { id: 'warten_dritte', label: 'Warten auf Dritte' },
   { id: 'erledigt', label: 'Erledigt' },
 ];
 
@@ -94,6 +99,7 @@ function TaskCard({
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs" style={{ color: COLORS.textMuted }}>
           <span>👤 {empName(t.assignee_id)}</span>
+          {t.created_by && <span title="Erstellt von">✍️ {t.created_by}</span>}
           {t.due_date && (
             <span style={{ color: t.due_date < today && t.status !== 'erledigt' ? COLORS.danger : undefined }}>📅 {t.due_date}</span>
           )}
@@ -148,6 +154,17 @@ export default function AufgabenPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Deep-Link ?task=<id> (z.B. aus dem Benachrichtigungs-Center) → Drawer öffnen.
+  const deepLinkDone = useRef(false);
+  useEffect(() => {
+    if (deepLinkDone.current || !tasks.length) return;
+    const id = new URLSearchParams(window.location.search).get('task');
+    deepLinkDone.current = true;
+    if (!id) return;
+    const t = tasks.find((x) => x.id === id);
+    if (t) setSelected(t);
+  }, [tasks]);
 
   const empName = (id: string | null) => employees.find((e) => e.id === id)?.name || '–';
 
@@ -263,7 +280,7 @@ export default function AufgabenPage() {
         <div className="flex justify-center py-16"><Spinner /></div>
       ) : (
         <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
             {COLUMNS.map((col) => {
               const colTasks = tasks.filter((t) => t.status === col.id);
               return (
