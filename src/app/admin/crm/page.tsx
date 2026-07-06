@@ -34,7 +34,18 @@ interface Lead {
   created_at?: string;
   offer_sent?: number;
   docs_ready?: number;
-  travelers?: string | Array<{ firstName?: string; lastName?: string; first_name?: string; last_name?: string }>;
+  travelers?: string | Array<{ salutation?: string; firstName?: string; lastName?: string; first_name?: string; last_name?: string; birthDate?: string; passportNumber?: string }>;
+  double_rooms?: number;
+  single_rooms?: number;
+  travel_period?: string;
+  source?: string;
+  customer_id?: string | null;
+  customer_name?: string;
+  customer_salutation?: string;
+  customer_street?: string;
+  customer_zip?: string;
+  customer_city?: string;
+  customer_country?: string;
 }
 
 interface MsgAttachment { id: string; filename: string; mime: string; size: number }
@@ -671,13 +682,82 @@ function DetailDrawer({
                     <span className="text-gray-700">{lead.package_title}</span>
                   </div>
                 )}
+                {lead.travel_period && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    <span className="font-semibold" style={{ color: '#143047' }}>{lead.travel_period}</span>
+                  </div>
+                )}
+                {((lead.double_rooms || 0) > 0 || (lead.single_rooms || 0) > 0) && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Package className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-700">
+                      {[
+                        lead.double_rooms ? `${lead.double_rooms}× Doppelbelegung` : '',
+                        lead.single_rooms ? `${lead.single_rooms}× Einzelbelegung` : '',
+                      ].filter(Boolean).join(', ')}
+                    </span>
+                  </div>
+                )}
                 {lead.total_price && lead.total_price > 0 && (
                   <div className="flex items-center gap-2 text-sm">
                     <Euro className="w-4 h-4 text-gray-400" />
                     <span className="font-bold" style={{ color: '#143047' }}>{formatCurrency(lead.total_price)}</span>
                   </div>
                 )}
+                {lead.source && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-500">Eingegangen über: {lead.source}</span>
+                  </div>
+                )}
               </div>
+
+              {/* Rechnungsadresse / Kunde */}
+              {(lead.customer_name || lead.customer_street) && (
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Rechnungsadresse</h3>
+                  <div className="rounded-xl p-4 text-sm text-gray-700" style={{ background: '#f5f7fa', border: '1px solid #e5e8ed' }}>
+                    <div className="font-semibold text-gray-900">{[lead.customer_salutation, lead.customer_name].filter(Boolean).join(' ')}</div>
+                    {lead.customer_street && <div>{lead.customer_street}</div>}
+                    {(lead.customer_zip || lead.customer_city) && (
+                      <div>{[lead.customer_zip, lead.customer_city].filter(Boolean).join(' ')}{lead.customer_country ? `, ${lead.customer_country}` : ''}</div>
+                    )}
+                    {!lead.customer_street && <div className="text-amber-600">Keine Adresse hinterlegt</div>}
+                    {lead.customer_id && (
+                      <a href={`/admin/kunden/${lead.customer_id}`} className="mt-2 inline-block text-xs font-bold text-blue-600 hover:underline">Kundenkarte öffnen →</a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Reisende */}
+              {(() => {
+                let travelers: Array<{ salutation?: string; firstName?: string; lastName?: string; birthDate?: string; passportNumber?: string }> = [];
+                try {
+                  const t = typeof lead.travelers === 'string' ? JSON.parse(lead.travelers) : lead.travelers;
+                  if (Array.isArray(t)) travelers = t;
+                } catch { /* ignore */ }
+                if (!travelers.length) return null;
+                return (
+                  <div>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Reisende ({travelers.length})</h3>
+                    <div className="rounded-xl p-4 space-y-2" style={{ background: '#f5f7fa', border: '1px solid #e5e8ed' }}>
+                      {travelers.map((t, i) => (
+                        <div key={i} className="text-sm">
+                          <span className="font-semibold text-gray-900">
+                            {[t.salutation, t.firstName, t.lastName].filter(Boolean).join(' ') || '– (ohne Name)'}
+                          </span>
+                          <span className="text-gray-500">
+                            {t.birthDate ? ` · geb. ${t.birthDate}` : ''}
+                            {t.passportNumber ? ` · Pass: ${t.passportNumber}` : ''}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {lead.message && (
                 <div>

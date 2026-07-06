@@ -21,6 +21,15 @@ export interface BookingRequest {
   notes?: string;
   /** Verknüpfter Kundenstammsatz (customers.id). */
   customer_id?: string | null;
+  /** Anzeige-Reisezeitraum, beim Anlegen aus dem Package fixiert (z.B. "Do. 11.02. – Mo. 15.02.2027 · 4 Nächte"). */
+  travel_period?: string;
+  // Anzeige-Felder aus dem Customer-JOIN (nur lesend, nicht persistiert):
+  customer_name?: string;
+  customer_salutation?: string;
+  customer_street?: string;
+  customer_zip?: string;
+  customer_city?: string;
+  customer_country?: string;
   /** Affiliate-/Herkunfts-Quelle: Host der einbettenden Website (WP-Shortcode). */
   source?: string;
   offer_sent?: number;

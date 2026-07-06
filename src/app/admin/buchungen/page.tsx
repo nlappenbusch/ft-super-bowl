@@ -490,6 +490,42 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              {/* Reisedaten */}
+              <div>
+                <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-gray-500">Reisedaten</h3>
+                <div className="rounded-xl bg-gray-50 p-4 text-sm text-gray-800 space-y-1">
+                  {selectedBooking.travel_period && <div><span className="text-gray-500">Reisezeitraum:</span> <strong>{selectedBooking.travel_period}</strong></div>}
+                  <div><span className="text-gray-500">Personen:</span> {selectedBooking.number_of_persons}</div>
+                  <div>
+                    <span className="text-gray-500">Belegung:</span>{' '}
+                    {[
+                      selectedBooking.double_rooms ? `${selectedBooking.double_rooms}× Doppelbelegung` : '',
+                      selectedBooking.single_rooms ? `${selectedBooking.single_rooms}× Einzelbelegung` : '',
+                    ].filter(Boolean).join(', ') || '–'}
+                  </div>
+                  {selectedBooking.total_price > 0 && <div><span className="text-gray-500">Richtpreis:</span> {selectedBooking.total_price.toLocaleString('de-DE')} €</div>}
+                </div>
+              </div>
+
+              {/* Rechnungsadresse */}
+              <div>
+                <h3 className="mb-2 text-sm font-bold uppercase tracking-wider text-gray-500">Rechnungsadresse</h3>
+                <div className="rounded-xl bg-gray-50 p-4 text-sm text-gray-800">
+                  <div className="font-semibold">{[selectedBooking.customer_salutation, selectedBooking.customer_name].filter(Boolean).join(' ') || selectedBooking.email}</div>
+                  {selectedBooking.customer_street ? (
+                    <>
+                      <div>{selectedBooking.customer_street}</div>
+                      <div>{[selectedBooking.customer_zip, selectedBooking.customer_city].filter(Boolean).join(' ')}{selectedBooking.customer_country ? `, ${selectedBooking.customer_country}` : ''}</div>
+                    </>
+                  ) : (
+                    <div className="text-amber-600">Keine Adresse hinterlegt</div>
+                  )}
+                  {selectedBooking.customer_id && (
+                    <a href={`/admin/kunden/${selectedBooking.customer_id}`} className="mt-1 inline-block text-xs font-bold text-blue-600 hover:underline">Kundenkarte öffnen →</a>
+                  )}
+                </div>
+              </div>
+
               {/* Message */}
               {selectedBooking.message && (
                 <div>

@@ -47,6 +47,8 @@ export interface BookingInput {
   totalPrice: number;
   /** Affiliate-/Herkunfts-Quelle (Host der einbettenden Website), wird in notes gespeichert. */
   source?: string;
+  /** Anzeige-Reisezeitraum des Pakets, wird an der Buchung fixiert. */
+  travelPeriod?: string;
 }
 
 export async function createBooking(input: BookingInput) {
@@ -54,6 +56,7 @@ export async function createBooking(input: BookingInput) {
     return insertBooking({
       event_slug: input.eventSlug || '',
       package_slug: input.packageSlug || '',
+      travel_period: input.travelPeriod || '',
       package_id: input.packageId,
       package_title: input.packageTitle,
       start_date: input.startDate,

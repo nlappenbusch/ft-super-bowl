@@ -37,6 +37,11 @@ export async function POST(request: Request) {
       );
     }
 
+    // Paket für Reisezeitraum/Nächte (wird an der Buchung fixiert + Team-Mail)
+    const pkgRecord = body.eventSlug && body.packageSlug ? await getPackageBySlug(body.eventSlug, body.packageSlug) : null;
+    const travelPeriodDisplay = [pkgRecord?.travel_period, pkgRecord?.nights ? `${pkgRecord.nights} Nächte` : '']
+      .filter(Boolean).join(' · ') || undefined;
+
     const booking = await createBooking({
       eventSlug: body.eventSlug,
       packageSlug: body.packageSlug,
@@ -51,7 +56,8 @@ export async function POST(request: Request) {
       phone: body.phone,
       message: body.message || '',
       totalPrice: body.totalPrice || 0,
-      source: typeof body.source === 'string' ? body.source.slice(0, 200) : ''
+      source: typeof body.source === 'string' ? body.source.slice(0, 200) : '',
+      travelPeriod: travelPeriodDisplay || ''
     });
 
     const consent = !!body.consent;
@@ -88,10 +94,6 @@ export async function POST(request: Request) {
       }
     }
     const eventName = event?.name || event?.title || body.packageTitle || undefined;
-    // Paket für Reisezeitraum/Nächte (Anzeige in Team-Mail)
-    const pkgRecord = body.eventSlug && body.packageSlug ? await getPackageBySlug(body.eventSlug, body.packageSlug) : null;
-    const travelPeriodDisplay = [pkgRecord?.travel_period, pkgRecord?.nights ? `${pkgRecord.nights} Nächte` : '']
-      .filter(Boolean).join(' · ') || undefined;
     const customerAddress = [body.street, [body.zip, body.city].filter(Boolean).join(' '), body.country]
       .filter((x: unknown) => typeof x === 'string' && (x as string).trim()).join(', ') || undefined;
 
