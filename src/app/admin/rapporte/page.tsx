@@ -6,7 +6,7 @@ import {
   PageHeader, Card, SectionCard, Button, Field, TextInput, SelectInput, Badge, Spinner, StatCard, COLORS,
 } from '@/components/admin/ui';
 import {
-  FileClock, Hourglass, CheckCircle2, FileText, Trash2, Plus, RotateCcw, Lock, X,
+  FileClock, Hourglass, CheckCircle2, FileText, Trash2, Plus, RotateCcw, Lock, X, Pencil, Check,
 } from 'lucide-react';
 
 interface TimeEntry {
@@ -90,6 +90,10 @@ export default function RapportePage() {
   // Rapport-Detail
   const [detail, setDetail] = useState<{ report: Report; entries: TimeEntry[]; total_minutes: number } | null>(null);
   const [detailBusy, setDetailBusy] = useState(false);
+
+  // Inline-Editor für Zeitbuchungen (Mitarbeiter/Datum/Minuten/Notiz)
+  const [edit, setEdit] = useState<{ id: string; minutes: string; note: string; work_date: string; employee_id: string } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -200,6 +204,76 @@ export default function RapportePage() {
     await load();
   };
 
+  const startEdit = (e: TimeEntry) => {
+    setErr('');
+    setEdit({ id: e.id, minutes: String(e.minutes), note: e.note || '', work_date: e.work_date || '', employee_id: e.employee_id || '' });
+  };
+
+  const saveEdit = async () => {
+    if (!edit) return;
+    setSavingEdit(true);
+    setErr('');
+    try {
+      const r = await fetch(`/api/admin/time-entries/${edit.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          minutes: Number(edit.minutes),
+          note: edit.note,
+          work_date: edit.work_date,
+          employee_id: edit.employee_id || null,
+        }),
+      }).then((x) => x.json());
+      if (!r.success) { setErr(r.error || 'Fehler beim Speichern'); return; }
+      setEdit(null);
+      await load();
+      if (detail) await openDetail(detail.report.id);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  /** Editierbare Zellen (Datum/Mitarbeiter/Notiz/Minuten) — für beide Tabellen einzeln einsetzbar. */
+  const editCell = edit ? {
+    date: (
+      <td className="py-2 pr-4">
+        <TextInput type="date" value={edit.work_date} onChange={(ev) => setEdit({ ...edit, work_date: ev.target.value })} className="w-36" />
+      </td>
+    ),
+    emp: (
+      <td className="py-2 pr-4">
+        <SelectInput value={edit.employee_id} onChange={(ev) => setEdit({ ...edit, employee_id: ev.target.value })} className="w-40">
+          <option value="">Extern (API)</option>
+          {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
+        </SelectInput>
+      </td>
+    ),
+    note: (
+      <td className="py-2 pr-4">
+        <TextInput value={edit.note} onChange={(ev) => setEdit({ ...edit, note: ev.target.value })} placeholder="Tätigkeit" className="w-full min-w-[160px]" />
+      </td>
+    ),
+    minutes: (
+      <td className="py-2 text-right">
+        <span className="inline-flex items-center gap-1 whitespace-nowrap">
+          <TextInput type="number" min={1} value={edit.minutes} onChange={(ev) => setEdit({ ...edit, minutes: ev.target.value })} className="w-20 text-right" />
+          <span className="text-xs" style={{ color: COLORS.textMuted }}>min</span>
+        </span>
+      </td>
+    ),
+  } : null;
+
+  const editActions = (
+    <span className="inline-flex items-center gap-1 whitespace-nowrap">
+      <Button size="sm" variant="accent" onClick={saveEdit} disabled={savingEdit || !edit || !Number(edit.minutes)} aria-label="Speichern">
+        <Check className="h-3.5 w-3.5" />
+      </Button>
+      <Button size="sm" variant="ghost" onClick={() => setEdit(null)} aria-label="Abbrechen">
+        <X className="h-3.5 w-3.5" />
+      </Button>
+    </span>
+  );
+
   const reportAmount = (r: Report): string => {
     if (r.hourly_rate == null || r.total_minutes == null) return '–';
     return `${fmtMoney((r.total_minutes / 60) * r.hourly_rate)} ${r.currency}`;
@@ -288,29 +362,48 @@ export default function RapportePage() {
                     <th className="py-2 pr-4">Mitarbeiter</th>
                     <th className="py-2 pr-4">Tätigkeit</th>
                     <th className="py-2 text-right">Zeit</th>
+                    <th className="py-2"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {openEntries.map((e) => (
-                    <tr
-                      key={e.id}
-                      className="cursor-pointer border-t"
-                      style={{ borderColor: COLORS.stroke, background: sel.has(e.id) ? '#fff7ed' : undefined }}
-                      onClick={() => toggle(e.id)}
-                    >
-                      <td className="py-2 pr-3">
-                        <input type="checkbox" checked={sel.has(e.id)} onChange={() => toggle(e.id)} onClick={(ev) => ev.stopPropagation()} />
-                      </td>
-                      <td className="py-2 pr-4 tabular-nums whitespace-nowrap">{fmtDate(e.work_date)}</td>
-                      <td className="py-2 pr-4">
-                        <span className="font-semibold whitespace-nowrap" style={{ color: COLORS.navy }}>{ticketNo(e.ticket_number) || '–'}</span>
-                        <span className="ml-2 hidden text-xs sm:inline" style={{ color: COLORS.textMuted }}>{e.task_title}</span>
-                      </td>
-                      <td className="py-2 pr-4 whitespace-nowrap">{e.employee_name || <span style={{ color: COLORS.textMuted }}>Extern (API)</span>}</td>
-                      <td className="py-2 pr-4 text-xs" style={{ color: COLORS.textMuted }}>{e.note || '–'}</td>
-                      <td className="py-2 text-right font-semibold tabular-nums whitespace-nowrap" style={{ color: COLORS.navy }}>{fmtMin(e.minutes)}</td>
-                    </tr>
-                  ))}
+                  {openEntries.map((e) => {
+                    const isEdit = edit?.id === e.id;
+                    return (
+                      <tr
+                        key={e.id}
+                        className={`border-t ${isEdit ? '' : 'cursor-pointer'}`}
+                        style={{ borderColor: COLORS.stroke, background: isEdit ? '#f0f6ff' : sel.has(e.id) ? '#fff7ed' : undefined }}
+                        onClick={isEdit ? undefined : () => toggle(e.id)}
+                      >
+                        <td className="py-2 pr-3">
+                          <input type="checkbox" checked={sel.has(e.id)} onChange={() => toggle(e.id)} onClick={(ev) => ev.stopPropagation()} disabled={isEdit} />
+                        </td>
+                        {isEdit && editCell ? editCell.date : (
+                          <td className="py-2 pr-4 tabular-nums whitespace-nowrap">{fmtDate(e.work_date)}</td>
+                        )}
+                        <td className="py-2 pr-4">
+                          <span className="font-semibold whitespace-nowrap" style={{ color: COLORS.navy }}>{ticketNo(e.ticket_number) || '–'}</span>
+                          <span className="ml-2 hidden text-xs sm:inline" style={{ color: COLORS.textMuted }}>{e.task_title}</span>
+                        </td>
+                        {isEdit && editCell ? editCell.emp : (
+                          <td className="py-2 pr-4 whitespace-nowrap">{e.employee_name || <span style={{ color: COLORS.textMuted }}>Extern (API)</span>}</td>
+                        )}
+                        {isEdit && editCell ? editCell.note : (
+                          <td className="py-2 pr-4 text-xs" style={{ color: COLORS.textMuted }}>{e.note || '–'}</td>
+                        )}
+                        {isEdit && editCell ? editCell.minutes : (
+                          <td className="py-2 text-right font-semibold tabular-nums whitespace-nowrap" style={{ color: COLORS.navy }}>{fmtMin(e.minutes)}</td>
+                        )}
+                        <td className="py-2 pl-2 text-right whitespace-nowrap">
+                          {isEdit ? editActions : (
+                            <Button size="sm" variant="ghost" onClick={(ev) => { ev.stopPropagation(); startEdit(e); }} aria-label="Bearbeiten">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -464,25 +557,43 @@ export default function RapportePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {detail.entries.map((e) => (
-                    <tr key={e.id} className="border-t" style={{ borderColor: COLORS.stroke }}>
-                      <td className="py-2 pr-4 tabular-nums whitespace-nowrap">{fmtDate(e.work_date)}</td>
-                      <td className="py-2 pr-4">
-                        <span className="font-semibold whitespace-nowrap" style={{ color: COLORS.navy }}>{ticketNo(e.ticket_number) || '–'}</span>
-                        <span className="ml-2 hidden text-xs sm:inline" style={{ color: COLORS.textMuted }}>{e.task_title}</span>
-                      </td>
-                      <td className="py-2 pr-4 whitespace-nowrap">{e.employee_name || <span style={{ color: COLORS.textMuted }}>Extern (API)</span>}</td>
-                      <td className="py-2 pr-4 text-xs" style={{ color: COLORS.textMuted }}>{e.note || '–'}</td>
-                      <td className="py-2 text-right font-semibold tabular-nums whitespace-nowrap" style={{ color: COLORS.navy }}>{fmtMin(e.minutes)}</td>
-                      {detail.report.status === 'entwurf' && (
-                        <td className="py-2 text-right">
-                          <Button size="sm" variant="ghost" onClick={() => removeEntry(detail.report.id, e.id)} aria-label="Aus Rapport entfernen">
-                            <X className="h-3.5 w-3.5" />
-                          </Button>
+                  {detail.entries.map((e) => {
+                    const isEdit = detail.report.status === 'entwurf' && edit?.id === e.id;
+                    return (
+                      <tr key={e.id} className="border-t" style={{ borderColor: COLORS.stroke, background: isEdit ? '#f0f6ff' : undefined }}>
+                        {isEdit && editCell ? editCell.date : (
+                          <td className="py-2 pr-4 tabular-nums whitespace-nowrap">{fmtDate(e.work_date)}</td>
+                        )}
+                        <td className="py-2 pr-4">
+                          <span className="font-semibold whitespace-nowrap" style={{ color: COLORS.navy }}>{ticketNo(e.ticket_number) || '–'}</span>
+                          <span className="ml-2 hidden text-xs sm:inline" style={{ color: COLORS.textMuted }}>{e.task_title}</span>
                         </td>
-                      )}
-                    </tr>
-                  ))}
+                        {isEdit && editCell ? editCell.emp : (
+                          <td className="py-2 pr-4 whitespace-nowrap">{e.employee_name || <span style={{ color: COLORS.textMuted }}>Extern (API)</span>}</td>
+                        )}
+                        {isEdit && editCell ? editCell.note : (
+                          <td className="py-2 pr-4 text-xs" style={{ color: COLORS.textMuted }}>{e.note || '–'}</td>
+                        )}
+                        {isEdit && editCell ? editCell.minutes : (
+                          <td className="py-2 text-right font-semibold tabular-nums whitespace-nowrap" style={{ color: COLORS.navy }}>{fmtMin(e.minutes)}</td>
+                        )}
+                        {detail.report.status === 'entwurf' && (
+                          <td className="py-2 pl-2 text-right whitespace-nowrap">
+                            {isEdit ? editActions : (
+                              <span className="inline-flex items-center gap-1">
+                                <Button size="sm" variant="ghost" onClick={() => startEdit(e)} aria-label="Bearbeiten">
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => removeEntry(detail.report.id, e.id)} aria-label="Aus Rapport entfernen">
+                                  <X className="h-3.5 w-3.5" />
+                                </Button>
+                              </span>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </>
