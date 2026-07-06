@@ -1,9 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { Send, Star, MapPin, Check, X } from 'lucide-react';
 import { NL_LEAGUES, NL_FLAG, NL_HOME_CITY, nlFormatDate } from '@/lib/nationsLeague';
+import EventContactForm from '@/components/EventContactForm';
 
 const NAVY = '#143047';
 const ACCENT = '#d9531e';
@@ -12,7 +12,6 @@ function flagUrl(team: string, big = false): string {
   return `https://flagcdn.com/${big ? 'w40' : 'w20'}/${NL_FLAG[team] || 'un'}.png`;
 }
 
-/** Top-Nationen für die „Kracher"-Auswahl. */
 const BIG = new Set(['Deutschland', 'Frankreich', 'Spanien', 'Italien', 'England', 'Niederlande', 'Portugal', 'Belgien', 'Kroatien', 'Dänemark']);
 
 interface Fx { md: number; date: string; home: string; away: string; group: string }
@@ -22,27 +21,19 @@ function Flag({ team, big = false }: { team: string; big?: boolean }) {
   return <img src={flagUrl(team, big)} alt="" width={big ? 26 : 20} height={big ? 17 : 13} loading="lazy" style={{ display: 'inline-block', borderRadius: 2, boxShadow: '0 0 0 1px rgba(0,0,0,0.06)' }} />;
 }
 
-/** Austragungsort = Land des Heimteams; Stadt wo bekannt (sonst Land). */
 function hostText(home: string): string {
   return NL_HOME_CITY[home] || home;
 }
-
 function matchLabel(f: Fx): string {
   return `${f.home} – ${f.away} · ${nlFormatDate(f.date)} · ${hostText(f.home)}`;
 }
-
 function keyOf(f: Fx): string {
   return `${f.group}|${f.date}|${f.home}|${f.away}`;
-}
-
-function anfrageHref(labels: string[]): string {
-  return `/kontakt?event=uefa-nations-league-2026&spiele=${encodeURIComponent(labels.join(' | '))}`;
 }
 
 const GROUPS = ['A1', 'A2', 'A3', 'A4'];
 
 export default function NationsLeagueFixtures() {
-  // Nur League A (A1–A4) ist für die Vermarktung relevant.
   const all = useMemo<Fx[]>(() => {
     const lg = NL_LEAGUES.find((l) => l.id === 'A');
     const out: Fx[] = [];
@@ -53,16 +44,20 @@ export default function NationsLeagueFixtures() {
   const featured = useMemo(() => all.filter((f) => BIG.has(f.home) && BIG.has(f.away)).slice(0, 4), [all]);
   const hostNations = useMemo(() => Array.from(new Set(all.map((f) => f.home))).sort((a, b) => a.localeCompare(b)), [all]);
 
-  const [group, setGroup] = useState<string>('all');
-  const [md, setMd] = useState<number>(0);
-  const [host, setHost] = useState<string>('all');
+  const [group, setGroup] = useState('all');
+  const [md, setMd] = useState(0);
+  const [host, setHost] = useState('all');
   const [sel, setSel] = useState<Record<string, Fx>>({});
+
+  // Anfrage-Dialog
+  const [anfrageLabels, setAnfrageLabels] = useState<string[] | null>(null);
+  const openAnfrage = (labels: string[]) => setAnfrageLabels(labels);
+  const closeAnfrage = () => setAnfrageLabels(null);
 
   const filtered = useMemo(
     () => all.filter((f) => (group === 'all' || f.group === group) && (md === 0 || f.md === md) && (host === 'all' || f.home === host)),
     [all, group, md, host],
   );
-
   const byDate = useMemo(() => {
     const m = new Map<string, Fx[]>();
     for (const f of filtered) { const a = m.get(f.date) || []; a.push(f); m.set(f.date, a); }
@@ -75,6 +70,10 @@ export default function NationsLeagueFixtures() {
     if (next[k]) delete next[k]; else next[k] = f;
     return next;
   });
+
+  const initialMessage = anfrageLabels && anfrageLabels.length
+    ? `Ich interessiere mich für folgende Nations-League-Spiele:\n${anfrageLabels.map((l) => `• ${l}`).join('\n')}\n\nBitte senden Sie mir ein unverbindliches Angebot.`
+    : undefined;
 
   return (
     <div style={{ paddingBottom: selList.length ? 72 : 0 }}>
@@ -98,9 +97,9 @@ export default function NationsLeagueFixtures() {
                 <div className="mt-1 text-xs" style={{ color: '#6b7280' }}>{nlFormatDate(f.date)}</div>
                 <div className="flex items-center gap-1 text-xs font-semibold" style={{ color: ACCENT }}><MapPin className="h-3.5 w-3.5" /> {hostText(f.home)}</div>
               </div>
-              <Link href={anfrageHref([matchLabel(f)])} className="mt-auto flex items-center justify-center gap-1.5 py-3 text-sm font-bold text-white transition hover:opacity-90" style={{ background: ACCENT }}>
+              <button onClick={() => openAnfrage([matchLabel(f)])} className="mt-auto flex items-center justify-center gap-1.5 py-3 text-sm font-bold text-white transition hover:opacity-90" style={{ background: ACCENT }}>
                 <Send className="h-4 w-4" /> Reise anfragen
-              </Link>
+              </button>
             </div>
           ))}
         </div>
@@ -154,9 +153,9 @@ export default function NationsLeagueFixtures() {
                       </span>
                       <span className="mt-0.5 flex items-center gap-1 text-[11px]" style={{ color: '#6b7280' }}><MapPin className="h-3 w-3" /> {hostText(g.home)} · Spieltag {g.md}</span>
                     </div>
-                    <Link href={anfrageHref([matchLabel(g)])} title="Dieses Spiel anfragen" className="shrink-0 rounded-lg p-1.5 transition hover:bg-orange-50" style={{ color: ACCENT }}>
+                    <button onClick={() => openAnfrage([matchLabel(g)])} title="Dieses Spiel anfragen" className="shrink-0 rounded-lg p-1.5 transition hover:bg-orange-50" style={{ color: ACCENT }}>
                       <Send className="h-4 w-4" />
-                    </Link>
+                    </button>
                   </div>
                 );
               })}
@@ -178,10 +177,33 @@ export default function NationsLeagueFixtures() {
               <button onClick={() => setSel({})} className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold text-white/80 transition hover:text-white" title="Auswahl leeren">
                 <X className="h-4 w-4" /> Leeren
               </button>
-              <Link href={anfrageHref(selList.map(matchLabel))} className="flex items-center gap-1.5 rounded-lg px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90" style={{ background: ACCENT }}>
+              <button onClick={() => openAnfrage(selList.map(matchLabel))} className="flex items-center gap-1.5 rounded-lg px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90" style={{ background: ACCENT }}>
                 <Send className="h-4 w-4" /> Auswahl anfragen
-              </Link>
+              </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Anfrage-Dialog (direkt hier, kein Seitenwechsel) */}
+      {anfrageLabels && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:p-6" style={{ background: 'rgba(9,20,34,0.55)' }} onClick={closeAnfrage}>
+          <div className="my-6 w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-sm font-semibold text-white/80">
+                {anfrageLabels.length} {anfrageLabels.length === 1 ? 'Spiel' : 'Spiele'} ausgewählt
+              </span>
+              <button onClick={closeAnfrage} className="flex items-center gap-1 rounded-lg bg-white/10 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-white/20">
+                <X className="h-4 w-4" /> Schließen
+              </button>
+            </div>
+            <EventContactForm
+              eventSlug="uefa-nations-league-2026"
+              eventName="UEFA Nations League 2026/27"
+              title="Spiele anfragen"
+              intro="Ihre Auswahl steht schon in der Nachricht – ergänzen Sie einfach Ihre Kontaktdaten, wir melden uns unverbindlich."
+              initialMessage={initialMessage}
+            />
           </div>
         </div>
       )}
