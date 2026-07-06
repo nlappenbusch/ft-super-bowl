@@ -5,7 +5,7 @@
  * Läuft über die Backend-Abstraktion `dbq` (SQLite ODER Postgres je nach DB_BACKEND).
  * ─────────────────────────────────────────────────────────────────────────────
  */
-import { dbGet, dbAll, dbRun, withTx } from './dbq';
+import { dbGet, dbAll, dbRun, withTx, type Q } from './dbq';
 import './database';
 import {
   WeeklyHours, DEFAULT_WEEKLY_HOURS,
@@ -516,11 +516,24 @@ export interface TaskTime {
   minutes: number;
   note: string;
   work_date: string;
+  report_id: string | null;
   created_at: string;
 }
 
-export async function listTaskTime(taskId: string): Promise<TaskTime[]> {
-  return dbAll<TaskTime>('SELECT * FROM task_time WHERE task_id = ? ORDER BY work_date DESC, created_at DESC', [taskId]);
+/** Zeitbuchung inkl. Rapport-Kontext (offen vs. rapportiert). */
+export interface TaskTimeEntry extends TaskTime {
+  report_number: number | null;
+  report_status: TimeReportStatus | null;
+}
+
+export async function listTaskTime(taskId: string): Promise<TaskTimeEntry[]> {
+  return dbAll<TaskTimeEntry>(`
+    SELECT t.*, r.report_number AS report_number, r.status AS report_status
+    FROM task_time t
+    LEFT JOIN time_reports r ON r.id = t.report_id
+    WHERE t.task_id = ?
+    ORDER BY t.work_date DESC, t.created_at DESC
+  `, [taskId]);
 }
 
 export async function sumTaskMinutes(taskId: string): Promise<number> {
@@ -535,8 +548,201 @@ export async function addTaskTime(taskId: string, minutes: number, note?: string
   return (await dbGet<TaskTime>('SELECT * FROM task_time WHERE id = ?', [id]))!;
 }
 
+/** Löscht eine Zeitbuchung — rapportierte Einträge sind gesperrt (erst aus dem Rapport nehmen). */
 export async function deleteTaskTime(id: string): Promise<boolean> {
-  return (await dbRun('DELETE FROM task_time WHERE id = ?', [id])).changes > 0;
+  return (await dbRun('DELETE FROM task_time WHERE id = ? AND report_id IS NULL', [id])).changes > 0;
+}
+
+// ==================== ZEIT-RAPPORTE (abrechenbare Zeiten) ====================
+
+export type TimeReportStatus = 'entwurf' | 'final';
+
+export interface TimeReport {
+  id: string;
+  report_number: number | null;
+  title: string;
+  period_from: string;
+  period_to: string;
+  hourly_rate: number | null;
+  currency: string;
+  status: TimeReportStatus;
+  note: string;
+  created_by: string;
+  created_at: string;
+  finalized_at: string | null;
+}
+
+export interface TimeReportSummary extends TimeReport {
+  entry_count: number;
+  total_minutes: number;
+}
+
+/** Zeitbuchung mit vollem Kontext für Rapport-Übersicht und PDF. */
+export interface TimeEntryDetail extends TaskTimeEntry {
+  ticket_number: number | null;
+  task_title: string;
+  employee_name: string | null;
+}
+
+export function formatReportNo(n?: number | null): string {
+  return n && n > 0 ? `RAP-${String(n).padStart(4, '0')}` : '';
+}
+
+const TIME_ENTRY_DETAIL_SQL = `
+  SELECT t.*, s.ticket_number AS ticket_number, s.title AS task_title,
+         e.name AS employee_name, r.report_number AS report_number, r.status AS report_status
+  FROM task_time t
+  LEFT JOIN staff_tasks s ON s.id = t.task_id
+  LEFT JOIN employees e ON e.id = t.employee_id
+  LEFT JOIN time_reports r ON r.id = t.report_id
+`;
+
+/** Alle Ticket-Zeitbuchungen (über alle Tickets), filterbar nach Zeitraum/Mitarbeiter/Rapport-Status. */
+export async function listTaskTimeEntries(f: { from?: string; to?: string; employee_id?: string; reported?: 'open' | 'reported' } = {}): Promise<TimeEntryDetail[]> {
+  const where: string[] = [];
+  const params: unknown[] = [];
+  if (f.from) { where.push('t.work_date >= ?'); params.push(f.from); }
+  if (f.to) { where.push('t.work_date <= ?'); params.push(f.to); }
+  if (f.employee_id) { where.push('t.employee_id = ?'); params.push(f.employee_id); }
+  if (f.reported === 'open') where.push('t.report_id IS NULL');
+  if (f.reported === 'reported') where.push('t.report_id IS NOT NULL');
+  return dbAll<TimeEntryDetail>(
+    `${TIME_ENTRY_DETAIL_SQL} ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY t.work_date DESC, t.created_at DESC`,
+    params
+  );
+}
+
+export async function listTimeReports(): Promise<TimeReportSummary[]> {
+  return dbAll<TimeReportSummary>(`
+    SELECT r.*, COUNT(t.id) AS entry_count, COALESCE(SUM(t.minutes), 0) AS total_minutes
+    FROM time_reports r
+    LEFT JOIN task_time t ON t.report_id = r.id
+    GROUP BY r.id
+    ORDER BY r.report_number DESC
+  `);
+}
+
+export async function getTimeReport(id: string): Promise<{ report: TimeReport; entries: TimeEntryDetail[]; total_minutes: number } | null> {
+  const report = await dbGet<TimeReport>('SELECT * FROM time_reports WHERE id = ?', [id]);
+  if (!report) return null;
+  const entries = await dbAll<TimeEntryDetail>(
+    `${TIME_ENTRY_DETAIL_SQL} WHERE t.report_id = ? ORDER BY t.work_date, t.created_at`, [id]
+  );
+  return { report, entries, total_minutes: entries.reduce((s, e) => s + (e.minutes || 0), 0) };
+}
+
+/** Zeitraum des Rapports aus seinen Einträgen ableiten (min/max Leistungsdatum). */
+async function recomputeReportPeriod(q: Q, reportId: string): Promise<void> {
+  const r = await q.get<{ pfrom: string | null; pto: string | null }>(
+    `SELECT MIN(work_date) AS pfrom, MAX(work_date) AS pto FROM task_time WHERE report_id = ?`, [reportId]
+  );
+  await q.run('UPDATE time_reports SET period_from = ?, period_to = ? WHERE id = ?', [r?.pfrom || '', r?.pto || '', reportId]);
+}
+
+/**
+ * Erstellt einen Rapport (Entwurf) aus offenen Zeitbuchungen.
+ * Bereits rapportierte Einträge werden abgelehnt — jede Zeit landet in genau einem Rapport.
+ */
+export async function createTimeReport(input: {
+  entry_ids: string[];
+  title?: string;
+  hourly_rate?: number | null;
+  currency?: string;
+  note?: string;
+  created_by?: string;
+}): Promise<{ report: TimeReport } | { error: string }> {
+  const ids = [...new Set(input.entry_ids)].filter(Boolean);
+  if (!ids.length) return { error: 'Keine Zeiteinträge ausgewählt' };
+  const placeholders = ids.map(() => '?').join(', ');
+  return withTx(async (q) => {
+    const rows = await q.all<{ id: string; report_id: string | null }>(
+      `SELECT id, report_id FROM task_time WHERE id IN (${placeholders})`, ids
+    );
+    if (rows.length !== ids.length) return { error: 'Mindestens ein Zeiteintrag existiert nicht (mehr)' };
+    const taken = rows.filter((r) => r.report_id);
+    if (taken.length) return { error: `${taken.length} Einträge sind bereits in einem Rapport` };
+
+    const id = crypto.randomUUID();
+    const nRow = await q.get<{ n: number }>('SELECT COALESCE(MAX(report_number), 0) + 1 AS n FROM time_reports');
+    const n = nRow?.n || 1;
+    await q.run(
+      `INSERT INTO time_reports (id, report_number, title, hourly_rate, currency, status, note, created_by)
+       VALUES (?, ?, ?, ?, ?, 'entwurf', ?, ?)`,
+      [id, n, (input.title || '').trim() || `Zeitrapport ${formatReportNo(n)}`,
+       input.hourly_rate ?? null, (input.currency || 'EUR').trim().toUpperCase() || 'EUR',
+       (input.note || '').trim(), input.created_by || '']
+    );
+    await q.run(`UPDATE task_time SET report_id = ? WHERE id IN (${placeholders}) AND report_id IS NULL`, [id, ...ids]);
+    await recomputeReportPeriod(q, id);
+    const report = (await q.get<TimeReport>('SELECT * FROM time_reports WHERE id = ?', [id]))!;
+    return { report };
+  });
+}
+
+/** Stammdaten/Status ändern. Finalisieren stempelt finalized_at; final = inhaltlich gesperrt. */
+export async function updateTimeReport(
+  id: string,
+  u: { title?: string; note?: string; hourly_rate?: number | null; currency?: string; status?: TimeReportStatus }
+): Promise<TimeReport | { error: string } | null> {
+  const cur = await dbGet<TimeReport>('SELECT * FROM time_reports WHERE id = ?', [id]);
+  if (!cur) return null;
+  const status = u.status ?? cur.status;
+  if (!['entwurf', 'final'].includes(status)) return { error: 'Ungültiger Status' };
+  if (cur.status === 'final' && status === 'final' && (u.title !== undefined || u.note !== undefined || u.hourly_rate !== undefined || u.currency !== undefined)) {
+    return { error: 'Finalisierte Rapporte können nicht mehr geändert werden (erst auf Entwurf zurücksetzen)' };
+  }
+  const finalizedAt = status === 'final' ? (cur.finalized_at || `${nowLocal().date} ${nowLocal().time}`) : null;
+  await dbRun(
+    `UPDATE time_reports SET title = ?, note = ?, hourly_rate = ?, currency = ?, status = ?, finalized_at = ? WHERE id = ?`,
+    [
+      u.title !== undefined ? String(u.title).trim() : cur.title,
+      u.note !== undefined ? String(u.note) : cur.note,
+      u.hourly_rate !== undefined ? u.hourly_rate : cur.hourly_rate,
+      u.currency !== undefined ? String(u.currency).trim().toUpperCase() || 'EUR' : cur.currency,
+      status, finalizedAt, id,
+    ]
+  );
+  return (await dbGet<TimeReport>('SELECT * FROM time_reports WHERE id = ?', [id])) ?? null;
+}
+
+/** Einträge zu einem Entwurf hinzufügen/entfernen; Zeitraum wird neu berechnet. */
+export async function updateTimeReportEntries(
+  id: string,
+  changes: { add?: string[]; remove?: string[] }
+): Promise<{ ok: true } | { error: string }> {
+  const add = [...new Set(changes.add || [])].filter(Boolean);
+  const remove = [...new Set(changes.remove || [])].filter(Boolean);
+  if (!add.length && !remove.length) return { error: 'Nichts zu ändern' };
+  return withTx(async (q) => {
+    const cur = await q.get<TimeReport>('SELECT * FROM time_reports WHERE id = ?', [id]);
+    if (!cur) return { error: 'Rapport nicht gefunden' };
+    if (cur.status !== 'entwurf') return { error: 'Nur Entwürfe können geändert werden' };
+    if (add.length) {
+      const ph = add.map(() => '?').join(', ');
+      const rows = await q.all<{ id: string; report_id: string | null }>(`SELECT id, report_id FROM task_time WHERE id IN (${ph})`, add);
+      if (rows.length !== add.length) return { error: 'Mindestens ein Zeiteintrag existiert nicht (mehr)' };
+      if (rows.some((r) => r.report_id)) return { error: 'Mindestens ein Eintrag ist bereits in einem Rapport' };
+      await q.run(`UPDATE task_time SET report_id = ? WHERE id IN (${ph}) AND report_id IS NULL`, [id, ...add]);
+    }
+    if (remove.length) {
+      const ph = remove.map(() => '?').join(', ');
+      await q.run(`UPDATE task_time SET report_id = NULL WHERE id IN (${ph}) AND report_id = ?`, [...remove, id]);
+    }
+    await recomputeReportPeriod(q, id);
+    return { ok: true as const };
+  });
+}
+
+/** Entwurf löschen — die enthaltenen Zeiten werden wieder "offen". Finale Rapporte sind gesperrt. */
+export async function deleteTimeReport(id: string): Promise<{ ok: true } | { error: string }> {
+  return withTx(async (q) => {
+    const cur = await q.get<TimeReport>('SELECT * FROM time_reports WHERE id = ?', [id]);
+    if (!cur) return { error: 'Rapport nicht gefunden' };
+    if (cur.status !== 'entwurf') return { error: 'Finalisierte Rapporte können nicht gelöscht werden (erst auf Entwurf zurücksetzen)' };
+    await q.run('UPDATE task_time SET report_id = NULL WHERE report_id = ?', [id]);
+    await q.run('DELETE FROM time_reports WHERE id = ?', [id]);
+    return { ok: true as const };
+  });
 }
 
 // ==================== TASK MESSAGES (Mail-Verlauf pro Ticket) ====================

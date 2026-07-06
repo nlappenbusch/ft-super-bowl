@@ -1,0 +1,494 @@
+'use client';
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import AdminShell from '@/components/admin/AdminShell';
+import {
+  PageHeader, Card, SectionCard, Button, Field, TextInput, SelectInput, Badge, Spinner, StatCard, COLORS,
+} from '@/components/admin/ui';
+import {
+  FileClock, Hourglass, CheckCircle2, FileText, Trash2, Plus, RotateCcw, Lock, X,
+} from 'lucide-react';
+
+interface TimeEntry {
+  id: string;
+  task_id: string;
+  employee_id: string | null;
+  minutes: number;
+  note: string;
+  work_date: string;
+  report_id: string | null;
+  ticket_number: number | null;
+  task_title: string;
+  employee_name: string | null;
+  report_number: number | null;
+  report_status: 'entwurf' | 'final' | null;
+}
+
+interface Stats { open_count: number; open_minutes: number; reported_count: number; reported_minutes: number }
+
+interface Report {
+  id: string;
+  report_number: number | null;
+  title: string;
+  period_from: string;
+  period_to: string;
+  hourly_rate: number | null;
+  currency: string;
+  status: 'entwurf' | 'final';
+  note: string;
+  created_at: string;
+  finalized_at: string | null;
+  entry_count?: number;
+  total_minutes?: number;
+}
+
+interface EmployeeLite { id: string; name: string }
+
+function fmtMin(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return `${h}:${String(m).padStart(2, '0')} h`;
+}
+
+function fmtMoney(v: number): string {
+  return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
+}
+
+function ticketNo(n: number | null | undefined): string {
+  return n && n > 0 ? `TASK-${String(n).padStart(5, '0')}` : '';
+}
+
+function reportNo(n: number | null | undefined): string {
+  return n && n > 0 ? `RAP-${String(n).padStart(4, '0')}` : '';
+}
+
+function fmtDate(d: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || '');
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : (d || '–');
+}
+
+export default function RapportePage() {
+  const [entries, setEntries] = useState<TimeEntry[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [employees, setEmployees] = useState<EmployeeLite[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState('');
+
+  // Filter offene Zeiten
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [employee, setEmployee] = useState('');
+
+  // Auswahl + Rapport-Anlage
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [title, setTitle] = useState('');
+  const [rate, setRate] = useState('');
+  const [currency, setCurrency] = useState('EUR');
+  const [creating, setCreating] = useState(false);
+
+  // Rapport-Detail
+  const [detail, setDetail] = useState<{ report: Report; entries: TimeEntry[]; total_minutes: number } | null>(null);
+  const [detailBusy, setDetailBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setErr('');
+    try {
+      const q = new URLSearchParams();
+      if (from) q.set('from', from);
+      if (to) q.set('to', to);
+      if (employee) q.set('employee', employee);
+      const [re, rr] = await Promise.all([
+        fetch(`/api/admin/time-entries?${q}`).then((x) => x.json()),
+        fetch('/api/admin/time-reports').then((x) => x.json()),
+      ]);
+      if (re.success) { setEntries(re.data.entries); setStats(re.data.stats); } else setErr(re.error || 'Fehler');
+      if (rr.success) setReports(rr.data);
+    } finally {
+      setLoading(false);
+    }
+  }, [from, to, employee]);
+
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    fetch('/api/admin/team').then((r) => r.json()).then((r) => {
+      if (r.success) setEmployees(r.data.map((e: EmployeeLite) => ({ id: e.id, name: e.name })));
+    }).catch(() => {});
+  }, []);
+
+  const openEntries = useMemo(() => entries.filter((e) => !e.report_id), [entries]);
+  const selEntries = useMemo(() => openEntries.filter((e) => sel.has(e.id)), [openEntries, sel]);
+  const selMinutes = selEntries.reduce((s, e) => s + (e.minutes || 0), 0);
+  const allSelected = openEntries.length > 0 && openEntries.every((e) => sel.has(e.id));
+  const draftCount = reports.filter((r) => r.status === 'entwurf').length;
+
+  const toggle = (id: string) => {
+    setSel((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setSel(allSelected ? new Set() : new Set(openEntries.map((e) => e.id)));
+  };
+
+  const openDetail = useCallback(async (id: string) => {
+    setDetailBusy(true);
+    try {
+      const r = await fetch(`/api/admin/time-reports/${id}`).then((x) => x.json());
+      if (r.success) setDetail(r.data); else setErr(r.error || 'Fehler');
+    } finally {
+      setDetailBusy(false);
+    }
+  }, []);
+
+  const createReport = async () => {
+    if (!selEntries.length) return;
+    setCreating(true);
+    setErr('');
+    try {
+      const r = await fetch('/api/admin/time-reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entry_ids: selEntries.map((e) => e.id),
+          title: title.trim() || undefined,
+          hourly_rate: rate.trim() === '' ? null : Number(rate.replace(',', '.')),
+          currency,
+        }),
+      }).then((x) => x.json());
+      if (!r.success) { setErr(r.error || 'Fehler beim Erstellen'); return; }
+      setSel(new Set());
+      setTitle('');
+      await load();
+      await openDetail(r.data.id);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const patchReport = async (id: string, body: Record<string, unknown>) => {
+    setErr('');
+    const r = await fetch(`/api/admin/time-reports/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    }).then((x) => x.json());
+    if (!r.success) { setErr(r.error || 'Fehler'); return; }
+    await load();
+    await openDetail(id);
+  };
+
+  const removeEntry = async (reportId: string, entryId: string) => {
+    setErr('');
+    const r = await fetch(`/api/admin/time-reports/${reportId}/entries`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ remove: [entryId] }),
+    }).then((x) => x.json());
+    if (!r.success) { setErr(r.error || 'Fehler'); return; }
+    await load();
+    await openDetail(reportId);
+  };
+
+  const delReport = async (id: string) => {
+    if (!confirm('Rapport löschen? Die enthaltenen Zeiten werden wieder als offen geführt.')) return;
+    setErr('');
+    const r = await fetch(`/api/admin/time-reports/${id}`, { method: 'DELETE' }).then((x) => x.json());
+    if (!r.success) { setErr(r.error || 'Fehler'); return; }
+    setDetail(null);
+    await load();
+  };
+
+  const reportAmount = (r: Report): string => {
+    if (r.hourly_rate == null || r.total_minutes == null) return '–';
+    return `${fmtMoney((r.total_minutes / 60) * r.hourly_rate)} ${r.currency}`;
+  };
+
+  return (
+    <AdminShell title="Zeit-Rapporte">
+      <PageHeader
+        title="Zeit-Rapporte"
+        description="Auf Tickets gebuchte Zeiten abrechnen: offene Zeiten auswählen → Rapport erstellen → als PDF exportieren. Jede Zeitbuchung ist entweder offen oder genau einem Rapport zugeordnet."
+      />
+
+      {/* Übersicht */}
+      {stats && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <StatCard
+            icon={<Hourglass className="h-5 w-5" />}
+            label="Offen (nicht rapportiert)"
+            value={fmtMin(stats.open_minutes)}
+            sub={`${stats.open_count} ${stats.open_count === 1 ? 'Eintrag' : 'Einträge'}`}
+            tone={stats.open_minutes > 0 ? 'warn' : 'ok'}
+          />
+          <StatCard
+            icon={<CheckCircle2 className="h-5 w-5" />}
+            label="Rapportiert"
+            value={fmtMin(stats.reported_minutes)}
+            sub={`${stats.reported_count} ${stats.reported_count === 1 ? 'Eintrag' : 'Einträge'}`}
+            tone="ok"
+          />
+          <StatCard
+            icon={<FileClock className="h-5 w-5" />}
+            label="Rapporte"
+            value={String(reports.length)}
+            sub={draftCount ? `davon ${draftCount} im Entwurf` : 'alle finalisiert'}
+            tone="navy"
+          />
+        </div>
+      )}
+
+      {err && <Card className="mt-6"><span className="text-sm font-semibold" style={{ color: COLORS.danger }}>{err}</span></Card>}
+
+      {/* Offene Zeiten */}
+      <SectionCard
+        title="Offene Zeiten"
+        icon={<Hourglass className="h-4 w-4" />}
+        description="Noch nicht rapportierte Zeitbuchungen. Auswählen und daraus einen Rapport erstellen."
+        className="mt-6"
+      >
+        <div className="mb-4 flex flex-wrap items-end gap-3">
+          <Field label="Von">
+            <TextInput type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-40" />
+          </Field>
+          <Field label="Bis">
+            <TextInput type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-40" />
+          </Field>
+          <Field label="Mitarbeiter">
+            <SelectInput value={employee} onChange={(e) => setEmployee(e.target.value)} className="w-48">
+              <option value="">Alle</option>
+              {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+            </SelectInput>
+          </Field>
+          {(from || to || employee) && (
+            <Button size="sm" variant="ghost" onClick={() => { setFrom(''); setTo(''); setEmployee(''); }}>
+              <X className="h-3.5 w-3.5" /> Filter zurücksetzen
+            </Button>
+          )}
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-10"><Spinner /></div>
+        ) : openEntries.length === 0 ? (
+          <p className="text-sm" style={{ color: COLORS.textMuted }}>
+            Keine offenen Zeiten {from || to || employee ? 'im gewählten Filter' : ''} — alles rapportiert. 🎉
+          </p>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs uppercase tracking-wide" style={{ color: COLORS.textMuted }}>
+                    <th className="py-2 pr-3">
+                      <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Alle auswählen" />
+                    </th>
+                    <th className="py-2 pr-4">Datum</th>
+                    <th className="py-2 pr-4">Ticket</th>
+                    <th className="py-2 pr-4">Mitarbeiter</th>
+                    <th className="py-2 pr-4">Tätigkeit</th>
+                    <th className="py-2 text-right">Zeit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {openEntries.map((e) => (
+                    <tr
+                      key={e.id}
+                      className="cursor-pointer border-t"
+                      style={{ borderColor: COLORS.stroke, background: sel.has(e.id) ? '#fff7ed' : undefined }}
+                      onClick={() => toggle(e.id)}
+                    >
+                      <td className="py-2 pr-3">
+                        <input type="checkbox" checked={sel.has(e.id)} onChange={() => toggle(e.id)} onClick={(ev) => ev.stopPropagation()} />
+                      </td>
+                      <td className="py-2 pr-4 tabular-nums whitespace-nowrap">{fmtDate(e.work_date)}</td>
+                      <td className="py-2 pr-4">
+                        <span className="font-semibold whitespace-nowrap" style={{ color: COLORS.navy }}>{ticketNo(e.ticket_number) || '–'}</span>
+                        <span className="ml-2 hidden text-xs sm:inline" style={{ color: COLORS.textMuted }}>{e.task_title}</span>
+                      </td>
+                      <td className="py-2 pr-4 whitespace-nowrap">{e.employee_name || <span style={{ color: COLORS.textMuted }}>Extern (API)</span>}</td>
+                      <td className="py-2 pr-4 text-xs" style={{ color: COLORS.textMuted }}>{e.note || '–'}</td>
+                      <td className="py-2 text-right font-semibold tabular-nums whitespace-nowrap" style={{ color: COLORS.navy }}>{fmtMin(e.minutes)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Rapport erstellen */}
+            <div className="mt-4 rounded-xl border p-4" style={{ borderColor: COLORS.stroke, background: '#fafbfc' }}>
+              <div className="mb-3 text-sm font-bold" style={{ color: COLORS.navy }}>
+                {sel.size > 0
+                  ? `${sel.size} ${sel.size === 1 ? 'Eintrag' : 'Einträge'} · ${fmtMin(selMinutes)} ausgewählt`
+                  : 'Einträge auswählen, um einen Rapport zu erstellen'}
+              </div>
+              <div className="flex flex-wrap items-end gap-3">
+                <Field label="Titel (optional)">
+                  <TextInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder="z. B. Entwicklung Juni 2026" className="w-64" />
+                </Field>
+                <Field label="Stundensatz (optional)">
+                  <TextInput type="number" min="0" step="0.01" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="—" className="w-32" />
+                </Field>
+                <Field label="Währung">
+                  <SelectInput value={currency} onChange={(e) => setCurrency(e.target.value)} className="w-28">
+                    <option value="EUR">EUR</option>
+                    <option value="CHF">CHF</option>
+                  </SelectInput>
+                </Field>
+                <Button variant="accent" onClick={createReport} disabled={creating || sel.size === 0}>
+                  {creating ? <Spinner className="h-4 w-4" /> : <Plus className="h-4 w-4" />} Rapport erstellen
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+      </SectionCard>
+
+      {/* Rapporte */}
+      <SectionCard
+        title="Rapporte"
+        icon={<FileClock className="h-4 w-4" />}
+        description="Entwürfe können geändert oder gelöscht werden; finalisierte Rapporte sind gesperrt."
+        className="mt-6"
+      >
+        {reports.length === 0 ? (
+          <p className="text-sm" style={{ color: COLORS.textMuted }}>Noch keine Rapporte erstellt.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide" style={{ color: COLORS.textMuted }}>
+                  <th className="py-2 pr-4">Nr.</th>
+                  <th className="py-2 pr-4">Titel</th>
+                  <th className="py-2 pr-4">Zeitraum</th>
+                  <th className="py-2 pr-4 text-right">Einträge</th>
+                  <th className="py-2 pr-4 text-right">Zeit</th>
+                  <th className="py-2 pr-4 text-right">Betrag</th>
+                  <th className="py-2 pr-4">Status</th>
+                  <th className="py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {reports.map((r) => (
+                  <tr
+                    key={r.id}
+                    className="cursor-pointer border-t transition-colors hover:bg-slate-50"
+                    style={{ borderColor: COLORS.stroke, background: detail?.report.id === r.id ? '#f0f6ff' : undefined }}
+                    onClick={() => openDetail(r.id)}
+                  >
+                    <td className="py-2 pr-4 font-bold whitespace-nowrap" style={{ color: COLORS.navy }}>{reportNo(r.report_number)}</td>
+                    <td className="py-2 pr-4">{r.title}</td>
+                    <td className="py-2 pr-4 tabular-nums whitespace-nowrap">{r.period_from ? `${fmtDate(r.period_from)} – ${fmtDate(r.period_to)}` : '–'}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums">{r.entry_count ?? '–'}</td>
+                    <td className="py-2 pr-4 text-right font-semibold tabular-nums whitespace-nowrap" style={{ color: COLORS.navy }}>{fmtMin(r.total_minutes || 0)}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums whitespace-nowrap">{reportAmount(r)}</td>
+                    <td className="py-2 pr-4">
+                      <Badge tone={r.status === 'final' ? 'ok' : 'warn'}>{r.status === 'final' ? 'Final' : 'Entwurf'}</Badge>
+                    </td>
+                    <td className="py-2 text-right whitespace-nowrap">
+                      <a
+                        href={`/api/admin/time-reports/${r.id}/pdf`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(ev) => ev.stopPropagation()}
+                        className="inline-flex items-center gap-1 text-xs font-bold hover:underline"
+                        style={{ color: COLORS.accent }}
+                      >
+                        <FileText className="h-3.5 w-3.5" /> PDF
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SectionCard>
+
+      {/* Rapport-Detail */}
+      {(detail || detailBusy) && (
+        <SectionCard
+          title={detail ? `${reportNo(detail.report.report_number)} – ${detail.report.title}` : 'Rapport'}
+          icon={detail?.report.status === 'final' ? <Lock className="h-4 w-4" /> : <FileClock className="h-4 w-4" />}
+          className="mt-6"
+          actions={detail ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <a href={`/api/admin/time-reports/${detail.report.id}/pdf`} target="_blank" rel="noreferrer">
+                <Button size="sm" variant="secondary"><FileText className="h-4 w-4" /> PDF</Button>
+              </a>
+              {detail.report.status === 'entwurf' ? (
+                <>
+                  <Button size="sm" variant="accent" onClick={() => patchReport(detail.report.id, { status: 'final' })}>
+                    <CheckCircle2 className="h-4 w-4" /> Finalisieren
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => delReport(detail.report.id)}>
+                    <Trash2 className="h-4 w-4" /> Löschen
+                  </Button>
+                </>
+              ) : (
+                <Button size="sm" variant="ghost" onClick={() => patchReport(detail.report.id, { status: 'entwurf' })}>
+                  <RotateCcw className="h-4 w-4" /> Auf Entwurf zurücksetzen
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" onClick={() => setDetail(null)} aria-label="Schließen"><X className="h-4 w-4" /></Button>
+            </div>
+          ) : undefined}
+        >
+          {!detail ? (
+            <div className="flex justify-center py-8"><Spinner /></div>
+          ) : (
+            <>
+              <div className="mb-4 flex flex-wrap gap-x-8 gap-y-1 text-sm">
+                <span><span style={{ color: COLORS.textMuted }}>Zeitraum:</span> <strong>{detail.report.period_from ? `${fmtDate(detail.report.period_from)} – ${fmtDate(detail.report.period_to)}` : '–'}</strong></span>
+                <span><span style={{ color: COLORS.textMuted }}>Gesamtzeit:</span> <strong style={{ color: COLORS.navy }}>{fmtMin(detail.total_minutes)}</strong></span>
+                {detail.report.hourly_rate != null && (
+                  <span><span style={{ color: COLORS.textMuted }}>Betrag ({fmtMoney(detail.report.hourly_rate)} {detail.report.currency}/h):</span>{' '}
+                    <strong style={{ color: COLORS.accent }}>{fmtMoney((detail.total_minutes / 60) * detail.report.hourly_rate)} {detail.report.currency}</strong>
+                  </span>
+                )}
+                <span>
+                  <Badge tone={detail.report.status === 'final' ? 'ok' : 'warn'}>
+                    {detail.report.status === 'final' ? `Finalisiert${detail.report.finalized_at ? ` am ${fmtDate(detail.report.finalized_at)}` : ''}` : 'Entwurf'}
+                  </Badge>
+                </span>
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs uppercase tracking-wide" style={{ color: COLORS.textMuted }}>
+                    <th className="py-2 pr-4">Datum</th>
+                    <th className="py-2 pr-4">Ticket</th>
+                    <th className="py-2 pr-4">Mitarbeiter</th>
+                    <th className="py-2 pr-4">Tätigkeit</th>
+                    <th className="py-2 text-right">Zeit</th>
+                    {detail.report.status === 'entwurf' && <th className="py-2"></th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {detail.entries.map((e) => (
+                    <tr key={e.id} className="border-t" style={{ borderColor: COLORS.stroke }}>
+                      <td className="py-2 pr-4 tabular-nums whitespace-nowrap">{fmtDate(e.work_date)}</td>
+                      <td className="py-2 pr-4">
+                        <span className="font-semibold whitespace-nowrap" style={{ color: COLORS.navy }}>{ticketNo(e.ticket_number) || '–'}</span>
+                        <span className="ml-2 hidden text-xs sm:inline" style={{ color: COLORS.textMuted }}>{e.task_title}</span>
+                      </td>
+                      <td className="py-2 pr-4 whitespace-nowrap">{e.employee_name || <span style={{ color: COLORS.textMuted }}>Extern (API)</span>}</td>
+                      <td className="py-2 pr-4 text-xs" style={{ color: COLORS.textMuted }}>{e.note || '–'}</td>
+                      <td className="py-2 text-right font-semibold tabular-nums whitespace-nowrap" style={{ color: COLORS.navy }}>{fmtMin(e.minutes)}</td>
+                      {detail.report.status === 'entwurf' && (
+                        <td className="py-2 text-right">
+                          <Button size="sm" variant="ghost" onClick={() => removeEntry(detail.report.id, e.id)} aria-label="Aus Rapport entfernen">
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+        </SectionCard>
+      )}
+    </AdminShell>
+  );
+}

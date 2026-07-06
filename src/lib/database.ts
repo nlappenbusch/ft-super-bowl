@@ -312,9 +312,26 @@ export function initDatabase() {
       minutes INTEGER NOT NULL DEFAULT 0,
       note TEXT NOT NULL DEFAULT '',
       work_date TEXT NOT NULL DEFAULT '',
+      report_id TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_task_time_task ON task_time(task_id);
+    CREATE INDEX IF NOT EXISTS idx_task_time_report ON task_time(report_id);
+
+    CREATE TABLE IF NOT EXISTS time_reports (
+      id TEXT PRIMARY KEY,
+      report_number INTEGER,
+      title TEXT NOT NULL DEFAULT '',
+      period_from TEXT NOT NULL DEFAULT '',
+      period_to TEXT NOT NULL DEFAULT '',
+      hourly_rate REAL,
+      currency TEXT NOT NULL DEFAULT 'EUR',
+      status TEXT NOT NULL DEFAULT 'entwurf' CHECK(status IN ('entwurf','final')),
+      note TEXT NOT NULL DEFAULT '',
+      created_by TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      finalized_at TEXT
+    );
 
     CREATE TABLE IF NOT EXISTS task_messages (
       id TEXT PRIMARY KEY,
@@ -477,6 +494,7 @@ export function initDatabase() {
   }
   const ttcols = sqlite.prepare(`PRAGMA table_info(task_time)`).all() as Array<{ name: string }>;
   if (ttcols.length && !ttcols.some((c) => c.name === 'work_date')) addColumn('task_time', "work_date TEXT NOT NULL DEFAULT ''");
+  if (ttcols.length && !ttcols.some((c) => c.name === 'report_id')) addColumn('task_time', 'report_id TEXT');
   // Backfill: bestehende Tasks ohne Nummer fortlaufend ab 10 nummerieren (nach Erstellzeit).
   try {
     const missing = sqlite.prepare(`SELECT id FROM staff_tasks WHERE ticket_number IS NULL ORDER BY created_at, id`).all() as Array<{ id: string }>;
