@@ -50,3 +50,6 @@ next-env.d.ts
 /Faltin-Travel_System-Status*.pdf
 /_srp_test*.cjs
 /Faltin-Travel_SEO*.pdf
+
+# Claude-Code-Worktrees (lokal)
+.claude/worktrees/
