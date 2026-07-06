@@ -150,9 +150,33 @@ async function createTicketFromMail(m: GraphInboxMessage, mailbox: string): Prom
         body: html,
         created_by: 'System (Auto-Create)',
       });
+    } else {
+      // Fehlschlag SICHTBAR am Ticket protokollieren statt nur in der
+      // Server-Console — sonst fällt ein kaputter Mail-Versand nie auf.
+      await addTaskMessage({
+        task_id: task.id,
+        direction: 'out',
+        from_email: mailbox,
+        to_email: m.fromAddress,
+        subject: `⚠️ Eingangsbestätigung NICHT gesendet`,
+        body: `Der Versand der Eingangsbestätigung an ${m.fromAddress} ist fehlgeschlagen: ${sent.error || 'unbekannter Fehler'}. Bitte Graph-/Postfach-Konfiguration prüfen (Admin → E-Mail) und manuell antworten.`,
+        created_by: 'System (Auto-Create)',
+      });
+      console.error('[inbound-poll] Bestätigungsmail fehlgeschlagen:', sent.error);
     }
   } catch (err) {
     console.error('[inbound-poll] Bestätigungsmail fehlgeschlagen:', err);
+    try {
+      await addTaskMessage({
+        task_id: task.id,
+        direction: 'out',
+        from_email: mailbox,
+        to_email: m.fromAddress,
+        subject: `⚠️ Eingangsbestätigung NICHT gesendet`,
+        body: `Der Versand der Eingangsbestätigung an ${m.fromAddress} ist fehlgeschlagen: ${(err as Error).message}. Bitte Graph-/Postfach-Konfiguration prüfen und manuell antworten.`,
+        created_by: 'System (Auto-Create)',
+      });
+    } catch { /* non-fatal */ }
   }
 }
 
