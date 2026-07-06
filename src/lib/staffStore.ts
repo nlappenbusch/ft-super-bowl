@@ -553,6 +553,43 @@ export async function deleteTaskTime(id: string): Promise<boolean> {
   return (await dbRun('DELETE FROM task_time WHERE id = ? AND report_id IS NULL', [id])).changes > 0;
 }
 
+/**
+ * Zeitbuchung nachträglich justieren (Mitarbeiter, Minuten, Leistungsdatum, Notiz).
+ * Einträge in FINALISIERTEN Rapporten sind gesperrt; liegt der Eintrag in einem
+ * Entwurf, wird dessen Zeitraum nach der Änderung neu berechnet.
+ */
+export async function updateTaskTime(
+  id: string,
+  u: { minutes?: number; note?: string; work_date?: string; employee_id?: string | null }
+): Promise<TaskTime | { error: string } | null> {
+  return withTx(async (q) => {
+    const cur = await q.get<TaskTime & { report_status: TimeReportStatus | null }>(`
+      SELECT t.*, r.status AS report_status
+      FROM task_time t LEFT JOIN time_reports r ON r.id = t.report_id
+      WHERE t.id = ?`, [id]);
+    if (!cur) return null;
+    if (cur.report_status === 'final') {
+      return { error: 'Eintrag gehört zu einem finalisierten Rapport (erst auf Entwurf zurücksetzen)' };
+    }
+    const minutes = u.minutes !== undefined ? Math.round(Number(u.minutes)) : cur.minutes;
+    if (!minutes || minutes <= 0) return { error: 'Minuten müssen größer 0 sein' };
+    const workDate = u.work_date !== undefined ? String(u.work_date) : cur.work_date;
+    if (workDate && !/^\d{4}-\d{2}-\d{2}$/.test(workDate)) return { error: 'Datum im Format JJJJ-MM-TT erwartet' };
+    const note = u.note !== undefined ? String(u.note) : cur.note;
+    const employeeId = u.employee_id !== undefined ? (u.employee_id || null) : cur.employee_id;
+    if (u.employee_id !== undefined && employeeId) {
+      const emp = await q.get<{ id: string }>('SELECT id FROM employees WHERE id = ?', [employeeId]);
+      if (!emp) return { error: 'Mitarbeiter nicht gefunden' };
+    }
+    await q.run(
+      'UPDATE task_time SET minutes = ?, note = ?, work_date = ?, employee_id = ? WHERE id = ?',
+      [minutes, note, workDate, employeeId, id]
+    );
+    if (cur.report_id) await recomputeReportPeriod(q, cur.report_id);
+    return (await q.get<TaskTime>('SELECT * FROM task_time WHERE id = ?', [id]))!;
+  });
+}
+
 // ==================== ZEIT-RAPPORTE (abrechenbare Zeiten) ====================
 
 export type TimeReportStatus = 'entwurf' | 'final';
