@@ -32,15 +32,32 @@ function ticketNo(n: number | null): string {
 
 interface EmployeeLite { id: string; name: string }
 
-const COLUMNS: Array<{ id: StaffTask['status']; label: string }> = [
+/** Board-Spalten: beide Warte-Status teilen sich eine Spalte (Umschalter auf der Karte). */
+type BoardCol = 'offen' | 'in_arbeit' | 'warten' | 'erledigt';
+
+const COLUMNS: Array<{ id: BoardCol; label: string }> = [
   { id: 'offen', label: 'Offen' },
   { id: 'in_arbeit', label: 'In Arbeit' },
-  { id: 'warten_requester', label: 'Warten auf Requester' },
-  { id: 'warten_dritte', label: 'Warten auf Dritte' },
+  { id: 'warten', label: 'Wartet auf …' },
   { id: 'erledigt', label: 'Erledigt' },
 ];
 
+const isWaiting = (s: TaskStatus) => s === 'warten_requester' || s === 'warten_dritte';
+const colOf = (s: TaskStatus): BoardCol => (isWaiting(s) ? 'warten' : (s as BoardCol));
+
 const PRIO_TONE = { niedrig: 'muted', normal: 'info', hoch: 'danger' } as const;
+const PRIO_RANK = { hoch: 0, normal: 1, niedrig: 2 } as const;
+
+/** Sortierung innerhalb einer Spalte: Priorität → Fälligkeit → neueste zuerst. */
+function sortColumn(list: StaffTask[]): StaffTask[] {
+  return [...list].sort((a, b) =>
+    (PRIO_RANK[a.priority] - PRIO_RANK[b.priority])
+    || (a.due_date || '9999').localeCompare(b.due_date || '9999')
+    || (b.created_at || '').localeCompare(a.created_at || ''));
+}
+
+/** In "Erledigt" nur die jüngsten Karten anzeigen, damit die Spalte nicht endlos wächst. */
+const DONE_LIMIT = 12;
 
 function DropColumn({ id, children }: { id: string; children: ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id });
@@ -56,7 +73,7 @@ function DropColumn({ id, children }: { id: string; children: ReactNode }) {
 }
 
 function TaskCard({
-  t, today, employees, empName, onOpen, onMove, onRemove, onAssign,
+  t, today, employees, empName, onOpen, onMove, onRemove, onAssign, onToggleWait,
 }: {
   t: StaffTask;
   today: string;
@@ -66,6 +83,7 @@ function TaskCard({
   onMove: (t: StaffTask, dir: 1 | -1) => void;
   onRemove: (id: string) => void;
   onAssign: (id: string, v: string | null) => void;
+  onToggleWait: (t: StaffTask) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: t.id });
   const style: CSSProperties = {
@@ -92,11 +110,21 @@ function TaskCard({
                 <span className="mb-0.5 inline-block font-mono text-[10px] font-bold tracking-wide" style={{ color: COLORS.accent }}>{ticketNo(t.ticket_number)}</span>
               )}
               <div className="font-semibold" style={{ color: COLORS.navy }}>{t.title}</div>
-              {t.description && <p className="mt-1 text-xs" style={{ color: COLORS.textMuted }}>{t.description}</p>}
+              {t.description && <p className="mt-1 line-clamp-2 text-xs" style={{ color: COLORS.textMuted }}>{t.description}</p>}
             </div>
           </div>
           <Badge tone={PRIO_TONE[t.priority]}>{t.priority}</Badge>
         </div>
+        {isWaiting(t.status) && (
+          <button
+            onClick={() => onToggleWait(t)}
+            className="mt-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition hover:opacity-80"
+            style={{ borderColor: '#f4c169', background: '#fdf3df', color: '#8a5a00' }}
+            title="Klicken zum Umschalten: Requester ↔ Extern"
+          >
+            ⏳ Wartet auf: {t.status === 'warten_requester' ? (t.created_by || 'Requester') : 'Extern (Dritte)'}
+          </button>
+        )}
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs" style={{ color: COLORS.textMuted }}>
           <span>👤 {empName(t.assignee_id)}</span>
           {t.created_by && <span title="Erstellt von">✍️ {t.created_by}</span>}
@@ -109,8 +137,8 @@ function TaskCard({
         </div>
         <div className="mt-3 flex items-center justify-between border-t pt-2" style={{ borderColor: COLORS.stroke }}>
           <div className="flex gap-1">
-            <Button size="sm" variant="ghost" onClick={() => onMove(t, -1)} disabled={t.status === 'offen'} title="Zurück"><ChevronLeft className="h-3.5 w-3.5" /></Button>
-            <Button size="sm" variant="ghost" onClick={() => onMove(t, 1)} disabled={t.status === 'erledigt'} title="Weiter"><ChevronRight className="h-3.5 w-3.5" /></Button>
+            <Button size="sm" variant="ghost" onClick={() => onMove(t, -1)} disabled={colOf(t.status) === 'offen'} title="Zurück"><ChevronLeft className="h-3.5 w-3.5" /></Button>
+            <Button size="sm" variant="ghost" onClick={() => onMove(t, 1)} disabled={colOf(t.status) === 'erledigt'} title="Weiter"><ChevronRight className="h-3.5 w-3.5" /></Button>
           </div>
           <div className="flex items-center gap-1">
             <SelectInput value={t.assignee_id || ''} onChange={(e) => onAssign(t.id, e.target.value || null)} className="!w-32 !py-1 !text-xs">
@@ -205,20 +233,34 @@ export default function AufgabenPage() {
     await load();
   };
 
+  /** Ziel-Status beim Wechsel in eine Board-Spalte (Warten-Spalte → Default Requester). */
+  const statusForCol = (t: StaffTask, col: BoardCol): TaskStatus =>
+    col === 'warten' ? (isWaiting(t.status) ? t.status : 'warten_requester') : col;
+
   const moveStatus = (t: StaffTask, dir: 1 | -1) => {
-    const idx = COLUMNS.findIndex((c) => c.id === t.status);
+    const idx = COLUMNS.findIndex((c) => c.id === colOf(t.status));
     const next = COLUMNS[idx + dir];
-    if (next) patch(t.id, { status: next.id });
+    if (next) patch(t.id, { status: statusForCol(t, next.id) });
+  };
+
+  /** Umschalter auf der Karte: Wartet auf Requester ↔ Extern (Dritte). */
+  const toggleWait = (t: StaffTask) => {
+    const newStatus: TaskStatus = t.status === 'warten_requester' ? 'warten_dritte' : 'warten_requester';
+    setTasks((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: newStatus } : x)));
+    fetch(`/api/admin/tasks/${t.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }),
+    }).catch(() => load());
   };
 
   // Drag & Drop (dnd-kit): Karte in die Ziel-Spalte verschieben (optimistisch + persistiert)
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over) return;
-    const newStatus = String(over.id) as StaffTask['status'];
+    const col = String(over.id) as BoardCol;
     const id = String(active.id);
     const t = tasks.find((x) => x.id === id);
-    if (!t || t.status === newStatus) return;
+    if (!t || colOf(t.status) === col) return;
+    const newStatus = statusForCol(t, col);
     setTasks((prev) => prev.map((x) => (x.id === id ? { ...x, status: newStatus } : x)));
     fetch(`/api/admin/tasks/${id}`, {
       method: 'PATCH',
@@ -230,7 +272,7 @@ export default function AufgabenPage() {
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <AdminShell title="Aufgaben">
+    <AdminShell title="Aufgaben" wide>
       <PageHeader
         title="Aufgaben"
         description="Interne Tasks – per Drag & Drop verschieben, zuweisen, mit Fälligkeit und Priorität."
@@ -280,15 +322,18 @@ export default function AufgabenPage() {
         <div className="flex justify-center py-16"><Spinner /></div>
       ) : (
         <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-          <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+          {/* Volle Breite; unterhalb von 4 × ~290px scrollt das Board horizontal statt zu quetschen. */}
+          <div className="mt-6 flex gap-4 overflow-x-auto pb-4">
             {COLUMNS.map((col) => {
-              const colTasks = tasks.filter((t) => t.status === col.id);
+              const all = sortColumn(tasks.filter((t) => colOf(t.status) === col.id));
+              const colTasks = col.id === 'erledigt' ? all.slice(0, DONE_LIMIT) : all;
+              const hidden = all.length - colTasks.length;
               return (
-                <div key={col.id}>
+                <div key={col.id} className="min-w-[290px] flex-1">
                   <div className="mb-2 flex items-center gap-2 px-1">
                     <ListTodo className="h-4 w-4" style={{ color: COLORS.textMuted }} />
-                    <span className="text-sm font-bold" style={{ color: COLORS.navy }}>{col.label}</span>
-                    <Badge tone="muted">{colTasks.length}</Badge>
+                    <span className="whitespace-nowrap text-sm font-bold" style={{ color: COLORS.navy }}>{col.label}</span>
+                    <Badge tone="muted">{all.length}</Badge>
                   </div>
                   <DropColumn id={col.id}>
                     {colTasks.length === 0 && (
@@ -305,8 +350,14 @@ export default function AufgabenPage() {
                         onMove={moveStatus}
                         onRemove={remove}
                         onAssign={(id, v) => patch(id, { assignee_id: v })}
+                        onToggleWait={toggleWait}
                       />
                     ))}
+                    {hidden > 0 && (
+                      <p className="px-1 py-2 text-center text-xs" style={{ color: COLORS.textMuted }}>
+                        + {hidden} ältere erledigte Aufgaben (über den Mitarbeiter-Filter weiterhin auffindbar)
+                      </p>
+                    )}
                   </DropColumn>
                 </div>
               );

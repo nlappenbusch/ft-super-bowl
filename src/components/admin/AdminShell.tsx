@@ -19,6 +19,8 @@ async function doLogout() {
 interface AdminShellProps {
   title: string;
   children: React.ReactNode;
+  /** Volle Content-Breite (z.B. für Board-Ansichten) statt max-w-7xl. */
+  wide?: boolean;
 }
 
 interface NavItem { href: string; label: string; icon: React.ReactNode; exact?: boolean }
@@ -253,7 +255,7 @@ function SidebarContent({ pathname, onNavigate, user }: { pathname: string; onNa
   );
 }
 
-export default function AdminShell({ title, children }: AdminShellProps) {
+export default function AdminShell({ title, children, wide }: AdminShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<{ name: string; src: string } | null>(null);
@@ -296,7 +298,7 @@ export default function AdminShell({ title, children }: AdminShellProps) {
             </div>
           </header>
 
-          <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+          <main className={`mx-auto ${wide ? 'max-w-none' : 'max-w-7xl'} px-4 py-6 sm:px-6 lg:px-8`}>{children}</main>
         </div>
       </div>
   );

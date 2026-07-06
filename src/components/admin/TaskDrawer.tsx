@@ -29,8 +29,8 @@ const PRIO_TONE = { niedrig: 'muted', normal: 'info', hoch: 'danger' } as const;
 const STATUS_LABEL: Record<TaskStatus, string> = {
   offen: 'Offen',
   in_arbeit: 'In Arbeit',
-  warten_requester: 'Warten auf Requester',
-  warten_dritte: 'Warten auf Dritte',
+  warten_requester: 'Wartet auf Rückmeldung (Requester)',
+  warten_dritte: 'Wartet auf Extern (Dritte)',
   erledigt: 'Erledigt',
 };
 
