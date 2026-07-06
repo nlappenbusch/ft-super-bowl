@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Faltin Travel – Event Shortcodes
  * Description: SEO-freundliche, serverseitig gerenderte Event-Karten, Package-Karten + natives Anfrageformular. Shortcodes: [faltin_events serie="..."], [faltin_event event="..."], [faltin_packages event="..."], [faltin_anfrage event="..."].
- * Version: 1.8.1
+ * Version: 1.8.2
  * Author: Faltin Travel AG
  *
  * 1.8.0: Deploy-/Ausfall-Fallback: (1) Letzter guter API-Stand wird 7 Tage als
@@ -44,28 +44,32 @@ define('FALTIN_EVENTS_DEFAULT_API', 'https://next.faltintravel.com');
 
 /* ─── Daten laden (mit Transient-Cache) ──────────────────────────────────── */
 
+/** Plattform als nicht erreichbar markiert? (gesetzt für 90 s nach einem Fetch-Fehler) */
+function faltin_api_is_down() {
+    return (bool) get_transient('faltin_api_down');
+}
+
 function faltin_events_fetch($url, $cache_seconds = 600) {
     $key = 'faltin_ev_' . md5($url);
-    $bk  = 'faltin_ev_bk_' . md5($url); // Backup: letzter guter Stand (für Deploys/Ausfälle)
     if ($cache_seconds > 0) {
         $cached = get_transient($key);
         if ($cached !== false) return $cached;
     }
+    // Plattform als down markiert → gar nicht erst anfragen. So zeigen ALLE
+    // Shortcodes konsistent die Wartungsbox und die API wird nicht gehämmert.
+    if (faltin_api_is_down()) return null;
     $res = wp_remote_get($url, array('timeout' => 10));
     if (is_wp_error($res) || wp_remote_retrieve_response_code($res) !== 200) {
-        // Plattform gerade nicht erreichbar (z.B. Deploy) → letzten guten Stand ausliefern.
-        $stale = get_transient($bk);
-        if ($stale !== false) {
-            if ($cache_seconds > 0) set_transient($key, $stale, 60); // kurz cachen, API nicht hämmern
-            return $stale;
-        }
+        // Plattform gerade nicht erreichbar (z.B. Deploy) → KEIN Stale-Inhalt:
+        // gecachte Karten würden mit kaputten (hotverlinkten) Bildern und
+        // funktionslosen Formularen erscheinen. Stattdessen Wartungsbox.
+        set_transient('faltin_api_down', 1, 90); // nach 90 s automatisch neuer Versuch
         return null;
     }
     $json = json_decode(wp_remote_retrieve_body($res), true);
     if (empty($json['success'])) return null;
     $data = $json['data'];
     if ($cache_seconds > 0) set_transient($key, $data, $cache_seconds);
-    set_transient($bk, $data, 7 * DAY_IN_SECONDS);
     return $data;
 }
 
@@ -170,7 +174,7 @@ function faltin_events_card($e, $cta) {
     <a class="ft-ev-card" href="<?php echo esc_url($e['url']); ?>">
       <div class="ft-ev-img">
         <?php if (!empty($e['hero_image'])): ?>
-          <img src="<?php echo esc_url($e['hero_image']); ?>" alt="<?php echo esc_attr($e['name'] ?: $e['title']); ?>" loading="lazy" />
+          <img src="<?php echo esc_url($e['hero_image']); ?>" alt="<?php echo esc_attr($e['name'] ?: $e['title']); ?>" loading="lazy" onerror="this.style.display='none'" />
         <?php endif; ?>
         <?php if ($date): ?><span class="ft-ev-date"><?php echo esc_html($date); ?></span><?php endif; ?>
       </div>
@@ -241,7 +245,7 @@ function faltin_event_single_shortcode($atts) {
     <div class="ft-ev-single">
       <div class="ft-ev-img">
         <?php if (!empty($e['hero_image'])): ?>
-          <img src="<?php echo esc_url($e['hero_image']); ?>" alt="<?php echo esc_attr($e['name'] ?: $e['title']); ?>" loading="lazy" />
+          <img src="<?php echo esc_url($e['hero_image']); ?>" alt="<?php echo esc_attr($e['name'] ?: $e['title']); ?>" loading="lazy" onerror="this.style.display='none'" />
         <?php endif; ?>
         <?php if ($date): ?><span class="ft-ev-date"><?php echo esc_html($date); ?></span><?php endif; ?>
       </div>
@@ -325,6 +329,10 @@ function faltin_anfrage_shortcode($atts) {
         'packages' => 'auto', // auto = Package-Karten ausliefern, wenn das Event welche hat; 0/off = immer Formular
         'cache' => 600,
     ), $atts, 'faltin_anfrage');
+
+    // Plattform down → auch das reine Formular nicht rendern (Absenden würde
+    // scheitern); gilt ebenso für packages="0" und die allgemeine Anfrage.
+    if (faltin_api_is_down()) return faltin_events_maintenance_box();
 
     // Wie auf der Faltin-Event-Seite: hat das Event buchbare Packages, zeigen
     // wir die Karten statt des Formulars — bestehende [faltin_anfrage]-
