@@ -229,7 +229,7 @@ export default function TaskDrawer({ task, onClose, onChanged }: { task: Task; o
         {/* Beschreibung */}
         <div className="mb-6">
           <label className="mb-1 block text-xs font-semibold" style={{ color: COLORS.textMuted }}>Beschreibung</label>
-          <TextArea rows={4} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Notizen, Kontext, Links…" />
+          <TextArea rows={Math.min(16, Math.max(4, desc.split('\n').length + 1))} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Notizen, Kontext, Links…" />
           <div className="mt-2">
             <Button size="sm" variant="secondary" onClick={saveDesc} disabled={savingDesc || desc === (task.description || '')}>
               {savingDesc ? <Spinner className="h-4 w-4" /> : null} Speichern

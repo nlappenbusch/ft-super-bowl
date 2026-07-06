@@ -104,6 +104,7 @@ function NotificationBell() {
   const [items, setItems] = useState<Notif[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const load = async () => {
     try {
@@ -118,15 +119,18 @@ function NotificationBell() {
     return () => clearInterval(t);
   }, []);
 
-  const openItem = async (n: Notif) => {
-    try {
-      await fetch('/api/admin/notifications', {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: [n.id] }),
-      });
-    } catch { /* ignore */ }
-    setOpen(false);
-    if (n.task_id) window.location.href = `/admin/aufgaben?task=${n.task_id}`;
-    else load();
+  /** Klick auf eine Benachrichtigung: aufklappen (voller Text) + als gelesen markieren. */
+  const toggleItem = async (n: Notif) => {
+    setExpandedId((cur) => (cur === n.id ? null : n.id));
+    if (!n.is_read) {
+      setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, is_read: 1 } : x)));
+      setUnread((u) => Math.max(0, u - 1));
+      try {
+        await fetch('/api/admin/notifications', {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: [n.id] }),
+        });
+      } catch { /* ignore */ }
+    }
   };
 
   const markAll = async () => {
@@ -171,21 +175,40 @@ function NotificationBell() {
               {items.length === 0 && (
                 <p className="px-3 py-6 text-center text-xs" style={{ color: 'rgba(20,48,71,0.55)' }}>Keine Benachrichtigungen.</p>
               )}
-              {items.map((n) => (
-                <button
-                  key={n.id}
-                  onClick={() => openItem(n)}
-                  className="block w-full border-b px-3 py-2.5 text-left transition hover:bg-gray-50"
-                  style={{ borderColor: COLORS.stroke, background: n.is_read ? '#fff' : 'rgba(233,90,12,0.05)' }}
-                >
-                  <div className="flex items-center gap-1.5 text-[11px]" style={{ color: 'rgba(20,48,71,0.55)' }}>
-                    {NOTIF_ICON[n.type] || NOTIF_ICON.info}
-                    <span className="ml-auto tabular-nums">{(n.created_at || '').slice(0, 16).replace('T', ' ')}</span>
+              {items.map((n) => {
+                const expanded = expandedId === n.id;
+                return (
+                  <div
+                    key={n.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => toggleItem(n)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') toggleItem(n); }}
+                    className="block w-full cursor-pointer border-b px-3 py-2.5 text-left transition hover:bg-gray-50"
+                    style={{ borderColor: COLORS.stroke, background: n.is_read ? '#fff' : 'rgba(233,90,12,0.05)' }}
+                  >
+                    <div className="flex items-center gap-1.5 text-[11px]" style={{ color: 'rgba(20,48,71,0.55)' }}>
+                      {NOTIF_ICON[n.type] || NOTIF_ICON.info}
+                      <span className="ml-auto tabular-nums">{(n.created_at || '').slice(0, 16).replace('T', ' ')}</span>
+                    </div>
+                    <div className="mt-0.5 text-xs font-semibold" style={{ color: COLORS.navy }}>{n.title}</div>
+                    {n.body && (
+                      <div className={`mt-0.5 text-[11px] ${expanded ? 'whitespace-pre-wrap' : 'line-clamp-2'}`} style={{ color: 'rgba(20,48,71,0.6)' }}>
+                        {n.body}
+                      </div>
+                    )}
+                    {expanded && n.task_id && (
+                      <span
+                        onClick={(e) => { e.stopPropagation(); setOpen(false); window.location.href = `/admin/aufgaben?task=${n.task_id}`; }}
+                        className="mt-1.5 inline-block text-[11px] font-semibold hover:underline"
+                        style={{ color: COLORS.accent }}
+                      >
+                        Ticket öffnen →
+                      </span>
+                    )}
                   </div>
-                  <div className="mt-0.5 text-xs font-semibold" style={{ color: COLORS.navy }}>{n.title}</div>
-                  {n.body && <div className="mt-0.5 line-clamp-2 text-[11px]" style={{ color: 'rgba(20,48,71,0.6)' }}>{n.body}</div>}
-                </button>
-              ))}
+                );
+              })}
             </div>
           </div>
         </>

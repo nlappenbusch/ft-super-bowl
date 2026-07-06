@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       type: 'task_assigned',
       task_id: task.id,
       title: `${formatTicketNo(task.ticket_number) || 'Ticket'} wurde dir zugewiesen – ${task.title}`,
-      body: (task.description || '').slice(0, 300),
+      body: (task.description || '').slice(0, 2000),
       created_by: ctx.session.name,
     }).catch(() => { /* nie blockierend */ });
   }

@@ -86,6 +86,7 @@ function TaskCard({
   onToggleWait: (t: StaffTask) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: t.id });
+  const [expanded, setExpanded] = useState(false);
   const style: CSSProperties = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     opacity: isDragging ? 0.5 : 1,
@@ -110,7 +111,18 @@ function TaskCard({
                 <span className="mb-0.5 inline-block font-mono text-[10px] font-bold tracking-wide" style={{ color: COLORS.accent }}>{ticketNo(t.ticket_number)}</span>
               )}
               <div className="font-semibold" style={{ color: COLORS.navy }}>{t.title}</div>
-              {t.description && <p className="mt-1 line-clamp-2 text-xs" style={{ color: COLORS.textMuted }}>{t.description}</p>}
+              {t.description && (
+                <p className={`mt-1 text-xs ${expanded ? 'whitespace-pre-wrap' : 'line-clamp-2'}`} style={{ color: COLORS.textMuted }}>{t.description}</p>
+              )}
+              {t.description && (t.description.length > 120 || t.description.includes('\n')) && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setExpanded((x) => !x); }}
+                  className="mt-0.5 text-[11px] font-medium hover:underline"
+                  style={{ color: COLORS.accent }}
+                >
+                  {expanded ? 'weniger anzeigen' : 'mehr anzeigen'}
+                </button>
+              )}
             </div>
           </div>
           <Badge tone={PRIO_TONE[t.priority]}>{t.priority}</Badge>

@@ -2,8 +2,16 @@
 /**
  * Plugin Name: Faltin Travel – Event Shortcodes
  * Description: SEO-freundliche, serverseitig gerenderte Event-Karten, Package-Karten + natives Anfrageformular. Shortcodes: [faltin_events serie="..."], [faltin_event event="..."], [faltin_packages event="..."], [faltin_anfrage event="..."].
- * Version: 1.7.1
+ * Version: 1.8.0
  * Author: Faltin Travel AG
+ *
+ * 1.8.0: Deploy-/Ausfall-Fallback: (1) Letzter guter API-Stand wird 7 Tage als
+ *        Backup-Transient vorgehalten und bei nicht erreichbarer Plattform
+ *        (z.B. während eines Deploys) ausgeliefert. (2) Ist gar kein Stand da,
+ *        erscheint statt einer Fehlermeldung ein freundlicher Hinweis
+ *        ("Unser Buchungsmodul wird gerade aktualisiert") mit den direkten
+ *        Kontaktdaten. (3) Schlägt das Absenden des Anfrageformulars fehl,
+ *        zeigt es denselben Hinweis inkl. Telefon/E-Mail.
  *
  * 1.7.1: [faltin_anfrage] ohne name="…" zeigt nicht mehr den rohen Slug
  *        ("karneval-in-rio-2026"), sondern einen lesbaren Eventnamen
@@ -38,19 +46,41 @@ define('FALTIN_EVENTS_DEFAULT_API', 'https://next.faltintravel.com');
 
 function faltin_events_fetch($url, $cache_seconds = 600) {
     $key = 'faltin_ev_' . md5($url);
+    $bk  = 'faltin_ev_bk_' . md5($url); // Backup: letzter guter Stand (für Deploys/Ausfälle)
     if ($cache_seconds > 0) {
         $cached = get_transient($key);
         if ($cached !== false) return $cached;
     }
     $res = wp_remote_get($url, array('timeout' => 10));
     if (is_wp_error($res) || wp_remote_retrieve_response_code($res) !== 200) {
+        // Plattform gerade nicht erreichbar (z.B. Deploy) → letzten guten Stand ausliefern.
+        $stale = get_transient($bk);
+        if ($stale !== false) {
+            if ($cache_seconds > 0) set_transient($key, $stale, 60); // kurz cachen, API nicht hämmern
+            return $stale;
+        }
         return null;
     }
     $json = json_decode(wp_remote_retrieve_body($res), true);
     if (empty($json['success'])) return null;
     $data = $json['data'];
     if ($cache_seconds > 0) set_transient($key, $data, $cache_seconds);
+    set_transient($bk, $data, 7 * DAY_IN_SECONDS);
     return $data;
+}
+
+/* ─── Wartungshinweis (Plattform nicht erreichbar, kein Cache-Stand) ─────── */
+
+function faltin_events_maintenance_box() {
+    return '<div class="ft-maintenance" style="margin:16px 0;padding:22px 24px;border:1px solid #e5e7eb;border-radius:14px;background:#f8fafc">'
+        . '<p style="margin:0 0 6px;font-size:17px;font-weight:700;color:#143047 !important">Unser Buchungsmodul wird gerade aktualisiert.</p>'
+        . '<p style="margin:0 0 14px;font-size:14px;line-height:1.55;color:#3f5468 !important">Es ist in wenigen Augenblicken wieder erreichbar – laden Sie die Seite einfach gleich neu. In dringenden Fällen sind wir direkt für Sie da:</p>'
+        . '<div style="display:flex;flex-wrap:wrap;gap:10px 26px;font-size:14px;color:#143047 !important">'
+        . '<span style="white-space:nowrap">&#128222; <a href="tel:+41447002277" style="color:#143047 !important;text-decoration:none;font-weight:600">+41 44 700 22 77</a></span>'
+        . '<span style="white-space:nowrap">&#128222; <a href="tel:+41447403327" style="color:#143047 !important;text-decoration:none;font-weight:600">+41 44 740 33 27</a></span>'
+        . '<span style="white-space:nowrap">&#9993;&#65039; <a href="mailto:info@faltintravel.com" style="color:#143047 !important;text-decoration:none;font-weight:600">info@faltintravel.com</a></span>'
+        . '<span style="white-space:nowrap">&#128340; Mo&#8211;Fr, 08:00&#8211;18:00 Uhr</span>'
+        . '</div></div>';
 }
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
@@ -170,7 +200,7 @@ function faltin_events_series_shortcode($atts) {
 
     $url = rtrim($atts['api_url'], '/') . '/api/events?serie=' . rawurlencode($atts['serie']);
     $events = faltin_events_fetch($url, (int)$atts['cache']);
-    if (!is_array($events)) return '<p class="ft-ev-error">Events können derzeit nicht geladen werden.</p>';
+    if (!is_array($events)) return faltin_events_maintenance_box();
     if (!count($events)) return '<p class="ft-ev-error">Keine Events in dieser Serie.</p>';
 
     $limit = (int)$atts['limit'];
@@ -200,7 +230,7 @@ function faltin_event_single_shortcode($atts) {
 
     $url = rtrim($atts['api_url'], '/') . '/api/events?event=' . rawurlencode($atts['event']);
     $e = faltin_events_fetch($url, (int)$atts['cache']);
-    if (!is_array($e) || empty($e['url'])) return '<p class="ft-ev-error">Event kann derzeit nicht geladen werden.</p>';
+    if (!is_array($e) || empty($e['url'])) return faltin_events_maintenance_box();
 
     $date = faltin_events_format_daterange($e['start_date'] ?? null, $e['end_date'] ?? null);
     $loc = trim(implode(' · ', array_filter(array($e['venue'] ?? '', $e['location_city'] ?? '', $e['location_country'] ?? ''))));
@@ -431,7 +461,17 @@ function faltin_anfrage_shortcode($atts) {
             throw new Error(d.error || 'Fehler');
           }
         }).catch(function(e){
-          err.textContent = 'Senden fehlgeschlagen: ' + e.message + ' — bitte erneut versuchen.';
+          var msg = String((e && e.message) || '');
+          // Netzwerkfehler / 5xx / HTML statt JSON (Proxy-Fehlerseite) → Plattform gerade im Deploy
+          var offline = !msg || /failed to fetch|networkerror|load failed|unexpected token|not valid json|bad gateway|50\d/i.test(msg);
+          if (offline) {
+            err.innerHTML = 'Unser Buchungsmodul wird gerade aktualisiert und ist in wenigen Augenblicken wieder erreichbar. '
+              + 'Bitte versuchen Sie es gleich noch einmal – Ihre Eingaben bleiben erhalten. In dringenden Fällen: '
+              + '<a href="tel:+41447002277" style="color:#dc2626 !important;font-weight:600">+41 44 700 22 77</a> &middot; '
+              + '<a href="mailto:info@faltintravel.com" style="color:#dc2626 !important;font-weight:600">info@faltintravel.com</a>';
+          } else {
+            err.textContent = 'Senden fehlgeschlagen: ' + msg + ' — bitte erneut versuchen.';
+          }
           err.style.display = 'block';
         }).finally(function(){
           btn.disabled = false;

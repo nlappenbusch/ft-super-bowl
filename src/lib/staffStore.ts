@@ -696,7 +696,7 @@ export async function notifyTaskParticipants(task: StaffTask, opts: {
       title: type === 'mention'
         ? `${opts.actorName || 'Jemand'} hat dich in ${ticket} erwähnt`
         : `${label} in ${ticket} – ${task.title}`,
-      body: opts.body.slice(0, 300),
+      body: opts.body.slice(0, 2000),
       created_by: opts.actorName || '',
     }).catch(() => { /* Benachrichtigung darf den Hauptfluss nie brechen */ });
   }
