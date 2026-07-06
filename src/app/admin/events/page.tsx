@@ -117,8 +117,8 @@ interface EventFormState {
   auto_reply_enabled: boolean;
   auto_reply_subject: string;
   auto_reply_message: string;
-  auto_reply_pdf: string;
-  auto_reply_pdf_name: string;
+  /** Mehrere PDF-Anhänge (Legacy-Einzelfelder auto_reply_pdf/auto_reply_pdf_name werden beim Laden hierher normalisiert). */
+  auto_reply_pdfs: Array<{ file: string; name: string; size?: number }>;
 }
 
 const DEFAULT_MODULE_ORDER = ['leistungen', 'about', 'duell', 'spielorte', 'spielplan', 'wissenswertes', 'stadionplan', 'lageplan', 'ticket_categories', 'packages', 'faq', 'related'];
@@ -211,8 +211,7 @@ const emptyForm: EventFormState = {
   auto_reply_enabled: false,
   auto_reply_subject: '',
   auto_reply_message: '',
-  auto_reply_pdf: '',
-  auto_reply_pdf_name: ''
+  auto_reply_pdfs: []
 };
 
 function normalizeEventFormState(event?: Partial<EventFormState> | null): EventFormState {
@@ -293,9 +292,22 @@ function normalizeEventFormState(event?: Partial<EventFormState> | null): EventF
     auto_reply_enabled: (event as Partial<EventFormState> | null | undefined)?.auto_reply_enabled ?? false,
     auto_reply_subject: (event as Partial<EventFormState> | null | undefined)?.auto_reply_subject ?? '',
     auto_reply_message: (event as Partial<EventFormState> | null | undefined)?.auto_reply_message ?? '',
-    auto_reply_pdf: (event as Partial<EventFormState> | null | undefined)?.auto_reply_pdf ?? '',
-    auto_reply_pdf_name: (event as Partial<EventFormState> | null | undefined)?.auto_reply_pdf_name ?? ''
+    auto_reply_pdfs: normalizeAutoReplyPdfs(event)
   };
+}
+
+/** Normalisiert die PDF-Anhänge: neue Mehrfach-Liste hat Vorrang, sonst Legacy-Einzelfeld einwickeln. */
+function normalizeAutoReplyPdfs(event?: Partial<EventFormState> | null): Array<{ file: string; name: string; size?: number }> {
+  const raw = event as (Partial<EventFormState> & { auto_reply_pdf?: string | null; auto_reply_pdf_name?: string | null }) | null | undefined;
+  if (Array.isArray(raw?.auto_reply_pdfs) && raw.auto_reply_pdfs.length > 0) {
+    return raw.auto_reply_pdfs
+      .filter((p): p is { file: string; name: string; size?: number } => !!p && !!p.file)
+      .map((p) => ({ file: p.file, name: p.name || p.file, size: typeof p.size === 'number' ? p.size : undefined }));
+  }
+  if (raw?.auto_reply_pdf) {
+    return [{ file: raw.auto_reply_pdf, name: raw.auto_reply_pdf_name || raw.auto_reply_pdf }];
+  }
+  return [];
 }
 
 function parseFlexibleDate(value?: string | null): Date | null {
@@ -315,6 +327,13 @@ function parseFlexibleDate(value?: string | null): Date | null {
 
   const date = new Date(trimmed);
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** Dateigröße lesbar formatieren (z.B. "1,2 MB" / "480 KB"). */
+function formatFileSize(bytes?: number): string {
+  if (typeof bytes !== 'number' || !Number.isFinite(bytes) || bytes <= 0) return '';
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',')} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
 function formatPreviewDate(value?: string | null) {
@@ -374,16 +393,22 @@ export default function AdminEventsPage() {
     requestAnimationFrame(() => { el.focus(); const p = start + token.length; el.setSelectionRange(p, p); });
   }
 
-  async function handleAutoReplyPdfUpload(file: File) {
+  async function handleAutoReplyPdfUpload(files: File[]) {
     setPdfUploading(true);
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      if (form.slug) fd.append('eventSlug', form.slug);
-      const res = await fetch('/api/admin/auto-reply', { method: 'POST', body: fd });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Upload fehlgeschlagen');
-      setForm((prev) => ({ ...prev, auto_reply_pdf: json.data.file, auto_reply_pdf_name: json.data.name }));
+      // Dateien nacheinander hochladen (Endpoint nimmt eine Datei pro Request)
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append('file', file);
+        if (form.slug) fd.append('eventSlug', form.slug);
+        const res = await fetch('/api/admin/auto-reply', { method: 'POST', body: fd });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'Upload fehlgeschlagen');
+        setForm((prev) => ({
+          ...prev,
+          auto_reply_pdfs: [...prev.auto_reply_pdfs, { file: json.data.file, name: json.data.name, size: json.data.size }],
+        }));
+      }
     } catch (e) {
       alert('PDF-Upload fehlgeschlagen: ' + (e as Error).message);
     } finally {
@@ -550,8 +575,10 @@ export default function AdminEventsPage() {
       auto_reply_enabled: form.auto_reply_enabled,
       auto_reply_subject: form.auto_reply_subject.trim() || null,
       auto_reply_message: form.auto_reply_message.trim() || null,
-      auto_reply_pdf: form.auto_reply_pdf || null,
-      auto_reply_pdf_name: form.auto_reply_pdf_name || null
+      auto_reply_pdfs: form.auto_reply_pdfs.length > 0 ? form.auto_reply_pdfs : null,
+      // Abwärtskompatibilität: erster Anhang zusätzlich in den Legacy-Einzelfeldern
+      auto_reply_pdf: form.auto_reply_pdfs[0]?.file || null,
+      auto_reply_pdf_name: form.auto_reply_pdfs[0]?.name || null
     };
 
     const response = await fetch(`/api/admin/events${form.id ? `/${form.id}` : ''}`, {
@@ -1004,7 +1031,7 @@ export default function AdminEventsPage() {
               <SectionCard
                 icon={<Mail className="h-5 w-5" />}
                 title="Automatische Antwort"
-                description="Statt der Standard-Bestätigung wird bei einer Anfrage zu diesem Event eine eigene Nachricht (optional mit PDF-Anhang) an den Kunden gesendet. Ist der Schalter aus oder kein Text gepflegt, gilt die Standard-Bestätigung."
+                description="Statt der Standard-Bestätigung wird bei einer Anfrage zu diesem Event eine eigene Nachricht (optional mit einem oder mehreren PDF-Anhängen) an den Kunden gesendet. Ist der Schalter aus oder kein Text gepflegt, gilt die Standard-Bestätigung."
               >
                 <div className="grid gap-4">
                   <div className="flex items-center justify-between gap-4 rounded-xl border px-3 py-3" style={{ borderColor: COLORS.stroke }}>
@@ -1058,32 +1085,42 @@ export default function AdminEventsPage() {
 
                       <div className="rounded-xl border px-3 py-3" style={{ borderColor: COLORS.stroke }}>
                         <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: COLORS.navy }}>
-                          <Paperclip className="h-4 w-4" /> PDF-Anhang (optional, max. 3 MB)
+                          <Paperclip className="h-4 w-4" /> PDF-Anhänge (optional, mehrere möglich, max. 3,5 MB pro Datei)
                         </div>
-                        {form.auto_reply_pdf ? (
-                          <div className="mt-2 flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm" style={{ background: '#f0fdf4', color: COLORS.navy }}>
-                            <span className="truncate">📎 {form.auto_reply_pdf_name || form.auto_reply_pdf}</span>
-                            <button
-                              type="button"
-                              className="shrink-0 text-xs font-semibold underline"
-                              style={{ color: COLORS.danger }}
-                              onClick={() => setForm((prev) => ({ ...prev, auto_reply_pdf: '', auto_reply_pdf_name: '' }))}
-                            >
-                              Entfernen
-                            </button>
+                        {form.auto_reply_pdfs.length > 0 ? (
+                          <div className="mt-2 grid gap-2">
+                            {form.auto_reply_pdfs.map((pdf, idx) => (
+                              <div key={`${pdf.file}-${idx}`} className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm" style={{ background: '#f0fdf4', color: COLORS.navy }}>
+                                <span className="min-w-0 truncate">
+                                  📎 {pdf.name || pdf.file}
+                                  {formatFileSize(pdf.size) && (
+                                    <span className="ml-1.5 text-xs" style={{ color: COLORS.textMuted }}>· {formatFileSize(pdf.size)}</span>
+                                  )}
+                                </span>
+                                <button
+                                  type="button"
+                                  className="shrink-0 text-xs font-semibold underline"
+                                  style={{ color: COLORS.danger }}
+                                  onClick={() => setForm((prev) => ({ ...prev, auto_reply_pdfs: prev.auto_reply_pdfs.filter((_, i) => i !== idx) }))}
+                                >
+                                  Entfernen
+                                </button>
+                              </div>
+                            ))}
                           </div>
                         ) : (
-                          <div className="mt-2 text-xs" style={{ color: COLORS.textMuted }}>Noch keine PDF hinterlegt.</div>
+                          <div className="mt-2 text-xs" style={{ color: COLORS.textMuted }}>Noch keine PDFs hinterlegt.</div>
                         )}
                         <input
                           ref={autoReplyPdfInputRef}
                           type="file"
                           accept="application/pdf,.pdf"
+                          multiple
                           disabled={pdfUploading}
                           className="hidden"
                           onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) handleAutoReplyPdfUpload(f);
+                            const files = Array.from(e.target.files || []);
+                            if (files.length > 0) handleAutoReplyPdfUpload(files);
                             e.target.value = '';
                           }}
                         />
@@ -1095,13 +1132,15 @@ export default function AdminEventsPage() {
                             disabled={pdfUploading}
                           >
                             <Upload className="h-4 w-4" />
-                            PDF auswählen
+                            PDFs hinzufügen
                           </Button>
                           <span className="min-w-0 text-sm" style={{ color: COLORS.textMuted }}>
-                            {form.auto_reply_pdf_name || form.auto_reply_pdf || 'Keine Datei ausgewählt'}
+                            {form.auto_reply_pdfs.length > 0
+                              ? `${form.auto_reply_pdfs.length} ${form.auto_reply_pdfs.length === 1 ? 'Datei' : 'Dateien'} angehängt`
+                              : 'Keine Datei ausgewählt'}
                           </span>
                         </div>
-                        {pdfUploading && <div className="mt-2 text-xs" style={{ color: COLORS.accent }}>PDF wird hochgeladen …</div>}
+                        {pdfUploading && <div className="mt-2 text-xs" style={{ color: COLORS.accent }}>PDFs werden hochgeladen …</div>}
                       </div>
                     </>
                   )}

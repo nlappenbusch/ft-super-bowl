@@ -124,7 +124,7 @@ export async function POST(request: Request) {
         let subject: string;
         let html: string;
         let attachments: { name: string; contentType: string; contentBytes: string }[] | undefined;
-        let pdfAttached = false;
+        let pdfCount = 0;
 
         if (useAutoReply) {
           subject = (event!.auto_reply_subject || '').trim() || autoReplySubjectDefault(eventName, requestNumber);
@@ -132,19 +132,26 @@ export async function POST(request: Request) {
           if (!/RQ-\d/i.test(subject)) subject = `${subject} ${subjectTag(requestNumber)}`;
           html = autoReplyHtml({ message: event!.auto_reply_message || '', firstName, lastName, salutation, eventName, requestNumber, consent });
 
-          if (event!.auto_reply_pdf) {
-            const pdf = await readAutoReplyPdfBase64(event!.auto_reply_pdf);
+          // Anhänge: neue Mehrfach-Liste (auto_reply_pdfs) hat Vorrang, sonst Legacy-Einzelfeld.
+          const pdfList = Array.isArray(event!.auto_reply_pdfs) && event!.auto_reply_pdfs.length > 0
+            ? event!.auto_reply_pdfs
+            : (event!.auto_reply_pdf
+                ? [{ file: event!.auto_reply_pdf, name: event!.auto_reply_pdf_name || 'Angebot.pdf' }]
+                : []);
+
+          for (const pdfMeta of pdfList) {
+            const pdf = await readAutoReplyPdfBase64(pdfMeta.file);
             if (pdf) {
-              attachments = [{
-                name: event!.auto_reply_pdf_name || 'Angebot.pdf',
+              (attachments ||= []).push({
+                name: pdfMeta.name || 'Angebot.pdf',
                 contentType: 'application/pdf',
                 contentBytes: pdf.base64,
-              }];
-              pdfAttached = true;
+              });
             } else {
-              console.warn('[AutoReply] PDF nicht gefunden:', event!.auto_reply_pdf);
+              console.warn('[AutoReply] PDF nicht gefunden:', pdfMeta.file);
             }
           }
+          pdfCount = attachments?.length ?? 0;
         } else {
           subject = confirmationSubject(requestNumber, eventName);
           html = confirmationEmailHtml({ firstName, lastName, salutation, requestNumber, eventName, message: body.message || '', consent });
@@ -160,7 +167,7 @@ export async function POST(request: Request) {
             to_email: body.email,
             subject,
             body: useAutoReply
-              ? `Automatische Event-Antwort gesendet${pdfAttached ? ' (mit PDF-Anhang)' : ''}.`
+              ? `Automatische Event-Antwort gesendet${pdfCount > 0 ? ` (mit ${pdfCount === 1 ? 'PDF-Anhang' : `${pdfCount} PDF-Anhängen`})` : ''}.`
               : 'Automatische Bestätigung der Anfrage gesendet.',
             graph_message_id: null,
           });
