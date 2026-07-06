@@ -78,8 +78,11 @@ Ablauf pro PR (externe API, Basis `https://next.faltintravel.com`, Auth-Header
 3. **PR verlinken**: `POST /api/ext/tasks/<id>/messages` `{ "kind": "note", "body": "PR: <url> – Claude" }`
    (Notizen mit „– Claude" signieren; `kind:"note"` verwenden, sonst geht eine Mail raus!)
 4. **Zeit buchen**: `POST /api/ext/tasks/<id>/time` `{ "minutes": <n>, "note": "<was>" }` —
-   ehrlich geschätzte Bearbeitungszeit der Session (Analyse + Umsetzung + Verifikation),
-   gern mehrere Buchungen bei mehreren Arbeitsblöcken.
+   gebucht wird die **ungefähre reale Dauer der KI-Session** (Wall-Clock von Arbeitsbeginn
+   bis fertigem PR, inkl. Verifikation; typisch 15–45 min pro PR). **KEINE**
+   Menschen-Äquivalent-Schätzungen buchen und **kein** „menschl. Äquivalent ~Xh" o. ä.
+   in die Notiz schreiben — Zeit-Notizen landen 1:1 im Kunden-Rapport-PDF.
+   Gern mehrere Buchungen bei mehreren Arbeitsblöcken.
 5. **`erledigt` erst, wenn der PR gemerged UND deployed ist** — nicht beim PR-Erstellen.
 
 Ticket-Nummern (`TASK-XXXXX`) im PR-Text erwähnen. Kein Ticket nötig für reine

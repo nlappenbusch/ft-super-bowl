@@ -95,6 +95,10 @@ export default function RapportePage() {
   const [edit, setEdit] = useState<{ id: string; minutes: string; note: string; work_date: string; employee_id: string } | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
+  // Stammdaten-Editor am Rapport-Entwurf (Titel/Stundensatz/Währung)
+  const [meta, setMeta] = useState<{ title: string; rate: string; currency: string } | null>(null);
+  const [savingMeta, setSavingMeta] = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     setErr('');
@@ -144,11 +148,32 @@ export default function RapportePage() {
     setDetailBusy(true);
     try {
       const r = await fetch(`/api/admin/time-reports/${id}`).then((x) => x.json());
-      if (r.success) setDetail(r.data); else setErr(r.error || 'Fehler');
+      if (r.success) {
+        setDetail(r.data);
+        setMeta({
+          title: r.data.report.title || '',
+          rate: r.data.report.hourly_rate != null ? String(r.data.report.hourly_rate) : '',
+          currency: r.data.report.currency || 'EUR',
+        });
+      } else setErr(r.error || 'Fehler');
     } finally {
       setDetailBusy(false);
     }
   }, []);
+
+  const saveMeta = async () => {
+    if (!detail || !meta) return;
+    setSavingMeta(true);
+    try {
+      await patchReport(detail.report.id, {
+        title: meta.title.trim(),
+        hourly_rate: meta.rate.trim() === '' ? null : Number(meta.rate.replace(',', '.')),
+        currency: meta.currency,
+      });
+    } finally {
+      setSavingMeta(false);
+    }
+  };
 
   const createReport = async () => {
     if (!selEntries.length) return;
@@ -545,6 +570,28 @@ export default function RapportePage() {
                   </Badge>
                 </span>
               </div>
+
+              {/* Stammdaten (nur Entwurf änderbar) */}
+              {detail.report.status === 'entwurf' && meta && (
+                <div className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border p-3" style={{ borderColor: COLORS.stroke, background: '#fafbfc' }}>
+                  <Field label="Titel">
+                    <TextInput value={meta.title} onChange={(ev) => setMeta({ ...meta, title: ev.target.value })} className="w-64" />
+                  </Field>
+                  <Field label="Stundensatz (leer = ohne)">
+                    <TextInput type="number" min={0} step="0.01" value={meta.rate} onChange={(ev) => setMeta({ ...meta, rate: ev.target.value })} className="w-32" />
+                  </Field>
+                  <Field label="Währung">
+                    <SelectInput value={meta.currency} onChange={(ev) => setMeta({ ...meta, currency: ev.target.value })} className="w-28">
+                      {!['EUR', 'CHF'].includes(meta.currency) && <option value={meta.currency}>{meta.currency}</option>}
+                      <option value="EUR">EUR</option>
+                      <option value="CHF">CHF</option>
+                    </SelectInput>
+                  </Field>
+                  <Button size="sm" variant="secondary" onClick={saveMeta} disabled={savingMeta}>
+                    {savingMeta ? <Spinner className="h-4 w-4" /> : <Check className="h-4 w-4" />} Stammdaten speichern
+                  </Button>
+                </div>
+              )}
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wide" style={{ color: COLORS.textMuted }}>
