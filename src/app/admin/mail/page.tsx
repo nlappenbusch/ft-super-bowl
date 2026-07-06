@@ -25,6 +25,8 @@ interface MailConfig {
   mailbox: string;
   from_name: string;
   inbound_poll_secret: string;
+  ticket_auto_create: boolean;
+  ticket_auto_create_domains: string;
   has_client_secret: boolean;
   has_brevo: boolean;
 }
@@ -39,6 +41,7 @@ export default function MailAdminPage() {
   const [form, setForm] = useState({
     tenant_id: '', client_id: '', client_secret: '', mailbox: '', from_name: '',
     inbound_poll_secret: '', brevo_api_key: '', login_base_url: '', notify_to: '',
+    ticket_auto_create: false, ticket_auto_create_domains: 'faltintravel.com',
   });
 
   const [testTo, setTestTo] = useState('');
@@ -70,6 +73,8 @@ export default function MailAdminPage() {
           inbound_poll_secret: c.data.inbound_poll_secret || '',
           login_base_url: c.data.login_base_url || '',
           notify_to: c.data.notify_to || '',
+          ticket_auto_create: !!c.data.ticket_auto_create,
+          ticket_auto_create_domains: c.data.ticket_auto_create_domains ?? 'faltintravel.com',
           client_secret: '',
           brevo_api_key: '',
         }));
@@ -85,7 +90,7 @@ export default function MailAdminPage() {
     setToast({ ok, msg });
     setTimeout(() => setToast(null), 5000);
   };
-  const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: keyof typeof form, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
   const genSecret = () =>
     set('inbound_poll_secret', (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, ''));
   const redirectUri = `${(form.login_base_url || (typeof window !== 'undefined' ? window.location.origin : '')).replace(/\/+$/, '')}/api/auth/microsoft/callback`;
@@ -125,7 +130,7 @@ export default function MailAdminPage() {
     try {
       const res = await fetch('/api/admin/mail/poll', { method: 'POST' });
       const data = await res.json();
-      if (data.success) flash(true, `Poll fertig: ${data.scanned} geprüft, ${data.matched} zugeordnet, ${data.skipped} übersprungen.`);
+      if (data.success) flash(true, `Poll fertig: ${data.scanned} geprüft, ${data.matched} zugeordnet, ${data.created || 0} Tickets erstellt, ${data.skipped} übersprungen.`);
       else flash(false, data.error || 'Poll fehlgeschlagen.');
     } catch { flash(false, 'Verbindungsfehler.'); }
     finally { setPolling(false); }
@@ -220,6 +225,29 @@ export default function MailAdminPage() {
                   <Button type="button" variant="secondary" onClick={genSecret}>Generieren</Button>
                 </div>
               </Field>
+              <div className="rounded-xl border border-gray-200 p-4">
+                <Toggle
+                  checked={form.ticket_auto_create}
+                  onChange={(v) => set('ticket_auto_create', v)}
+                  label="Tickets aus unzugeordneten Mails erstellen"
+                />
+                <p className="mt-1.5 text-xs" style={{ color: '#9ca3af' }}>
+                  Eingehende Mails ohne RQ-/TASK-Nummer werden automatisch als Ticket angelegt; der Absender erhält eine Bestätigung mit der TASK-Nummer im Betreff.
+                </p>
+                <div className="mt-3">
+                  <Field
+                    label="Absender-Domains (Komma-getrennt, leer = alle)"
+                    hint="Nur Mails von diesen Domains erzeugen Tickets, z.B. faltintravel.com. Autoresponder/No-Reply-Absender werden immer ignoriert."
+                  >
+                    <TextInput
+                      value={form.ticket_auto_create_domains}
+                      onChange={(e) => set('ticket_auto_create_domains', e.target.value)}
+                      placeholder="faltintravel.com"
+                      disabled={!form.ticket_auto_create}
+                    />
+                  </Field>
+                </div>
+              </div>
               <InputField
                 label="Brevo API-Key (Listen)"
                 type="password"
