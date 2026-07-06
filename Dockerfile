@@ -59,6 +59,7 @@ COPY --from=builder /app/.next/static ./.next/static
 
 # Content-Seed + Entrypoint (rollt Inhalte beim Start ins Volume, ohne bookings.db/settings.json zu überschreiben)
 COPY data-seed ./data-seed
+COPY wordpress-plugin ./wordpress-plugin
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 

@@ -343,6 +343,40 @@ function Cf7Migrator() {
   );
 }
 
+/** Download-Karte: liefert immer die aktuell deployte Plugin-Version als ZIP. */
+function PluginDownloadCard() {
+  const [version, setVersion] = useState<string>('');
+  useEffect(() => {
+    fetch('/api/admin/plugin?info=1')
+      .then((r) => r.json())
+      .then((j) => { if (j?.success) setVersion(j.data.version); })
+      .catch(() => { /* Karte zeigt dann keinen Versionsstand */ });
+  }, []);
+  return (
+    <SectionCard title="WordPress-Plugin herunterladen" icon={<Boxes className="h-4 w-4" />}>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="text-sm text-gray-700">
+          <p className="m-0">
+            Immer die <b>aktuell deployte Version</b> — die ZIP wird live vom Server gepackt.
+            {version && <> Aktuell: <Badge tone="ok">v{version}</Badge></>}
+          </p>
+          <p className="m-0 mt-1 text-xs text-gray-500">
+            In WordPress: Plugins → Installieren → Plugin hochladen → ZIP wählen → „Jetzt ersetzen".
+          </p>
+        </div>
+        <a
+          href="/api/admin/plugin"
+          className="inline-flex shrink-0 items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-bold text-white"
+          style={{ background: '#d9531e' }}
+          download
+        >
+          ⬇ faltin-events{version ? `-${version}` : ''}.zip
+        </a>
+      </div>
+    </SectionCard>
+  );
+}
+
 export default function ShortcodesPage() {
   return (
     <AdminShell title="WP-Shortcodes">
@@ -350,6 +384,8 @@ export default function ShortcodesPage() {
         title="WordPress-Shortcodes"
         description="Alle Shortcodes, mit denen Inhalte dieser Plattform in die WordPress-Seite (faltintravel.com) eingebunden werden. Snippet kopieren, in eine WordPress-Seite/Block einfügen, Parameter anpassen."
       />
+
+      <PluginDownloadCard />
 
       <SectionCard title="So funktioniert's" icon={<Code2 className="h-4 w-4" />}>
         <ol className="list-inside list-decimal space-y-1 text-sm text-gray-700">
