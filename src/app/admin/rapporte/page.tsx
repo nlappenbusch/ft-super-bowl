@@ -6,7 +6,7 @@ import {
   PageHeader, Card, SectionCard, Button, Field, TextInput, SelectInput, Badge, Spinner, StatCard, COLORS,
 } from '@/components/admin/ui';
 import {
-  FileClock, Hourglass, CheckCircle2, FileText, Trash2, Plus, RotateCcw, Lock, X, Pencil, Check, Users,
+  FileClock, Hourglass, CheckCircle2, FileText, Trash2, Plus, RotateCcw, Lock, X, Pencil, Check, Users, FolderKanban,
 } from 'lucide-react';
 
 interface TimeEntry {
@@ -105,8 +105,9 @@ export default function RapportePage() {
   const [meta, setMeta] = useState<{ title: string; rate: string; currency: string } | null>(null);
   const [savingMeta, setSavingMeta] = useState(false);
 
-  // Batch-Aktionen auf der Checkbox-Auswahl (Mitarbeiter zuweisen / löschen)
+  // Batch-Aktionen auf der Checkbox-Auswahl (Mitarbeiter/Projekt zuweisen, löschen)
   const [batchEmp, setBatchEmp] = useState('');
+  const [batchProject, setBatchProject] = useState('');
   const [batchBusy, setBatchBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -334,6 +335,31 @@ export default function RapportePage() {
     }
   };
 
+  /** Projekt für die Auswahl setzen — Projekte hängen am Ticket, daher werden die zugehörigen Tickets umgestellt. */
+  const batchSetProject = async () => {
+    if (!selEntries.length) return;
+    const taskIds = [...new Set(selEntries.map((e) => e.task_id))];
+    const pname = batchProject ? (projects.find((p) => p.id === batchProject)?.name || 'Projekt') : 'Ohne Projekt';
+    if (!confirm(`Projekt „${pname}" für ${taskIds.length} ${taskIds.length === 1 ? 'Ticket' : 'Tickets'} setzen?\nDas gilt für alle Zeitbuchungen dieser Tickets.`)) return;
+    setBatchBusy(true);
+    setErr('');
+    try {
+      const results = await Promise.all(taskIds.map((tid) =>
+        fetch(`/api/admin/tasks/${tid}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ project_id: batchProject || null }),
+        }).then((x) => x.json()).catch(() => ({ success: false }))
+      ));
+      const failed = results.filter((r) => !r.success).length;
+      if (failed) setErr(`${failed} von ${taskIds.length} Tickets konnten nicht umgestellt werden`);
+      setSel(new Set());
+      await load();
+    } finally {
+      setBatchBusy(false);
+    }
+  };
+
   const batchDelete = async () => {
     if (!selEntries.length) return;
     if (!confirm(`${selEntries.length} ${selEntries.length === 1 ? 'Zeiteintrag' : 'Zeiteinträge'} (${fmtMin(selMinutes)}) unwiderruflich löschen?`)) return;
@@ -445,6 +471,42 @@ export default function RapportePage() {
           </p>
         ) : (
           <>
+            {/* Batch-Aktionen — prominent über der Tabelle, sobald etwas ausgewählt ist */}
+            {sel.size > 0 && (
+              <div className="mb-3 flex flex-wrap items-end gap-x-4 gap-y-2 rounded-xl border-2 px-4 py-3" style={{ borderColor: '#f4c169', background: '#fff9ef' }}>
+                <span className="self-center whitespace-nowrap text-sm font-bold" style={{ color: COLORS.navy }}>
+                  {sel.size} {sel.size === 1 ? 'Eintrag' : 'Einträge'} · {fmtMin(selMinutes)}
+                </span>
+                <div className="flex items-end gap-2">
+                  <Field label="Mitarbeiter">
+                    <SelectInput value={batchEmp} onChange={(e) => setBatchEmp(e.target.value)} className="w-44">
+                      <option value="">Extern (API)</option>
+                      {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+                    </SelectInput>
+                  </Field>
+                  <Button size="sm" variant="secondary" onClick={batchAssign} disabled={batchBusy}>
+                    {batchBusy ? <Spinner className="h-4 w-4" /> : <Users className="h-4 w-4" />} Zuweisen
+                  </Button>
+                </div>
+                <div className="flex items-end gap-2">
+                  <Field label="Projekt (gilt fürs ganze Ticket)">
+                    <SelectInput value={batchProject} onChange={(e) => setBatchProject(e.target.value)} className="w-52">
+                      <option value="">Ohne Projekt</option>
+                      {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </SelectInput>
+                  </Field>
+                  <Button size="sm" variant="secondary" onClick={batchSetProject} disabled={batchBusy}>
+                    {batchBusy ? <Spinner className="h-4 w-4" /> : <FolderKanban className="h-4 w-4" />} Setzen
+                  </Button>
+                </div>
+                <Button size="sm" variant="ghost" onClick={batchDelete} disabled={batchBusy}>
+                  <Trash2 className="h-4 w-4" /> Löschen
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setSel(new Set())} title="Auswahl aufheben">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -516,22 +578,6 @@ export default function RapportePage() {
                   ? `${sel.size} ${sel.size === 1 ? 'Eintrag' : 'Einträge'} · ${fmtMin(selMinutes)} ausgewählt`
                   : 'Einträge auswählen, um einen Rapport zu erstellen'}
               </div>
-              {sel.size > 0 && (
-                <div className="mb-3 flex flex-wrap items-end gap-3 border-b pb-3" style={{ borderColor: COLORS.stroke }}>
-                  <Field label="Mitarbeiter für Auswahl setzen">
-                    <SelectInput value={batchEmp} onChange={(e) => setBatchEmp(e.target.value)} className="w-48">
-                      <option value="">Extern (API)</option>
-                      {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-                    </SelectInput>
-                  </Field>
-                  <Button size="sm" variant="secondary" onClick={batchAssign} disabled={batchBusy}>
-                    {batchBusy ? <Spinner className="h-4 w-4" /> : <Users className="h-4 w-4" />} Zuweisen
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={batchDelete} disabled={batchBusy}>
-                    <Trash2 className="h-4 w-4" /> Auswahl löschen
-                  </Button>
-                </div>
-              )}
               <div className="flex flex-wrap items-end gap-3">
                 <Field label="Titel (optional)">
                   <TextInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder="z. B. Entwicklung Juni 2026" className="w-64" />
