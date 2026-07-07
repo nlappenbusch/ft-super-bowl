@@ -16,7 +16,8 @@ import {
   ArrowDown,
   Mail,
   Paperclip,
-  Upload
+  Upload,
+  Link2
 } from 'lucide-react';
 import AdminShell from '@/components/admin/AdminShell';
 import AdminImageField from '@/components/admin/AdminImageField';
@@ -117,8 +118,10 @@ interface EventFormState {
   auto_reply_enabled: boolean;
   auto_reply_subject: string;
   auto_reply_message: string;
-  /** Mehrere PDF-Anhänge (Legacy-Einzelfelder auto_reply_pdf/auto_reply_pdf_name werden beim Laden hierher normalisiert). */
+  /** Mehrere Anhänge (PDF/Bilder; Legacy-Einzelfelder auto_reply_pdf/auto_reply_pdf_name werden beim Laden hierher normalisiert). */
   auto_reply_pdfs: Array<{ file: string; name: string; size?: number }>;
+  /** Link-Buttons am Ende der Auto-Antwort. */
+  auto_reply_links: Array<{ label: string; url: string }>;
 }
 
 const DEFAULT_MODULE_ORDER = ['leistungen', 'about', 'duell', 'spielorte', 'spielplan', 'wissenswertes', 'stadionplan', 'lageplan', 'ticket_categories', 'packages', 'faq', 'related'];
@@ -211,7 +214,8 @@ const emptyForm: EventFormState = {
   auto_reply_enabled: false,
   auto_reply_subject: '',
   auto_reply_message: '',
-  auto_reply_pdfs: []
+  auto_reply_pdfs: [],
+  auto_reply_links: []
 };
 
 function normalizeEventFormState(event?: Partial<EventFormState> | null): EventFormState {
@@ -292,7 +296,10 @@ function normalizeEventFormState(event?: Partial<EventFormState> | null): EventF
     auto_reply_enabled: (event as Partial<EventFormState> | null | undefined)?.auto_reply_enabled ?? false,
     auto_reply_subject: (event as Partial<EventFormState> | null | undefined)?.auto_reply_subject ?? '',
     auto_reply_message: (event as Partial<EventFormState> | null | undefined)?.auto_reply_message ?? '',
-    auto_reply_pdfs: normalizeAutoReplyPdfs(event)
+    auto_reply_pdfs: normalizeAutoReplyPdfs(event),
+    auto_reply_links: Array.isArray((event as Partial<EventFormState> | null | undefined)?.auto_reply_links)
+      ? ((event as Partial<EventFormState>).auto_reply_links as Array<{ label?: string; url?: string }>).map((l) => ({ label: l?.label || '', url: l?.url || '' }))
+      : []
   };
 }
 
@@ -410,7 +417,7 @@ export default function AdminEventsPage() {
         }));
       }
     } catch (e) {
-      alert('PDF-Upload fehlgeschlagen: ' + (e as Error).message);
+      alert('Upload fehlgeschlagen: ' + (e as Error).message);
     } finally {
       setPdfUploading(false);
     }
@@ -576,6 +583,12 @@ export default function AdminEventsPage() {
       auto_reply_subject: form.auto_reply_subject.trim() || null,
       auto_reply_message: form.auto_reply_message.trim() || null,
       auto_reply_pdfs: form.auto_reply_pdfs.length > 0 ? form.auto_reply_pdfs : null,
+      auto_reply_links: (() => {
+        const cleaned = form.auto_reply_links
+          .map((l) => ({ label: l.label.trim(), url: l.url.trim() }))
+          .filter((l) => l.label && l.url);
+        return cleaned.length > 0 ? cleaned : null;
+      })(),
       // Abwärtskompatibilität: erster Anhang zusätzlich in den Legacy-Einzelfeldern
       auto_reply_pdf: form.auto_reply_pdfs[0]?.file || null,
       auto_reply_pdf_name: form.auto_reply_pdfs[0]?.name || null
@@ -1085,7 +1098,7 @@ export default function AdminEventsPage() {
 
                       <div className="rounded-xl border px-3 py-3" style={{ borderColor: COLORS.stroke }}>
                         <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: COLORS.navy }}>
-                          <Paperclip className="h-4 w-4" /> PDF-Anhänge (optional, mehrere möglich, max. 3,5 MB pro Datei)
+                          <Paperclip className="h-4 w-4" /> Anhänge — PDF &amp; Bilder (optional, mehrere möglich, max. 3,5 MB pro Datei)
                         </div>
                         {form.auto_reply_pdfs.length > 0 ? (
                           <div className="mt-2 grid gap-2">
@@ -1109,12 +1122,12 @@ export default function AdminEventsPage() {
                             ))}
                           </div>
                         ) : (
-                          <div className="mt-2 text-xs" style={{ color: COLORS.textMuted }}>Noch keine PDFs hinterlegt.</div>
+                          <div className="mt-2 text-xs" style={{ color: COLORS.textMuted }}>Noch keine Anhänge hinterlegt.</div>
                         )}
                         <input
                           ref={autoReplyPdfInputRef}
                           type="file"
-                          accept="application/pdf,.pdf"
+                          accept="application/pdf,.pdf,image/jpeg,.jpg,.jpeg,image/png,.png,image/webp,.webp"
                           multiple
                           disabled={pdfUploading}
                           className="hidden"
@@ -1132,7 +1145,7 @@ export default function AdminEventsPage() {
                             disabled={pdfUploading}
                           >
                             <Upload className="h-4 w-4" />
-                            PDFs hinzufügen
+                            Dateien hinzufügen
                           </Button>
                           <span className="min-w-0 text-sm" style={{ color: COLORS.textMuted }}>
                             {form.auto_reply_pdfs.length > 0
@@ -1140,7 +1153,59 @@ export default function AdminEventsPage() {
                               : 'Keine Datei ausgewählt'}
                           </span>
                         </div>
-                        {pdfUploading && <div className="mt-2 text-xs" style={{ color: COLORS.accent }}>PDFs werden hochgeladen …</div>}
+                        {pdfUploading && <div className="mt-2 text-xs" style={{ color: COLORS.accent }}>Dateien werden hochgeladen …</div>}
+                      </div>
+
+                      {/* Link-Buttons am Mail-Ende (TASK-00086) */}
+                      <div className="rounded-xl border px-3 py-3" style={{ borderColor: COLORS.stroke }}>
+                        <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: COLORS.navy }}>
+                          <Link2 className="h-4 w-4" /> Link-Buttons am Mail-Ende (optional)
+                        </div>
+                        <div className="mt-1 text-xs" style={{ color: COLORS.textMuted }}>
+                          Erscheinen in der Auto-Antwort als orange Buttons — z.&nbsp;B. „Weiter zur Buchung“ oder „Unsere Angebote ansehen“. Nur http(s)- und mailto-Links werden versendet.
+                        </div>
+                        {form.auto_reply_links.map((link, idx) => (
+                          <div key={idx} className="mt-2 flex flex-wrap items-center gap-2">
+                            <input
+                              value={link.label}
+                              onChange={(e) => setForm((prev) => ({
+                                ...prev,
+                                auto_reply_links: prev.auto_reply_links.map((l, i) => (i === idx ? { ...l, label: e.target.value } : l)),
+                              }))}
+                              placeholder="Button-Text (z. B. Weiter zur Buchung)"
+                              className="w-64 rounded-lg border px-3 py-1.5 text-sm focus:outline-none"
+                              style={{ borderColor: COLORS.stroke }}
+                            />
+                            <input
+                              value={link.url}
+                              onChange={(e) => setForm((prev) => ({
+                                ...prev,
+                                auto_reply_links: prev.auto_reply_links.map((l, i) => (i === idx ? { ...l, url: e.target.value } : l)),
+                              }))}
+                              placeholder="https://…"
+                              className="min-w-[220px] flex-1 rounded-lg border px-3 py-1.5 text-sm focus:outline-none"
+                              style={{ borderColor: COLORS.stroke }}
+                            />
+                            <button
+                              type="button"
+                              className="shrink-0 text-xs font-semibold underline"
+                              style={{ color: COLORS.danger }}
+                              onClick={() => setForm((prev) => ({ ...prev, auto_reply_links: prev.auto_reply_links.filter((_, i) => i !== idx) }))}
+                            >
+                              Entfernen
+                            </button>
+                          </div>
+                        ))}
+                        <div className="mt-3">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => setForm((prev) => ({ ...prev, auto_reply_links: [...prev.auto_reply_links, { label: '', url: '' }] }))}
+                          >
+                            <Plus className="h-4 w-4" />
+                            Link hinzufügen
+                          </Button>
+                        </div>
                       </div>
                     </>
                   )}

@@ -303,6 +303,8 @@ export interface AutoReplyInput extends RecipientInfo {
   eventName?: string;
   requestNumber?: string;
   consent?: boolean;
+  /** Link-Buttons am Mail-Ende (nur http(s)/mailto werden gerendert). */
+  links?: Array<{ label: string; url: string }>;
 }
 
 /**
@@ -324,6 +326,17 @@ export function autoReplyHtml(input: AutoReplyInput): string {
 
   const bodyHtml = rendered.replace(/\n/g, '<br>');
 
+  // Link-Buttons am Mail-Ende (vom Admin je Event gepflegt) — gebrandet,
+  // nur valide http(s)-/mailto-Ziele mit Beschriftung werden gerendert.
+  const validLinks = (input.links || []).filter(
+    (l) => l && (l.label || '').trim() && /^(https?:\/\/|mailto:)/i.test((l.url || '').trim())
+  );
+  const linksHtml = validLinks.length
+    ? `<div style="margin:22px 0 0;">${validLinks.map((l) =>
+        `<a href="${escapeHtml(l.url.trim())}" style="display:inline-block;margin:0 10px 10px 0;background:#d9531e;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:10px;">${escapeHtml(l.label.trim())}</a>`
+      ).join('')}</div>`
+    : '';
+
   // Bewusst minimal: nur (optionale) Anrede + der Admin-Text im Marken-Rahmen.
   // KEINE automatische Anfragenummer-Zeile und KEINE Grußformel – die Nachricht ist
   // vollständig vom Admin gepflegt (vermeidet doppelten/überflüssigen Text).
@@ -331,6 +344,7 @@ export function autoReplyHtml(input: AutoReplyInput): string {
   const inner = `
     ${greetingHtml}
     <div style="font-size:15px;line-height:1.7;color:#374151;">${bodyHtml}</div>
+    ${linksHtml}
     ${portalCtaHtml({ withNote: true })}
     ${consentNoticeHtml(input.consent)}`;
 

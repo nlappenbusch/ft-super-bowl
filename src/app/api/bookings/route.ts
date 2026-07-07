@@ -9,7 +9,7 @@ import {
   autoReplyHtml, autoReplySubjectDefault, subjectTag,
 } from '@/lib/emailTemplates';
 import { linkBookingToCustomer, normalizeSalutation } from '@/lib/customerStore';
-import { readAutoReplyPdfBase64 } from '@/lib/autoReplyStore';
+import { readAutoReplyPdfBase64, autoReplyContentType } from '@/lib/autoReplyStore';
 
 /**
  * CORS: erlaubt das Anfrage-Formular auf WordPress ([faltin_anfrage]).
@@ -132,7 +132,11 @@ export async function POST(request: Request) {
           subject = (event!.auto_reply_subject || '').trim() || autoReplySubjectDefault(eventName, requestNumber);
           // RQ-Tag fürs Threading anhängen, falls nicht bereits im Custom-Betreff enthalten.
           if (!/RQ-\d/i.test(subject)) subject = `${subject} ${subjectTag(requestNumber)}`;
-          html = autoReplyHtml({ message: event!.auto_reply_message || '', firstName, lastName, salutation, eventName, requestNumber, consent });
+          html = autoReplyHtml({
+            message: event!.auto_reply_message || '',
+            firstName, lastName, salutation, eventName, requestNumber, consent,
+            links: Array.isArray(event!.auto_reply_links) ? event!.auto_reply_links : [],
+          });
 
           // Anhänge: neue Mehrfach-Liste (auto_reply_pdfs) hat Vorrang, sonst Legacy-Einzelfeld.
           const pdfList = Array.isArray(event!.auto_reply_pdfs) && event!.auto_reply_pdfs.length > 0
@@ -146,11 +150,11 @@ export async function POST(request: Request) {
             if (pdf) {
               (attachments ||= []).push({
                 name: pdfMeta.name || 'Angebot.pdf',
-                contentType: 'application/pdf',
+                contentType: autoReplyContentType(pdfMeta.file),
                 contentBytes: pdf.base64,
               });
             } else {
-              console.warn('[AutoReply] PDF nicht gefunden:', pdfMeta.file);
+              console.warn('[AutoReply] Anhang nicht gefunden:', pdfMeta.file);
             }
           }
           pdfCount = attachments?.length ?? 0;
