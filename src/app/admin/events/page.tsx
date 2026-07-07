@@ -22,6 +22,7 @@ import {
 import AdminShell from '@/components/admin/AdminShell';
 import AdminImageField from '@/components/admin/AdminImageField';
 import PinMapEditor from '@/components/admin/PinMapEditor';
+import SimpleRichEditor, { type SimpleRichEditorHandle } from '@/components/admin/SimpleRichEditor';
 import {
   COLORS,
   SectionCard,
@@ -388,16 +389,12 @@ export default function AdminEventsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [pdfUploading, setPdfUploading] = useState(false);
   const autoReplyPdfInputRef = useRef<HTMLInputElement>(null);
+  const autoReplyEditorRef = useRef<SimpleRichEditorHandle | null>(null);
 
   function insertAutoReplyToken(token: string) {
-    const el = document.getElementById('ev-f-autoreply-msg') as HTMLTextAreaElement | null;
-    const cur = form.auto_reply_message || '';
-    if (!el) { updateField('auto_reply_message', cur + token); return; }
-    const start = el.selectionStart ?? cur.length;
-    const end = el.selectionEnd ?? cur.length;
-    const next = cur.slice(0, start) + token + cur.slice(end);
-    updateField('auto_reply_message', next);
-    requestAnimationFrame(() => { el.focus(); const p = start + token.length; el.setSelectionRange(p, p); });
+    // WYSIWYG-Editor: an der Cursor-Position einfügen; Fallback: anhängen.
+    if (autoReplyEditorRef.current) { autoReplyEditorRef.current.insertText(token); return; }
+    updateField('auto_reply_message', (form.auto_reply_message || '') + token);
   }
 
   async function handleAutoReplyPdfUpload(files: File[]) {
@@ -1085,15 +1082,18 @@ export default function AdminEventsPage() {
                             </button>
                           ))}
                         </div>
-                        <TextAreaField
-                          id="ev-f-autoreply-msg"
+                        <Field
                           label="Nachricht"
-                          value={form.auto_reply_message}
-                          onChange={(event) => updateField('auto_reply_message', event.target.value)}
-                          rows={8}
-                          placeholder={'Vielen Dank für Ihre unverbindliche Anfrage …\n\nIm Anhang finden Sie unsere aktuellen Angebote.\n\nGerne melden wir uns persönlich bei Ihnen.'}
-                          hint="Die Nachricht wird 1:1 im Faltin-Rahmen (Logo/Footer) versendet. Platzhalter: {{grussformel}} = tageszeit-abhängig „Guten Morgen/Tag/Abend“ · {{anrede}} = „Herr“/„Frau“ · {{vorname}} · {{nachname}}. Beispiel: „Guten Tag {{anrede}} {{nachname}}“ → „Guten Tag Herr Müller“. Fehlt die Anrede, fällt die Zeile automatisch sauber auf „Guten Tag“ zurück (ohne Name)."
-                        />
+                          hint="Die Nachricht wird 1:1 im Faltin-Rahmen (Logo/Footer) versendet — Formatierungen (fett, kursiv, Listen, Links) werden übernommen; Vollbild über das Symbol rechts in der Leiste. Platzhalter: {{grussformel}} = tageszeit-abhängig „Guten Morgen/Tag/Abend“ · {{anrede}} = „Herr“/„Frau“ · {{vorname}} · {{nachname}}. Beispiel: „Guten Tag {{anrede}} {{nachname}}“ → „Guten Tag Herr Müller“. Fehlt die Anrede, fällt die Zeile automatisch sauber auf „Guten Tag“ zurück (ohne Name)."
+                        >
+                          <SimpleRichEditor
+                            value={form.auto_reply_message}
+                            onChange={(html) => updateField('auto_reply_message', html)}
+                            editorRef={autoReplyEditorRef}
+                            minHeight={200}
+                            placeholder="Vielen Dank für Ihre unverbindliche Anfrage … Im Anhang finden Sie unsere aktuellen Angebote."
+                          />
+                        </Field>
                       </div>
 
                       <div className="rounded-xl border px-3 py-3" style={{ borderColor: COLORS.stroke }}>
