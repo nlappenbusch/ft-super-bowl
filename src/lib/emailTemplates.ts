@@ -297,8 +297,40 @@ export function autoReplySubjectDefault(eventName?: string, requestNumber?: stri
   return `Ihre unverbindliche Anfrage${ev}${tag}`;
 }
 
+/** Erlaubte Tags für Admin-gepflegtes Auto-Antwort-HTML (WYSIWYG-Editor). */
+const AUTO_REPLY_ALLOWED_TAGS = new Set(['p', 'br', 'b', 'strong', 'i', 'em', 'u', 'ul', 'ol', 'li', 'a', 'div', 'span']);
+
+/**
+ * Sanitisiert HTML aus dem Auto-Antwort-Editor für den Mail-Versand:
+ * Tag-Whitelist, alle Attribute werden verworfen (bei <a> bleibt ein
+ * geprüftes http(s)/mailto-href mit Marken-Styling), script/style/iframe
+ * fliegen komplett raus. Defense-in-depth — Eingaben kommen nur von Admins.
+ */
+export function sanitizeAutoReplyHtml(html: string): string {
+  let out = String(html || '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<(script|style|iframe|object|embed|form)[\s\S]*?<\/\1\s*>/gi, '')
+    .replace(/<(script|style|iframe|object|embed|form)[^>]*\/?>/gi, '');
+  out = out.replace(/<\s*(\/?)\s*([a-zA-Z0-9]+)((?:[^>"']|"[^"]*"|'[^']*')*)>/g, (_m, slash, tag, attrs) => {
+    const t = String(tag).toLowerCase();
+    if (!AUTO_REPLY_ALLOWED_TAGS.has(t)) return '';
+    if (slash) return `</${t}>`;
+    if (t === 'a') {
+      const hrefM = /href\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(attrs || '');
+      const href = ((hrefM?.[1] ?? hrefM?.[2]) || '').trim();
+      if (/^(https?:\/\/|mailto:)/i.test(href)) {
+        return `<a href="${href.replace(/"/g, '&quot;')}" style="color:#d9531e;font-weight:600;">`;
+      }
+      return '<a>';
+    }
+    if (t === 'br') return '<br>';
+    return `<${t}>`;
+  });
+  return out;
+}
+
 export interface AutoReplyInput extends RecipientInfo {
-  /** Frei definierbarer Nachrichtentext (Plaintext mit Zeilenumbrüchen, Platzhalter erlaubt). */
+  /** Frei definierbarer Nachrichtentext: Plaintext ODER (ab TASK-00087) HTML aus dem WYSIWYG-Editor. */
   message: string;
   eventName?: string;
   requestNumber?: string;
@@ -315,16 +347,22 @@ export interface AutoReplyInput extends RecipientInfo {
  */
 export function autoReplyHtml(input: AutoReplyInput): string {
   const r: RecipientInfo = { salutation: input.salutation, firstName: input.firstName, lastName: input.lastName };
-  const rendered = renderRecipientTokens(escapeHtml(input.message || ''), r);
+  // HTML-Nachricht (WYSIWYG-Editor) → sanitisieren; Klartext (Legacy) → escapen.
+  const isHtml = /<[a-z][^>]*>/i.test(input.message || '');
+  const rendered = isHtml
+    ? renderRecipientTokens(sanitizeAutoReplyHtml(input.message || ''), r)
+    : renderRecipientTokens(escapeHtml(input.message || ''), r);
+  // Für Begrüßungs-Erkennung und Preheader den reinen Text betrachten.
+  const renderedText = isHtml ? rendered.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : rendered;
 
   // Eigene Begrüßung erkennen (erste nicht-leere Zeile)
-  const firstLine = rendered.replace(/^\s+/, '').slice(0, 40).toLowerCase();
+  const firstLine = renderedText.replace(/^\s+/, '').slice(0, 40).toLowerCase();
   const hasOwnGreeting = /^(sehr geehrt|hallo|guten (tag|morgen|mittag|abend)|liebe|moin|servus|hi[\s,]|hey[\s,])/.test(firstLine);
   const greetingHtml = hasOwnGreeting
     ? ''
     : `<p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#374151;">${neutralGreeting(r)}</p>`;
 
-  const bodyHtml = rendered.replace(/\n/g, '<br>');
+  const bodyHtml = isHtml ? rendered : rendered.replace(/\n/g, '<br>');
 
   // Link-Buttons am Mail-Ende (vom Admin je Event gepflegt) — gebrandet,
   // nur valide http(s)-/mailto-Ziele mit Beschriftung werden gerendert.
@@ -350,8 +388,8 @@ export function autoReplyHtml(input: AutoReplyInput): string {
 
   // Preheader (Inbox-Vorschau) aus dem BEREITS gerenderten Text bilden – sonst
   // erscheinen die {{…}}-Platzhalter unersetzt in der Gmail-/Client-Vorschau.
-  // rendered ist HTML-escaped → für den Preheader zurück-entschärfen (layout() escaped erneut).
-  const preheader = rendered
+  // renderedText ist HTML-escaped bzw. tag-befreit → zurück-entschärfen (layout() escaped erneut).
+  const preheader = renderedText
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
