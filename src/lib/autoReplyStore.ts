@@ -16,8 +16,23 @@ import path from 'path';
 
 const DATA_DIR = path.join(process.cwd(), 'data', 'uploads', 'auto-reply');
 
-/** Max. Größe pro PDF-Anhang (3,5 MB). Große Mails gehen via Graph Draft + Upload-Session raus. */
+/** Max. Größe pro Anhang (3,5 MB). Große Mails gehen via Graph Draft + Upload-Session raus. */
 export const MAX_AUTO_REPLY_PDF_BYTES = Math.floor(3.5 * 1024 * 1024);
+
+/** Erlaubte Anhangstypen: PDF + gängige Bildformate (TASK-00086). */
+const ALLOWED_TYPES: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+};
+
+/** MIME-Type eines gespeicherten Anhangs anhand der Endung (Fallback: PDF-Legacy). */
+export function autoReplyContentType(file: string): string {
+  const ext = path.extname(file || '').toLowerCase();
+  return ALLOWED_TYPES[ext] || 'application/pdf';
+}
 
 export interface AutoReplyPdfMeta {
   /** Gespeicherter Dateiname (im Event-Datensatz hinterlegt) */
@@ -43,26 +58,26 @@ function safeStoredName(file: string): string {
   return path.basename(file || '').replace(/[^a-zA-Z0-9._-]/g, '');
 }
 
-/** Speichert eine hochgeladene PDF und gibt Metadaten zurück. */
+/** Speichert einen hochgeladenen Anhang (PDF oder Bild) und gibt Metadaten zurück. */
 export async function saveAutoReplyPdf(file: File, eventSlug?: string): Promise<AutoReplyPdfMeta> {
   const originalName = file.name || 'dokument.pdf';
   const ext = path.extname(originalName).toLowerCase();
-  if (ext !== '.pdf') {
-    throw new Error('Nur PDF-Dateien sind als Auto-Antwort-Anhang erlaubt.');
+  if (!ALLOWED_TYPES[ext]) {
+    throw new Error('Erlaubt sind PDF-Dateien und Bilder (JPG, PNG, WebP).');
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());
   // Versand großer Anhänge läuft über die Graph Upload-Session (graphMailer.ts),
   // daher gilt nur noch das eigene Limit pro Datei.
   if (bytes.length > MAX_AUTO_REPLY_PDF_BYTES) {
-    throw new Error('PDF ist zu groß (max. 3,5 MB pro Anhang).');
+    throw new Error('Datei ist zu groß (max. 3,5 MB pro Anhang).');
   }
 
   await mkdir(DATA_DIR, { recursive: true });
 
   const slugPart = eventSlug ? `${sanitizeBase(eventSlug)}-` : '';
   const timeStamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const finalName = `${slugPart}${timeStamp}-${sanitizeBase(originalName)}.pdf`;
+  const finalName = `${slugPart}${timeStamp}-${sanitizeBase(originalName)}${ext}`;
   const finalPath = path.join(DATA_DIR, finalName);
   await writeFile(finalPath, bytes);
 
