@@ -6683,7 +6683,13 @@
         "note": "Auf Wunsch zubuchbar."
       }
     ],
-    "spielplan_anfrage": false
+    "spielplan_anfrage": false,
+    "auto_reply_links": [
+      {
+        "label": "Streckenplan Monaco Grand Prix",
+        "url": "https://faltintravel.com/wp-content/uploads/2020/10/MonacoGP-Ticketkategorien-scaled.jpg"
+      }
+    ]
   },
   {
     "id": "3ff55d42-d1c3-414f-b69e-f8b45a788ed8",
