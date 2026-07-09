@@ -12,7 +12,6 @@
  *   NEXT_PUBLIC_SITE_KEYWORDS      comma-separated keywords
  *   NEXT_PUBLIC_SITE_URL           canonical URL  e.g. "https://frenchopen.faltintravel.com"
  *   NEXT_PUBLIC_OG_IMAGE           path to OG image, e.g. "/french-open-og.webp"
- *   NEXT_PUBLIC_ADMIN_PASSWORD     admin panel password
  *   NEXT_PUBLIC_BRAND_COLOR        primary hex color  e.g. "#143047"
  *   NEXT_PUBLIC_BRAND_ACCENT       accent hex color   e.g. "#d9531e"
  * ─────────────────────────────────────────────────────────────────────────────
@@ -49,9 +48,6 @@ export const siteConfig = {
 
   /** Open-Graph / Twitter card image */
   ogImage: env('NEXT_PUBLIC_OG_IMAGE', '/og-image.webp'),
-
-  /** Admin panel password (fallback – always set via real env var in production) */
-  adminPassword: env('NEXT_PUBLIC_ADMIN_PASSWORD', 'faltin-admin-2025'),
 
   /** Brand primary color */
   brandColor: env('NEXT_PUBLIC_BRAND_COLOR', '#143047'),

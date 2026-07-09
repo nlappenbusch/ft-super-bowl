@@ -55,7 +55,6 @@ Für echte Werte (Google-Maps-Key, Mail-Secrets, andere Domain) eine Datei
 ```dotenv
 # Build-Zeit (ins Client-JS eingebacken – bei Änderung neu deployen)
 NEXT_PUBLIC_SITE_URL=https://superbowl.faltintravel.com
-NEXT_PUBLIC_ADMIN_PASSWORD=faltin-admin-2025
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=DEIN_GOOGLE_MAPS_KEY
 NEXT_PUBLIC_SITE_NAME=Faltin Travel Sports Events
 
@@ -70,8 +69,8 @@ BREVO_API_KEY=
 INBOUND_POLL_SECRET=ein-langes-zufalls-token
 ```
 
-**Defaults ohne `.env`:** Domain = `superbowl.faltintravel.com`, Admin-PW = `faltin-admin-2025`,
-**Google-Maps-Key leer** → die interaktive Lageplan-Karte bleibt leer, bis der Key gesetzt ist.
+**Defaults ohne `.env`:** Domain = `superbowl.faltintravel.com`, **Google-Maps-Key leer** →
+die interaktive Lageplan-Karte bleibt leer, bis der Key gesetzt ist.
 
 ## Andere/mehrere Domains
 
@@ -98,7 +97,6 @@ tar czf backup-data-$(date +%F).tgz data/
 ## Sicherheit
 
 - `data-seed/` enthält **nur öffentlichen Website-Content** – keine Secrets.
-- `settings.json` (mit Admin-PW/Mail-Secrets) und `.env` bleiben aus dem Git heraus.
-- `NEXT_PUBLIC_ADMIN_PASSWORD` ist im Client-JS sichtbar (Design der `AdminGate`).
-  Für echten Schutz `/admin` zusätzlich serverseitig absichern (Basic-Auth im Reverse
-  Proxy oder IP-Whitelist).
+- `settings.json` (mit Mail-Secrets) und `.env` bleiben aus dem Git heraus.
+- `/admin` ist serverseitig abgesichert: Login über Microsoft SSO bzw. `localadmin`
+  (`src/lib/auth.ts`).
