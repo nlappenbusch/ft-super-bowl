@@ -230,6 +230,21 @@ function consentNoticeHtml(consent?: boolean): string {
     </p>`;
 }
 
+/**
+ * Link-Buttons am Mail-Ende (vom Admin je Event gepflegt, z. B. Streckenplan) —
+ * gebrandet, nur valide http(s)-/mailto-Ziele mit Beschriftung werden gerendert.
+ * Gemeinsam genutzt von Auto-Antwort UND Standard-Bestätigung.
+ */
+export function mailLinkButtonsHtml(links?: Array<{ label: string; url: string }> | null): string {
+  const valid = (links || []).filter(
+    (l) => l && (l.label || '').trim() && /^(https?:\/\/|mailto:)/i.test((l.url || '').trim())
+  );
+  if (!valid.length) return '';
+  return `<div style="margin:22px 0 0;">${valid.map((l) =>
+    `<a href="${escapeHtml(l.url.trim())}" style="display:inline-block;margin:0 10px 10px 0;background:#d9531e;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:10px;">${escapeHtml(l.label.trim())}</a>`
+  ).join('')}</div>`;
+}
+
 export interface ConfirmationInput {
   firstName?: string;
   lastName?: string;
@@ -238,6 +253,8 @@ export interface ConfirmationInput {
   eventName?: string;
   message?: string;
   consent?: boolean;
+  /** Link-Buttons am Mail-Ende (aus event.auto_reply_links, z. B. Streckenplan). */
+  links?: Array<{ label: string; url: string }> | null;
 }
 
 /** Fancy Bestätigungsmail an den Kunden ("Vielen Dank für Ihre Anfrage") */
@@ -284,6 +301,7 @@ export function confirmationEmailHtml(input: ConfirmationInput): string {
     <p style="margin:24px 0 0;font-size:15px;line-height:1.7;color:#374151;">
       Herzliche Grüße<br><strong style="color:${NAVY};">Ihr Faltin Travel Team</strong>
     </p>
+    ${mailLinkButtonsHtml(input.links)}
     ${portalCtaHtml({ withNote: true })}
     ${consentNoticeHtml(input.consent)}`;
 
@@ -364,16 +382,7 @@ export function autoReplyHtml(input: AutoReplyInput): string {
 
   const bodyHtml = isHtml ? rendered : rendered.replace(/\n/g, '<br>');
 
-  // Link-Buttons am Mail-Ende (vom Admin je Event gepflegt) — gebrandet,
-  // nur valide http(s)-/mailto-Ziele mit Beschriftung werden gerendert.
-  const validLinks = (input.links || []).filter(
-    (l) => l && (l.label || '').trim() && /^(https?:\/\/|mailto:)/i.test((l.url || '').trim())
-  );
-  const linksHtml = validLinks.length
-    ? `<div style="margin:22px 0 0;">${validLinks.map((l) =>
-        `<a href="${escapeHtml(l.url.trim())}" style="display:inline-block;margin:0 10px 10px 0;background:#d9531e;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:10px;">${escapeHtml(l.label.trim())}</a>`
-      ).join('')}</div>`
-    : '';
+  const linksHtml = mailLinkButtonsHtml(input.links);
 
   // Bewusst minimal: nur (optionale) Anrede + der Admin-Text im Marken-Rahmen.
   // KEINE automatische Anfragenummer-Zeile und KEINE Grußformel – die Nachricht ist

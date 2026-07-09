@@ -161,7 +161,11 @@ export async function POST(request: Request) {
           pdfCount = attachments?.length ?? 0;
         } else {
           subject = confirmationSubject(requestNumber, eventName);
-          html = confirmationEmailHtml({ firstName, lastName, salutation, requestNumber, eventName, message: body.message || '', consent });
+          html = confirmationEmailHtml({
+            firstName, lastName, salutation, requestNumber, eventName, message: body.message || '', consent,
+            // Link-Buttons (z. B. Streckenplan) auch ohne aktivierte Auto-Antwort mitschicken
+            links: Array.isArray(event?.auto_reply_links) ? event.auto_reply_links : [],
+          });
         }
 
         const sendRes = await sendGraphMail({ to: body.email, toName: customerName, subject, html, attachments });
