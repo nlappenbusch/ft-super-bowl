@@ -26,7 +26,7 @@ interface TimeEntry {
   report_status: 'entwurf' | 'final' | null;
 }
 
-interface ProjectLite { id: string; name: string }
+interface ProjectLite { id: string; name: string; status?: 'aktiv' | 'archiviert' }
 
 interface Stats { open_count: number; open_minutes: number; reported_count: number; reported_minutes: number }
 
@@ -137,7 +137,7 @@ export default function RapportePage() {
       if (r.success) setEmployees(r.data.map((e: EmployeeLite) => ({ id: e.id, name: e.name })));
     }).catch(() => {});
     fetch('/api/admin/projects').then((r) => r.json()).then((r) => {
-      if (r.success) setProjects(r.data.map((p: ProjectLite) => ({ id: p.id, name: p.name })));
+      if (r.success) setProjects(r.data.map((p: ProjectLite) => ({ id: p.id, name: p.name, status: p.status })));
     }).catch(() => {});
   }, []);
 
@@ -453,7 +453,7 @@ export default function RapportePage() {
             <SelectInput value={project} onChange={(e) => setProject(e.target.value)} className="w-52">
               <option value="">Alle</option>
               <option value="none">Ohne Projekt</option>
-              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}{p.status === 'archiviert' ? ' (archiviert)' : ''}</option>)}
             </SelectInput>
           </Field>
           {(from || to || employee || project) && (
@@ -492,7 +492,7 @@ export default function RapportePage() {
                   <Field label="Projekt (gilt fürs ganze Ticket)">
                     <SelectInput value={batchProject} onChange={(e) => setBatchProject(e.target.value)} className="w-52">
                       <option value="">Ohne Projekt</option>
-                      {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      {projects.filter((p) => p.status !== 'archiviert').map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </SelectInput>
                   </Field>
                   <Button size="sm" variant="secondary" onClick={batchSetProject} disabled={batchBusy}>

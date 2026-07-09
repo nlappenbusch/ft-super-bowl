@@ -22,7 +22,7 @@ interface Task {
   project_id?: string | null;
 }
 
-interface ProjectLite { id: string; name: string }
+interface ProjectLite { id: string; name: string; status?: 'aktiv' | 'archiviert' }
 interface Subtask { id: string; title: string; done: number }
 interface Att { id: string; filename: string; mime: string; size: number }
 interface TimeEntry { id: string; minutes: number; note: string; work_date?: string; report_id?: string | null; report_number?: number | null }
@@ -111,7 +111,7 @@ export default function TaskDrawer({ task, onClose, onChanged, variant = 'drawer
   useEffect(() => {
     setProjectId(task.project_id || '');
     fetch('/api/admin/projects').then((r) => r.json()).then((r) => {
-      if (r.success) setProjects(r.data.map((p: ProjectLite) => ({ id: p.id, name: p.name })));
+      if (r.success) setProjects(r.data.map((p: ProjectLite) => ({ id: p.id, name: p.name, status: p.status })));
     }).catch(() => {});
   }, [task.id, task.project_id]);
 
@@ -264,7 +264,9 @@ export default function TaskDrawer({ task, onClose, onChanged, variant = 'drawer
             title="Projekt zuordnen"
           >
             <option value="">🗂 Kein Projekt</option>
-            {projects.map((p) => <option key={p.id} value={p.id}>🗂 {p.name}</option>)}
+            {projects.filter((p) => p.status !== 'archiviert' || p.id === projectId).map((p) => (
+              <option key={p.id} value={p.id}>🗂 {p.name}{p.status === 'archiviert' ? ' (archiviert)' : ''}</option>
+            ))}
           </select>
           <Badge tone={PRIO_TONE[task.priority]}>{task.priority}</Badge>
           {task.due_date && <span className="text-xs" style={{ color: COLORS.textMuted }}>📅 {task.due_date}</span>}

@@ -626,7 +626,7 @@ export async function listProjects(): Promise<ProjectSummary[]> {
     LEFT JOIN staff_tasks s ON s.project_id = p.id
     LEFT JOIN task_time t ON t.task_id = s.id
     GROUP BY p.id
-    ORDER BY lower(p.name)
+    ORDER BY CASE WHEN p.status = 'archiviert' THEN 1 ELSE 0 END, lower(p.name)
   `);
 }
 
