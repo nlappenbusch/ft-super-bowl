@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSettings, saveSettings } from '@/lib/settingsStore';
 import { requireAdminSession } from '@/lib/apiGuard';
 
-// Settings enthalten Secrets (admin_password, Graph client_secret, API-Keys)
+// Settings enthalten Secrets (Graph client_secret, API-Keys)
 // und werden nur vom Admin-Panel gelesen/geschrieben → Session-Pflicht.
 export async function GET() {
   const denied = await requireAdminSession();

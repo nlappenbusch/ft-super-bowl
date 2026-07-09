@@ -298,15 +298,6 @@ export default function SettingsPage() {
               rows={3}
             />
           </SectionCard>
-          <SectionCard title="Admin">
-            <InputField
-              label="Admin-Passwort"
-              value={settings.site.admin_password}
-              onChange={e => update('site', 'admin_password', e.target.value)}
-              type="password"
-              hint="Passwort für den Admin-Bereich — nach Änderung neu einloggen"
-            />
-          </SectionCard>
         </div>
       )}
 
