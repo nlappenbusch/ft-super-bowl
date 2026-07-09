@@ -94,15 +94,17 @@ const COLUMNS: { id: CrmStatus; label: string; color: string; bg: string }[] = [
 /* ─── Helpers ────────────────────────────────────────────────────────── */
 
 function getLeadName(lead: Lead): string {
-  if (!lead.travelers) return lead.email;
+  // Erster Reisender MIT Namen (Altbuchungen mit „Ich bin auch Reisender" haben ein leeres travelers[0])
   try {
     const travelers = typeof lead.travelers === 'string' ? JSON.parse(lead.travelers) : lead.travelers;
-    if (!Array.isArray(travelers) || travelers.length === 0) return lead.email;
-    const t = travelers[0];
-    const first = t?.firstName || t?.first_name || '';
-    const last = t?.lastName || t?.last_name || '';
-    return [first, last].filter(Boolean).join(' ') || lead.email;
-  } catch { return lead.email; }
+    if (Array.isArray(travelers)) {
+      for (const t of travelers) {
+        const name = [t?.firstName || t?.first_name, t?.lastName || t?.last_name].filter(Boolean).join(' ');
+        if (name) return name;
+      }
+    }
+  } catch { /* Fallbacks unten */ }
+  return (lead as { customer_name?: string }).customer_name || lead.email;
 }
 
 function formatDate(str?: string) {
@@ -736,7 +738,8 @@ function DetailDrawer({
                 let travelers: Array<{ salutation?: string; firstName?: string; lastName?: string; birthDate?: string; passportNumber?: string }> = [];
                 try {
                   const t = typeof lead.travelers === 'string' ? JSON.parse(lead.travelers) : lead.travelers;
-                  if (Array.isArray(t)) travelers = t;
+                  // Leere Einträge ausblenden (Altbuchungen: „Ich bin auch Reisender" ließ travelers[0] leer)
+                  if (Array.isArray(t)) travelers = t.filter((x) => x && (x.firstName || x.lastName || x.salutation));
                 } catch { /* ignore */ }
                 if (!travelers.length) return null;
                 return (

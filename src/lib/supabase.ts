@@ -40,7 +40,7 @@ export interface Traveler {
   salutation: string;
   firstName: string;
   lastName: string;
-  birthDate: string;
+  birthDate?: string;
   passportNumber?: string;
 }
 
