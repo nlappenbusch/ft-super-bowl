@@ -316,7 +316,6 @@ export function initDatabase() {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_task_time_task ON task_time(task_id);
-    CREATE INDEX IF NOT EXISTS idx_task_time_report ON task_time(report_id);
 
     CREATE TABLE IF NOT EXISTS time_reports (
       id TEXT PRIMARY KEY,
@@ -503,6 +502,10 @@ export function initDatabase() {
   const ttcols = sqlite.prepare(`PRAGMA table_info(task_time)`).all() as Array<{ name: string }>;
   if (ttcols.length && !ttcols.some((c) => c.name === 'work_date')) addColumn('task_time', "work_date TEXT NOT NULL DEFAULT ''");
   if (ttcols.length && !ttcols.some((c) => c.name === 'report_id')) addColumn('task_time', 'report_id TEXT');
+  // Indizes auf nachträglich migrierte Spalten gehören HIERHER, nicht in den großen
+  // exec oben: dort würde CREATE INDEX auf Alt-DBs ohne die Spalte werfen, bevor
+  // addColumn sie nachziehen kann — und alle Statements danach liefen nie.
+  sqlite.exec(`CREATE INDEX IF NOT EXISTS idx_task_time_report ON task_time(report_id)`);
   const stcols2 = sqlite.prepare(`PRAGMA table_info(staff_tasks)`).all() as Array<{ name: string }>;
   if (stcols2.length && !stcols2.some((c) => c.name === 'project_id')) addColumn('staff_tasks', 'project_id TEXT');
   // Backfill: bestehende Tasks ohne Nummer fortlaufend ab 10 nummerieren (nach Erstellzeit).
