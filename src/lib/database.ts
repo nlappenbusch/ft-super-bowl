@@ -233,7 +233,8 @@ export function initDatabase() {
       weekly_hours TEXT NOT NULL DEFAULT '[0,8.4,8.4,8.4,8.4,8.4,0]',
       vacation_days_per_year REAL NOT NULL DEFAULT 25,
       employment_start TEXT,
-      notes TEXT NOT NULL DEFAULT ''
+      notes TEXT NOT NULL DEFAULT '',
+      briefing_opt_out INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS time_entries (
@@ -462,6 +463,8 @@ export function initDatabase() {
   if (ccols.length && !ccols.some((c) => c.name === 'salutation')) addColumn('customers', "salutation TEXT DEFAULT ''");
   if (ccols.length && !ccols.some((c) => c.name === 'first_name')) addColumn('customers', "first_name TEXT DEFAULT ''");
   if (ccols.length && !ccols.some((c) => c.name === 'last_name')) addColumn('customers', "last_name TEXT DEFAULT ''");
+  const ecols = sqlite.prepare(`PRAGMA table_info(employees)`).all() as Array<{ name: string }>;
+  if (ecols.length && !ecols.some((c) => c.name === 'briefing_opt_out')) addColumn('employees', 'briefing_opt_out INTEGER NOT NULL DEFAULT 0');
 
   // Ticket-System: fortlaufende Ticketnummer + Zeit-Datum (Bestands-DBs nachrüsten)
   const stcols = sqlite.prepare(`PRAGMA table_info(staff_tasks)`).all() as Array<{ name: string }>;
@@ -622,6 +625,40 @@ export async function getMessagesByBooking(bookingId: string): Promise<BookingMe
     [bookingId]
   );
   return rows as BookingMessage[];
+}
+
+export interface UnansweredBookingInbound {
+  booking_id: string;
+  request_number: string | null;
+  package_title: string;
+  status: string;
+  assigned_to: string | null;
+  email: string;
+  customer_name: string | null;
+  /** created_at der neuesten unbeantworteten Kunden-Mail. */
+  last_in_at: string;
+}
+
+/**
+ * Offene Anfragen, bei denen die letzte Kunden-Mail ('in') neuer ist als die
+ * letzte Team-Antwort ('out') — fürs Tages-Briefing. Aggregat-Ausdrücke im
+ * HAVING bewusst wiederholt (Postgres erlaubt keine SELECT-Aliase dort).
+ */
+export async function listUnansweredBookingInbound(): Promise<UnansweredBookingInbound[]> {
+  return dbAll<UnansweredBookingInbound>(`
+    SELECT b.id AS booking_id, b.request_number, b.package_title, b.status, b.assigned_to, b.email,
+           c.name AS customer_name,
+           MAX(CASE WHEN m.direction = 'in' THEN m.created_at END) AS last_in_at
+    FROM booking_requests b
+    JOIN booking_messages m ON m.booking_id = b.id
+    LEFT JOIN customers c ON c.id = b.customer_id
+    WHERE b.status IN ('new', 'in_progress')
+    GROUP BY b.id, b.request_number, b.package_title, b.status, b.assigned_to, b.email, c.name
+    HAVING MAX(CASE WHEN m.direction = 'in' THEN m.created_at END) IS NOT NULL
+       AND (MAX(CASE WHEN m.direction = 'out' THEN m.created_at END) IS NULL
+            OR MAX(CASE WHEN m.direction = 'out' THEN m.created_at END) < MAX(CASE WHEN m.direction = 'in' THEN m.created_at END))
+    ORDER BY MAX(CASE WHEN m.direction = 'in' THEN m.created_at END) ASC
+  `);
 }
 
 export async function findBookingByRequestNumber(requestNumber: string): Promise<BookingRequest | undefined> {

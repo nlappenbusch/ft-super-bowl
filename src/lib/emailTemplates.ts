@@ -597,6 +597,14 @@ export interface DailyBriefingInput {
   newInquiries: BriefingInquiryItem[];
   movedInquiries: BriefingInquiryItem[];
   staleInquiries: BriefingInquiryItem[];
+  /** Pipeline-Zeile: offene Anfragen nach Status + offenes Volumen (TASK-00103). */
+  pipeline?: { newCount: number; inProgressCount: number; volumeLabel: string } | null;
+  /** Unbeantwortete Kunden-Mails (>24 h) aus CRM & Tickets — wichtigste Sektion. */
+  unansweredMails?: BriefingInquiryItem[];
+  /** Countdown-Zeilen zu den nächsten Events. */
+  countdowns?: Array<{ name: string; daysLabel: string; extra?: string }>;
+  /** Freitags: Wochen-Rückblick als Stichpunkte. */
+  weekReview?: { title: string; lines: string[] } | null;
   boardUrl: string;
   crmUrl: string;
 }
@@ -650,7 +658,24 @@ export function dailyBriefingEmailHtml(input: DailyBriefingInput): string {
       </div>`
     : '';
 
+  // Pipeline-Chips direkt unter der Begrüßung: der Geschäftsstand auf einen Blick.
+  const chip = (label: string, color: string) =>
+    `<span style="display:inline-block;margin:0 8px 6px 0;background:#f5f7fa;border:1px solid #e5e8ed;border-radius:999px;padding:5px 14px;font-size:12px;font-weight:700;color:${color};">${escapeHtml(label)}</span>`;
+  const pipelineHtml = input.pipeline
+    ? `<p style="margin:16px 0 0;">
+        ${chip(`${input.pipeline.newCount} neu`, ACCENT)}
+        ${chip(`${input.pipeline.inProgressCount} in Bearbeitung`, NAVY)}
+        ${chip(`${input.pipeline.volumeLabel} offenes Volumen`, '#16a34a')}
+      </p>`
+    : '';
+
   const sections: string[] = [];
+  if ((input.unansweredMails || []).length) {
+    sections.push(
+      briefingSectionHeading(`📬 Unbeantwortete Kundenmails (älter als 24 h)`) +
+      briefingList((input.unansweredMails || []).map(briefingInquiryRow))
+    );
+  }
   if (input.myOpenTasks.length) {
     sections.push(
       briefingSectionHeading(`Deine offenen Aufgaben (${input.myOpenTasks.length + (input.myOpenMore || 0)})`) +
@@ -682,10 +707,29 @@ export function dailyBriefingEmailHtml(input: DailyBriefingInput): string {
       briefingList(input.staleInquiries.map(briefingInquiryRow))
     );
   }
+  if (input.weekReview && input.weekReview.lines.length) {
+    sections.push(
+      briefingSectionHeading(`📊 ${input.weekReview.title}`) +
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:12px 16px;background:#f5f7fa;border:1px solid #e5e8ed;border-radius:12px;">
+        ${input.weekReview.lines.map((l) => `<p style="margin:0;font-size:14px;line-height:1.9;color:#374151;">${escapeHtml(l)}</p>`).join('')}
+      </td></tr></table>`
+    );
+  }
+  if ((input.countdowns || []).length) {
+    sections.push(
+      briefingSectionHeading(`🗓 Nächste Events`) +
+      briefingList((input.countdowns || []).map((c) => `<tr><td style="padding:7px 0;border-bottom:1px solid #f0f2f5;">
+        <span style="font-size:14px;font-weight:600;color:${NAVY};">${escapeHtml(c.name)}</span>
+        <span style="font-size:13px;font-weight:700;color:${ACCENT};"> — ${escapeHtml(c.daysLabel)}</span>
+        ${c.extra ? `<span style="font-size:12px;color:#6b7280;"> · ${escapeHtml(c.extra)}</span>` : ''}
+      </td></tr>`))
+    );
+  }
 
   const inner = `
     <p style="margin:0 0 4px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;">Tages-Briefing · ${escapeHtml(input.dateLabel)}</p>
     <h1 style="margin:6px 0 0;font-size:22px;font-weight:800;color:${NAVY};">${hi}! ☀️</h1>
+    ${pipelineHtml}
     ${kudosHtml}
     ${sections.join('')}
     <p style="margin:28px 0 0;">

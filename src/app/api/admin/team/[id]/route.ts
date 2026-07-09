@@ -13,6 +13,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     employment_start: body.employment_start,
     notes: body.notes,
     name: body.name,
+    briefing_opt_out: body.briefing_opt_out,
   });
   if (!updated) return NextResponse.json({ success: false, error: 'Mitarbeiter nicht gefunden' }, { status: 404 });
   return NextResponse.json({ success: true, data: updated });

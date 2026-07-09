@@ -19,6 +19,7 @@ interface Employee {
   vacation_days_per_year: number;
   employment_start: string | null;
   notes: string;
+  briefing_opt_out: boolean;
   last_login_at: string | null;
   vacation: { entitlement: number; used: number; pending: number; remaining: number };
 }
@@ -65,6 +66,7 @@ export default function TeamPage() {
           vacation_days_per_year: editing.vacation_days_per_year,
           employment_start: editing.employment_start,
           notes: editing.notes,
+          briefing_opt_out: editing.briefing_opt_out,
         }),
       });
       setEditing(null);
@@ -201,6 +203,14 @@ export default function TeamPage() {
             <Field label="Notizen" className="mt-4">
               <TextInput value={editing.notes} onChange={(ev) => setEditing({ ...editing, notes: ev.target.value })} />
             </Field>
+
+            <div className="mt-4">
+              <Toggle
+                checked={!editing.briefing_opt_out}
+                onChange={(v) => setEditing({ ...editing, briefing_opt_out: !v })}
+                label="Tages-Briefing per Mail erhalten"
+              />
+            </div>
 
             <div className="mt-5 flex items-center justify-between">
               <Toggle checked={editing.active} onChange={(v) => setEditing({ ...editing, active: v })} label="Aktiv" />
