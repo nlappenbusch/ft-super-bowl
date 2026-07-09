@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
+import { gzipSync, gunzipSync } from 'zlib';
 
 export interface ContentEventRecord {
   id: string;
@@ -217,6 +218,16 @@ function ensureDataDir() {
   }
 }
 
+const HISTORY_DIR = path.join(dataDir, 'backups', 'history');
+/** Wie viele Snapshot-Stände je Datei aufgehoben werden (gzip, je ~50–100 KB). */
+const HISTORY_KEEP = 100;
+
+// Dateien, deren letzter Lese-Versuch am JSON-Parsen scheiterte: Schreiben ist
+// gesperrt. Sonst würde der nächste Speichervorgang den In-Memory-Fallback
+// persistieren und den echten (defekten, aber evtl. reparierbaren) Stand still
+// überschreiben — genau die Mechanik des Content-Wipes vom 01.07.2026.
+const unreadableFiles = new Set<string>();
+
 function readJsonFile<T>(filePath: string, fallback: T): T {
   ensureDataDir();
   if (!fs.existsSync(filePath)) {
@@ -226,16 +237,115 @@ function readJsonFile<T>(filePath: string, fallback: T): T {
 
   try {
     const raw = fs.readFileSync(filePath, 'utf-8');
-    return JSON.parse(raw) as T;
+    const parsed = JSON.parse(raw) as T;
+    unreadableFiles.delete(filePath);
+    return parsed;
   } catch (error) {
-    console.error('Failed to read JSON:', filePath, error);
+    unreadableFiles.add(filePath);
+    console.error('[contentStore] JSON unlesbar — Writes auf diese Datei gesperrt:', filePath, error);
     return fallback;
+  }
+}
+
+/**
+ * Sichert den aktuellen Stand einer Content-Datei als gzip-Snapshot nach
+ * data/backups/history/ (Rotation: HISTORY_KEEP Stände je Datei). Läuft vor
+ * jedem Überschreiben — jede Admin-/API-Änderung ist damit rückholbar.
+ * Best effort: ein Snapshot-Fehler blockiert das Speichern nicht.
+ */
+function snapshotForHistory(filePath: string) {
+  try {
+    if (!fs.existsSync(filePath)) return;
+    fs.mkdirSync(HISTORY_DIR, { recursive: true });
+    const base = path.basename(filePath, '.json');
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    fs.writeFileSync(path.join(HISTORY_DIR, `${base}-${ts}.json.gz`), gzipSync(fs.readFileSync(filePath)));
+    const all = fs
+      .readdirSync(HISTORY_DIR)
+      .filter((f) => f.startsWith(`${base}-`) && f.endsWith('.json.gz'))
+      .sort();
+    for (const f of all.slice(0, Math.max(0, all.length - HISTORY_KEEP))) {
+      fs.unlinkSync(path.join(HISTORY_DIR, f));
+    }
+  } catch (e) {
+    console.error('[history] Snapshot fehlgeschlagen (Speichern läuft trotzdem weiter):', filePath, e);
   }
 }
 
 function writeJsonFile<T>(filePath: string, data: T) {
   ensureDataDir();
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+  if (unreadableFiles.has(filePath)) {
+    throw new Error(
+      `Schreiben blockiert: ${path.basename(filePath)} konnte zuletzt nicht gelesen werden (defektes JSON?). ` +
+        `Datei prüfen bzw. über /api/admin/content-history wiederherstellen, dann erneut speichern.`
+    );
+  }
+  snapshotForHistory(filePath);
+  // Atomar via tmp+rename: Leser sehen nie eine halb geschriebene Datei.
+  const tmp = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
+  fs.renameSync(tmp, filePath);
+}
+
+/** Erlaubte Content-Dateien für die Historie (Whitelist gegen Path-Traversal). */
+const HISTORY_BASES = new Set(['events', 'series', 'packages', 'faqs', 'pins', 'pin-icons', 'category-seo']);
+
+export interface ContentHistoryEntry {
+  name: string;
+  file: string;
+  savedAt: string;
+  bytes: number;
+}
+
+/** Listet alle Historie-Snapshots (neueste zuerst). */
+export function listContentHistory(): ContentHistoryEntry[] {
+  try {
+    return fs
+      .readdirSync(HISTORY_DIR)
+      .filter((f) => f.endsWith('.json.gz'))
+      .map((name) => {
+        const base = name.replace(/-\d{4}-\d{2}-\d{2}T.+\.json\.gz$/, '');
+        const st = fs.statSync(path.join(HISTORY_DIR, name));
+        return { name, file: `${base}.json`, savedAt: st.mtime.toISOString(), bytes: st.size };
+      })
+      .sort((a, b) => b.name.localeCompare(a.name));
+  } catch {
+    return [];
+  }
+}
+
+/** Liest einen Historie-Snapshot (entpackt) — z.B. zum Ansehen vor dem Restore. */
+export function readContentHistorySnapshot(name: string): unknown | null {
+  const p = resolveHistoryName(name);
+  if (!p) return null;
+  try {
+    return JSON.parse(gunzipSync(fs.readFileSync(p)).toString('utf-8'));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Stellt einen Historie-Snapshot als aktuellen Stand wieder her.
+ * Der bisherige Stand wird davor selbst als Snapshot gesichert (kein Verlust).
+ */
+export function restoreContentHistorySnapshot(name: string): { file: string } {
+  const p = resolveHistoryName(name);
+  if (!p) throw new Error('Unbekannter oder unzulässiger Snapshot-Name.');
+  const base = path.basename(name).replace(/-\d{4}-\d{2}-\d{2}T.+\.json\.gz$/, '');
+  const data = JSON.parse(gunzipSync(fs.readFileSync(p)).toString('utf-8'));
+  const target = path.join(dataDir, `${base}.json`);
+  unreadableFiles.delete(target); // Restore darf auch eine defekte Datei ersetzen
+  writeJsonFile(target, data);
+  return { file: `${base}.json` };
+}
+
+function resolveHistoryName(name: string): string | null {
+  const clean = path.basename(name);
+  const m = /^([a-z-]+)-\d{4}-\d{2}-\d{2}T.+\.json\.gz$/.exec(clean);
+  if (!m || !HISTORY_BASES.has(m[1])) return null;
+  const p = path.join(HISTORY_DIR, clean);
+  return fs.existsSync(p) ? p : null;
 }
 
 const defaultSeriesId = 'series-super-bowl';
