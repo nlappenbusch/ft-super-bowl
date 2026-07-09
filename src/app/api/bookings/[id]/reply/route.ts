@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getBooking, addMessage } from '@/lib/bookingStore';
-import { getEventBySlug } from '@/lib/eventData';
+import { bookingEventName } from '@/lib/eventData';
 import { sendGraphMail, isGraphConfigured, getMailbox, getFromName, type MailAttachment } from '@/lib/graphMailer';
 import { replyEmailHtml, replySubject } from '@/lib/emailTemplates';
 import { addMessageAttachment, MAX_FILE_BYTES } from '@/lib/documentStore';
@@ -62,6 +62,7 @@ export async function POST(
       email: string;
       request_number?: string | null;
       event_slug?: string | null;
+      package_title?: string | null;
     };
 
     const requestNumber = b.request_number || '';
@@ -72,12 +73,8 @@ export async function POST(
       );
     }
 
-    // Event-Name für Betreff
-    let eventName: string | undefined;
-    if (b.event_slug) {
-      const ev = await getEventBySlug(b.event_slug).catch(() => null);
-      eventName = ev?.name || ev?.title || undefined;
-    }
+    // Event-Name für Betreff (Fallback Paket-Titel, TASK-00097)
+    const eventName = await bookingEventName(b);
 
     const subject = replySubject(requestNumber, eventName);
     const html = replyEmailHtml({
