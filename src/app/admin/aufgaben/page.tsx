@@ -5,7 +5,7 @@ import AdminShell from '@/components/admin/AdminShell';
 import {
   PageHeader, Card, SectionCard, Button, Field, TextInput, SelectInput, TextArea, Badge, Spinner, COLORS,
 } from '@/components/admin/ui';
-import { Plus, Trash2, ChevronRight, ChevronLeft, ListTodo, GripVertical, FolderKanban } from 'lucide-react';
+import { Plus, Trash2, ChevronRight, ChevronLeft, ListTodo, GripVertical, FolderKanban, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import TaskDrawer from '@/components/admin/TaskDrawer';
@@ -27,6 +27,7 @@ interface StaffTask {
   created_by: string | null;
   project_id?: string | null;
   project_name?: string | null;
+  ai_requested?: number;
 }
 
 interface ProjectLite { id: string; name: string; status?: 'aktiv' | 'archiviert' }
@@ -138,7 +139,10 @@ function TaskCard({
               )}
             </div>
           </div>
-          <Badge tone={PRIO_TONE[t.priority]}>{t.priority}</Badge>
+          <div className="flex flex-col items-end gap-1">
+            <Badge tone={PRIO_TONE[t.priority]}>{t.priority}</Badge>
+            {!!t.ai_requested && <Badge tone="info">🤖 KI</Badge>}
+          </div>
         </div>
         {isWaiting(t.status) && (
           <button
@@ -196,6 +200,14 @@ export default function AufgabenPage() {
   const [filterProject, setFilterProject] = useState('');
   const [form, setForm] = useState({ title: '', description: '', assignee_id: '', due_date: '', priority: 'normal', project_id: '' });
   const [saving, setSaving] = useState(false);
+  // KI-Check beim Anlegen (TASK-00098)
+  const [aiCheck, setAiCheck] = useState<{
+    ai_doable: boolean; confidence: number; clear: boolean; questions: string[];
+    improved_title: string; improved_description: string; category: string;
+  } | null>(null);
+  const [aiChecking, setAiChecking] = useState(false);
+  const [aiError, setAiError] = useState('');
+  const [aiRequested, setAiRequested] = useState(false);
   const [selected, setSelected] = useState<StaffTask | null>(null);
   const [showProjects, setShowProjects] = useState(false);
 
@@ -267,12 +279,38 @@ export default function AufgabenPage() {
           due_date: form.due_date || null,
           priority: form.priority,
           project_id: form.project_id || null,
+          ai_requested: aiRequested,
         }),
       });
       setForm({ title: '', description: '', assignee_id: '', due_date: '', priority: 'normal', project_id: form.project_id });
+      setAiCheck(null);
+      setAiRequested(false);
       await load();
     } finally {
       setSaving(false);
+    }
+  };
+
+  const runAiCheck = async () => {
+    if (!form.title) return;
+    setAiChecking(true);
+    setAiError('');
+    try {
+      const r = await fetch('/api/admin/tasks/ai-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: form.title, description: form.description }),
+      }).then((x) => x.json());
+      if (r.success) {
+        setAiCheck(r.data);
+        setAiRequested(false);
+      } else {
+        setAiError(r.error || 'KI-Check fehlgeschlagen.');
+      }
+    } catch {
+      setAiError('Verbindungsfehler beim KI-Check.');
+    } finally {
+      setAiChecking(false);
     }
   };
 
@@ -398,11 +436,57 @@ export default function AufgabenPage() {
             </SelectInput>
           </Field>
         </div>
-        <div className="mt-3">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <Button variant="accent" onClick={create} disabled={saving || !form.title}>
             {saving ? <Spinner className="h-4 w-4" /> : <Plus className="h-4 w-4" />} Aufgabe anlegen
           </Button>
+          <Button variant="secondary" onClick={runAiCheck} disabled={aiChecking || !form.title}>
+            {aiChecking ? <Spinner className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />} KI-Check
+          </Button>
+          {aiError && <span className="text-sm" style={{ color: COLORS.danger }}>{aiError}</span>}
         </div>
+
+        {/* KI-Check-Ergebnis (TASK-00098) */}
+        {aiCheck && (
+          <div className="mt-4 rounded-xl border p-4" style={{ borderColor: aiCheck.ai_doable ? '#c7dcf5' : '#e5e8ed', background: aiCheck.ai_doable ? '#f0f5fa' : '#fafafa' }}>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tone={aiCheck.ai_doable ? 'accent' : 'muted'}>
+                {aiCheck.ai_doable ? `🤖 KI-geeignet (${aiCheck.confidence} %)` : 'Nicht KI-geeignet'}
+              </Badge>
+              <Badge tone="navy">{aiCheck.category.replace('_', '-')}</Badge>
+              {!aiCheck.clear && <Badge tone="warn">Beschreibung unklar</Badge>}
+            </div>
+            {aiCheck.questions.length > 0 && (
+              <div className="mt-3">
+                <div className="text-xs font-bold uppercase tracking-wide" style={{ color: COLORS.textMuted }}>Rückfragen der KI</div>
+                <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm" style={{ color: COLORS.navy }}>
+                  {aiCheck.questions.map((q, i) => <li key={i}>{q}</li>)}
+                </ul>
+                <p className="mt-1.5 text-xs" style={{ color: COLORS.textMuted }}>
+                  Antworten am besten direkt in die Beschreibung einarbeiten und den KI-Check erneut ausführen.
+                </p>
+              </div>
+            )}
+            <div className="mt-3">
+              <div className="text-xs font-bold uppercase tracking-wide" style={{ color: COLORS.textMuted }}>Optimierter Vorschlag</div>
+              <div className="mt-1.5 rounded-lg border border-gray-200 bg-white p-3 text-sm">
+                <div className="font-semibold" style={{ color: COLORS.navy }}>{aiCheck.improved_title}</div>
+                <div className="mt-1 whitespace-pre-line" style={{ color: '#4b5563' }}>{aiCheck.improved_description}</div>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <Button size="sm" variant="secondary" onClick={() => setForm({ ...form, title: aiCheck.improved_title, description: aiCheck.improved_description })}>
+                  Vorschlag übernehmen
+                </Button>
+                {aiCheck.ai_doable && (
+                  <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold" style={{ color: COLORS.navy }}>
+                    <input type="checkbox" checked={aiRequested} onChange={(e) => setAiRequested(e.target.checked)} />
+                    🤖 KI soll diese Aufgabe übernehmen (Bestätigung per Mail)
+                  </label>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </SectionCard>
 
       {/* Board */}

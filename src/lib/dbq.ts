@@ -202,6 +202,8 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
     try { await pool.query(`ALTER TABLE booking_requests ADD COLUMN IF NOT EXISTS travel_period text DEFAULT ''`); } catch { /* ignore */ }
     // Tages-Briefing: Opt-out pro Mitarbeiter:in (TASK-00103)
     try { await pool.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS briefing_opt_out integer NOT NULL DEFAULT 0`); } catch { /* ignore */ }
+    // KI-Task-Assistent: Umsetzung durch KI angefragt (TASK-00098)
+    try { await pool.query(`ALTER TABLE staff_tasks ADD COLUMN IF NOT EXISTS ai_requested integer NOT NULL DEFAULT 0`); } catch { /* ignore */ }
     try { await pool.query(`INSERT INTO counters (name, value) SELECT 'booking_number', 1000 WHERE NOT EXISTS (SELECT 1 FROM counters WHERE name = 'booking_number')`); } catch { /* ignore */ }
 
     // Kundenportal-Tabellen (in PG zusätzlich anlegen – Migration introspektiert nur Bestandstabellen).

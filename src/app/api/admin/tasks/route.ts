@@ -35,5 +35,37 @@ export async function POST(req: Request) {
     }).catch(() => { /* nie blockierend */ });
   }
 
+  // KI-Umsetzung angefragt → Bestätigung an die Ersteller:in (Mail + Glocke), nie blockierend.
+  if (task.ai_requested && ctx.employee?.email) {
+    const ticket = formatTicketNo(task.ticket_number) || 'Ticket';
+    addNotification({
+      employee_id: ctx.employee.id,
+      type: 'info',
+      task_id: task.id,
+      title: `🤖 ${ticket} für KI-Umsetzung vorgemerkt – ${task.title}`,
+      body: 'Du bekommst eine Mail, sobald die KI mit der Umsetzung startet und wenn sie fertig ist.',
+      created_by: 'KI-Assistent',
+    }).catch(() => { /* nie blockierend */ });
+    (async () => {
+      const { isGraphConfigured, sendGraphMail } = await import('@/lib/graphMailer');
+      if (!isGraphConfigured()) return;
+      const { taskNotifyEmailHtml, taskSubjectTag } = await import('@/lib/emailTemplates');
+      const { getSettings } = await import('@/lib/settingsStore');
+      const base = (getSettings().mail?.login_base_url || 'https://next.faltintravel.com').replace(/\/+$/, '');
+      await sendGraphMail({
+        to: ctx.employee!.email,
+        toName: ctx.employee!.name,
+        subject: `🤖 KI-Auftrag registriert ${taskSubjectTag(ticket)} – ${task.title}`.slice(0, 200),
+        html: taskNotifyEmailHtml({
+          bodyText: 'Deine Aufgabe wurde für die Umsetzung durch die KI vorgemerkt. Sobald die KI startet bzw. fertig ist, bekommst du je eine Mail mit dem Stand direkt am Ticket.',
+          ticketNo: ticket,
+          taskTitle: task.title,
+          kindLabel: 'KI-Auftrag registriert',
+          ticketUrl: `${base}/admin/aufgaben/${task.id}`,
+        }),
+      });
+    })().catch((e) => console.warn('[ai-task] Bestätigungs-Mail fehlgeschlagen:', (e as Error).message));
+  }
+
   return NextResponse.json({ success: true, data: task });
 }

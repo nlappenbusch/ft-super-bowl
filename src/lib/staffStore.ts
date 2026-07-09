@@ -393,6 +393,8 @@ export interface StaffTask {
   status: TaskStatus;
   created_by: string | null;
   project_id: string | null;
+  /** 1 = Ersteller:in wünscht Umsetzung durch die KI (TASK-00098). */
+  ai_requested?: number;
   /** Aus dem Join in listStaffTasks (LEFT JOIN projects). */
   project_name?: string | null;
 }
@@ -410,12 +412,12 @@ export async function createStaffTask(input: Partial<StaffTask> & { title: strin
     const row = await q.get<{ n: number }>(`SELECT COALESCE(MAX(ticket_number), 9) + 1 AS n FROM staff_tasks`);
     const next = row?.n ?? 10;
     await q.run(`
-      INSERT INTO staff_tasks (id, ticket_number, title, description, assignee_id, booking_id, due_date, priority, status, created_by, project_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO staff_tasks (id, ticket_number, title, description, assignee_id, booking_id, due_date, priority, status, created_by, project_id, ai_requested)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [id, next, input.title, input.description || '', input.assignee_id || null,
       input.booking_id || null, input.due_date || null,
       input.priority || 'normal', input.status || 'offen', input.created_by || null,
-      input.project_id || null]);
+      input.project_id || null, input.ai_requested ? 1 : 0]);
   });
   return (await dbGet<StaffTask>('SELECT * FROM staff_tasks WHERE id = ?', [id]))!;
 }
@@ -455,10 +457,11 @@ export async function deleteStaffTask(id: string): Promise<boolean> {
   return (await dbRun('DELETE FROM staff_tasks WHERE id = ?', [id])).changes > 0;
 }
 
-export async function listStaffTasks(filter?: { assignee_id?: string; status?: string; booking_id?: string; project_id?: string }): Promise<StaffTask[]> {
+export async function listStaffTasks(filter?: { assignee_id?: string; status?: string; booking_id?: string; project_id?: string; ai_requested?: boolean }): Promise<StaffTask[]> {
   const where: string[] = [];
   const params: string[] = [];
   if (filter?.assignee_id) { where.push('t.assignee_id = ?'); params.push(filter.assignee_id); }
+  if (filter?.ai_requested) { where.push('t.ai_requested = 1'); }
   if (filter?.status) { where.push('t.status = ?'); params.push(filter.status); }
   if (filter?.booking_id) { where.push('t.booking_id = ?'); params.push(filter.booking_id); }
   if (filter?.project_id) {
