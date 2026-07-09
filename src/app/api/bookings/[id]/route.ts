@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { updateBooking } from '@/lib/bookingStore';
+import { requireAdminSession } from '@/lib/apiGuard';
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdminSession();
+  if (denied) return denied;
   try {
     const { id } = await params;
     const body = await request.json();

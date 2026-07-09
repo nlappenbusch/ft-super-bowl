@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createInvoiceRecord, listInvoices, getInvoiceItems } from '@/lib/invoiceStore';
 import { getBooking, createBooking } from '@/lib/bookingStore';
+import { requireAdminSession } from '@/lib/apiGuard';
 
 interface ManualCustomer {
   firstName?: string;
@@ -12,6 +13,8 @@ interface ManualCustomer {
 
 // Create invoice (für bestehenden Lead ODER individuelle/manuelle Buchung)
 export async function POST(request: Request) {
+  const denied = await requireAdminSession();
+  if (denied) return denied;
   try {
     const body = await request.json();
     const { bookingId, items, dueInDays, notes } = body;
@@ -82,6 +85,8 @@ export async function POST(request: Request) {
 
 // Get all invoices or by booking ID
 export async function GET(request: Request) {
+  const denied = await requireAdminSession();
+  if (denied) return denied;
   try {
     const { searchParams } = new URL(request.url);
     const bookingId = searchParams.get('bookingId');

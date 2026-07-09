@@ -7,11 +7,17 @@ import { jsPDF } from 'jspdf';
 import fs from 'fs';
 import path from 'path';
 import QRCode from 'qrcode';
+import { requireAdminSession, isInternalRequest } from '@/lib/apiGuard';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Admin-Session ODER interner Loopback-Aufruf (Portal-PDF mit eigenem Owner-Check).
+  if (!isInternalRequest(request)) {
+    const denied = await requireAdminSession();
+    if (denied) return denied;
+  }
   try {
     const { id } = await params;
     

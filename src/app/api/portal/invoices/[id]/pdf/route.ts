@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getPortalSession } from '@/lib/portalSession';
 import { getInvoiceById } from '@/lib/invoiceStore';
 import { getBooking } from '@/lib/bookingStore';
+import { internalApiKey, INTERNAL_KEY_HEADER } from '@/lib/apiGuard';
 
 /** GET /api/portal/invoices/[id]/pdf - Rechnung-PDF (nur Eigentuemer). */
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -19,7 +20,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   // PDF-Erzeugung an die bestehende Route delegieren – intern über Loopback
   // (hinter dem Reverse-Proxy ist req.url die interne Adresse; Loopback ist robust).
   const internal = `http://127.0.0.1:${process.env.PORT || '3000'}`;
-  const r = await fetch(`${internal}/api/invoices/${encodeURIComponent(id)}/pdf`);
+  const r = await fetch(`${internal}/api/invoices/${encodeURIComponent(id)}/pdf`, {
+    headers: { [INTERNAL_KEY_HEADER]: internalApiKey() },
+  });
   if (!r.ok) return NextResponse.json({ success: false, error: 'PDF-Erzeugung fehlgeschlagen' }, { status: 502 });
   const buf = Buffer.from(await r.arrayBuffer());
   return new NextResponse(buf, {

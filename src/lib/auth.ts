@@ -17,9 +17,10 @@ export interface Session {
   exp: number;
 }
 
-function secret(): string {
+export function authSecret(): string {
   return process.env.AUTH_SECRET || 'ft-dev-insecure-secret-bitte-AUTH_SECRET-setzen';
 }
+const secret = authSecret;
 
 function b64url(bytes: Uint8Array): string {
   let s = '';
