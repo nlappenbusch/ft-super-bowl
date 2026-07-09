@@ -72,7 +72,14 @@ export interface RecipientInfo {
  *   <05 Guten Tag · <11 Guten Morgen · <14 Guten Mittag · <18 Guten Tag · sonst Guten Abend
  */
 export function grussformel(date: Date = new Date()): string {
-  const h = Number(new Intl.DateTimeFormat('de-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', hour12: false }).format(date));
+  // formatToParts statt Number(format()): de-CH formatiert die Stunde als "11 Uhr" →
+  // Number davon ist NaN, alle Vergleiche false → es kam IMMER "Guten Abend" (Vorfall 09.07.).
+  let h = NaN;
+  try {
+    const parts = new Intl.DateTimeFormat('de-CH', { timeZone: 'Europe/Zurich', hour: 'numeric', hourCycle: 'h23' }).formatToParts(date);
+    h = Number(parts.find((p) => p.type === 'hour')?.value);
+  } catch { /* Fallback unten */ }
+  if (!Number.isFinite(h)) h = (date.getUTCHours() + 2) % 24; // grobe CEST-Näherung
   if (h < 5) return 'Guten Tag';
   if (h < 11) return 'Guten Morgen';
   if (h < 14) return 'Guten Mittag';

@@ -456,6 +456,38 @@ export async function listSentMessages(
   }));
 }
 
+/**
+ * Lädt die Anhänge einer versendeten Mail (inkl. Base64-Inhalt) — für die
+ * Wiederherstellung der Auto-Antwort-PDFs aus den Sent Items.
+ */
+export async function getSentMessageAttachments(
+  messageId: string
+): Promise<Array<{ name: string; contentType: string; size: number; contentBytes: string }>> {
+  if (!isGraphConfigured()) return [];
+  const token = await getGraphToken();
+  if (!token) return [];
+
+  const mailbox = getMailbox();
+  const url = `${GRAPH_BASE}/users/${encodeURIComponent(mailbox)}/messages/${encodeURIComponent(messageId)}/attachments`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    console.error(`[Graph] getAttachments Fehler (Postfach ${mailbox}):`, res.status, txt);
+    return [];
+  }
+  const json = (await res.json()) as {
+    value: Array<{ name?: string; contentType?: string; size?: number; contentBytes?: string }>;
+  };
+  return (json.value || [])
+    .filter((a) => a.contentBytes)
+    .map((a) => ({
+      name: a.name || 'Anhang',
+      contentType: a.contentType || 'application/octet-stream',
+      size: a.size || 0,
+      contentBytes: a.contentBytes as string,
+    }));
+}
+
 /** Health-Check fürs M365/Graph: Ist es konfiguriert und lässt sich ein Token holen? */
 export async function graphHealth(): Promise<{ configured: boolean; tokenOk: boolean; error?: string }> {
   if (!isGraphConfigured()) return { configured: false, tokenOk: false };
