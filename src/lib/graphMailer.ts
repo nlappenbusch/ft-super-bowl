@@ -381,6 +381,81 @@ export async function listInboxMessages(
   }));
 }
 
+export interface GraphSentMessage {
+  id: string;
+  subject: string;
+  toAddress: string;
+  toName: string;
+  sentAt: string;
+  bodyHtml: string;
+  hasAttachments: boolean;
+  attachments: Array<{ name: string; size: number; contentType: string }>;
+}
+
+/**
+ * Liest versendete Mails aus den Sent Items des Postfachs (neueste zuerst).
+ * Dient der Wiederherstellung von per Event konfigurierten Auto-Antworten
+ * aus den tatsächlich verschickten Mails (Anhänge nur als Metadaten).
+ * @param sinceIso nur Mails ab diesem Zeitpunkt (ISO), optional
+ * @param top max. Anzahl pro Seite (default 25)
+ * @param skip Offset fürs Blättern (default 0)
+ */
+export async function listSentMessages(
+  sinceIso?: string,
+  top = 25,
+  skip = 0
+): Promise<GraphSentMessage[]> {
+  if (!isGraphConfigured()) return [];
+  const token = await getGraphToken();
+  if (!token) return [];
+
+  const mailbox = getMailbox();
+  const filter = sinceIso ? `&$filter=sentDateTime ge ${encodeURIComponent(sinceIso)}` : '';
+  const url =
+    `${GRAPH_BASE}/users/${encodeURIComponent(mailbox)}/mailFolders/sentitems/messages` +
+    `?$top=${top}&$skip=${skip}` +
+    `&$select=id,subject,toRecipients,sentDateTime,body,hasAttachments` +
+    `&$expand=attachments($select=name,size,contentType)` +
+    `&$orderby=sentDateTime desc${filter}`;
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    console.error(`[Graph] listSent Fehler (App ${mailConfig().clientId}, Postfach ${mailbox}):`, res.status, txt);
+    return [];
+  }
+
+  const json = (await res.json()) as {
+    value: Array<{
+      id: string;
+      subject: string;
+      toRecipients?: Array<{ emailAddress?: { address?: string; name?: string } }>;
+      sentDateTime: string;
+      body?: { contentType: string; content: string };
+      hasAttachments?: boolean;
+      attachments?: Array<{ name?: string; size?: number; contentType?: string }>;
+    }>;
+  };
+
+  return (json.value || []).map((m) => ({
+    id: m.id,
+    subject: m.subject || '',
+    toAddress: m.toRecipients?.[0]?.emailAddress?.address || '',
+    toName: m.toRecipients?.[0]?.emailAddress?.name || '',
+    sentAt: m.sentDateTime,
+    bodyHtml: m.body?.content || '',
+    hasAttachments: !!m.hasAttachments,
+    attachments: (m.attachments || []).map((a) => ({
+      name: a.name || '',
+      size: a.size || 0,
+      contentType: a.contentType || '',
+    })),
+  }));
+}
+
 /** Health-Check fürs M365/Graph: Ist es konfiguriert und lässt sich ein Token holen? */
 export async function graphHealth(): Promise<{ configured: boolean; tokenOk: boolean; error?: string }> {
   if (!isGraphConfigured()) return { configured: false, tokenOk: false };
