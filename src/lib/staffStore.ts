@@ -26,13 +26,15 @@ export interface Employee {
   vacation_days_per_year: number;
   employment_start: string | null;
   notes: string;
+  /** Kein tägliches Briefing per Mail erhalten (TASK-00103). */
+  briefing_opt_out: boolean;
 }
 
 interface EmployeeRow {
   id: string; created_at: string; last_login_at: string | null;
   name: string; email: string; role: 'admin' | 'mitarbeiter';
   active: number; weekly_hours: string; vacation_days_per_year: number;
-  employment_start: string | null; notes: string;
+  employment_start: string | null; notes: string; briefing_opt_out: number;
 }
 
 function rowToEmployee(r: EmployeeRow): Employee {
@@ -41,7 +43,7 @@ function rowToEmployee(r: EmployeeRow): Employee {
     const parsed = JSON.parse(r.weekly_hours);
     if (Array.isArray(parsed) && parsed.length === 7) weekly = parsed as WeeklyHours;
   } catch { /* default */ }
-  return { ...r, active: !!r.active, weekly_hours: weekly };
+  return { ...r, active: !!r.active, weekly_hours: weekly, briefing_opt_out: !!r.briefing_opt_out };
 }
 
 /** Upsert beim Microsoft-Login: legt Mitarbeiter an bzw. aktualisiert Name/E-Mail/Login-Zeit. */
@@ -78,6 +80,7 @@ export interface EmployeeUpdate {
   employment_start?: string | null;
   notes?: string;
   name?: string;
+  briefing_opt_out?: boolean;
 }
 
 export async function updateEmployee(id: string, u: EmployeeUpdate): Promise<Employee | null> {
@@ -86,7 +89,7 @@ export async function updateEmployee(id: string, u: EmployeeUpdate): Promise<Emp
   await dbRun(`
     UPDATE employees SET
       role = ?, active = ?, weekly_hours = ?, vacation_days_per_year = ?,
-      employment_start = ?, notes = ?, name = ?
+      employment_start = ?, notes = ?, name = ?, briefing_opt_out = ?
     WHERE id = ?
   `, [
     u.role ?? cur.role,
@@ -96,6 +99,7 @@ export async function updateEmployee(id: string, u: EmployeeUpdate): Promise<Emp
     u.employment_start !== undefined ? u.employment_start : cur.employment_start,
     u.notes ?? cur.notes,
     u.name ?? cur.name,
+    (u.briefing_opt_out ?? cur.briefing_opt_out) ? 1 : 0,
     id,
   ]);
   return getEmployee(id);
@@ -877,6 +881,36 @@ export interface TaskMessage {
   graph_message_id: string | null;
   created_at: string;
   created_by: string;
+}
+
+export interface UnansweredTaskInbound {
+  task_id: string;
+  ticket_number: number | null;
+  title: string;
+  status: string;
+  assignee_id: string | null;
+  /** created_at der neuesten unbeantworteten eingehenden Mail. */
+  last_in_at: string;
+}
+
+/**
+ * Offene Tickets, bei denen die letzte eingehende Mail ('in') neuer ist als die
+ * letzte ausgehende Antwort ('out') — fürs Tages-Briefing. Aggregat-Ausdrücke
+ * im HAVING bewusst wiederholt (Postgres erlaubt keine SELECT-Aliase dort).
+ */
+export async function listUnansweredTaskInbound(): Promise<UnansweredTaskInbound[]> {
+  return dbAll<UnansweredTaskInbound>(`
+    SELECT s.id AS task_id, s.ticket_number, s.title, s.status, s.assignee_id,
+           MAX(CASE WHEN m.direction = 'in' THEN m.created_at END) AS last_in_at
+    FROM staff_tasks s
+    JOIN task_messages m ON m.task_id = s.id
+    WHERE s.status != 'erledigt'
+    GROUP BY s.id, s.ticket_number, s.title, s.status, s.assignee_id
+    HAVING MAX(CASE WHEN m.direction = 'in' THEN m.created_at END) IS NOT NULL
+       AND (MAX(CASE WHEN m.direction = 'out' THEN m.created_at END) IS NULL
+            OR MAX(CASE WHEN m.direction = 'out' THEN m.created_at END) < MAX(CASE WHEN m.direction = 'in' THEN m.created_at END))
+    ORDER BY MAX(CASE WHEN m.direction = 'in' THEN m.created_at END) ASC
+  `);
 }
 
 export async function listTaskMessages(taskId: string): Promise<TaskMessage[]> {

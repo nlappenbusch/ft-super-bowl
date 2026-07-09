@@ -16,8 +16,12 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { listEmployees, listStaffTasks, formatTicketNo, type StaffTask, type Employee } from './staffStore';
-import { getAllBookings } from './database';
+import {
+  listEmployees, listStaffTasks, formatTicketNo, listUnansweredTaskInbound, listTaskTimeEntries,
+  type StaffTask, type Employee,
+} from './staffStore';
+import { getAllBookings, listUnansweredBookingInbound } from './database';
+import { getEvents } from './contentStore';
 import type { BookingRequest } from './supabase';
 import { getSettings } from './settingsStore';
 import {
@@ -116,6 +120,43 @@ function plural(n: number, singular: string, pluralWord: string): string {
   return `${n} ${n === 1 ? singular : pluralWord}`;
 }
 
+/** YYYY-MM-DD um n Tage verschieben (rein kalendarisch, UTC-Mittag gegen DST-Kanten). */
+function addDays(dateStr: string, n: number): string {
+  const d = new Date(`${dateStr}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Wochentag 0=So … 6=Sa eines YYYY-MM-DD. */
+function dayOfWeek(dateStr: string): number {
+  return new Date(`${dateStr}T12:00:00Z`).getUTCDay();
+}
+
+function formatEuro(n: number): string {
+  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(n);
+}
+
+function formatHours(minutes: number): string {
+  return `${(minutes / 60).toFixed(1).replace('.', ',')} h`;
+}
+
+/**
+ * Streak: zusammenhängende Arbeitstage (Mo–Fr) bis heute/gestern, an denen der
+ * Mitarbeitende Zeiten gebucht hat. Wochenenden unterbrechen den Streak nicht.
+ */
+function bookingStreak(workDates: Set<string>, today: string): number {
+  let day = workDates.has(today) ? today : addDays(today, -1);
+  let streak = 0;
+  for (let i = 0; i < 60; i++) {
+    const dow = dayOfWeek(day);
+    if (dow === 0 || dow === 6) { day = addDays(day, -1); continue; }
+    if (!workDates.has(day)) break;
+    streak++;
+    day = addDays(day, -1);
+  }
+  return streak;
+}
+
 function taskItem(t: StaffTask, opts: { sinceMs: number; today: string; base: string; withAssignee?: Map<string, string> }): BriefingTaskItem {
   const due = (t.due_date || '').slice(0, 10);
   const overdue = !!due && due < opts.today;
@@ -193,10 +234,14 @@ export async function runDailyBriefing(opts: { force?: boolean } = {}): Promise<
     const sinceMs = Date.now() - DAY_MS;
     const staleBeforeMs = Date.now() - STALE_DAYS * DAY_MS;
 
-    const [employees, tasks, bookings] = await Promise.all([
+    const [employees, tasks, bookings, unansweredBookings, unansweredTasks, timeEntries] = await Promise.all([
       listEmployees(false),
       listStaffTasks(),
       getAllBookings() as Promise<BookingRow[]>,
+      listUnansweredBookingInbound().catch(() => []),
+      listUnansweredTaskInbound().catch(() => []),
+      // Zeiten der letzten 30 Tage: Streaks + Wochen-Rückblick aus einem Abruf
+      listTaskTimeEntries({ from: addDays(now.date, -30) }).catch(() => []),
     ]);
     const nameById = new Map(employees.map((e) => [e.id, e.name]));
 
@@ -205,12 +250,74 @@ export async function runDailyBriefing(opts: { force?: boolean } = {}): Promise<
     const movedInquiries = bookings.filter((b) => ts(b.created_at) < sinceMs && ts(b.updated_at) >= sinceMs);
     const teamDoneCount = tasks.filter((t) => t.status === 'erledigt' && ts(t.updated_at) >= sinceMs).length;
 
+    // Pipeline: offene Anfragen nach Status + offenes Volumen (für alle gleich)
+    const openBookings = bookings.filter((b) => b.status === 'new' || b.status === 'in_progress');
+    const pipeline = {
+      newCount: openBookings.filter((b) => b.status === 'new').length,
+      inProgressCount: openBookings.filter((b) => b.status === 'in_progress').length,
+      volumeLabel: formatEuro(openBookings.reduce((s, b) => s + (b.total_price || 0), 0)),
+    };
+
+    // Unbeantwortete Kundenmails (>24 h) aus CRM + Tickets, älteste zuerst
+    const unanswered: BriefingInquiryItem[] = [
+      ...unansweredBookings.map((u) => ({
+        requestNumber: u.request_number || '—',
+        title: [u.package_title, (u.customer_name || '').trim() || u.email].filter(Boolean).join(' — '),
+        url: `${base}/admin/crm`,
+        statusLabel: `${BOOKING_STATUS_LABEL[u.status] || u.status}${u.assigned_to ? ` · ${nameById.get(u.assigned_to) || 'Unbekannt'}` : ' · nicht zugewiesen'}`,
+        lastInMs: ts(u.last_in_at),
+      })),
+      ...unansweredTasks.map((u) => ({
+        requestNumber: formatTicketNo(u.ticket_number) || '—',
+        title: u.title,
+        url: `${base}/admin/aufgaben/${u.task_id}`,
+        statusLabel: u.assignee_id ? `Ticket · ${nameById.get(u.assignee_id) || 'Unbekannt'}` : 'Ticket · nicht zugewiesen',
+        lastInMs: ts(u.last_in_at),
+      })),
+    ]
+      .filter((u) => u.lastInMs > 0 && u.lastInMs <= sinceMs)
+      .sort((a, b) => a.lastInMs - b.lastInMs)
+      .slice(0, MAX_ITEMS_PER_SECTION)
+      .map(({ lastInMs, ...item }) => ({
+        ...item,
+        ageLabel: `seit ${plural(Math.max(1, Math.floor((Date.now() - lastInMs) / DAY_MS)), 'Tag', 'Tagen')} unbeantwortet`,
+      }));
+
+    // Event-Countdowns: nächste 3 Events mit offenen Anfragen je Event
+    const countdowns = getEvents()
+      .filter((e) => (e.start_date || '') >= now.date)
+      .sort((a, b) => ((a.start_date || '') < (b.start_date || '') ? -1 : 1))
+      .slice(0, 3)
+      .map((e) => {
+        const days = Math.round((ts(`${e.start_date}T12:00:00Z`) - ts(`${now.date}T12:00:00Z`)) / DAY_MS);
+        const open = openBookings.filter((b) => b.event_slug && b.event_slug === e.slug).length;
+        return {
+          name: e.name || e.title,
+          daysLabel: days === 0 ? 'heute!' : days === 1 ? 'morgen' : `in ${days} Tagen`,
+          extra: open ? plural(open, 'offene Anfrage', 'offene Anfragen') : undefined,
+        };
+      });
+
+    // Zeiten-Buchungs-Streak je Mitarbeiter:in (Arbeitstage Mo–Fr)
+    const workDatesByEmp = new Map<string, Set<string>>();
+    for (const te of timeEntries) {
+      if (!te.employee_id || !te.work_date) continue;
+      if (!workDatesByEmp.has(te.employee_id)) workDatesByEmp.set(te.employee_id, new Set());
+      workDatesByEmp.get(te.employee_id)!.add(te.work_date.slice(0, 10));
+    }
+
+    // Freitags: Wochen-Rückblick (Mo–heute)
+    const isFriday = dayOfWeek(now.date) === 5;
+    const weekFrom = addDays(now.date, -((dayOfWeek(now.date) + 6) % 7));
+    const weekFromMs = ts(`${weekFrom}T00:00:00Z`);
+    const weekTime = timeEntries.filter((te) => (te.work_date || '').slice(0, 10) >= weekFrom);
+
     const dateLabel = new Intl.DateTimeFormat('de-CH', {
       timeZone: 'Europe/Zurich', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
     }).format(new Date());
 
     const result = empty({});
-    const recipients = employees.filter((e): e is Employee => !!(e.email || '').trim());
+    const recipients = employees.filter((e): e is Employee => !!(e.email || '').trim() && !e.briefing_opt_out);
 
     for (const emp of recipients) {
       try {
@@ -239,8 +346,32 @@ export async function runDailyBriefing(opts: { force?: boolean } = {}): Promise<
         if (teamDoneCount > myDone) {
           kudos.push(`👏 Das Team hat insgesamt ${plural(teamDoneCount, 'Aufgabe', 'Aufgaben')} erledigt.`);
         }
+        const streak = bookingStreak(workDatesByEmp.get(emp.id) || new Set(), now.date);
+        if (streak >= 2) {
+          kudos.push(`🔥 ${streak} Arbeitstage in Folge Zeiten gebucht — dranbleiben!`);
+        }
 
-        const hasContent = myOpen.length || othersNew.length || newInquiries.length || movedInquiries.length || myStale.length || kudos.length;
+        // Freitags: Wochen-Bilanz (Team gesamt + eigener Zeitanteil)
+        let weekReview: { title: string; lines: string[] } | null = null;
+        if (isFriday) {
+          const doneWeek = tasks.filter((t) => t.status === 'erledigt' && ts(t.updated_at) >= weekFromMs).length;
+          const bookedWeek = bookings.filter((b) => b.status === 'booked' && ts(b.updated_at) >= weekFromMs).length;
+          const newWeek = bookings.filter((b) => ts(b.created_at) >= weekFromMs).length;
+          const totalMin = weekTime.reduce((s, te) => s + (te.minutes || 0), 0);
+          const ownMin = weekTime.filter((te) => te.employee_id === emp.id).reduce((s, te) => s + (te.minutes || 0), 0);
+          const lines = [
+            doneWeek ? `✅ ${plural(doneWeek, 'Aufgabe erledigt', 'Aufgaben erledigt')}` : '',
+            bookedWeek ? `✈️ ${plural(bookedWeek, 'Anfrage zur Buchung gebracht', 'Anfragen zur Buchung gebracht')}` : '',
+            newWeek ? `📥 ${plural(newWeek, 'neue Anfrage eingegangen', 'neue Anfragen eingegangen')}` : '',
+            totalMin ? `⏱️ ${formatHours(totalMin)} Zeiten gebucht${ownMin ? ` (davon du: ${formatHours(ownMin)})` : ''}` : '',
+          ].filter(Boolean);
+          if (lines.length) {
+            weekReview = { title: `Dein Wochen-Rückblick (seit Mo. ${formatDueDate(weekFrom)})`, lines };
+          }
+        }
+
+        const hasContent = myOpen.length || othersNew.length || newInquiries.length || movedInquiries.length
+          || myStale.length || kudos.length || unanswered.length || weekReview;
         if (!hasContent) {
           result.skippedEmpty++;
           continue;
@@ -259,11 +390,16 @@ export async function runDailyBriefing(opts: { force?: boolean } = {}): Promise<
             const days = Math.floor((Date.now() - ts(b.updated_at || b.created_at)) / DAY_MS);
             return inquiryItem(b, base, `seit ${plural(days, 'Tag', 'Tagen')} ohne Bewegung`);
           }),
+          pipeline,
+          unansweredMails: unanswered,
+          countdowns,
+          weekReview,
           boardUrl: `${base}/admin/aufgaben`,
           crmUrl: `${base}/admin/crm`,
         });
 
         const counts = [
+          unanswered.length ? plural(unanswered.length, 'unbeantwortete Mail', 'unbeantwortete Mails') : '',
           myOpenAll.length ? plural(myOpenAll.length, 'offene Aufgabe', 'offene Aufgaben') : '',
           newInquiries.length ? plural(newInquiries.length, 'neue Anfrage', 'neue Anfragen') : '',
         ].filter(Boolean).join(' · ');
