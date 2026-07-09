@@ -127,6 +127,8 @@ export interface MailSettings {
   daily_briefing_enabled?: boolean;
   /** Stunde (0–23, Europe/Zurich), ab der das Tages-Briefing verschickt wird */
   daily_briefing_hour?: number;
+  /** Release-Notes-Mail an alle nach jedem Deploy (gemergte PRs via GitHub-API) */
+  release_notes_enabled?: boolean;
 }
 
 const DEFAULT_SETTINGS: AllSettings = {
@@ -194,6 +196,7 @@ const DEFAULT_SETTINGS: AllSettings = {
     ticket_auto_create_domains: 'faltintravel.com',
     daily_briefing_enabled: true,
     daily_briefing_hour: 7,
+    release_notes_enabled: true,
   },
   ai: {
     anthropic_api_key: '',

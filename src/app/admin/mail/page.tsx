@@ -8,7 +8,7 @@ import {
 import { buildEntraSetupScript } from '@/lib/entraSetupScript';
 import {
   Mail, Send, RefreshCw, CheckCircle2, XCircle, Server, Inbox, ListChecks, KeyRound,
-  Save, Terminal, Copy, Download, ShieldCheck, Sun,
+  Save, Terminal, Copy, Download, ShieldCheck, Sun, Rocket,
 } from 'lucide-react';
 
 interface MailStatus {
@@ -45,6 +45,7 @@ export default function MailAdminPage() {
     inbound_poll_secret: '', brevo_api_key: '', login_base_url: '', notify_to: '',
     ticket_auto_create: false, ticket_auto_create_domains: 'faltintravel.com',
     daily_briefing_enabled: true, daily_briefing_hour: '7',
+    release_notes_enabled: true,
   });
 
   const [testTo, setTestTo] = useState('');
@@ -52,6 +53,8 @@ export default function MailAdminPage() {
   const [polling, setPolling] = useState(false);
   const [briefingStatus, setBriefingStatus] = useState<{ last_sent_date: string | null; last_result: { sent: number; skippedEmpty: number; errors: number } | null } | null>(null);
   const [sendingBriefing, setSendingBriefing] = useState(false);
+  const [releaseStatus, setReleaseStatus] = useState<{ githubConfigured: boolean; last_run_at: string | null; last_result: { sent: number; prs: number[] } | null } | null>(null);
+  const [sendingRelease, setSendingRelease] = useState(false);
   const [toast, setToast] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // Script generator
@@ -62,13 +65,15 @@ export default function MailAdminPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, c, b] = await Promise.all([
+      const [s, c, b, rn] = await Promise.all([
         fetch('/api/admin/mail/status').then((r) => r.json()),
         fetch('/api/admin/mail/config').then((r) => r.json()),
         fetch('/api/admin/briefing').then((r) => r.json()).catch(() => null),
+        fetch('/api/admin/release-notes').then((r) => r.json()).catch(() => null),
       ]);
       if (s.success) setStatus(s.data);
       if (b?.success) setBriefingStatus(b.data);
+      if (rn?.success) setReleaseStatus(rn.data);
       if (c.success) {
         setCfg(c.data);
         setForm((f) => ({
@@ -84,6 +89,7 @@ export default function MailAdminPage() {
           ticket_auto_create_domains: c.data.ticket_auto_create_domains ?? 'faltintravel.com',
           daily_briefing_enabled: c.data.daily_briefing_enabled !== false,
           daily_briefing_hour: String(c.data.daily_briefing_hour ?? 7),
+          release_notes_enabled: c.data.release_notes_enabled !== false,
           client_secret: '',
           brevo_api_key: '',
         }));
@@ -145,6 +151,21 @@ export default function MailAdminPage() {
       } else flash(false, data.error || 'Briefing fehlgeschlagen.');
     } catch { flash(false, 'Verbindungsfehler.'); }
     finally { setSendingBriefing(false); }
+  };
+
+  const runReleaseNotes = async () => {
+    setSendingRelease(true);
+    try {
+      const res = await fetch('/api/admin/release-notes', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        flash(true, data.data.prs.length
+          ? `Release-Mail verschickt: ${data.data.sent} Empfänger, PRs #${data.data.prs.join(', #')}.`
+          : `Keine neuen Merges seit dem letzten Lauf — nichts zu verschicken.`);
+        await load();
+      } else flash(false, data.error || 'Release-Mail fehlgeschlagen.');
+    } catch { flash(false, 'Verbindungsfehler.'); }
+    finally { setSendingRelease(false); }
   };
 
   const runPoll = async () => {
@@ -291,6 +312,17 @@ export default function MailAdminPage() {
                   />
                 </div>
               </div>
+              <div className="rounded-xl border border-gray-200 p-4">
+                <Toggle
+                  checked={form.release_notes_enabled}
+                  onChange={(v) => set('release_notes_enabled', v)}
+                  label="Release-Mail nach jedem Deploy"
+                />
+                <p className="mt-1.5 text-xs" style={{ color: '#9ca3af' }}>
+                  Nach jedem Deploy geht ein Entwickler-Changelog an alle Mitarbeitenden: neue Funktionen,
+                  Bugfixes & Co. mit PR-Link und TASK-Nummern (Quelle: gemergte GitHub-PRs).
+                </p>
+              </div>
               <InputField
                 label="Brevo API-Key (Listen)"
                 type="password"
@@ -360,6 +392,24 @@ export default function MailAdminPage() {
             </p>
             <Button variant="primary" onClick={runBriefing} disabled={sendingBriefing || !status?.graphConfigured}>
               {sendingBriefing ? <Spinner className="h-4 w-4 border-white" /> : <Send className="h-4 w-4" />} Jetzt an alle senden
+            </Button>
+          </SectionCard>
+
+          {/* Release-Mails */}
+          <SectionCard title="Release-Mails" description="Changelog nach jedem Deploy ans Team" icon={<Rocket className="h-5 w-5" />}>
+            <p className="mb-4 text-sm" style={{ color: COLORS.textMuted }}>
+              {releaseStatus?.last_result?.prs?.length
+                ? <>Zuletzt angekündigt: PR&nbsp;#{releaseStatus.last_result.prs.join(', #')} ({releaseStatus.last_result.sent} Mails).</>
+                : 'Noch keine Release-Mail verschickt.'}
+              {' '}Der Button prüft auf neue Merges und verschickt sofort.
+              {releaseStatus && !releaseStatus.githubConfigured && (
+                <span className="block mt-2 font-semibold" style={{ color: COLORS.danger }}>
+                  Kein GitHub-Token konfiguriert — Quelle für die Changelog-Daten fehlt.
+                </span>
+              )}
+            </p>
+            <Button variant="primary" onClick={runReleaseNotes} disabled={sendingRelease || !status?.graphConfigured || !releaseStatus?.githubConfigured}>
+              {sendingRelease ? <Spinner className="h-4 w-4 border-white" /> : <Rocket className="h-4 w-4" />} Jetzt prüfen &amp; senden
             </Button>
           </SectionCard>
         </div>
