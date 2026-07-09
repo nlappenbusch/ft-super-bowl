@@ -5,10 +5,11 @@ import AdminShell from '@/components/admin/AdminShell';
 import {
   PageHeader, Card, SectionCard, Button, Field, TextInput, SelectInput, TextArea, Badge, Spinner, COLORS,
 } from '@/components/admin/ui';
-import { Plus, Trash2, ChevronRight, ChevronLeft, ListTodo, GripVertical } from 'lucide-react';
+import { Plus, Trash2, ChevronRight, ChevronLeft, ListTodo, GripVertical, FolderKanban } from 'lucide-react';
 import Link from 'next/link';
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import TaskDrawer from '@/components/admin/TaskDrawer';
+import ProjectManagerDialog from '@/components/admin/ProjectManagerDialog';
 
 type TaskStatus = 'offen' | 'in_arbeit' | 'warten_requester' | 'warten_dritte' | 'erledigt';
 
@@ -28,7 +29,7 @@ interface StaffTask {
   project_name?: string | null;
 }
 
-interface ProjectLite { id: string; name: string }
+interface ProjectLite { id: string; name: string; status?: 'aktiv' | 'archiviert' }
 
 function ticketNo(n: number | null): string {
   return n && n > 0 ? `TASK-${String(n).padStart(5, '0')}` : '';
@@ -196,6 +197,7 @@ export default function AufgabenPage() {
   const [form, setForm] = useState({ title: '', description: '', assignee_id: '', due_date: '', priority: 'normal', project_id: '' });
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<StaffTask | null>(null);
+  const [showProjects, setShowProjects] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -214,7 +216,7 @@ export default function AufgabenPage() {
 
   const loadProjects = useCallback(async () => {
     const r = await fetch('/api/admin/projects').then((x) => x.json()).catch(() => null);
-    if (r?.success) setProjects(r.data.map((p: ProjectLite) => ({ id: p.id, name: p.name })));
+    if (r?.success) setProjects(r.data.map((p: ProjectLite) => ({ id: p.id, name: p.name, status: p.status })));
   }, []);
 
   useEffect(() => {
@@ -337,12 +339,15 @@ export default function AufgabenPage() {
             <SelectInput value={filterProject} onChange={(e) => setFilterProject(e.target.value)} className="w-52">
               <option value="">Alle Projekte</option>
               <option value="none">Ohne Projekt</option>
-              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}{p.status === 'archiviert' ? ' (archiviert)' : ''}</option>)}
             </SelectInput>
             <SelectInput value={filterAssignee} onChange={(e) => setFilterAssignee(e.target.value)} className="w-48">
               <option value="">Alle Mitarbeiter</option>
               {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
             </SelectInput>
+            <Button variant="secondary" onClick={() => setShowProjects(true)}>
+              <FolderKanban className="h-4 w-4" /> Projekte
+            </Button>
           </div>
         }
       />
@@ -379,7 +384,9 @@ export default function AufgabenPage() {
               }}
             >
               <option value="">Kein Projekt</option>
-              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              {projects.filter((p) => p.status !== 'archiviert' || p.id === form.project_id).map((p) => (
+                <option key={p.id} value={p.id}>{p.name}{p.status === 'archiviert' ? ' (archiviert)' : ''}</option>
+              ))}
               <option value="__new__">＋ Neues Projekt…</option>
             </SelectInput>
           </Field>
@@ -447,6 +454,11 @@ export default function AufgabenPage() {
         </DndContext>
       )}
       {selected && <TaskDrawer task={selected} onClose={() => setSelected(null)} onChanged={load} />}
+      <ProjectManagerDialog
+        open={showProjects}
+        onClose={() => setShowProjects(false)}
+        onChanged={() => { loadProjects(); load(); }}
+      />
     </AdminShell>
   );
 }
