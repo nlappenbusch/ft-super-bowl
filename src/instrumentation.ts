@@ -16,6 +16,7 @@
 const POLL_INTERVAL_MS = 120_000;
 const BRIEFING_CHECK_MS = 300_000;
 const RELEASE_NOTES_DELAY_MS = 90_000;
+const CONTENT_DRIFT_DELAY_MS = 30_000;
 const GLOBAL_KEY = Symbol.for('faltin.inboundPollTimer');
 
 export async function register() {
@@ -80,4 +81,22 @@ export async function register() {
   (releaseTimer as unknown as { unref?: () => void }).unref?.();
 
   console.log(`[release-notes] Check ${RELEASE_NOTES_DELAY_MS / 1000}s nach Start geplant.`);
+
+  // Content-Drift-Check einmalig nach dem Start (= nach jedem Deploy): vergleicht
+  // den Content-Bestand mit dem letzten Stand und alarmiert bei verdächtigem
+  // Schwund per Mail (Konsequenz aus dem Wipe vom 01.07., blieb 8 Tage unbemerkt).
+  const driftTimer = setTimeout(async () => {
+    try {
+      const { runContentDriftCheck } = await import('./lib/contentDriftCheck');
+      const result = await runContentDriftCheck();
+      console.log(
+        result.alarms.length
+          ? `[content-drift] ${result.alarms.length} Alarm(e) — Mail an notify_to versendet.`
+          : `[content-drift] Bestand OK${result.checked ? '' : ' (erster Lauf, Referenz gespeichert)'}.`
+      );
+    } catch (err) {
+      console.error('[content-drift] Check fehlgeschlagen:', err);
+    }
+  }, CONTENT_DRIFT_DELAY_MS);
+  (driftTimer as unknown as { unref?: () => void }).unref?.();
 }
