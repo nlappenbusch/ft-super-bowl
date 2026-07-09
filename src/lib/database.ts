@@ -511,6 +511,7 @@ export function initDatabase() {
   sqlite.exec(`CREATE INDEX IF NOT EXISTS idx_task_time_report ON task_time(report_id)`);
   const stcols2 = sqlite.prepare(`PRAGMA table_info(staff_tasks)`).all() as Array<{ name: string }>;
   if (stcols2.length && !stcols2.some((c) => c.name === 'project_id')) addColumn('staff_tasks', 'project_id TEXT');
+  if (stcols2.length && !stcols2.some((c) => c.name === 'ai_requested')) addColumn('staff_tasks', 'ai_requested INTEGER NOT NULL DEFAULT 0');
   // Backfill: bestehende Tasks ohne Nummer fortlaufend ab 10 nummerieren (nach Erstellzeit).
   try {
     const missing = sqlite.prepare(`SELECT id FROM staff_tasks WHERE ticket_number IS NULL ORDER BY created_at, id`).all() as Array<{ id: string }>;

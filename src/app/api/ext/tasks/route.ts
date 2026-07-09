@@ -13,6 +13,7 @@ export async function GET(req: Request) {
     assignee_id: url.searchParams.get('assignee') || undefined,
     booking_id: url.searchParams.get('booking') || undefined,
     project_id: url.searchParams.get('project') || undefined,
+    ai_requested: url.searchParams.get('ai') === '1' || undefined,
   });
   return NextResponse.json({ success: true, data: tasks.map(withTicket) });
 }
