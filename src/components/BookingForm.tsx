@@ -12,7 +12,7 @@ interface Traveler {
   salutation: string;
   firstName: string;
   lastName: string;
-  birthDate: string;
+  birthDate?: string;
   passportNumber?: string;
 }
 
@@ -27,7 +27,6 @@ interface BookingFormData {
   mainBookerSalutation: string;
   mainBookerFirstName: string;
   mainBookerLastName: string;
-  mainBookerBirthDate: string;
   street: string;
   zip: string;
   city: string;
@@ -179,7 +178,7 @@ export default function BookingForm() {
       doubleRooms: 0,
       singleRooms: 1,
       numberOfPersons: 1,
-      travelers: Array(1).fill({ salutation: '', firstName: '', lastName: '', birthDate: '', passportNumber: '' })
+      travelers: Array(1).fill({ salutation: '', firstName: '', lastName: '' })
     }
   });
 
@@ -269,7 +268,7 @@ export default function BookingForm() {
         setValue('numberOfPersons', persons);
         setValue('doubleRooms', 0);
         setValue('singleRooms', persons);
-        setValue('travelers', Array(persons).fill({ salutation: '', firstName: '', lastName: '', birthDate: '', passportNumber: '' }));
+        setValue('travelers', Array(persons).fill({ salutation: '', firstName: '', lastName: '' }));
         setNumberOfPersons(persons);
         setSelectedPreset('0');
       } else if (roomParam === 'double') {
@@ -280,7 +279,7 @@ export default function BookingForm() {
         const singleRooms = persons % 2;
         setValue('doubleRooms', doubleRooms);
         setValue('singleRooms', singleRooms);
-        setValue('travelers', Array(persons).fill({ salutation: '', firstName: '', lastName: '', birthDate: '', passportNumber: '' }));
+        setValue('travelers', Array(persons).fill({ salutation: '', firstName: '', lastName: '' }));
         setNumberOfPersons(persons);
         setSelectedPreset('0');
       } else if (personsParam) {
@@ -290,7 +289,7 @@ export default function BookingForm() {
         const singleRooms = persons % 2;
         setValue('doubleRooms', doubleRooms);
         setValue('singleRooms', singleRooms);
-        setValue('travelers', Array(persons).fill({ salutation: '', firstName: '', lastName: '', birthDate: '', passportNumber: '' }));
+        setValue('travelers', Array(persons).fill({ salutation: '', firstName: '', lastName: '' }));
         setNumberOfPersons(persons);
         setSelectedPreset('0');
       }
@@ -394,7 +393,18 @@ export default function BookingForm() {
     }
 
     setIsSubmitting(true);
-    
+
+    // „Ich bin auch Reisender": Daten des Hauptanmelders als ersten Reisenden übernehmen
+    // (das Formular blendet travelers[0] dann aus – ohne Übernahme bliebe der Eintrag leer).
+    const submittedTravelers = [...data.travelers];
+    if (mainBookerIsTraveler) {
+      submittedTravelers[0] = {
+        salutation: data.mainBookerSalutation,
+        firstName: data.mainBookerFirstName,
+        lastName: data.mainBookerLastName,
+      };
+    }
+
     try {
       const response = await fetch('/api/bookings', {
         method: 'POST',
@@ -410,7 +420,7 @@ export default function BookingForm() {
           numberOfPersons: data.numberOfPersons,
           doubleRooms: data.doubleRooms,
           singleRooms: data.singleRooms,
-          travelers: data.travelers,
+          travelers: submittedTravelers,
           salutation: data.mainBookerSalutation,
           firstName: data.mainBookerFirstName,
           lastName: data.mainBookerLastName,
@@ -430,9 +440,9 @@ export default function BookingForm() {
       const result = await response.json();
 
       if (result.success) {
-        alert('✅ Vielen Dank für Ihre Buchungsanfrage! Wir werden uns in Kürze bei Ihnen melden.');
-        // Optionally redirect to thank you page
-        // window.location.href = '/danke';
+        const rq = result.requestNumber ? `?rq=${encodeURIComponent(result.requestNumber)}` : '';
+        window.location.href = `/booking/danke${rq}`;
+        return;
       } else {
         alert('❌ Fehler beim Absenden: ' + result.error);
       }
@@ -745,11 +755,6 @@ export default function BookingForm() {
 
                     <div className='grid md:grid-cols-2 gap-4'>
                       <div>
-                        <label className='block text-sm font-semibold text-gray-700 mb-2'>Geburtsdatum *</label>
-                        <input type='date' {...register('mainBookerBirthDate', { required: true })} className='w-full min-w-0 max-w-full appearance-none px-4 py-3 border border-gray-300 rounded-lg bg-white' />
-                        {errors.mainBookerBirthDate && <span className='text-red-500 text-sm'>Pflichtfeld</span>}
-                      </div>
-                      <div>
                         <label className='block text-sm font-semibold text-gray-700 mb-2'>E-Mail *</label>
                         <div className='relative'>
                           <Mail className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5' />
@@ -932,16 +937,6 @@ export default function BookingForm() {
                       <div>
                         <label className='block text-sm font-semibold text-gray-700 mb-2'>Nachname *</label>
                         <input type='text' {...register(`travelers.${index}.lastName`, { required: true })} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white' placeholder='Wie im Reisepass' />
-                      </div>
-                    </div>
-                    <div className='grid md:grid-cols-2 gap-4'>
-                      <div>
-                        <label className='block text-sm font-semibold text-gray-700 mb-2'>Geburtsdatum *</label>
-                        <input type='date' {...register(`travelers.${index}.birthDate`, { required: true })} className='w-full min-w-0 max-w-full appearance-none px-4 py-3 border border-gray-300 rounded-lg bg-white' />
-                      </div>
-                      <div>
-                        <label className='block text-sm font-semibold text-gray-700 mb-2'>Passnummer (optional)</label>
-                        <input type='text' {...register(`travelers.${index}.passportNumber`)} className='w-full px-4 py-3 border border-gray-300 rounded-lg bg-white' placeholder='Falls vorhanden' />
                       </div>
                     </div>
                   </div>
