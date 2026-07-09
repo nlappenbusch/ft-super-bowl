@@ -20,6 +20,28 @@ DATA_DIR="/app/data"
 
 mkdir -p "$DATA_DIR" 2>/dev/null
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Sicherheitsnetz (seit Vorfall 2026-07-09, Volume-Reset auf Seed-Stand):
+# Bei JEDEM Container-Start werden die Content-JSONs des Volumes nach
+# data/backups/ weggesichert, BEVOR der Seed-Merge irgendetwas anfasst.
+# Rotation: die letzten 60 Stände bleiben liegen (~wenige MB).
+# Wiederherstellen: tar xzf data/backups/content-json-<ts>.tar.gz -C data/
+# ─────────────────────────────────────────────────────────────────────────────
+BK_DIR="$DATA_DIR/backups"
+mkdir -p "$BK_DIR" 2>/dev/null
+JSON_FILES="$(cd "$DATA_DIR" 2>/dev/null && ls ./*.json 2>/dev/null)"
+if [ -n "$JSON_FILES" ]; then
+  TS="$(date +%Y%m%d-%H%M%S)"
+  if tar czf "$BK_DIR/content-json-$TS.tar.gz" -C "$DATA_DIR" $JSON_FILES 2>/dev/null; then
+    echo "[backup] Content-JSONs gesichert: backups/content-json-$TS.tar.gz"
+    ls -t "$BK_DIR"/content-json-*.tar.gz 2>/dev/null | tail -n +61 | xargs rm -f 2>/dev/null || true
+  else
+    echo "[backup] WARNUNG: Sicherung der Content-JSONs fehlgeschlagen (Rechte?)."
+  fi
+else
+  echo "[backup] Keine Content-JSONs im Volume gefunden — nichts zu sichern (Erstinstallation?)."
+fi
+
 WANT="$(cat "$SEED_DIR/SEED_VERSION" 2>/dev/null || echo '')"
 HAVE="$(cat "$DATA_DIR/.seed_version" 2>/dev/null || echo '')"
 
@@ -53,7 +75,13 @@ for (const f of FILES) {
     if (!existsSync(sp)) continue;
     if (!existsSync(dp)) {
       copyFileSync(sp, dp);
-      console.log(`[seed]   + ${f} (neu angelegt)`);
+      if (process.env.SEED_HAVE) {
+        // Datei weg, obwohl frueher schon geseedet wurde: das ist die Signatur
+        // des Vorfalls vom 2026-07-09 (Volume-Reset) — laut melden statt still kopieren.
+        console.warn(`[seed]   !! ${f} FEHLTE im Volume trotz vorherigem Seed (v${process.env.SEED_HAVE}) — Voll-Kopie aus dem Seed. Admin-Stand ggf. verloren, data/backups/ pruefen!`);
+      } else {
+        console.log(`[seed]   + ${f} (neu angelegt)`);
+      }
       continue;
     }
     const seed = JSON.parse(readFileSync(sp, 'utf8'));
@@ -94,7 +122,7 @@ for (const f of FILES) {
 process.exit(failed ? 1 : 0);
 MERGE_EOF
 
-  if SEED_DIR="$SEED_DIR" DATA_DIR="$DATA_DIR" node /tmp/ft-seed-merge.mjs; then
+  if SEED_DIR="$SEED_DIR" DATA_DIR="$DATA_DIR" SEED_HAVE="$HAVE" node /tmp/ft-seed-merge.mjs; then
     echo "$WANT" > "$DATA_DIR/.seed_version" 2>/dev/null || true
     echo "[seed] Fertig. bookings.db und settings.json wurden NICHT angefasst."
   else
