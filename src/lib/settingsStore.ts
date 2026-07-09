@@ -73,8 +73,6 @@ export interface SiteSettings {
   site_description: string;
   /** OG image path in /public */
   og_image: string;
-  /** Admin password (plain – in production use a hashed approach) */
-  admin_password: string;
 }
 
 export interface AiSettings {
@@ -177,7 +175,6 @@ const DEFAULT_SETTINGS: AllSettings = {
     site_description:
       'Offizielle Super Bowl LXI 2027 Packages inkl. Tickets, Hotel & VIP-Hospitality.',
     og_image: '/Super-Bowl-LXI-Tickets-Packages.webp',
-    admin_password: 'faltin-admin-2025',
   },
   mail: {
     tenant_id: '',
@@ -211,6 +208,18 @@ function ensureDataDir() {
   }
 }
 
+/**
+ * site.admin_password ist deprecated (seit 2026-07): der Admin-Login läuft über
+ * Microsoft SSO bzw. localadmin (src/lib/auth.ts), das Feld schützt nichts mehr.
+ * Ältere settings.json-Dateien (und alte Clients im PATCH-Body) dürfen es noch
+ * enthalten — hier wird es beim Lesen/Schreiben still entfernt.
+ */
+function stripLegacySiteFields(site: SiteSettings): SiteSettings {
+  const cleaned = { ...site } as SiteSettings & { admin_password?: unknown };
+  delete cleaned.admin_password;
+  return cleaned;
+}
+
 export function getSettings(): AllSettings {
   try {
     ensureDataDir();
@@ -225,7 +234,7 @@ export function getSettings(): AllSettings {
       bank: { ...DEFAULT_SETTINGS.bank, ...parsed.bank },
       invoice: { ...DEFAULT_SETTINGS.invoice, ...parsed.invoice },
       event: { ...DEFAULT_SETTINGS.event, ...parsed.event },
-      site: { ...DEFAULT_SETTINGS.site, ...parsed.site },
+      site: stripLegacySiteFields({ ...DEFAULT_SETTINGS.site, ...parsed.site }),
       mail: { ...DEFAULT_SETTINGS.mail, ...parsed.mail },
       ai: { ...DEFAULT_SETTINGS.ai, ...parsed.ai },
       github: { ...DEFAULT_SETTINGS.github, ...parsed.github },
@@ -244,7 +253,7 @@ export function saveSettings(updates: Partial<AllSettings>): AllSettings {
     bank: { ...current.bank, ...(updates.bank || {}) },
     invoice: { ...current.invoice, ...(updates.invoice || {}) },
     event: { ...current.event, ...(updates.event || {}) },
-    site: { ...current.site, ...(updates.site || {}) },
+    site: stripLegacySiteFields({ ...current.site, ...(updates.site || {}) }),
     mail: { ...current.mail, ...(updates.mail || {}) },
     ai: { ...current.ai, ...(updates.ai || {}) },
     github: { ...current.github, ...(updates.github || {}) },
