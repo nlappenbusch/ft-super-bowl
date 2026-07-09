@@ -18,6 +18,7 @@ export async function GET() {
       ticket_auto_create_domains: m.ticket_auto_create_domains ?? 'faltintravel.com',
       daily_briefing_enabled: m.daily_briefing_enabled !== false,
       daily_briefing_hour: m.daily_briefing_hour ?? 7,
+      release_notes_enabled: m.release_notes_enabled !== false,
       has_client_secret: !!(m.client_secret || process.env.GRAPH_CLIENT_SECRET),
       has_brevo: !!(m.brevo_api_key || process.env.BREVO_API_KEY),
       env_fallback: {
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
     }
     if ('ticket_auto_create' in body) updates.ticket_auto_create = !!body.ticket_auto_create;
     if ('daily_briefing_enabled' in body) updates.daily_briefing_enabled = !!body.daily_briefing_enabled;
+    if ('release_notes_enabled' in body) updates.release_notes_enabled = !!body.release_notes_enabled;
     if ('daily_briefing_hour' in body) {
       const h = Number(body.daily_briefing_hour);
       if (Number.isFinite(h)) updates.daily_briefing_hour = Math.min(23, Math.max(0, Math.round(h)));

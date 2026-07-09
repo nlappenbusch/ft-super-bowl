@@ -698,3 +698,91 @@ export function dailyBriefingEmailHtml(input: DailyBriefingInput): string {
 
   return layout(inner, `Dein Tages-Briefing: ${input.myOpenTasks.length + (input.myOpenMore || 0)} offene Aufgaben, ${input.newInquiries.length} neue Anfragen.`);
 }
+
+/* ── Release-Notes-Mail nach Deploy (TASK-00096) ───────────────────────────── */
+
+export interface ReleaseNoteItem {
+  type: 'feature' | 'bugfix' | 'performance' | 'security' | 'refactor' | 'chore' | 'other';
+  /** Titel ohne Conventional-Commit-Präfix, z.B. "Tägliches Team-Briefing per Mail" */
+  title: string;
+  prNumber: number;
+  prUrl: string;
+  /** Referenzierte Tickets, z.B. ["TASK-00091"] */
+  taskNos: string[];
+  /** Kurzfassung aus dem PR-Body (bereits Markdown-bereinigt). */
+  summary?: string;
+  author?: string;
+}
+
+export interface ReleaseNotesInput {
+  /** z.B. "09.07.2026, 10:45" */
+  dateLabel: string;
+  /** z.B. "next.faltintravel.com" */
+  siteHost: string;
+  items: ReleaseNoteItem[];
+  /** Anzahl nicht gezeigter älterer Merges (Kappung). */
+  omittedCount?: number;
+  repoUrl: string;
+}
+
+const RELEASE_TYPE_META: Record<ReleaseNoteItem['type'], { label: string; bg: string; fg: string }> = {
+  feature:     { label: 'FEATURE',     bg: '#fff1ea', fg: '#d9531e' },
+  bugfix:      { label: 'BUGFIX',      bg: '#f0fdf4', fg: '#16a34a' },
+  performance: { label: 'PERFORMANCE', bg: '#f5f3ff', fg: '#7c3aed' },
+  security:    { label: 'SECURITY',    bg: '#fef2f2', fg: '#dc2626' },
+  refactor:    { label: 'REFACTOR',    bg: '#eff6ff', fg: '#2563eb' },
+  chore:       { label: 'WARTUNG',     bg: '#f5f7fa', fg: '#6b7280' },
+  other:       { label: 'ÄNDERUNG',    bg: '#f5f7fa', fg: '#6b7280' },
+};
+
+function releaseItemHtml(item: ReleaseNoteItem): string {
+  const meta = RELEASE_TYPE_META[item.type] || RELEASE_TYPE_META.other;
+  const metaLine = [
+    `<a href="${item.prUrl}" style="color:#6b7280;text-decoration:none;">PR&nbsp;#${item.prNumber}</a>`,
+    ...item.taskNos.map((t) => `<span style="font-family:monospace;color:${ACCENT};font-weight:700;">${escapeHtml(t)}</span>`),
+    item.author ? `von ${escapeHtml(item.author)}` : '',
+  ].filter(Boolean).join(' &nbsp;·&nbsp; ');
+  return `<tr><td style="padding:14px 16px;border:1px solid #e5e8ed;border-radius:12px;">
+    <span style="display:inline-block;background:${meta.bg};color:${meta.fg};font-size:10px;font-weight:800;letter-spacing:1px;padding:3px 10px;border-radius:999px;">${meta.label}</span>
+    <p style="margin:8px 0 0;font-size:15px;font-weight:700;color:${NAVY};line-height:1.5;">${escapeHtml(item.title)}</p>
+    ${item.summary ? `<p style="margin:6px 0 0;font-size:13px;line-height:1.6;color:#4b5563;">${escapeHtml(item.summary)}</p>` : ''}
+    <p style="margin:8px 0 0;font-size:12px;color:#6b7280;">${metaLine}</p>
+  </td></tr><tr><td style="height:10px;line-height:10px;font-size:10px;">&nbsp;</td></tr>`;
+}
+
+/**
+ * Release-Changelog nach einem Deploy — Entwickler-Stil mit Typ-Badges,
+ * PR-Links, Ticket-Nummern und Kurzbeschreibung je Änderung.
+ */
+export function releaseNotesEmailHtml(input: ReleaseNotesInput): string {
+  const features = input.items.filter((i) => i.type === 'feature').length;
+  const fixes = input.items.filter((i) => i.type === 'bugfix').length;
+  const rest = input.items.length - features - fixes;
+  const statChip = (n: number, label: string, color: string) =>
+    n ? `<span style="display:inline-block;margin:0 8px 6px 0;background:#f5f7fa;border:1px solid #e5e8ed;border-radius:999px;padding:5px 14px;font-size:12px;font-weight:700;color:${color};">${n} ${label}</span>` : '';
+
+  const inner = `
+    <p style="margin:0 0 4px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;">Release · ${escapeHtml(input.siteHost)} · ${escapeHtml(input.dateLabel)}</p>
+    <h1 style="margin:6px 0 0;font-size:24px;font-weight:800;color:${NAVY};">🚀 Frisch deployed!</h1>
+    <p style="margin:10px 0 0;font-size:15px;line-height:1.7;color:#374151;">
+      Soeben ist ein neues Release live gegangen — das steckt drin:
+    </p>
+    <p style="margin:14px 0 0;">
+      ${statChip(features, features === 1 ? 'neue Funktion' : 'neue Funktionen', '#d9531e')}
+      ${statChip(fixes, fixes === 1 ? 'Bugfix' : 'Bugfixes', '#16a34a')}
+      ${statChip(rest, rest === 1 ? 'weitere Änderung' : 'weitere Änderungen', '#6b7280')}
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;">
+      ${input.items.map(releaseItemHtml).join('')}
+    </table>
+    ${input.omittedCount ? `<p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">… und ${input.omittedCount} ältere Änderung${input.omittedCount === 1 ? '' : 'en'} (siehe GitHub).</p>` : ''}
+    <p style="margin:24px 0 0;">
+      <a href="${input.repoUrl}/pulls?q=is%3Apr+is%3Amerged" style="display:inline-block;background:${NAVY};color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:10px;">Alle Änderungen auf GitHub</a>
+    </p>
+    <p style="margin:22px 0 0;font-size:11px;line-height:1.6;color:#9ca3af;">
+      Automatische Release-Mail nach jedem Deploy — konfigurierbar unter Admin → E-Mail / Microsoft 365.
+    </p>`;
+
+  const preheader = input.items.map((i) => i.title).join(' · ').slice(0, 120);
+  return layout(inner, preheader);
+}
