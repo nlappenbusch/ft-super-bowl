@@ -260,6 +260,20 @@ export interface PackageCardData {
   badgeText: string;
 }
 
+/**
+ * Event-Name für Kunden-Mail-Betreffe: Event-Lookup via slug, sonst Fallback
+ * auf den Paket-Titel — so steht das Event auch bei Anfragen ohne event_slug
+ * (Alt-/CF7-Anfragen) automatisch im Betreff (TASK-00097).
+ */
+export async function bookingEventName(b: { event_slug?: string | null; package_title?: string | null }): Promise<string | undefined> {
+  if (b.event_slug) {
+    const ev = await getEventBySlug(b.event_slug).catch(() => null);
+    const name = ev?.name || ev?.title;
+    if (name) return name;
+  }
+  return (b.package_title || '').trim() || undefined;
+}
+
 export async function getEventBySlug(slug: string): Promise<EventRecord | null> {
   if (!isSupabaseConfigured() || !supabase) {
     return (findEventBySlug(slug) as EventRecord | null) || null;
