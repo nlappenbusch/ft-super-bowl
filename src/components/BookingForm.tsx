@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
-import { Star, Hotel, Calendar, Users, ChevronDown, CheckCircle2, Phone, Mail, ArrowLeft, Bed, AlertCircle, UserCircle, UserCheck, MapPin, Bus, Building2, Camera } from 'lucide-react';
+import { Star, Hotel, Calendar, Users, ChevronDown, CheckCircle2, Phone, Mail, ArrowLeft, Bed, AlertCircle, UserCircle, UserCheck, MapPin, Bus, Building2, Camera, Clock } from 'lucide-react';
 import 'flag-icons/css/flag-icons.min.css';
 import EkomiWidget from '@/components/EkomiWidget';
 
@@ -158,6 +158,10 @@ export default function BookingForm() {
   const [isSoldOut, setIsSoldOut] = useState(false); // Kontingent 0 → Anfrage gesperrt
   const [refSource, setRefSource] = useState(''); // Affiliate: Host der einbettenden Website (?ref=)
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null); // Foto-Lightbox (alle Hotelbilder)
+  // Nach erfolgreichem Absenden: Anfragenummer der Buchungsanfrage (null = Formular sichtbar).
+  // Erfolgsmeldung inline statt Redirect, damit Embed-Besucher (z. B. superbowl.faltintravel.com)
+  // nicht auf einer Seitenvariante mit Header/Menü landen.
+  const [submittedRq, setSubmittedRq] = useState<string | null>(null);
   
   const phoneCountries = [
     { code: 'ch', prefix: '+41', name: 'CH' },
@@ -440,8 +444,10 @@ export default function BookingForm() {
       const result = await response.json();
 
       if (result.success) {
-        const rq = result.requestNumber ? `?rq=${encodeURIComponent(result.requestNumber)}` : '';
-        window.location.href = `/booking/danke${rq}`;
+        // Redirect auf /booking/danke vorübergehend ausgesetzt (TASK-00090):
+        // Erfolgsmeldung inline anzeigen, damit Embed-Besucher nicht die Header-Variante sehen.
+        setSubmittedRq(result.requestNumber || '');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       } else {
         alert('❌ Fehler beim Absenden: ' + result.error);
@@ -453,6 +459,70 @@ export default function BookingForm() {
       setIsSubmitting(false);
     }
   };
+
+  // Erfolgsansicht ersetzt das komplette Formular (kein Redirect, kein Popup → nicht blockierbar)
+  if (submittedRq !== null) {
+    return (
+      <div className='min-h-screen bg-gray-50 flex items-start justify-center px-4 py-12 sm:py-16'>
+        <style>{`
+          @keyframes bookingSuccessPop { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
+          @keyframes bookingSuccessRise { from { transform: translateY(18px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+          .booking-success-card { animation: bookingSuccessRise 0.5s ease-out both; }
+          .booking-success-check { animation: bookingSuccessPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both; }
+        `}</style>
+        <div className='booking-success-card w-full max-w-2xl'>
+          <div className='bg-white rounded-2xl shadow-sm border border-gray-200 p-8 sm:p-12 text-center'>
+            <div className='booking-success-check mx-auto flex h-20 w-20 items-center justify-center rounded-full' style={{ background: '#e8f7ee' }}>
+              <CheckCircle2 className='h-12 w-12' style={{ color: '#16a34a' }} />
+            </div>
+            <h1 className='mt-6 text-3xl font-bold text-gray-900'>Vielen Dank für Ihre Buchungsanfrage!</h1>
+            <p className='mt-3 text-gray-600'>
+              Ihre Anfrage ist bei uns eingegangen und wird persönlich geprüft.
+            </p>
+
+            {submittedRq && (
+              <div className='mt-6 inline-flex items-center gap-2 rounded-xl px-5 py-3' style={{ background: '#f0f5fa', border: '1px solid #d5e2ef' }}>
+                <span className='text-sm text-gray-600'>Ihre Anfragenummer:</span>
+                <span className='font-mono text-lg font-bold' style={{ color: '#184a7b' }}>{submittedRq}</span>
+              </div>
+            )}
+
+            <div className='mt-10 text-left'>
+              <h2 className='text-sm font-semibold uppercase tracking-wider text-gray-500 mb-4'>Wie geht es weiter?</h2>
+              <ol className='space-y-4'>
+                {[
+                  'Wir prüfen Verfügbarkeit von Tickets, Hotel und Leistungen für Ihren Wunschtermin.',
+                  'Sie erhalten von uns per E-Mail eine persönliche Bestätigung bzw. Ihr verbindliches Angebot.',
+                  'Ihr persönlicher Ansprechpartner meldet sich in der Regel innerhalb eines Werktages bei Ihnen.',
+                ].map((step, i) => (
+                  <li key={i} className='flex items-start gap-3'>
+                    <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white' style={{ background: '#184a7b' }}>{i + 1}</span>
+                    <span className='text-gray-700 pt-0.5'>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <div className='mt-10 rounded-xl p-6 text-left' style={{ background: '#f8fafc', border: '1px solid #e5e7eb' }}>
+              <p className='font-semibold text-gray-900 mb-3'>Fragen zu Ihrer Anfrage? Wir sind direkt für Sie da:</p>
+              <div className='grid gap-3 sm:grid-cols-3 text-sm text-gray-700'>
+                <a href='tel:+41447002277' className='flex items-center gap-2 hover:underline'>
+                  <Phone className='h-4 w-4 shrink-0' style={{ color: '#f14624' }} /> +41 44 700 22 77
+                </a>
+                <a href='mailto:info@faltintravel.com' className='flex items-center gap-2 hover:underline'>
+                  <Mail className='h-4 w-4 shrink-0' style={{ color: '#f14624' }} /> info@faltintravel.com
+                </a>
+                <span className='flex items-center gap-2'>
+                  <Clock className='h-4 w-4 shrink-0' style={{ color: '#f14624' }} /> Mo–Fr, 08:00–18:00 Uhr
+                </span>
+              </div>
+              {submittedRq && <p className='mt-3 text-xs text-gray-500'>Bitte geben Sie bei Rückfragen Ihre Anfragenummer {submittedRq} an.</p>}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className='min-h-screen bg-gray-50 overflow-x-clip'>
