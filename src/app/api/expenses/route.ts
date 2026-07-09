@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createExpenseRecord, listExpenses } from '@/lib/expenseStore';
+import { requireAdminSession } from '@/lib/apiGuard';
 
 // Get all expenses (optionally filtered by event or booking)
 export async function GET(request: Request) {
+  const denied = await requireAdminSession();
+  if (denied) return denied;
   try {
     const { searchParams } = new URL(request.url);
     const eventSlug = searchParams.get('eventSlug');
@@ -21,6 +24,8 @@ export async function GET(request: Request) {
 
 // Create expense
 export async function POST(request: Request) {
+  const denied = await requireAdminSession();
+  if (denied) return denied;
   try {
     const body = await request.json();
 

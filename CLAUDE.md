@@ -44,6 +44,19 @@ Laufzeit-Lesen Content: `src/lib/contentStore.ts` (`findPackagesByEvent` etc.).
 - **SSO-Redirect-URI** `https://next.faltintravel.com/api/auth/microsoft/callback` muss bei der aktiven App registriert sein (sonst `AADSTS500113`). Basis-URL kommt aus `settings.mail.login_base_url` bzw. Request-Host.
 - **Lokaler Admin-Login:** User `localadmin`, PW `LOCAL_ADMIN_PASSWORD` (Default `faltin-localadmin-2026`).
 
+## API-Auth (Routen außerhalb von /api/admin) — WICHTIG
+- Die Middleware schützt NUR `/admin/*` + `/api/admin/*`. Sensible Routen außerhalb
+  (z.B. `/api/bookings` GET, `/api/invoices*`, `/api/expenses*`, `/api/settings`,
+  `/api/bookings/[id]/messages|reply`) prüfen selbst per `requireAdminSession()` aus
+  `src/lib/apiGuard.ts` (401 ohne Session). **Neue Routen außerhalb `/api/admin`:
+  Guard einbauen**, außer bewusst öffentlich (POST `/api/bookings` = Buchungsformular/
+  WordPress-CORS; Content-Routen events/series/faqs/package*; `/api/health`;
+  Portal/Tippspiel/`/api/ext` haben eigene Auth).
+- Interne Loopback-Calls (Portal → Rechnungs-PDF) authentifizieren sich mit
+  `internalApiKey()` (Header `x-internal-key`, aus `AUTH_SECRET` abgeleitet).
+- Cron-Endpoints `/api/inbound/poll` + `/api/status/scan`: Secret ODER Admin-Session,
+  fail-closed (Mail-Polling läuft ohnehin in-process via `instrumentation.ts`).
+
 ## KI-Redaktion
 - Config: `settings.json.ai` (anthropic_api_key, model; Default `claude-sonnet-4-6`).
 - `src/lib/aiAssist.ts` (Anthropic Messages API, multimodal), `src/lib/urlFetch.ts` (HTML→Text).

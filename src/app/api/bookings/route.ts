@@ -10,6 +10,7 @@ import {
 } from '@/lib/emailTemplates';
 import { linkBookingToCustomer, normalizeSalutation } from '@/lib/customerStore';
 import { readAutoReplyPdfBase64, autoReplyContentType } from '@/lib/autoReplyStore';
+import { requireAdminSession } from '@/lib/apiGuard';
 
 /**
  * CORS: erlaubt das Anfrage-Formular auf WordPress ([faltin_anfrage]).
@@ -232,7 +233,11 @@ export async function POST(request: Request) {
   }
 }
 
+// Nur für das Admin-Panel: komplette Lead-Liste inkl. PII → Session-Pflicht.
+// (POST bleibt bewusst öffentlich – Buchungsformular + WordPress posten hierher.)
 export async function GET() {
+  const denied = await requireAdminSession();
+  if (denied) return denied;
   try {
     const bookings = await listBookings();
     return NextResponse.json({ success: true, data: bookings });

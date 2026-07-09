@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { listMessages } from '@/lib/bookingStore';
 import { listAttachmentsForBooking } from '@/lib/documentStore';
+import { requireAdminSession } from '@/lib/apiGuard';
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdminSession();
+  if (denied) return denied;
   try {
     const { id } = await params;
     const messages = await listMessages(id);

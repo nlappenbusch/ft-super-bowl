@@ -1,23 +1,24 @@
 import { NextResponse } from 'next/server';
 import { runScan } from '@/lib/statusCheck';
 import { getSettings } from '@/lib/settingsStore';
+import { requireAdminSession } from '@/lib/apiGuard';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 /**
- * Cron-Endpoint für den täglichen System-Scan (außerhalb von /api/admin, also ohne Login).
+ * Cron-Endpoint für den täglichen System-Scan (außerhalb von /api/admin).
  * Aufruf: GET/POST /api/status/scan?secret=<INBOUND_POLL_SECRET>
- * Schutz: identisch zum Inbound-Poll – wenn ein Secret gesetzt ist, muss es übergeben werden.
+ * Schutz: identisch zum Inbound-Poll – gültiges Secret ODER Admin-Session,
+ * ohne konfiguriertes Secret fail-closed.
  */
 async function handle(request: Request) {
   const secret = getSettings().mail.inbound_poll_secret || process.env.INBOUND_POLL_SECRET;
-  if (secret) {
-    const url = new URL(request.url);
-    const provided = url.searchParams.get('secret') || request.headers.get('x-poll-secret') || '';
-    if (provided !== secret) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+  const url = new URL(request.url);
+  const provided = url.searchParams.get('secret') || request.headers.get('x-poll-secret') || '';
+  if (!secret || provided !== secret) {
+    const denied = await requireAdminSession();
+    if (denied) return denied;
   }
   try {
     const report = await runScan(true);

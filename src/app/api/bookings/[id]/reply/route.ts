@@ -4,11 +4,14 @@ import { getEventBySlug } from '@/lib/eventData';
 import { sendGraphMail, isGraphConfigured, getMailbox, getFromName, type MailAttachment } from '@/lib/graphMailer';
 import { replyEmailHtml, replySubject } from '@/lib/emailTemplates';
 import { addMessageAttachment, MAX_FILE_BYTES } from '@/lib/documentStore';
+import { requireAdminSession } from '@/lib/apiGuard';
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdminSession();
+  if (denied) return denied;
   try {
     const { id } = await params;
 

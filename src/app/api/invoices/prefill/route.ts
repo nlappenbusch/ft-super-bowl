@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getBooking } from '@/lib/bookingStore';
 import { getCustomer } from '@/lib/customerStore';
 import { findEventBySlug, findPackagesByEvent, getPackages, getEvents, type ContentPackageRecord } from '@/lib/contentStore';
+import { requireAdminSession } from '@/lib/apiGuard';
 
 /**
  * Rechnungs-Vorbefüllung aus einer Buchungsanfrage: lädt Buchung + Package +
@@ -14,6 +15,8 @@ import { findEventBySlug, findPackagesByEvent, getPackages, getEvents, type Cont
 interface PrefillItem { description: string; quantity: number; unit_price: number }
 
 export async function GET(request: Request) {
+  const denied = await requireAdminSession();
+  if (denied) return denied;
   const { searchParams } = new URL(request.url);
   const bookingId = searchParams.get('bookingId') || '';
   if (!bookingId) {
