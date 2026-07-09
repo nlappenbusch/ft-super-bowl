@@ -123,6 +123,10 @@ export interface MailSettings {
   ticket_auto_create?: boolean;
   /** Komma-getrennte Absender-Domain-Allowlist für Auto-Create (leer = alle Absender) */
   ticket_auto_create_domains?: string;
+  /** Tägliches Team-Briefing per Mail (Aufgaben & Anfragen je Mitarbeiter:in) */
+  daily_briefing_enabled?: boolean;
+  /** Stunde (0–23, Europe/Zurich), ab der das Tages-Briefing verschickt wird */
+  daily_briefing_hour?: number;
 }
 
 const DEFAULT_SETTINGS: AllSettings = {
@@ -188,6 +192,8 @@ const DEFAULT_SETTINGS: AllSettings = {
     notify_to: '',
     ticket_auto_create: false,
     ticket_auto_create_domains: 'faltintravel.com',
+    daily_briefing_enabled: true,
+    daily_briefing_hour: 7,
   },
   ai: {
     anthropic_api_key: '',

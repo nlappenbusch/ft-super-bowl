@@ -548,3 +548,144 @@ export function taskEmailHtml(input: TaskEmailInput): string {
     </p>`;
   return layout(inner, `${input.ticketNo}: ${input.bodyText.slice(0, 100)}`);
 }
+
+/* ── Tägliches Team-Briefing (TASK-00091) ──────────────────────────────────── */
+
+export interface BriefingTaskItem {
+  ticketNo: string;
+  title: string;
+  url: string;
+  /** 'hoch' wird hervorgehoben. */
+  priority?: string;
+  /** z.B. "fällig 09.07." oder "überfällig seit 05.07." */
+  dueLabel?: string;
+  overdue?: boolean;
+  /** In den letzten 24 h erstellt → NEU-Badge. */
+  isNew?: boolean;
+  /** Nur in Team-Listen: wem die Aufgabe zugewiesen ist. */
+  assigneeName?: string;
+}
+
+export interface BriefingInquiryItem {
+  requestNumber: string;
+  title: string;
+  url: string;
+  statusLabel: string;
+  /** z.B. "seit 6 Tagen ohne Bewegung" */
+  ageLabel?: string;
+}
+
+export interface DailyBriefingInput {
+  recipientFirstName?: string;
+  /** z.B. "Mittwoch, 09.07.2026" */
+  dateLabel: string;
+  /** Fertig formulierte Schulterklopf-Zeile(n), leer = keine Kudos-Box. */
+  kudos?: string[];
+  myOpenTasks: BriefingTaskItem[];
+  /** Anzahl weiterer eigener Aufgaben jenseits des Limits. */
+  myOpenMore?: number;
+  newTeamTasks: BriefingTaskItem[];
+  newInquiries: BriefingInquiryItem[];
+  movedInquiries: BriefingInquiryItem[];
+  staleInquiries: BriefingInquiryItem[];
+  boardUrl: string;
+  crmUrl: string;
+}
+
+function briefingSectionHeading(text: string): string {
+  return `<p style="margin:26px 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#9ca3af;">${escapeHtml(text)}</p>`;
+}
+
+function briefingTaskRow(t: BriefingTaskItem): string {
+  const badges: string[] = [];
+  if (t.isNew) badges.push(`<span style="display:inline-block;background:${ACCENT};color:#ffffff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;letter-spacing:0.5px;">NEU</span>`);
+  if ((t.priority || '') === 'hoch') badges.push(`<span style="display:inline-block;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-size:10px;font-weight:800;padding:1px 8px;border-radius:999px;letter-spacing:0.5px;">HOCH</span>`);
+  const meta: string[] = [];
+  if (t.dueLabel) meta.push(`<span style="color:${t.overdue ? '#dc2626' : '#6b7280'};font-weight:${t.overdue ? '700' : '400'};">${escapeHtml(t.dueLabel)}</span>`);
+  if (t.assigneeName) meta.push(escapeHtml(t.assigneeName));
+  return `<tr><td style="padding:9px 0;border-bottom:1px solid #f0f2f5;">
+    <a href="${t.url}" style="text-decoration:none;">
+      <span style="font-family:monospace;font-size:12px;font-weight:700;color:${ACCENT};">${escapeHtml(t.ticketNo)}</span>
+      <span style="font-size:14px;font-weight:600;color:${NAVY};"> ${escapeHtml(t.title)}</span>
+    </a>
+    ${badges.length ? ' ' + badges.join(' ') : ''}
+    ${meta.length ? `<div style="margin-top:2px;font-size:12px;color:#6b7280;">${meta.join(' · ')}</div>` : ''}
+  </td></tr>`;
+}
+
+function briefingInquiryRow(q: BriefingInquiryItem): string {
+  return `<tr><td style="padding:9px 0;border-bottom:1px solid #f0f2f5;">
+    <a href="${q.url}" style="text-decoration:none;">
+      <span style="font-family:monospace;font-size:12px;font-weight:700;color:${ACCENT};">${escapeHtml(q.requestNumber)}</span>
+      <span style="font-size:14px;font-weight:600;color:${NAVY};"> ${escapeHtml(q.title)}</span>
+    </a>
+    <div style="margin-top:2px;font-size:12px;color:#6b7280;">${escapeHtml(q.statusLabel)}${q.ageLabel ? ` · <span style="color:#dc2626;font-weight:700;">${escapeHtml(q.ageLabel)}</span>` : ''}</div>
+  </td></tr>`;
+}
+
+function briefingList(rows: string[]): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows.join('')}</table>`;
+}
+
+/**
+ * Tägliche Briefing-Mail an einen Mitarbeitenden: eigene offene Aufgaben,
+ * neue Team-Aufgaben, Anfragen-Bewegungen, liegengebliebene eigene Anfragen
+ * und eine Schulterklopf-Box für Erledigtes. Leere Sektionen werden weggelassen.
+ */
+export function dailyBriefingEmailHtml(input: DailyBriefingInput): string {
+  const hi = input.recipientFirstName ? `Guten Morgen ${escapeHtml(input.recipientFirstName)}` : 'Guten Morgen';
+
+  const kudosHtml = (input.kudos || []).length
+    ? `<div style="margin:22px 0 0;padding:14px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;">
+        ${(input.kudos || []).map((k) => `<p style="margin:0;font-size:14px;line-height:1.7;color:#166534;">${escapeHtml(k)}</p>`).join('')}
+      </div>`
+    : '';
+
+  const sections: string[] = [];
+  if (input.myOpenTasks.length) {
+    sections.push(
+      briefingSectionHeading(`Deine offenen Aufgaben (${input.myOpenTasks.length + (input.myOpenMore || 0)})`) +
+      briefingList(input.myOpenTasks.map(briefingTaskRow)) +
+      (input.myOpenMore ? `<p style="margin:8px 0 0;font-size:12px;color:#9ca3af;">… und ${input.myOpenMore} weitere im Board.</p>` : '')
+    );
+  }
+  if (input.newTeamTasks.length) {
+    sections.push(
+      briefingSectionHeading(`Neue Aufgaben im Team (letzte 24 h)`) +
+      briefingList(input.newTeamTasks.map(briefingTaskRow))
+    );
+  }
+  if (input.newInquiries.length) {
+    sections.push(
+      briefingSectionHeading(`Neue Anfragen (letzte 24 h)`) +
+      briefingList(input.newInquiries.map(briefingInquiryRow))
+    );
+  }
+  if (input.movedInquiries.length) {
+    sections.push(
+      briefingSectionHeading(`Anfragen mit Bewegung (letzte 24 h)`) +
+      briefingList(input.movedInquiries.map(briefingInquiryRow))
+    );
+  }
+  if (input.staleInquiries.length) {
+    sections.push(
+      briefingSectionHeading(`⚠️ Deine Anfragen ohne Bewegung seit 5+ Tagen`) +
+      briefingList(input.staleInquiries.map(briefingInquiryRow))
+    );
+  }
+
+  const inner = `
+    <p style="margin:0 0 4px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;">Tages-Briefing · ${escapeHtml(input.dateLabel)}</p>
+    <h1 style="margin:6px 0 0;font-size:22px;font-weight:800;color:${NAVY};">${hi}! ☀️</h1>
+    ${kudosHtml}
+    ${sections.join('')}
+    <p style="margin:28px 0 0;">
+      <a href="${input.boardUrl}" style="display:inline-block;margin:0 10px 10px 0;background:${ACCENT};color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:10px;">Zum Aufgaben-Board</a>
+      <a href="${input.crmUrl}" style="display:inline-block;margin:0 10px 10px 0;background:${NAVY};color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:10px;">Zum CRM</a>
+    </p>
+    <p style="margin:22px 0 0;font-size:11px;line-height:1.6;color:#9ca3af;">
+      Automatisches Tages-Briefing — konfigurierbar unter Admin → E-Mail / Microsoft 365.
+    </p>`;
+
+  return layout(inner, `Dein Tages-Briefing: ${input.myOpenTasks.length + (input.myOpenMore || 0)} offene Aufgaben, ${input.newInquiries.length} neue Anfragen.`);
+}

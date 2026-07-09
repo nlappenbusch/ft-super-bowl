@@ -8,7 +8,7 @@ import {
 import { buildEntraSetupScript } from '@/lib/entraSetupScript';
 import {
   Mail, Send, RefreshCw, CheckCircle2, XCircle, Server, Inbox, ListChecks, KeyRound,
-  Save, Terminal, Copy, Download, ShieldCheck,
+  Save, Terminal, Copy, Download, ShieldCheck, Sun,
 } from 'lucide-react';
 
 interface MailStatus {
@@ -27,6 +27,8 @@ interface MailConfig {
   inbound_poll_secret: string;
   ticket_auto_create: boolean;
   ticket_auto_create_domains: string;
+  daily_briefing_enabled: boolean;
+  daily_briefing_hour: number;
   has_client_secret: boolean;
   has_brevo: boolean;
 }
@@ -42,11 +44,14 @@ export default function MailAdminPage() {
     tenant_id: '', client_id: '', client_secret: '', mailbox: '', from_name: '',
     inbound_poll_secret: '', brevo_api_key: '', login_base_url: '', notify_to: '',
     ticket_auto_create: false, ticket_auto_create_domains: 'faltintravel.com',
+    daily_briefing_enabled: true, daily_briefing_hour: '7',
   });
 
   const [testTo, setTestTo] = useState('');
   const [testing, setTesting] = useState(false);
   const [polling, setPolling] = useState(false);
+  const [briefingStatus, setBriefingStatus] = useState<{ last_sent_date: string | null; last_result: { sent: number; skippedEmpty: number; errors: number } | null } | null>(null);
+  const [sendingBriefing, setSendingBriefing] = useState(false);
   const [toast, setToast] = useState<{ ok: boolean; msg: string } | null>(null);
 
   // Script generator
@@ -57,11 +62,13 @@ export default function MailAdminPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, c] = await Promise.all([
+      const [s, c, b] = await Promise.all([
         fetch('/api/admin/mail/status').then((r) => r.json()),
         fetch('/api/admin/mail/config').then((r) => r.json()),
+        fetch('/api/admin/briefing').then((r) => r.json()).catch(() => null),
       ]);
       if (s.success) setStatus(s.data);
+      if (b?.success) setBriefingStatus(b.data);
       if (c.success) {
         setCfg(c.data);
         setForm((f) => ({
@@ -75,6 +82,8 @@ export default function MailAdminPage() {
           notify_to: c.data.notify_to || '',
           ticket_auto_create: !!c.data.ticket_auto_create,
           ticket_auto_create_domains: c.data.ticket_auto_create_domains ?? 'faltintravel.com',
+          daily_briefing_enabled: c.data.daily_briefing_enabled !== false,
+          daily_briefing_hour: String(c.data.daily_briefing_hour ?? 7),
           client_secret: '',
           brevo_api_key: '',
         }));
@@ -123,6 +132,19 @@ export default function MailAdminPage() {
       flash(data.success, data.success ? data.message : data.error);
     } catch { flash(false, 'Verbindungsfehler.'); }
     finally { setTesting(false); }
+  };
+
+  const runBriefing = async () => {
+    setSendingBriefing(true);
+    try {
+      const res = await fetch('/api/admin/briefing', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        flash(true, `Briefing verschickt: ${data.data.sent} Mail(s), ${data.data.skippedEmpty} ohne Inhalt übersprungen${data.data.errors ? `, ${data.data.errors} Fehler` : ''}.`);
+        await load();
+      } else flash(false, data.error || 'Briefing fehlgeschlagen.');
+    } catch { flash(false, 'Verbindungsfehler.'); }
+    finally { setSendingBriefing(false); }
   };
 
   const runPoll = async () => {
@@ -248,6 +270,27 @@ export default function MailAdminPage() {
                   </Field>
                 </div>
               </div>
+              <div className="rounded-xl border border-gray-200 p-4">
+                <Toggle
+                  checked={form.daily_briefing_enabled}
+                  onChange={(v) => set('daily_briefing_enabled', v)}
+                  label="Tägliches Team-Briefing per Mail"
+                />
+                <p className="mt-1.5 text-xs" style={{ color: '#9ca3af' }}>
+                  Jede:r aktive Mitarbeiter:in erhält einmal täglich eine Mail mit offenen/neuen Aufgaben,
+                  neuen Anfragen, liegengebliebenen Anfragen (5+ Tage) und Erledigt-Bilanz.
+                </p>
+                <div className="mt-3 max-w-[200px]">
+                  <InputField
+                    label="Versand ab Stunde (0–23 Uhr)"
+                    type="number"
+                    value={form.daily_briefing_hour}
+                    onChange={(e) => set('daily_briefing_hour', e.target.value)}
+                    placeholder="7"
+                    disabled={!form.daily_briefing_enabled}
+                  />
+                </div>
+              </div>
               <InputField
                 label="Brevo API-Key (Listen)"
                 type="password"
@@ -304,6 +347,19 @@ export default function MailAdminPage() {
             </p>
             <Button variant="primary" onClick={runPoll} disabled={polling || !status?.graphConfigured}>
               {polling ? <Spinner className="h-4 w-4 border-white" /> : <RefreshCw className="h-4 w-4" />} Jetzt abrufen
+            </Button>
+          </SectionCard>
+
+          {/* Tages-Briefing */}
+          <SectionCard title="Tages-Briefing" description="Aufgaben & Anfragen als Morgen-Mail ans Team" icon={<Sun className="h-5 w-5" />}>
+            <p className="mb-4 text-sm" style={{ color: COLORS.textMuted }}>
+              {briefingStatus?.last_sent_date
+                ? <>Zuletzt verschickt am <span className="font-semibold">{briefingStatus.last_sent_date}</span>{briefingStatus.last_result ? ` (${briefingStatus.last_result.sent} Mails)` : ''}.</>
+                : 'Noch nie verschickt.'}
+              {' '}Der Button sendet sofort an alle Mitarbeitenden und zählt als heutiger Versand.
+            </p>
+            <Button variant="primary" onClick={runBriefing} disabled={sendingBriefing || !status?.graphConfigured}>
+              {sendingBriefing ? <Spinner className="h-4 w-4 border-white" /> : <Send className="h-4 w-4" />} Jetzt an alle senden
             </Button>
           </SectionCard>
         </div>
