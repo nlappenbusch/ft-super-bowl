@@ -247,7 +247,8 @@ export async function updateCustomer(id: string, updates: CustomerUpdate): Promi
   for (const f of fields) {
     if (f in updates && updates[f] !== undefined) {
       sets.push(`${f} = ?`);
-      vals.push(String(updates[f] ?? ''));
+      // Anrede immer auf "Herr"/"Frau" normalisieren (auch bei Admin-Edits).
+      vals.push(f === 'salutation' ? normalizeSalutation(String(updates[f] ?? '')) : String(updates[f] ?? ''));
     }
   }
   // Wenn Vor-/Nachname geändert werden, kombiniertes `name`-Feld konsistent halten.

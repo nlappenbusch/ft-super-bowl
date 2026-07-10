@@ -7,6 +7,30 @@
 import { sqlite, dbGet, dbAll, dbRun, ensurePgSchema, db } from './dbq';
 import { pgEnabled } from './pg';
 import type { BookingRequest, BookingMessage, Traveler } from './supabase';
+import { normalizeSalutation } from './customerStore';
+
+/**
+ * Normalisiert die Anrede in einem travelers-JSON-String auf "Herr"/"Frau".
+ * Defensiv: unlesbares JSON wird unverändert durchgereicht.
+ */
+function normalizeTravelersJson(travelers: string): string {
+  try {
+    const arr = JSON.parse(travelers);
+    if (!Array.isArray(arr)) return travelers;
+    let changed = false;
+    const out = arr.map((t) => {
+      if (t && typeof t === 'object' && 'salutation' in t) {
+        const norm = normalizeSalutation(String((t as { salutation?: unknown }).salutation ?? ''));
+        if (norm !== (t as { salutation?: unknown }).salutation) changed = true;
+        return { ...t, salutation: norm };
+      }
+      return t;
+    });
+    return changed ? JSON.stringify(out) : travelers;
+  } catch {
+    return travelers;
+  }
+}
 
 export { db };
 
@@ -586,7 +610,7 @@ export async function insertBooking(booking: Omit<BookingRequest, 'id' | 'create
       (booking as { travel_period?: string }).travel_period || '',
       booking.package_id, booking.package_title, booking.start_date,
       booking.number_of_persons, booking.double_rooms, booking.single_rooms,
-      booking.travelers, booking.email, booking.phone, booking.message,
+      normalizeTravelersJson(booking.travelers as unknown as string), booking.email, booking.phone, booking.message,
       booking.status, booking.total_price, booking.notes,
       (booking as { source?: string }).source || '',
     ]
