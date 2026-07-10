@@ -32,6 +32,11 @@ interface StaffTask {
 
 interface ProjectLite { id: string; name: string; status?: 'aktiv' | 'archiviert' }
 
+interface AiCheckState {
+  ai_doable: boolean; confidence: number; clear: boolean; questions: string[];
+  improved_title: string; improved_description: string; category: string;
+}
+
 function ticketNo(n: number | null): string {
   return n && n > 0 ? `TASK-${String(n).padStart(5, '0')}` : '';
 }
@@ -201,10 +206,7 @@ export default function AufgabenPage() {
   const [form, setForm] = useState({ title: '', description: '', assignee_id: '', due_date: '', priority: 'normal', project_id: '' });
   const [saving, setSaving] = useState(false);
   // KI-Check beim Anlegen (TASK-00098)
-  const [aiCheck, setAiCheck] = useState<{
-    ai_doable: boolean; confidence: number; clear: boolean; questions: string[];
-    improved_title: string; improved_description: string; category: string;
-  } | null>(null);
+  const [aiCheck, setAiCheck] = useState<AiCheckState | null>(null);
   const [aiChecking, setAiChecking] = useState(false);
   const [aiError, setAiError] = useState('');
   const [aiRequested, setAiRequested] = useState(false);
@@ -295,21 +297,41 @@ export default function AufgabenPage() {
     if (!form.title) return;
     setAiChecking(true);
     setAiError('');
+    // Der KI-Aufruf kann dauern; großzügiges Client-Timeout, damit nicht der Proxy
+    // eine (nicht-JSON) Fehlerseite liefert, die dann als "Verbindungsfehler" endet.
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 170_000);
     try {
-      const r = await fetch('/api/admin/tasks/ai-check', {
+      const res = await fetch('/api/admin/tasks/ai-check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: form.title, description: form.description }),
-      }).then((x) => x.json());
-      if (r.success) {
+        signal: ctrl.signal,
+      });
+      // Antwort robust auswerten: bei Timeout/Neustart liefert der Proxy HTML statt JSON.
+      const raw = await res.text();
+      let r: { success?: boolean; data?: AiCheckState; error?: string } | null = null;
+      try { r = JSON.parse(raw); } catch { /* nicht-JSON s.u. */ }
+      if (!r) {
+        setAiError(
+          res.status === 502 || res.status === 503 || res.status === 504
+            ? 'KI-Check hat zu lange gebraucht oder der Server war kurz nicht erreichbar. Bitte erneut versuchen.'
+            : `KI-Check unerwartete Antwort (HTTP ${res.status}). Bitte erneut versuchen.`
+        );
+      } else if (r.success && r.data) {
         setAiCheck(r.data);
         setAiRequested(false);
       } else {
         setAiError(r.error || 'KI-Check fehlgeschlagen.');
       }
-    } catch {
-      setAiError('Verbindungsfehler beim KI-Check.');
+    } catch (e) {
+      setAiError(
+        (e as Error)?.name === 'AbortError'
+          ? 'KI-Check abgebrochen (Zeitüberschreitung). Bitte erneut versuchen.'
+          : 'KI-Check nicht erreichbar. Internetverbindung/Server prüfen und erneut versuchen.'
+      );
     } finally {
+      clearTimeout(timer);
       setAiChecking(false);
     }
   };
@@ -406,7 +428,7 @@ export default function AufgabenPage() {
             <TextInput type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
           </Field>
           <Field label="Beschreibung" className="sm:col-span-2">
-            <TextArea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <TextArea rows={8} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </Field>
           <Field label="Projekt">
             <SelectInput
