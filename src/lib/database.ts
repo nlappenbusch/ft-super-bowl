@@ -243,7 +243,9 @@ export function initDatabase() {
       title TEXT NOT NULL DEFAULT '',
       customer_id TEXT,
       booking_id TEXT,
-      target_currency TEXT NOT NULL DEFAULT 'CHF',
+      travel_start TEXT NOT NULL DEFAULT '',
+      travel_end TEXT NOT NULL DEFAULT '',
+      target_currency TEXT NOT NULL DEFAULT 'EUR',
       margin_mode TEXT NOT NULL DEFAULT 'percent',
       margin_value REAL NOT NULL DEFAULT 0,
       items TEXT NOT NULL DEFAULT '[]',
@@ -548,6 +550,11 @@ export function initDatabase() {
     try { sqlite.exec('ROLLBACK'); } catch { /* keine offene Transaktion */ }
     console.warn('[sqlite] staff_tasks-Status-Migration:', (e as Error).message);
   }
+  // Angebotskalkulation: Reisezeitraum (Bestands-DBs nachrüsten)
+  const occols = sqlite.prepare(`PRAGMA table_info(offer_calculations)`).all() as Array<{ name: string }>;
+  if (occols.length && !occols.some((c) => c.name === 'travel_start')) addColumn('offer_calculations', "travel_start TEXT NOT NULL DEFAULT ''");
+  if (occols.length && !occols.some((c) => c.name === 'travel_end')) addColumn('offer_calculations', "travel_end TEXT NOT NULL DEFAULT ''");
+
   const ttcols = sqlite.prepare(`PRAGMA table_info(task_time)`).all() as Array<{ name: string }>;
   if (ttcols.length && !ttcols.some((c) => c.name === 'work_date')) addColumn('task_time', "work_date TEXT NOT NULL DEFAULT ''");
   if (ttcols.length && !ttcols.some((c) => c.name === 'report_id')) addColumn('task_time', 'report_id TEXT');

@@ -10,9 +10,9 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Printer, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Printer, AlertTriangle, CalendarDays } from 'lucide-react';
 import { COLORS, Button, Spinner } from '@/components/admin/ui';
-import { CALC_CATEGORIES, computeTotals, fmtMoney, type CalcItem, type MarginMode } from '@/lib/calcModel';
+import { CALC_CATEGORIES, computeTotals, fmtMoney, fmtPeriod, categoryLabel, type CalcItem, type MarginMode } from '@/lib/calcModel';
 import type { CalcCurrency, RatesSnapshot } from '@/lib/fxRates';
 
 interface CalcData {
@@ -22,6 +22,8 @@ interface CalcData {
   title: string;
   customer_name: string | null;
   request_number: string | null;
+  travel_start: string;
+  travel_end: string;
   target_currency: CalcCurrency;
   margin_mode: MarginMode;
   margin_value: number;
@@ -72,10 +74,13 @@ export default function KalkulationAngebotPage() {
   // Preisbasis: festgeschriebener Kurs-Snapshot; Fallback aktuelle Kurse (mit internem Hinweis).
   const rates = calc.rates_snapshot ?? currentRates;
   const totals = computeTotals(calc.items, calc.target_currency, rates, calc.margin_mode, calc.margin_value);
-  const categories = CALC_CATEGORIES
-    .map((cat) => ({ ...cat, items: calc.items.filter((i) => i.category === cat.id && (i.description.trim() || i.amount > 0)) }))
+  const knownIds = CALC_CATEGORIES.map((c) => c.id as string);
+  const extraIds = Array.from(new Set(calc.items.map((i) => i.category))).filter((c) => !knownIds.includes(c));
+  const categories = [...knownIds, ...extraIds]
+    .map((catId) => ({ id: catId, label: categoryLabel(catId), items: calc.items.filter((i) => i.category === catId && (i.description.trim() || i.amount > 0)) }))
     .filter((cat) => cat.items.length > 0);
   const dateStr = (calc.created_at || '').slice(0, 10).split('-').reverse().join('.');
+  const period = fmtPeriod(calc.travel_start, calc.travel_end);
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white">
@@ -131,6 +136,11 @@ export default function KalkulationAngebotPage() {
           <h1 className="mt-1 text-xl font-extrabold" style={{ color: COLORS.navy }}>
             {calc.title || 'Ihr Reise-Arrangement'}
           </h1>
+          {period && (
+            <p className="mt-1.5 inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: COLORS.accent }}>
+              <CalendarDays className="h-4 w-4" /> {period}
+            </p>
+          )}
         </div>
 
         {/* Leistungen */}
@@ -152,6 +162,9 @@ export default function KalkulationAngebotPage() {
                         <span>
                           {item.qty > 1 ? `${item.qty}× ` : ''}
                           {item.description.trim() || cat.label}
+                          {(item.room_category || '').trim() && (
+                            <span className="block text-xs" style={{ color: COLORS.textMuted }}>{item.room_category}</span>
+                          )}
                         </span>
                       </li>
                     ))}
@@ -166,7 +179,7 @@ export default function KalkulationAngebotPage() {
         <div className="mt-4 rounded-xl border-2 px-6 py-5" style={{ borderColor: COLORS.navy }}>
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <div>
-              <p className="text-sm font-bold" style={{ color: COLORS.navy }}>Gesamtpreis</p>
+              <p className="text-sm font-bold" style={{ color: COLORS.navy }}>Gesamtpreis pro Person</p>
               <p className="text-xs" style={{ color: COLORS.textMuted }}>inkl. aller oben aufgeführten Leistungen</p>
             </div>
             <div className="text-3xl font-extrabold tabular-nums" style={{ color: COLORS.navy }}>
@@ -176,7 +189,7 @@ export default function KalkulationAngebotPage() {
         </div>
 
         <p className="mt-3 text-[11px] leading-relaxed" style={{ color: COLORS.textMuted }}>
-          Alle Preise in {calc.target_currency}. Angebot freibleibend — Verfügbarkeit und Preis werden bei Buchung bestätigt.
+          Alle Preise pro Person in {calc.target_currency}. Angebot freibleibend — Verfügbarkeit und Preis werden bei Buchung bestätigt.
         </p>
 
         {/* Fuß */}

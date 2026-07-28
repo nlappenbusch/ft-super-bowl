@@ -349,7 +349,9 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
         title text NOT NULL DEFAULT '',
         customer_id text,
         booking_id text,
-        target_currency text NOT NULL DEFAULT 'CHF',
+        travel_start text NOT NULL DEFAULT '',
+        travel_end text NOT NULL DEFAULT '',
+        target_currency text NOT NULL DEFAULT 'EUR',
         margin_mode text NOT NULL DEFAULT 'percent',
         margin_value double precision NOT NULL DEFAULT 0,
         items text NOT NULL DEFAULT '[]',
@@ -360,6 +362,8 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
       )`);
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_offer_calcs_customer ON offer_calculations(customer_id)`);
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_offer_calcs_booking ON offer_calculations(booking_id)`);
+      await pool.query(`ALTER TABLE offer_calculations ADD COLUMN IF NOT EXISTS travel_start text NOT NULL DEFAULT ''`);
+      await pool.query(`ALTER TABLE offer_calculations ADD COLUMN IF NOT EXISTS travel_end text NOT NULL DEFAULT ''`);
       await pool.query(`INSERT INTO counters (name, value) SELECT 'calculation_number', 1000 WHERE NOT EXISTS (SELECT 1 FROM counters WHERE name = 'calculation_number')`);
       // Benachrichtigungs-Center (Glocke im Admin)
       await pool.query(`CREATE TABLE IF NOT EXISTS admin_notifications (

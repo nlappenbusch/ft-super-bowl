@@ -1,24 +1,27 @@
 'use client';
 
 /**
- * /admin/kalkulation/[id] — Editor einer Angebotskalkulation (TASK-00115).
- * id = "neu" legt eine neue Kalkulation an. Positionen je Kategorie mit EK in
- * EUR/USD/CHF/GBP, Live-Umrechnung in die Zielwährung (Kursbasis = Snapshot
- * bei Erstellung), Marge als Prozent (Slider 0–200 %) oder Fixbetrag,
- * FX-Alert bei Kursveränderung, Kunden-/Anfrage-Zuordnung, Kundenansicht.
+ * /admin/kalkulation/[id] — Editor einer Angebotskalkulation (TASK-00115/-00116).
+ * id = "neu" legt eine neue Kalkulation an. Positionen je Kategorie mit EK
+ * (immer pro Person) in EUR/USD/CHF/GBP, Live-Umrechnung in die Zielwährung
+ * (Kursbasis = Snapshot bei Erstellung), Reisezeitraum mit Kalenderauswahl,
+ * Marge als Prozent (Slider 0–200 %), Fixbetrag ODER fixer VK (Rück-Rechnung),
+ * FX-Alert bei Kursveränderung, Kalkulationstabelle, Kundenansicht.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import AdminShell from '@/components/admin/AdminShell';
 import {
-  COLORS, SectionCard, Card, Spinner, Button, Field, TextInput, TextArea, SelectInput, InputField, Badge, PageHeader,
+  COLORS, SectionCard, Card, Spinner, Button, Field, TextInput, TextArea, SelectInput, Badge, PageHeader,
 } from '@/components/admin/ui';
+import CalculationTable from '@/components/admin/CalculationTable';
 import {
-  ArrowLeft, Plus, X, Save, Trash2, FileText, TrendingDown, TrendingUp, Minus, RefreshCw, AlertTriangle, Landmark,
+  ArrowLeft, Plus, X, Save, Trash2, FileText, TrendingDown, TrendingUp, Minus, RefreshCw, AlertTriangle,
+  Landmark, CalendarDays, Table2, ArrowDownToLine,
 } from 'lucide-react';
 import {
-  CALC_CATEGORIES, computeTotals, compareEk, itemEk, fmtMoney, fmtPct,
+  CALC_CATEGORIES, computeTotals, compareEk, itemEk, fmtMoney, fmtPct, fmtPeriod, fmtPeriodShort,
   type CalcItem, type MarginMode,
 } from '@/lib/calcModel';
 import { CALC_CURRENCIES, convertAmount, type CalcCurrency, type RatesSnapshot } from '@/lib/fxRates';
@@ -29,8 +32,14 @@ interface CustomerOption { id: string; name: string; company: string; primary_em
 interface BookingOption { id: string; request_number: string | null; package_title: string; email: string; customer_id?: string | null }
 
 function newItem(category: string, currency: CalcCurrency): CalcItem {
-  return { id: crypto.randomUUID(), category, description: '', currency, amount: 0, qty: 1 };
+  return { id: crypto.randomUUID(), category, description: '', room_category: '', currency, amount: 0, qty: 1 };
 }
+
+const MARGIN_MODE_LABEL: Record<MarginMode, string> = {
+  percent: 'Marge in %',
+  fixed: 'Marge als Fixbetrag',
+  target_vk: 'Fixer VK (Zielpreis)',
+};
 
 export default function KalkulationEditorPage() {
   const params = useParams<{ id: string }>();
@@ -48,7 +57,9 @@ export default function KalkulationEditorPage() {
   const [title, setTitle] = useState('');
   const [customerId, setCustomerId] = useState('');
   const [bookingId, setBookingId] = useState('');
-  const [target, setTarget] = useState<CalcCurrency>('CHF');
+  const [travelStart, setTravelStart] = useState('');
+  const [travelEnd, setTravelEnd] = useState('');
+  const [target, setTarget] = useState<CalcCurrency>('EUR');
   const [marginMode, setMarginMode] = useState<MarginMode>('percent');
   const [marginValue, setMarginValue] = useState(10);
   const [items, setItems] = useState<CalcItem[]>([]);
@@ -90,7 +101,9 @@ export default function KalkulationEditorPage() {
         setTitle(d.title || '');
         setCustomerId(d.customer_id || '');
         setBookingId(d.booking_id || '');
-        setTarget(d.target_currency || 'CHF');
+        setTravelStart(d.travel_start || '');
+        setTravelEnd(d.travel_end || '');
+        setTarget(d.target_currency || 'EUR');
         setMarginMode(d.margin_mode || 'percent');
         setMarginValue(Number(d.margin_value) || 0);
         setItems(Array.isArray(d.items) ? d.items : []);
@@ -120,6 +133,9 @@ export default function KalkulationEditorPage() {
     () => compareEk(items, target, snapshot, current),
     [items, target, snapshot, current]
   );
+  const period = fmtPeriod(travelStart, travelEnd);
+  const periodShort = fmtPeriodShort(travelStart, travelEnd);
+  const negativeMargin = !!totals && totals.marginAmount < -0.005;
 
   /* ─── Positionen ────────────────────────────────────────────────────── */
 
@@ -136,14 +152,23 @@ export default function KalkulationEditorPage() {
     }
   };
 
+  const applyPeriodToTitle = () => {
+    if (!periodShort) return;
+    const base = title.trim().replace(/\s*\d{2}\.\d{2}\.–\d{2}\.\d{2}\.\d{4}.*$/, '').trim();
+    setTitle(`${base ? base + ' ' : ''}${periodShort}`);
+  };
+
   /* ─── Aktionen ──────────────────────────────────────────────────────── */
 
   const save = async () => {
     setSaving(true);
     setErr(null);
     setNotice(null);
+    const effectiveTitle = title.trim() || (periodShort ? `Arrangement ${periodShort}` : '');
     const payload = {
-      title, customer_id: customerId || null, booking_id: bookingId || null,
+      title: effectiveTitle,
+      customer_id: customerId || null, booking_id: bookingId || null,
+      travel_start: travelStart || '', travel_end: travelEnd || '',
       target_currency: target, margin_mode: marginMode, margin_value: marginValue,
       items, status, notes,
     };
@@ -159,6 +184,7 @@ export default function KalkulationEditorPage() {
           method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
         }).then((r) => r.json());
         if (!res?.success) { setErr(res?.error || 'Speichern fehlgeschlagen'); return; }
+        setTitle(res.data?.title ?? effectiveTitle);
         setSnapshot(res.data?.rates_snapshot || null);
         if (res.current_rates) setCurrent(res.current_rates);
         setNotice('Gespeichert.');
@@ -220,15 +246,18 @@ export default function KalkulationEditorPage() {
   }
 
   const usedCurrencies = Array.from(new Set(items.map((i) => i.currency)));
+  const inputStyle: CSSProperties = { borderColor: COLORS.stroke };
+  const cellInput = 'w-full rounded-lg border px-2.5 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 transition';
 
   return (
     <AdminShell title={isNew ? 'Neue Kalkulation' : `Kalkulation ${calcNumber}`}>
       <PageHeader
         title={isNew ? 'Neue Angebotskalkulation' : `${calcNumber || 'Kalkulation'}${title ? ` — ${title}` : ''}`}
         description={
-          isNew
-            ? 'Positionen erfassen, EK in der Einkaufswährung eingeben — beim Speichern werden die aktuellen EZB-Kurse festgeschrieben.'
-            : `Angelegt am ${(createdAt || '').slice(0, 10)}${snapshot ? ` · Kursbasis EZB ${snapshot.date}` : ' · noch keine Kurse festgeschrieben'}`
+          (period ? `${period} · ` : '') +
+          (isNew
+            ? 'Alle EK-Preise pro Person — beim Speichern werden die aktuellen EZB-Kurse festgeschrieben.'
+            : `Angelegt am ${(createdAt || '').slice(0, 10)}${snapshot ? ` · Kursbasis EZB ${snapshot.date}` : ' · noch keine Kurse festgeschrieben'}`)
         }
         actions={
           <>
@@ -258,16 +287,37 @@ export default function KalkulationEditorPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* ─── Linke Spalte: Stammdaten + Positionen ─── */}
-        <div className="space-y-6 lg:col-span-2">
-          <SectionCard title="Stammdaten" description="Titel, Zuordnung zu Kunde und Anfrage (RQ), Status.">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        {/* ─── Linke Spalte: Stammdaten + Positionen + Tabelle ─── */}
+        <div className="space-y-6 xl:col-span-2">
+          <SectionCard title="Stammdaten" description="Reisetermin, Titel, Zuordnung zu Kunde und Anfrage (REQ).">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Reisetermin von">
+                <TextInput type="date" value={travelStart} onChange={(e) => setTravelStart(e.target.value)} />
+              </Field>
+              <Field label="Reisetermin bis">
+                <TextInput type="date" value={travelEnd} onChange={(e) => setTravelEnd(e.target.value)} />
+              </Field>
+              {period && (
+                <div className="sm:col-span-2 -mt-1 flex flex-wrap items-center gap-2 rounded-xl px-3 py-2" style={{ background: COLORS.surfaceMuted }}>
+                  <CalendarDays className="h-4 w-4" style={{ color: COLORS.accent }} />
+                  <span className="text-sm font-bold" style={{ color: COLORS.navy }}>{period}</span>
+                  <button
+                    onClick={applyPeriodToTitle}
+                    className="ml-auto inline-flex items-center gap-1 text-xs font-semibold hover:underline"
+                    style={{ color: COLORS.accent }}
+                  >
+                    <ArrowDownToLine className="h-3.5 w-3.5" /> In Titel übernehmen
+                  </button>
+                </div>
+              )}
               <div className="sm:col-span-2">
-                <InputField
-                  label="Titel" required placeholder="z. B. Super Bowl LXII — VIP-Arrangement 4 Personen"
-                  value={title} onChange={(e) => setTitle(e.target.value)}
-                />
+                <Field label="Titel" hint={!title.trim() && periodShort ? `Bleibt der Titel leer, wird „Arrangement ${periodShort}“ verwendet.` : undefined}>
+                  <TextInput
+                    placeholder={periodShort ? `z. B. Super Bowl LXII ${periodShort}` : 'z. B. Super Bowl LXII — VIP-Arrangement'}
+                    value={title} onChange={(e) => setTitle(e.target.value)}
+                  />
+                </Field>
               </div>
               <Field label="Kunde">
                 <SelectInput value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
@@ -279,7 +329,7 @@ export default function KalkulationEditorPage() {
                   ))}
                 </SelectInput>
               </Field>
-              <Field label="Anfrage (REQ)" hint="Verknüpft die Kalkulation mit einer Buchungsanfrage.">
+              <Field label="Anfrage (REQ)">
                 <SelectInput value={bookingId} onChange={(e) => onBookingChange(e.target.value)}>
                   <option value="">— keine Anfrage zugeordnet —</option>
                   {bookings.map((b) => (
@@ -296,29 +346,31 @@ export default function KalkulationEditorPage() {
                   <option value="archiviert">Archiviert</option>
                 </SelectInput>
               </Field>
-              <div className="sm:col-span-2">
-                <Field label="Interne Notizen" hint="Nur intern — erscheint nicht in der Kundenansicht.">
-                  <TextArea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="z. B. Ticket-Kontingent bei Broker XY angefragt…" />
-                </Field>
-              </div>
+              <Field label="Interne Notizen" hint="Nur intern — erscheint nicht in der Kundenansicht.">
+                <TextArea rows={1} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="z. B. Ticket-Kontingent bei Broker XY angefragt…" />
+              </Field>
             </div>
           </SectionCard>
 
           <SectionCard
             title="Positionen (EK)"
-            description="Einkaufspreise je Position in der jeweiligen Einkaufswährung — pro Kategorie beliebig viele Positionen (z. B. mehrere Transfers)."
+            description="Alle EK-Preise verstehen sich PRO PERSON, in der jeweiligen Einkaufswährung. Pro Kategorie beliebig viele Positionen."
           >
-            <div className="space-y-5">
+            <div className="space-y-4">
               {CALC_CATEGORIES.map((cat) => {
                 const catItems = items.filter((i) => i.category === cat.id);
                 const catSum = baseRates
                   ? catItems.reduce((s, i) => s + convertAmount(itemEk(i), i.currency, target, baseRates), 0)
                   : null;
+                const isHotel = cat.id === 'hotel';
                 return (
-                  <div key={cat.id} className="rounded-xl border" style={{ borderColor: COLORS.stroke }}>
-                    <div className="flex items-center justify-between gap-3 px-4 py-2.5" style={{ background: COLORS.surfaceMuted, borderRadius: '0.75rem 0.75rem 0 0' }}>
-                      <span className="text-sm font-bold" style={{ color: COLORS.navy }}>{cat.label}</span>
-                      <div className="flex items-center gap-3">
+                  <div key={cat.id} className="overflow-hidden rounded-xl border" style={{ borderColor: COLORS.stroke }}>
+                    <div className="flex items-center justify-between gap-3 px-4 py-2.5" style={{ background: COLORS.surfaceMuted }}>
+                      <div>
+                        <span className="text-sm font-bold" style={{ color: COLORS.navy }}>{cat.label}</span>
+                        {cat.hint && <span className="ml-2 hidden text-xs sm:inline" style={{ color: COLORS.textMuted }}>{cat.hint}</span>}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
                         {catItems.length > 0 && catSum !== null && (
                           <span className="text-xs font-semibold tabular-nums" style={{ color: COLORS.textMuted }}>
                             {fmtMoney(catSum, target)}
@@ -330,50 +382,88 @@ export default function KalkulationEditorPage() {
                       </div>
                     </div>
                     {catItems.length > 0 && (
-                      <div className="space-y-2 p-3">
-                        {catItems.map((item) => {
-                          const ek = itemEk(item);
-                          const inTarget = baseRates ? convertAmount(ek, item.currency, target, baseRates) : null;
-                          return (
-                            <div key={item.id} className="flex flex-wrap items-center gap-2">
-                              <TextInput
-                                className="min-w-40 flex-1"
-                                placeholder="Beschreibung, z. B. Kat.-1-Ticket Unterrang"
-                                value={item.description}
-                                onChange={(e) => patchItem(item.id, { description: e.target.value })}
-                              />
-                              <TextInput
-                                type="number" min={0} step={1} title="Menge"
-                                className="w-16 text-center"
-                                value={item.qty}
-                                onChange={(e) => patchItem(item.id, { qty: Math.max(0, Number(e.target.value) || 0) })}
-                              />
-                              <SelectInput
-                                className="w-24" title="Einkaufswährung"
-                                value={item.currency}
-                                onChange={(e) => patchItem(item.id, { currency: e.target.value as CalcCurrency })}
-                              >
-                                {CALC_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                              </SelectInput>
-                              <TextInput
-                                type="number" min={0} step={0.01} title="EK je Einheit"
-                                className="w-28 text-right"
-                                value={item.amount}
-                                onChange={(e) => patchItem(item.id, { amount: Math.max(0, Number(e.target.value) || 0) })}
-                              />
-                              <span className="w-28 text-right text-xs font-bold tabular-nums" style={{ color: COLORS.navy }}>
-                                {inTarget !== null ? fmtMoney(inTarget, target) : '—'}
-                              </span>
-                              <button
-                                onClick={() => removeItem(item.id)}
-                                className="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-500"
-                                title="Position entfernen"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                            </div>
-                          );
-                        })}
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="text-left text-[10px] uppercase tracking-wider" style={{ color: '#9ca3af' }}>
+                              <th className="px-3 pb-1 pt-2.5 font-bold">Beschreibung{isHotel ? ' + Zimmerkategorie' : ''}</th>
+                              <th className="w-16 px-2 pb-1 pt-2.5 text-center font-bold">Menge</th>
+                              <th className="w-24 px-2 pb-1 pt-2.5 font-bold">Währung</th>
+                              <th className="w-32 px-2 pb-1 pt-2.5 text-right font-bold">EK p.P.</th>
+                              <th className="w-32 px-2 pb-1 pt-2.5 text-right font-bold">in {target}</th>
+                              <th className="w-10 px-2 pb-1 pt-2.5"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {catItems.map((item) => {
+                              const ek = itemEk(item);
+                              const inTarget = baseRates ? convertAmount(ek, item.currency, target, baseRates) : null;
+                              return (
+                                <tr key={item.id} className="border-t align-top" style={{ borderColor: '#f1f4f8' }}>
+                                  <td className="px-3 py-2">
+                                    <input
+                                      className={cellInput}
+                                      style={inputStyle}
+                                      placeholder={isHotel ? 'Hotelname, z. B. Fairmont Santa Monica' : cat.id === 'extras' ? 'Freitext, z. B. Reiseführer, Gift-Bag, City Tax…' : 'Beschreibung, z. B. Kat.-1-Ticket Unterrang'}
+                                      value={item.description}
+                                      onChange={(e) => patchItem(item.id, { description: e.target.value })}
+                                    />
+                                    {isHotel && (
+                                      <input
+                                        className={`${cellInput} mt-1.5`}
+                                        style={inputStyle}
+                                        placeholder="Zimmerkategorie, z. B. Deluxe DZ Meerblick"
+                                        value={item.room_category || ''}
+                                        onChange={(e) => patchItem(item.id, { room_category: e.target.value })}
+                                      />
+                                    )}
+                                  </td>
+                                  <td className="px-2 py-2">
+                                    <input
+                                      type="number" min={0} step={1} title="Menge pro Person"
+                                      className={`${cellInput} text-center`}
+                                      style={inputStyle}
+                                      value={item.qty}
+                                      onChange={(e) => patchItem(item.id, { qty: Math.max(0, Number(e.target.value) || 0) })}
+                                    />
+                                  </td>
+                                  <td className="px-2 py-2">
+                                    <select
+                                      className={`${cellInput} bg-white`}
+                                      style={inputStyle}
+                                      title="Einkaufswährung"
+                                      value={item.currency}
+                                      onChange={(e) => patchItem(item.id, { currency: e.target.value as CalcCurrency })}
+                                    >
+                                      {CALC_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                  </td>
+                                  <td className="px-2 py-2">
+                                    <input
+                                      type="number" min={0} step={0.01} title="EK je Einheit, pro Person"
+                                      className={`${cellInput} text-right`}
+                                      style={inputStyle}
+                                      value={item.amount}
+                                      onChange={(e) => patchItem(item.id, { amount: Math.max(0, Number(e.target.value) || 0) })}
+                                    />
+                                  </td>
+                                  <td className="px-2 py-3.5 text-right text-xs font-bold tabular-nums" style={{ color: COLORS.navy }}>
+                                    {inTarget !== null ? fmtMoney(inTarget, target) : '—'}
+                                  </td>
+                                  <td className="px-2 py-2 text-center">
+                                    <button
+                                      onClick={() => removeItem(item.id)}
+                                      className="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-500"
+                                      title="Position entfernen"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
                     )}
                   </div>
@@ -381,11 +471,19 @@ export default function KalkulationEditorPage() {
               })}
             </div>
           </SectionCard>
+
+          <SectionCard
+            title="Kalkulationstabelle"
+            description={`Alle Positionen umgerechnet in ${target}, pro Person${snapshot ? ` — Kursbasis EZB ${snapshot.date}` : current ? ` — aktuelle Kurse (${current.date}), werden beim Speichern festgeschrieben` : ''}.`}
+            icon={<Table2 className="h-5 w-5" />}
+          >
+            <CalculationTable items={items} target={target} rates={baseRates} marginMode={marginMode} marginValue={marginValue} />
+          </SectionCard>
         </div>
 
         {/* ─── Rechte Spalte: Kalkulation + Kurse ─── */}
-        <div className="h-fit space-y-6 lg:sticky lg:top-20">
-          <SectionCard title="Kalkulation" description="Zielwährung, Marge und Summen.">
+        <div className="h-fit space-y-6 xl:sticky xl:top-20">
+          <SectionCard title="Kalkulation" description="Zielwährung, Marge/VK und Summen — alles pro Person.">
             <div className="space-y-4">
               <Field label="Zielwährung" hint="Die gesamte Kalkulation wird in diese Währung umgerechnet.">
                 <SelectInput value={target} onChange={(e) => setTarget(e.target.value as CalcCurrency)}>
@@ -393,22 +491,24 @@ export default function KalkulationEditorPage() {
                 </SelectInput>
               </Field>
 
-              <Field label="Marge">
-                <div className="flex gap-2">
-                  <SelectInput
-                    className="w-36 shrink-0"
-                    value={marginMode}
-                    onChange={(e) => setMarginMode(e.target.value as MarginMode)}
-                  >
-                    <option value="percent">Prozent (%)</option>
-                    <option value="fixed">Fixbetrag ({target})</option>
+              <Field label="Marge / Verkaufspreis">
+                <div className="grid grid-cols-2 gap-2">
+                  <SelectInput value={marginMode} onChange={(e) => setMarginMode(e.target.value as MarginMode)}>
+                    {(Object.keys(MARGIN_MODE_LABEL) as MarginMode[]).map((m) => (
+                      <option key={m} value={m}>{MARGIN_MODE_LABEL[m]}</option>
+                    ))}
                   </SelectInput>
-                  <TextInput
-                    type="number" min={0} step={marginMode === 'percent' ? 0.5 : 10}
-                    className="text-right"
-                    value={marginValue}
-                    onChange={(e) => setMarginValue(Math.max(0, Number(e.target.value) || 0))}
-                  />
+                  <div className="relative">
+                    <TextInput
+                      type="number" min={0} step={marginMode === 'percent' ? 0.5 : 10}
+                      className="pr-12 text-right"
+                      value={marginValue}
+                      onChange={(e) => setMarginValue(Math.max(0, Number(e.target.value) || 0))}
+                    />
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-bold" style={{ color: COLORS.textMuted }}>
+                      {marginMode === 'percent' ? '%' : target}
+                    </span>
+                  </div>
                 </div>
                 {marginMode === 'percent' && (
                   <input
@@ -420,23 +520,31 @@ export default function KalkulationEditorPage() {
                   />
                 )}
                 {totals && (
-                  <p className="mt-2 text-xs font-semibold" style={{ color: COLORS.textMuted }}>
-                    {marginMode === 'percent'
-                      ? <>= {fmtMoney(totals.marginAmount, target)} Marge</>
-                      : <>= {totals.marginPercent.toFixed(1).replace('.', ',')} % vom EK</>}
+                  <p className="mt-2 text-xs font-semibold" style={{ color: negativeMargin ? COLORS.danger : COLORS.textMuted }}>
+                    {marginMode === 'percent' && <>= {fmtMoney(totals.marginAmount, target)} Marge → VK {fmtMoney(totals.vkTarget, target)}</>}
+                    {marginMode === 'fixed' && <>= {totals.marginPercent.toFixed(1).replace('.', ',')} % vom EK → VK {fmtMoney(totals.vkTarget, target)}</>}
+                    {marginMode === 'target_vk' && (
+                      <>Marge: {fmtMoney(totals.marginAmount, target)} = {totals.marginPercent.toFixed(1).replace('.', ',')} % vom EK</>
+                    )}
+                  </p>
+                )}
+                {negativeMargin && (
+                  <p className="mt-1 flex items-center gap-1 text-xs font-bold" style={{ color: COLORS.danger }}>
+                    <AlertTriangle className="h-3.5 w-3.5" /> VK liegt unter dem EK — negative Marge!
                   </p>
                 )}
               </Field>
 
               {totals ? (
                 <div className="rounded-xl border p-4" style={{ borderColor: COLORS.stroke, background: COLORS.surfaceMuted }}>
+                  <div className="mb-1 text-[10px] font-bold uppercase tracking-wider" style={{ color: COLORS.textMuted }}>Pro Person</div>
                   <div className="flex items-baseline justify-between text-sm">
                     <span style={{ color: COLORS.textMuted }}>EK gesamt</span>
                     <span className="font-bold tabular-nums" style={{ color: COLORS.navy }}>{fmtMoney(totals.ekTarget, target)}</span>
                   </div>
                   <div className="mt-1 flex items-baseline justify-between text-sm">
-                    <span style={{ color: COLORS.textMuted }}>Marge ({totals.marginPercent.toFixed(1).replace('.', ',')} %)</span>
-                    <span className="font-bold tabular-nums" style={{ color: COLORS.navy }}>{fmtMoney(totals.marginAmount, target)}</span>
+                    <span style={{ color: negativeMargin ? COLORS.danger : COLORS.textMuted }}>Marge ({totals.marginPercent.toFixed(1).replace('.', ',')} %)</span>
+                    <span className="font-bold tabular-nums" style={{ color: negativeMargin ? COLORS.danger : COLORS.navy }}>{fmtMoney(totals.marginAmount, target)}</span>
                   </div>
                   <div className="mt-2 flex items-baseline justify-between border-t pt-2" style={{ borderColor: COLORS.stroke }}>
                     <span className="text-sm font-bold" style={{ color: COLORS.navy }}>VK gesamt</span>
@@ -520,7 +628,6 @@ export default function KalkulationEditorPage() {
                 </p>
               )}
 
-              {/* Kurs-Tabelle Snapshot vs. aktuell */}
               {usedCurrencies.filter((c) => c !== target).length > 0 && current && (
                 <div className="mt-3 space-y-1 text-xs tabular-nums" style={{ color: COLORS.textMuted }}>
                   {usedCurrencies.filter((c) => c !== target).map((c) => {
