@@ -364,6 +364,8 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_offer_calcs_booking ON offer_calculations(booking_id)`);
       await pool.query(`ALTER TABLE offer_calculations ADD COLUMN IF NOT EXISTS travel_start text NOT NULL DEFAULT ''`);
       await pool.query(`ALTER TABLE offer_calculations ADD COLUMN IF NOT EXISTS travel_end text NOT NULL DEFAULT ''`);
+      await pool.query(`ALTER TABLE offer_calculations ADD COLUMN IF NOT EXISTS hotel_info text NOT NULL DEFAULT ''`);
+      await pool.query(`ALTER TABLE offer_calculations ADD COLUMN IF NOT EXISTS invoice_id text`);
       await pool.query(`INSERT INTO counters (name, value) SELECT 'calculation_number', 1000 WHERE NOT EXISTS (SELECT 1 FROM counters WHERE name = 'calculation_number')`);
       // Benachrichtigungs-Center (Glocke im Admin)
       await pool.query(`CREATE TABLE IF NOT EXISTS admin_notifications (

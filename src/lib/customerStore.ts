@@ -144,6 +144,14 @@ export interface CustomerListRow extends Customer {
   requests_count: number;
   bookings_count: number;
   revenue: number;
+  /** IDs anderer Kunden mit identischem Namen (mögliche Dubletten). */
+  duplicate_ids: string[];
+}
+
+/** Vergleichsschlüssel für die Dubletten-Erkennung (Vor- + Nachname, case-insensitiv). */
+function duplicateKey(c: Pick<Customer, 'first_name' | 'last_name' | 'name'>): string {
+  const full = joinName(c.first_name, c.last_name) || (c.name || '').trim();
+  return full.toLowerCase().replace(/\s+/g, ' ');
 }
 
 export async function listCustomers(search?: string): Promise<CustomerListRow[]> {
@@ -166,7 +174,21 @@ export async function listCustomers(search?: string): Promise<CustomerListRow[]>
       requests_count: Number(stats?.cnt) || 0,
       bookings_count: Number(stats?.booked) || 0,
       revenue: Number(stats?.revenue) || 0,
+      duplicate_ids: [],
     });
+  }
+
+  // Dubletten-Erkennung: identischer Vor- + Nachname (case-insensitiv) bei anderer Kunden-ID.
+  const byName = new Map<string, string[]>();
+  for (const c of result) {
+    const key = duplicateKey(c);
+    if (!key) continue;
+    byName.set(key, [...(byName.get(key) || []), c.id]);
+  }
+  for (const c of result) {
+    const key = duplicateKey(c);
+    const ids = key ? byName.get(key) || [] : [];
+    c.duplicate_ids = ids.filter((x) => x !== c.id);
   }
 
   if (search && search.trim()) {
@@ -209,6 +231,8 @@ export interface CustomerDetail extends Customer {
   emails: CustomerEmail[];
   bookings: CustomerBooking[];
   invoices: CustomerInvoice[];
+  /** Andere Kunden mit identischem Namen (mögliche Dubletten → Merge anbieten). */
+  possible_duplicates: Array<{ id: string; name: string; primary_email: string }>;
 }
 
 export async function getCustomer(id: string): Promise<CustomerDetail | null> {
@@ -235,7 +259,26 @@ export async function getCustomer(id: string): Promise<CustomerDetail | null> {
   } catch {
     invoices = [];
   }
-  return { ...c, emails, bookings, invoices };
+
+  // Mögliche Dubletten: gleicher Vor- + Nachname bei anderer Kunden-ID.
+  const possible_duplicates: CustomerDetail['possible_duplicates'] = [];
+  const key = duplicateKey(c);
+  if (key) {
+    try {
+      const others = await dbAll<{ id: string; name: string; first_name: string; last_name: string }>(
+        `SELECT id, name, first_name, last_name FROM customers WHERE id != ?`, [id]
+      );
+      for (const o of others) {
+        if (duplicateKey(o) !== key) continue;
+        const mail = await dbGet<{ email: string }>(
+          `SELECT email FROM customer_emails WHERE customer_id = ? ORDER BY is_primary DESC LIMIT 1`, [o.id]
+        );
+        possible_duplicates.push({ id: o.id, name: o.name || joinName(o.first_name, o.last_name), primary_email: mail?.email || '' });
+      }
+    } catch { /* Dubletten-Hinweis ist optional */ }
+  }
+
+  return { ...c, emails, bookings, invoices, possible_duplicates };
 }
 
 export type CustomerUpdate = Partial<Pick<Customer, 'salutation' | 'first_name' | 'last_name' | 'name' | 'company' | 'phone' | 'street' | 'zip' | 'city' | 'country' | 'notes'>>;

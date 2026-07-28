@@ -5,7 +5,9 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import AdminShell from '@/components/admin/AdminShell';
 import { COLORS, SectionCard, InputField, TextAreaField, Button, Spinner, Badge, Field } from '@/components/admin/ui';
-import { ArrowLeft, Save, Mail, Plus, GitMerge, Receipt, Inbox, MapPin, Search, FileText, Upload, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Mail, Plus, GitMerge, Receipt, Inbox, MapPin, Search, FileText, Upload, Trash2, Calculator, TrendingDown, TrendingUp, CalendarDays } from 'lucide-react';
+import { computeTotals, fmtMoney, fmtPct, fmtPeriod, type CalcItem, type MarginMode, type FxComparison } from '@/lib/calcModel';
+import type { CalcCurrency, RatesSnapshot } from '@/lib/fxRates';
 
 interface CEmail { email: string; is_primary: number }
 interface CBooking { id: string; request_number: string | null; package_title: string; start_date: string; status: string; total_price: number; created_at: string; email: string }
@@ -20,8 +22,14 @@ interface Detail {
   id: string; salutation: string; first_name: string; last_name: string; name: string; company: string; phone: string;
   street: string; zip: string; city: string; country: string; notes: string;
   emails: CEmail[]; bookings: CBooking[]; invoices: CInvoice[];
+  possible_duplicates?: Array<{ id: string; name: string; primary_email: string }>;
 }
 interface MergeHit { id: string; name: string; primary_email: string }
+interface CCalc {
+  id: string; calc_number: string; title: string; travel_start: string; travel_end: string;
+  target_currency: CalcCurrency; margin_mode: MarginMode; margin_value: number;
+  items: CalcItem[]; rates_snapshot: RatesSnapshot | null; status: string; fx: FxComparison | null; invoice_id: string | null;
+}
 
 function eur(n: number) { return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(n || 0); }
 function date(s?: string) { if (!s) return '–'; try { return new Date(s).toLocaleDateString('de-DE'); } catch { return s; } }
@@ -43,6 +51,7 @@ export default function KundenakteePage() {
   const [hits, setHits] = useState<MergeHit[]>([]);
   const [merging, setMerging] = useState(false);
   const [docs, setDocs] = useState<CDoc[]>([]);
+  const [calcs, setCalcs] = useState<CCalc[]>([]);
   const [docCat, setDocCat] = useState('ticket');
   const [docTitle, setDocTitle] = useState('');
   const [docBooking, setDocBooking] = useState('');
@@ -56,6 +65,13 @@ export default function KundenakteePage() {
     const res = await fetch(`/api/admin/customers/${id}/documents`).then((r) => r.json()).catch(() => null);
     if (res?.success) setDocs(res.data || []);
   }, [id]);
+
+  const loadCalcs = useCallback(async () => {
+    const res = await fetch(`/api/admin/calculations?customer_id=${encodeURIComponent(id)}`).then((r) => r.json()).catch(() => null);
+    if (res?.success) setCalcs(res.data || []);
+  }, [id]);
+
+  useEffect(() => { loadCalcs(); }, [loadCalcs]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -205,6 +221,26 @@ export default function KundenakteePage() {
           </SectionCard>
 
           <SectionCard title="Dubletten zusammenführen" description="Anderen Kunden in diesen mergen – Historie wandert hierher, dessen E-Mail bleibt als Alias." icon={<GitMerge className="h-5 w-5" />}>
+            {(c.possible_duplicates || []).length > 0 && (
+              <div className="mb-3 grid gap-1.5">
+                <div className="text-xs font-bold" style={{ color: '#d97706' }}>
+                  ⚠️ Mögliche Dublette{(c.possible_duplicates || []).length > 1 ? 'n' : ''} erkannt (gleicher Vor- &amp; Nachname):
+                </div>
+                {(c.possible_duplicates || []).map((d) => (
+                  <div key={d.id} className="flex items-center justify-between rounded-lg px-3 py-2 text-sm" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
+                    <span>
+                      <Link href={`/admin/kunden/${d.id}`} className="font-semibold underline-offset-2 hover:underline" style={{ color: COLORS.navy }}>
+                        {d.name || '(ohne Name)'}
+                      </Link>
+                      {d.primary_email && <span className="text-gray-500"> · {d.primary_email}</span>}
+                    </span>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => doMerge(d.id, d.name || d.primary_email)} disabled={merging}>
+                      <GitMerge className="h-3.5 w-3.5" /> In diesen Kunden mergen
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input value={mergeQ} onChange={(e) => searchMerge(e.target.value)} placeholder="Anderen Kunden suchen (Name/E-Mail)…" className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm text-gray-900" style={{ borderColor: '#d8dde4' }} />
@@ -221,6 +257,52 @@ export default function KundenakteePage() {
             )}
           </SectionCard>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <SectionCard
+          title={`Kalkulationen (${calcs.length})`}
+          description="Diesem Kunden zugeordnete Angebotskalkulationen — VK pro Person, FX-Alert bei Kursveränderung."
+          icon={<Calculator className="h-5 w-5" />}
+        >
+          {calcs.length === 0 ? (
+            <p className="text-sm text-gray-400">
+              Noch keine Kalkulation. <Link href="/admin/kalkulation/neu" className="underline" style={{ color: COLORS.accent }}>Neue Kalkulation anlegen</Link> und diesen Kunden zuordnen.
+            </p>
+          ) : (
+            <div className="grid gap-2">
+              {calcs.map((k) => {
+                const totals = computeTotals(k.items, k.target_currency, k.rates_snapshot, k.margin_mode, k.margin_value);
+                const period = fmtPeriod(k.travel_start, k.travel_end);
+                const pct = k.fx?.diffPct ?? 0;
+                return (
+                  <Link key={k.id} href={`/admin/kalkulation/${k.id}`} className="flex items-center justify-between rounded-lg border px-3 py-2.5 text-sm transition hover:bg-gray-50" style={{ borderColor: '#eef2f7' }}>
+                    <div>
+                      <div className="font-semibold" style={{ color: COLORS.navy }}>
+                        {k.calc_number || k.id.slice(0, 8)} · {k.title || '(ohne Titel)'}
+                      </div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-gray-400">
+                        {period && <span className="inline-flex items-center gap-1" style={{ color: COLORS.accent }}><CalendarDays className="h-3 w-3" /> {period}</span>}
+                        <span>{k.items.length} Pos. · {k.status}</span>
+                        {k.invoice_id && <span style={{ color: '#16a34a' }}>Rechnung erstellt</span>}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      {k.fx && Math.abs(pct) >= 1 && (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold" style={{ color: pct > 0 ? '#dc2626' : '#16a34a' }}>
+                          {pct > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />} EK {fmtPct(pct)}
+                        </span>
+                      )}
+                      <div className="text-sm font-bold" style={{ color: COLORS.navy }}>
+                        {totals ? `${fmtMoney(totals.vkTarget, k.target_currency)} p.P.` : '—'}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </SectionCard>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
