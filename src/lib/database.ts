@@ -250,6 +250,8 @@ export function initDatabase() {
       margin_value REAL NOT NULL DEFAULT 0,
       items TEXT NOT NULL DEFAULT '[]',
       rates_snapshot TEXT NOT NULL DEFAULT '',
+      hotel_info TEXT NOT NULL DEFAULT '',
+      invoice_id TEXT,
       status TEXT NOT NULL DEFAULT 'entwurf',
       notes TEXT NOT NULL DEFAULT '',
       created_by TEXT NOT NULL DEFAULT ''
@@ -550,10 +552,12 @@ export function initDatabase() {
     try { sqlite.exec('ROLLBACK'); } catch { /* keine offene Transaktion */ }
     console.warn('[sqlite] staff_tasks-Status-Migration:', (e as Error).message);
   }
-  // Angebotskalkulation: Reisezeitraum (Bestands-DBs nachrüsten)
+  // Angebotskalkulation: Reisezeitraum, Hotel-Import, Rechnungs-Link (Bestands-DBs nachrüsten)
   const occols = sqlite.prepare(`PRAGMA table_info(offer_calculations)`).all() as Array<{ name: string }>;
   if (occols.length && !occols.some((c) => c.name === 'travel_start')) addColumn('offer_calculations', "travel_start TEXT NOT NULL DEFAULT ''");
   if (occols.length && !occols.some((c) => c.name === 'travel_end')) addColumn('offer_calculations', "travel_end TEXT NOT NULL DEFAULT ''");
+  if (occols.length && !occols.some((c) => c.name === 'hotel_info')) addColumn('offer_calculations', "hotel_info TEXT NOT NULL DEFAULT ''");
+  if (occols.length && !occols.some((c) => c.name === 'invoice_id')) addColumn('offer_calculations', 'invoice_id TEXT');
 
   const ttcols = sqlite.prepare(`PRAGMA table_info(task_time)`).all() as Array<{ name: string }>;
   if (ttcols.length && !ttcols.some((c) => c.name === 'work_date')) addColumn('task_time', "work_date TEXT NOT NULL DEFAULT ''");

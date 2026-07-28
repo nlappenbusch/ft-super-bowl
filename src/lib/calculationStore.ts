@@ -11,6 +11,7 @@ import './database';
 import { dbGet, dbAll, dbRun } from './dbq';
 import { isCalcCurrency, type CalcCurrency, type RatesSnapshot } from './fxRates';
 import { sanitizeItems, type CalcItem, type MarginMode } from './calcModel';
+import type { HotelInfo } from './hotelLookup';
 
 export type CalcStatus = 'entwurf' | 'aktiv' | 'archiviert';
 
@@ -30,6 +31,10 @@ export interface OfferCalculation {
   margin_value: number;
   items: CalcItem[];
   rates_snapshot: RatesSnapshot | null;
+  /** Per Booking.com-Import hinterlegte Hoteldaten (für Rechnung/PDF). */
+  hotel_info: HotelInfo | null;
+  /** Aus dieser Kalkulation erzeugte Rechnung. */
+  invoice_id: string | null;
   status: CalcStatus;
   notes: string;
   created_by: string;
@@ -57,6 +62,8 @@ interface DbRow {
   margin_value: number;
   items: string;
   rates_snapshot: string;
+  hotel_info: string | null;
+  invoice_id: string | null;
   status: string;
   notes: string;
   created_by: string;
@@ -99,6 +106,13 @@ function parseRow(r: DbRow): OfferCalculationRow {
   } catch {
     snapshot = null;
   }
+  let hotelInfo: HotelInfo | null = null;
+  try {
+    hotelInfo = r.hotel_info ? (JSON.parse(r.hotel_info) as HotelInfo) : null;
+    if (hotelInfo && typeof hotelInfo.name !== 'string') hotelInfo = null;
+  } catch {
+    hotelInfo = null;
+  }
   return {
     id: r.id,
     calc_number: r.calc_number || '',
@@ -114,6 +128,8 @@ function parseRow(r: DbRow): OfferCalculationRow {
     margin_value: normMarginValue(r.margin_value),
     items,
     rates_snapshot: snapshot,
+    hotel_info: hotelInfo,
+    invoice_id: r.invoice_id || null,
     status: normStatus(r.status),
     notes: r.notes || '',
     created_by: r.created_by || '',
@@ -160,6 +176,19 @@ export interface CalculationInput {
   items?: unknown;
   status?: unknown;
   notes?: unknown;
+  hotel_info?: unknown;
+}
+
+/** HotelInfo aus Request-Body absichern (oder null). */
+function normHotelInfo(v: unknown): HotelInfo | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  if (typeof o.name !== 'string' || !o.name.trim()) return null;
+  const s = (x: unknown) => (typeof x === 'string' ? x : '');
+  return {
+    name: o.name.trim(), street: s(o.street), zip: s(o.zip), city: s(o.city),
+    country: s(o.country), url: s(o.url), source: s(o.source) || 'manual',
+  };
 }
 
 function normTarget(c: unknown): CalcCurrency {
@@ -229,6 +258,7 @@ export async function updateCalculation(id: string, updates: CalculationUpdate):
   if ('items' in updates) { sets.push('items = ?'); vals.push(JSON.stringify(sanitizeItems(updates.items, target))); }
   if ('status' in updates) { sets.push('status = ?'); vals.push(normStatus(updates.status)); }
   if ('notes' in updates) { sets.push('notes = ?'); vals.push(typeof updates.notes === 'string' ? updates.notes : ''); }
+  if ('hotel_info' in updates) { const h = normHotelInfo(updates.hotel_info); sets.push('hotel_info = ?'); vals.push(h ? JSON.stringify(h) : ''); }
   if (updates.rates_snapshot) { sets.push('rates_snapshot = ?'); vals.push(JSON.stringify(updates.rates_snapshot)); }
 
   if (sets.length) {
@@ -242,4 +272,19 @@ export async function updateCalculation(id: string, updates: CalculationUpdate):
 export async function deleteCalculation(id: string): Promise<boolean> {
   const { changes } = await dbRun(`DELETE FROM offer_calculations WHERE id = ?`, [id]);
   return changes > 0;
+}
+
+/** Erzeugte Rechnung an der Kalkulation verknüpfen. */
+export async function setCalculationInvoice(id: string, invoiceId: string): Promise<boolean> {
+  const { changes } = await dbRun(
+    `UPDATE offer_calculations SET invoice_id = ?, updated_at = ? WHERE id = ?`,
+    [invoiceId, new Date().toISOString(), id]
+  );
+  return changes > 0;
+}
+
+/** Kalkulationen eines Kunden (für die Kundenakte). */
+export async function listCalculationsByCustomer(customerId: string): Promise<OfferCalculationRow[]> {
+  const rows = await dbAll<DbRow>(`${SELECT_SQL} WHERE oc.customer_id = ? ORDER BY oc.created_at DESC`, [customerId]);
+  return rows.map(parseRow);
 }

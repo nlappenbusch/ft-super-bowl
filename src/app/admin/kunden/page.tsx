@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import AdminShell from '@/components/admin/AdminShell';
-import { COLORS, SectionCard, Spinner, EmptyState } from '@/components/admin/ui';
-import { Search, Users, ArrowRight, Mail, Phone } from 'lucide-react';
+import { COLORS, SectionCard, Spinner, EmptyState, Badge } from '@/components/admin/ui';
+import { Search, Users, ArrowRight, Mail, Phone, GitMerge } from 'lucide-react';
 
 interface CustomerRow {
   id: string;
@@ -17,6 +17,7 @@ interface CustomerRow {
   requests_count: number;
   bookings_count: number;
   revenue: number;
+  duplicate_ids?: string[];
 }
 
 function eur(n: number) {
@@ -93,9 +94,16 @@ export default function KundenPage() {
                 {rows.map((c) => (
                   <tr key={c.id} className="border-t transition-colors hover:bg-gray-50" style={{ borderColor: '#eef2f7' }}>
                     <td className="px-3 py-3">
-                      <Link href={`/admin/kunden/${c.id}`} className="font-bold" style={{ color: COLORS.navy }}>
-                        {c.name || '(ohne Name)'}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link href={`/admin/kunden/${c.id}`} className="font-bold" style={{ color: COLORS.navy }}>
+                          {c.name || '(ohne Name)'}
+                        </Link>
+                        {(c.duplicate_ids || []).length > 0 && (
+                          <Link href={`/admin/kunden/${c.id}`} title="Gleicher Vor- und Nachname wie ein anderer Kunde — in der Akte zusammenführen.">
+                            <Badge tone="warn"><GitMerge className="h-3 w-3" /> Dublette?</Badge>
+                          </Link>
+                        )}
+                      </div>
                       {c.company && <div className="text-xs text-gray-500">{c.company}</div>}
                       {c.city && <div className="text-xs text-gray-400">{c.city}</div>}
                     </td>

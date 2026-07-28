@@ -18,18 +18,25 @@ import {
 import CalculationTable from '@/components/admin/CalculationTable';
 import {
   ArrowLeft, Plus, X, Save, Trash2, FileText, TrendingDown, TrendingUp, Minus, RefreshCw, AlertTriangle,
-  Landmark, CalendarDays, Table2, ArrowDownToLine,
+  Landmark, CalendarDays, Table2, ArrowDownToLine, FileDown, Receipt, Hotel, Search, ExternalLink,
 } from 'lucide-react';
 import {
-  CALC_CATEGORIES, computeTotals, compareEk, itemEk, fmtMoney, fmtPct, fmtPeriod, fmtPeriodShort,
+  CALC_CATEGORIES, EXTRAS_QUICK, DEFAULT_EXTRAS, computeTotals, compareEk, itemEk, fmtMoney, fmtPct,
+  fmtPeriod, fmtPeriodShort, buildIncludedServices,
   type CalcItem, type MarginMode,
 } from '@/lib/calcModel';
 import { CALC_CURRENCIES, convertAmount, type CalcCurrency, type RatesSnapshot } from '@/lib/fxRates';
+import type { HotelInfo } from '@/lib/hotelLookup';
 
 type CalcStatus = 'entwurf' | 'aktiv' | 'archiviert';
 
 interface CustomerOption { id: string; name: string; company: string; primary_email: string }
-interface BookingOption { id: string; request_number: string | null; package_title: string; email: string; customer_id?: string | null }
+interface BookingOption { id: string; request_number: string | null; package_title: string; email: string; customer_id?: string | null; number_of_persons?: number }
+
+function hotelLine(h: HotelInfo): string {
+  const addr = [h.street, [h.zip, h.city].filter(Boolean).join(' '), h.country].filter(Boolean).join(', ');
+  return addr ? `${h.name} — ${addr}` : h.name;
+}
 
 function newItem(category: string, currency: CalcCurrency): CalcItem {
   return { id: crypto.randomUUID(), category, description: '', room_category: '', currency, amount: 0, qty: 1 };
@@ -67,10 +74,23 @@ export default function KalkulationEditorPage() {
   const [notes, setNotes] = useState('');
   const [snapshot, setSnapshot] = useState<RatesSnapshot | null>(null);
   const [current, setCurrent] = useState<RatesSnapshot | null>(null);
+  const [hotelInfo, setHotelInfo] = useState<HotelInfo | null>(null);
+  const [invoiceId, setInvoiceId] = useState<string | null>(null);
 
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [bookings, setBookings] = useState<BookingOption[]>([]);
   const [confirmAction, setConfirmAction] = useState<null | 'delete' | 'rebase'>(null);
+
+  // Booking.com-Hotel-Import
+  const [hotelUrl, setHotelUrl] = useState('');
+  const [hotelLoading, setHotelLoading] = useState(false);
+
+  // Rechnung aus Kalkulation
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [invPersons, setInvPersons] = useState(1);
+  const [invDueDays, setInvDueDays] = useState(14);
+  const [invServices, setInvServices] = useState('');
+  const [invCreating, setInvCreating] = useState(false);
 
   /* ─── Laden ─────────────────────────────────────────────────────────── */
 
@@ -86,6 +106,8 @@ export default function KalkulationEditorPage() {
       if (bookingsRes?.success) setBookings(bookingsRes.data || []);
 
       if (isNew) {
+        // Standard-Extras (Inklusivleistungen, EK 0) vorbelegen
+        setItems(DEFAULT_EXTRAS.map((d) => ({ ...newItem('extras', 'EUR'), description: d })));
         const ratesRes = await fetch('/api/admin/calculations/rates').then((r) => r.json()).catch(() => null);
         if (ratesRes?.success) setCurrent(ratesRes.data);
         else setNotice('Wechselkurse sind aktuell nicht abrufbar — die Vorschau bleibt leer, Kurse werden beim Speichern nachgeholt.');
@@ -111,6 +133,9 @@ export default function KalkulationEditorPage() {
         setNotes(d.notes || '');
         setSnapshot(d.rates_snapshot || null);
         setCurrent(res.current_rates || null);
+        setHotelInfo(d.hotel_info || null);
+        setInvoiceId(d.invoice_id || null);
+        if (d.hotel_info?.url) setHotelUrl(d.hotel_info.url);
       }
     } catch {
       setErr('Laden fehlgeschlagen');
@@ -170,7 +195,7 @@ export default function KalkulationEditorPage() {
       customer_id: customerId || null, booking_id: bookingId || null,
       travel_start: travelStart || '', travel_end: travelEnd || '',
       target_currency: target, margin_mode: marginMode, margin_value: marginValue,
-      items, status, notes,
+      items, status, notes, hotel_info: hotelInfo,
     };
     try {
       if (isNew) {
@@ -211,6 +236,54 @@ export default function KalkulationEditorPage() {
       setNotice('Kurse neu festgeschrieben — die Kalkulation rechnet ab jetzt mit dem aktuellen Stand.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  /** Booking.com-URL auflösen und als Hotel übernehmen. */
+  const importHotel = async () => {
+    if (!hotelUrl.trim()) return;
+    setHotelLoading(true);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/admin/calculations/hotel-lookup?url=${encodeURIComponent(hotelUrl.trim())}`).then((r) => r.json());
+      if (!res?.success) { setErr(res?.error || 'Hoteldaten konnten nicht geladen werden'); return; }
+      const h = res.data as HotelInfo;
+      setHotelInfo(h);
+      setItems((prev) => {
+        const firstHotel = prev.find((i) => i.category === 'hotel');
+        if (firstHotel) {
+          return prev.map((i) => (i.id === firstHotel.id ? { ...i, description: h.name } : i));
+        }
+        return [...prev, { ...newItem('hotel', target), description: h.name }];
+      });
+      setNotice(`Hotel übernommen: ${hotelLine(h)} (Quelle: ${h.source === 'booking' ? 'Booking.com' : h.source === 'nominatim' ? 'OpenStreetMap' : 'URL'})`);
+    } finally {
+      setHotelLoading(false);
+    }
+  };
+
+  /** Rechnungs-Dialog öffnen (Leistungsliste + Personen vorbelegen). */
+  const openInvoiceDialog = () => {
+    setInvServices(buildIncludedServices(items));
+    const b = bookings.find((x) => x.id === bookingId);
+    setInvPersons(Math.max(1, Number(b?.number_of_persons) || 1));
+    setInvoiceOpen(true);
+  };
+
+  const createInvoice = async () => {
+    setInvCreating(true);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/admin/calculations/${id}/invoice`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ persons: invPersons, due_in_days: invDueDays, included_services: invServices }),
+      }).then((r) => r.json());
+      if (!res?.success) { setErr(res?.error || 'Rechnung konnte nicht erstellt werden'); return; }
+      setInvoiceId(res.data?.invoice?.id || null);
+      setInvoiceOpen(false);
+      setNotice(`Rechnung ${res.data?.invoice?.invoice_number || ''} erstellt.${res.data?.currency_warning ? ' ' + res.data.currency_warning : ''}`);
+    } finally {
+      setInvCreating(false);
     }
   };
 
@@ -265,9 +338,16 @@ export default function KalkulationEditorPage() {
               <Button variant="ghost"><ArrowLeft className="h-4 w-4" /> Übersicht</Button>
             </Link>
             {!isNew && (
-              <Link href={`/admin/kalkulation/${id}/angebot`}>
-                <Button variant="secondary"><FileText className="h-4 w-4" /> Kundenansicht</Button>
-              </Link>
+              <>
+                <Link href={`/admin/kalkulation/${id}/angebot`}>
+                  <Button variant="secondary"><FileText className="h-4 w-4" /> Kundenansicht</Button>
+                </Link>
+                <a href={`/api/admin/calculations/${id}/pdf`} target="_blank" rel="noreferrer">
+                  <Button variant="secondary" title="Angebots-PDF (Kundenversion, ohne EK/Marge)">
+                    <FileDown className="h-4 w-4" /> Angebots-PDF
+                  </Button>
+                </a>
+              </>
             )}
             <Button variant="accent" onClick={save} disabled={saving}>
               {saving ? <Spinner className="h-4 w-4" /> : <Save className="h-4 w-4" />} Speichern
@@ -381,6 +461,52 @@ export default function KalkulationEditorPage() {
                         </Button>
                       </div>
                     </div>
+                    {isHotel && (
+                      <div className="border-b px-4 py-3" style={{ borderColor: '#f1f4f8', background: '#fbfcfe' }}>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Hotel className="h-4 w-4 shrink-0" style={{ color: COLORS.accent }} />
+                          <input
+                            className={`${cellInput} min-w-56 flex-1`}
+                            style={inputStyle}
+                            placeholder="Booking.com-Hotel-URL einfügen → Name & Adresse automatisch übernehmen"
+                            value={hotelUrl}
+                            onChange={(e) => setHotelUrl(e.target.value)}
+                          />
+                          <Button variant="secondary" size="sm" onClick={importHotel} disabled={hotelLoading || !hotelUrl.trim()}>
+                            {hotelLoading ? <Spinner className="h-3.5 w-3.5" /> : <Search className="h-3.5 w-3.5" />} Hotel übernehmen
+                          </Button>
+                        </div>
+                        {hotelInfo && (
+                          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                            <Badge tone="ok">Hotel hinterlegt</Badge>
+                            <span style={{ color: COLORS.navy }}>{hotelLine(hotelInfo)}</span>
+                            <button
+                              onClick={() => setHotelInfo(null)}
+                              className="text-gray-400 transition hover:text-red-500"
+                              title="Hoteldaten entfernen"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {cat.id === 'extras' && (
+                      <div className="flex flex-wrap items-center gap-1.5 border-b px-4 py-2.5" style={{ borderColor: '#f1f4f8', background: '#fbfcfe' }}>
+                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#9ca3af' }}>Schnellauswahl:</span>
+                        {EXTRAS_QUICK.map((q) => (
+                          <button
+                            key={q}
+                            onClick={() => setItems((prev) => [...prev, { ...newItem('extras', target), description: q }])}
+                            className="rounded-full border px-2.5 py-1 text-xs font-semibold transition hover:bg-white"
+                            style={{ borderColor: COLORS.stroke, color: COLORS.navy }}
+                            title={`„${q}“ als Position hinzufügen (EK 0 — reine Inklusivleistung)`}
+                          >
+                            + {q}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     {catItems.length > 0 && (
                       <div className="overflow-x-auto">
                         <table className="w-full">
@@ -476,6 +602,13 @@ export default function KalkulationEditorPage() {
             title="Kalkulationstabelle"
             description={`Alle Positionen umgerechnet in ${target}, pro Person${snapshot ? ` — Kursbasis EZB ${snapshot.date}` : current ? ` — aktuelle Kurse (${current.date}), werden beim Speichern festgeschrieben` : ''}.`}
             icon={<Table2 className="h-5 w-5" />}
+            actions={!isNew ? (
+              <a href={`/api/admin/calculations/${id}/pdf?variant=intern`} target="_blank" rel="noreferrer">
+                <Button variant="ghost" size="sm" title="PDF mit voller Kalkulationstabelle — nur für den internen Gebrauch">
+                  <FileDown className="h-3.5 w-3.5" /> Internes PDF
+                </Button>
+              </a>
+            ) : undefined}
           >
             <CalculationTable items={items} target={target} rates={baseRates} marginMode={marginMode} marginValue={marginValue} />
           </SectionCard>
@@ -569,6 +702,77 @@ export default function KalkulationEditorPage() {
               )}
             </div>
           </SectionCard>
+
+          {/* Rechnung aus der Kalkulation */}
+          {!isNew && (
+            <SectionCard
+              title="Rechnung"
+              description="Erzeugt eine Rechnung im bekannten Stil: eine Pauschalposition, Leistungen ohne Einzelpreise."
+              icon={<Receipt className="h-5 w-5" />}
+            >
+              {invoiceId ? (
+                <div className="space-y-2">
+                  <Badge tone="ok">Rechnung erstellt</Badge>
+                  <div className="flex flex-wrap gap-2">
+                    <a href={`/api/invoices/${invoiceId}/pdf`} target="_blank" rel="noreferrer">
+                      <Button variant="secondary" size="sm"><FileDown className="h-3.5 w-3.5" /> Rechnungs-PDF</Button>
+                    </a>
+                    <Link href="/admin/finanzen">
+                      <Button variant="ghost" size="sm"><ExternalLink className="h-3.5 w-3.5" /> Finanzen öffnen</Button>
+                    </Link>
+                  </div>
+                </div>
+              ) : !invoiceOpen ? (
+                <div>
+                  <Button variant="secondary" size="sm" onClick={openInvoiceDialog} disabled={!snapshot}>
+                    <Receipt className="h-3.5 w-3.5" /> Rechnung erstellen
+                  </Button>
+                  {!bookingId && !customerId && (
+                    <p className="mt-2 text-[11px]" style={{ color: COLORS.warn }}>
+                      Bitte zuerst eine Anfrage (REQ) oder einen Kunden zuordnen.
+                    </p>
+                  )}
+                  {!snapshot && (
+                    <p className="mt-2 text-[11px]" style={{ color: COLORS.warn }}>
+                      Zuerst Kurse festschreiben (Kalkulation speichern).
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Field label="Personen" hint="Rechnungsmenge × VK p.P.">
+                      <TextInput type="number" min={1} step={1} value={invPersons}
+                        onChange={(e) => setInvPersons(Math.max(1, Number(e.target.value) || 1))} />
+                    </Field>
+                    <Field label="Zahlungsziel (Tage)">
+                      <TextInput type="number" min={1} step={1} value={invDueDays}
+                        onChange={(e) => setInvDueDays(Math.max(1, Number(e.target.value) || 14))} />
+                    </Field>
+                  </div>
+                  <Field label="Inkludierte Leistungen" hint="Erscheint als Leistungsliste auf der Rechnung — ohne Einzelpreise.">
+                    <TextArea rows={6} value={invServices} onChange={(e) => setInvServices(e.target.value)} />
+                  </Field>
+                  {totals && (
+                    <p className="text-xs font-semibold" style={{ color: COLORS.navy }}>
+                      Rechnungsbetrag: {invPersons} × {fmtMoney(totals.vkTarget, target)} = {fmtMoney(totals.vkTarget * invPersons, target)}
+                    </p>
+                  )}
+                  {target !== 'EUR' && (
+                    <p className="text-[11px] font-medium" style={{ color: COLORS.warn }}>
+                      Hinweis: Das Rechnungs-PDF weist EUR aus — Zielwährung dieser Kalkulation ist {target}.
+                    </p>
+                  )}
+                  <div className="flex gap-2">
+                    <Button variant="accent" size="sm" onClick={createInvoice} disabled={invCreating}>
+                      {invCreating ? <Spinner className="h-3.5 w-3.5" /> : <Receipt className="h-3.5 w-3.5" />} Erstellen
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setInvoiceOpen(false)}>Abbrechen</Button>
+                  </div>
+                </div>
+              )}
+            </SectionCard>
+          )}
 
           {/* FX-Alert: Kursveränderung seit Festschreibung */}
           {!isNew && snapshot && (

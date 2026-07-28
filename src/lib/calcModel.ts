@@ -34,6 +34,22 @@ export function categoryLabel(id: string): string {
   return CALC_CATEGORIES.find((c) => c.id === id)?.label || id;
 }
 
+/** Schnellauswahl-Vorschläge für Extras-Positionen. */
+export const EXTRAS_QUICK = [
+  'Reiseführer',
+  'Trikot',
+  'Faltin Travel Lanyard',
+  'Faltin Travel Ladekabel (Gift)',
+  'Gepäckanhänger (Gift)',
+] as const;
+
+/** Standard-Extras, die jede NEUE Kalkulation vorbelegt bekommt (EK 0 — reine Inklusivleistungen). */
+export const DEFAULT_EXTRAS = [
+  'Faltin Travel Lanyard',
+  'Faltin Travel Ladekabel (Gift)',
+  'Gepäckanhänger (Gift)',
+] as const;
+
 /* ─── Positionen ─────────────────────────────────────────────────────────── */
 
 export interface CalcItem {
@@ -188,6 +204,24 @@ export function compareEk(
     diffPct: (diffAbs / ekAtSnapshot) * 100,
     perCurrency,
   };
+}
+
+/**
+ * Vorschlag „Inkludierte Leistungen" (eine Zeile je Position, ohne Preise) —
+ * für Rechnungs-PDF (ticket_details) und den Rechnungs-Dialog.
+ */
+export function buildIncludedServices(items: CalcItem[]): string {
+  const knownIds = CALC_CATEGORIES.map((c) => c.id as string);
+  const extraIds = Array.from(new Set(items.map((i) => i.category))).filter((c) => !knownIds.includes(c));
+  const lines: string[] = [];
+  for (const catId of [...knownIds, ...extraIds]) {
+    for (const item of items.filter((i) => i.category === catId && (i.description.trim() || i.amount > 0))) {
+      const qty = item.qty > 1 ? `${item.qty}× ` : '';
+      const room = (item.room_category || '').trim() ? ` — ${item.room_category}` : '';
+      lines.push(`Inkl. ${qty}${item.description.trim() || categoryLabel(catId)}${room}`);
+    }
+  }
+  return lines.join('\n');
 }
 
 /* ─── Formatierung ───────────────────────────────────────────────────────── */

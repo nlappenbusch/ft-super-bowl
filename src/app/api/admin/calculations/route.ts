@@ -1,15 +1,21 @@
 import { NextResponse } from 'next/server';
-import { listCalculations, createCalculation, type CalculationInput } from '@/lib/calculationStore';
+import { listCalculations, listCalculationsByCustomer, createCalculation, type CalculationInput } from '@/lib/calculationStore';
 import { getCurrentRates } from '@/lib/fxRates';
 import { compareEk } from '@/lib/calcModel';
 import { getSessionEmployee } from '@/lib/serverSession';
 
 /**
- * GET /api/admin/calculations → Liste aller Angebotskalkulationen,
- * je Zeile inkl. `fx` (EK-Veränderung Snapshot vs. aktuelle Kurse).
+ * GET /api/admin/calculations[?customer_id=…] → Liste aller Angebotskalkulationen
+ * (optional auf einen Kunden gefiltert), je Zeile inkl. `fx` (EK-Veränderung
+ * Snapshot vs. aktuelle Kurse).
  */
-export async function GET() {
-  const [rows, current] = await Promise.all([listCalculations(), getCurrentRates()]);
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const customerId = searchParams.get('customer_id');
+  const [rows, current] = await Promise.all([
+    customerId ? listCalculationsByCustomer(customerId) : listCalculations(),
+    getCurrentRates(),
+  ]);
   const data = rows.map((r) => ({
     ...r,
     fx: compareEk(r.items, r.target_currency, r.rates_snapshot, current),
