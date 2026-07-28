@@ -233,6 +233,28 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_cdoc_customer ON customer_documents(customer_id);
     CREATE INDEX IF NOT EXISTS idx_cdoc_booking ON customer_documents(booking_id);
 
+    -- Angebotskalkulationen: EK je Position in EUR/USD/CHF/GBP, Kurs-Snapshot
+    -- zum Erstellzeitpunkt, Marge (percent|fixed). Positionen/Kurse als JSON-TEXT.
+    CREATE TABLE IF NOT EXISTS offer_calculations (
+      id TEXT PRIMARY KEY,
+      calc_number TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      title TEXT NOT NULL DEFAULT '',
+      customer_id TEXT,
+      booking_id TEXT,
+      target_currency TEXT NOT NULL DEFAULT 'CHF',
+      margin_mode TEXT NOT NULL DEFAULT 'percent',
+      margin_value REAL NOT NULL DEFAULT 0,
+      items TEXT NOT NULL DEFAULT '[]',
+      rates_snapshot TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'entwurf',
+      notes TEXT NOT NULL DEFAULT '',
+      created_by TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX IF NOT EXISTS idx_offer_calcs_customer ON offer_calculations(customer_id);
+    CREATE INDEX IF NOT EXISTS idx_offer_calcs_booking ON offer_calculations(booking_id);
+
     -- Incentive Builder: gespeicherte KI-Reisepläne (brief/plan als JSON-TEXT).
     CREATE TABLE IF NOT EXISTS incentive_plans (
       id TEXT PRIMARY KEY,
@@ -549,6 +571,7 @@ export function initDatabase() {
 
   sqlite.prepare(`INSERT OR IGNORE INTO counters (name, value) VALUES ('request_number', 10000)`).run();
   sqlite.prepare(`INSERT OR IGNORE INTO counters (name, value) VALUES ('booking_number', 1000)`).run();
+  sqlite.prepare(`INSERT OR IGNORE INTO counters (name, value) VALUES ('calculation_number', 1000)`).run();
 }
 
 // Initialisierung nur zur Laufzeit (nicht während `next build`).
