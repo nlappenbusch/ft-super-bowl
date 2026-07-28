@@ -340,6 +340,27 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
         revoked integer NOT NULL DEFAULT 0
       )`);
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash)`);
+      // Angebotskalkulationen (EK in Fremdwährungen, Kurs-Snapshot, Marge) — TASK-00115
+      await pool.query(`CREATE TABLE IF NOT EXISTS offer_calculations (
+        id text PRIMARY KEY,
+        calc_number text,
+        created_at text NOT NULL DEFAULT ${NOW_ISO_PG},
+        updated_at text NOT NULL DEFAULT ${NOW_ISO_PG},
+        title text NOT NULL DEFAULT '',
+        customer_id text,
+        booking_id text,
+        target_currency text NOT NULL DEFAULT 'CHF',
+        margin_mode text NOT NULL DEFAULT 'percent',
+        margin_value double precision NOT NULL DEFAULT 0,
+        items text NOT NULL DEFAULT '[]',
+        rates_snapshot text NOT NULL DEFAULT '',
+        status text NOT NULL DEFAULT 'entwurf',
+        notes text NOT NULL DEFAULT '',
+        created_by text NOT NULL DEFAULT ''
+      )`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_offer_calcs_customer ON offer_calculations(customer_id)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_offer_calcs_booking ON offer_calculations(booking_id)`);
+      await pool.query(`INSERT INTO counters (name, value) SELECT 'calculation_number', 1000 WHERE NOT EXISTS (SELECT 1 FROM counters WHERE name = 'calculation_number')`);
       // Benachrichtigungs-Center (Glocke im Admin)
       await pool.query(`CREATE TABLE IF NOT EXISTS admin_notifications (
         id text PRIMARY KEY,
