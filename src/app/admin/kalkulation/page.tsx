@@ -1,16 +1,21 @@
 'use client';
 
 /**
- * /admin/kalkulation — Übersicht der Angebotskalkulationen (TASK-00115).
- * EK-Kalkulationen mit Fremdwährungs-Positionen, Kurs-Snapshot und FX-Alert:
+ * /admin/kalkulation — Übersicht der Angebotskalkulationen (TASK-00115/-00116).
+ * EK-Kalkulationen (alle Preise pro Person) mit Kurs-Snapshot und FX-Alert:
  * grün = EK seit Erstellung gesunken (mehr Marge), rot = EK gestiegen.
+ * Zeilen sind aufklappbar und zeigen die volle Kalkulationstabelle.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import AdminShell from '@/components/admin/AdminShell';
 import { COLORS, SectionCard, Spinner, EmptyState, Button, Badge, StatCard, PageHeader } from '@/components/admin/ui';
-import { Calculator, Plus, TrendingDown, TrendingUp, Minus, Trash2, ExternalLink, FileText } from 'lucide-react';
-import { computeTotals, fmtMoney, fmtPct, type CalcItem, type FxComparison, type MarginMode } from '@/lib/calcModel';
+import CalculationTable from '@/components/admin/CalculationTable';
+import {
+  Calculator, Plus, TrendingDown, TrendingUp, Minus, Trash2, ExternalLink, FileText,
+  ChevronRight, ChevronDown, CalendarDays, Landmark,
+} from 'lucide-react';
+import { computeTotals, fmtMoney, fmtPct, fmtPeriod, type CalcItem, type FxComparison, type MarginMode } from '@/lib/calcModel';
 import type { CalcCurrency, RatesSnapshot } from '@/lib/fxRates';
 
 /** Ab dieser EK-Veränderung (±%) erscheint das farbige Alert-Badge in der Liste. */
@@ -26,6 +31,8 @@ interface CalcRow {
   booking_id: string | null;
   request_number: string | null;
   package_title: string | null;
+  travel_start: string;
+  travel_end: string;
   target_currency: CalcCurrency;
   margin_mode: MarginMode;
   margin_value: number;
@@ -49,7 +56,7 @@ function FxBadge({ fx, currency }: { fx: FxComparison | null; currency: string }
   const info = `EK zu aktuellen Kursen: ${fmtMoney(fx.ekAtCurrent, currency)} (Kalkulation: ${fmtMoney(fx.ekAtSnapshot, currency)}, Kursbasis ${fx.snapshotDate})`;
   if (pct <= -FX_ALERT_THRESHOLD) {
     return (
-      <Badge tone="ok" className="whitespace-nowrap" >
+      <Badge tone="ok" className="whitespace-nowrap">
         <TrendingDown className="h-3 w-3" />
         <span title={`${info} — EK gesunken, mehr Marge als kalkuliert.`}>EK {fmtPct(pct)}</span>
       </Badge>
@@ -64,7 +71,7 @@ function FxBadge({ fx, currency }: { fx: FxComparison | null; currency: string }
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-xs text-gray-400 whitespace-nowrap" title={`${info} — Veränderung unter ${FX_ALERT_THRESHOLD} %.`}>
+    <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-gray-400" title={`${info} — Veränderung unter ${FX_ALERT_THRESHOLD} %.`}>
       <Minus className="h-3 w-3" /> stabil
     </span>
   );
@@ -75,6 +82,7 @@ export default function KalkulationListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -107,7 +115,7 @@ export default function KalkulationListPage() {
     <AdminShell title="Angebotskalkulation">
       <PageHeader
         title="Angebotskalkulation"
-        description="EK-Kalkulationen für Arrangements — Positionen in EUR/USD/CHF/GBP, Kurs-Snapshot bei Erstellung, Marge & Kundenansicht."
+        description="EK-Kalkulationen pro Person — Positionen in EUR/USD/CHF/GBP, Kurs-Snapshot bei Erstellung, Marge & Kundenansicht."
         actions={
           <Link href="/admin/kalkulation/neu">
             <Button variant="accent"><Plus className="h-4 w-4" /> Neue Kalkulation</Button>
@@ -123,7 +131,7 @@ export default function KalkulationListPage() {
 
       <SectionCard
         title="Alle Kalkulationen"
-        description="EK/VK in der Zielwährung zu festgeschriebenen Kursen. Das FX-Badge zeigt die EK-Veränderung durch Kursbewegungen seit Erstellung."
+        description="Klick auf eine Zeile klappt die volle Kalkulationstabelle auf. EK/VK pro Person, in der Zielwährung zu festgeschriebenen Kursen."
       >
         {loading ? (
           <div className="py-10 text-center"><Spinner /></div>
@@ -133,85 +141,122 @@ export default function KalkulationListPage() {
           <EmptyState
             icon={<Calculator className="h-6 w-6" />}
             title="Noch keine Kalkulation."
-            description="Lege die erste Angebotskalkulation an — Positionen je Kategorie, EK in der Einkaufswährung, Marge, fertig."
+            description="Lege die erste Angebotskalkulation an — Positionen je Kategorie, EK pro Person in der Einkaufswährung, Marge, fertig."
             action={<Link href="/admin/kalkulation/neu"><Button variant="accent"><Plus className="h-4 w-4" /> Neue Kalkulation</Button></Link>}
           />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs uppercase tracking-wide text-gray-400">
-                  <th className="px-3 py-2">Nr.</th>
-                  <th className="px-3 py-2">Titel</th>
-                  <th className="px-3 py-2">Kunde / Anfrage</th>
-                  <th className="px-3 py-2 text-center">Pos.</th>
-                  <th className="px-3 py-2 text-right">EK gesamt</th>
-                  <th className="px-3 py-2 text-right">Marge</th>
-                  <th className="px-3 py-2 text-right">VK gesamt</th>
-                  <th className="px-3 py-2">Kurs-Alert</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2"></th>
+                <tr className="text-left text-[11px] uppercase tracking-wider text-gray-400">
+                  <th className="w-8 px-2 py-2.5"></th>
+                  <th className="px-3 py-2.5">Nr.</th>
+                  <th className="px-3 py-2.5">Titel / Reisetermin</th>
+                  <th className="px-3 py-2.5">Kunde / Anfrage</th>
+                  <th className="px-3 py-2.5 text-right">EK p.P.</th>
+                  <th className="px-3 py-2.5 text-right">Marge</th>
+                  <th className="px-3 py-2.5 text-right">VK p.P.</th>
+                  <th className="px-3 py-2.5">Kurs-Alert</th>
+                  <th className="px-3 py-2.5">Status</th>
+                  <th className="px-3 py-2.5"></th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => {
                   const totals = computeTotals(r.items, r.target_currency, r.rates_snapshot, r.margin_mode, r.margin_value);
+                  const period = fmtPeriod(r.travel_start, r.travel_end);
+                  const expanded = expandedId === r.id;
                   return (
-                    <tr key={r.id} className="border-t transition-colors hover:bg-gray-50" style={{ borderColor: '#eef2f7' }}>
-                      <td className="px-3 py-3 font-mono text-xs font-bold" style={{ color: COLORS.navy }}>
-                        <Link href={`/admin/kalkulation/${r.id}`}>{r.calc_number || r.id.slice(0, 8)}</Link>
-                      </td>
-                      <td className="px-3 py-3">
-                        <Link href={`/admin/kalkulation/${r.id}`} className="font-bold" style={{ color: COLORS.navy }}>
-                          {r.title || '(ohne Titel)'}
-                        </Link>
-                        <div className="text-xs text-gray-400">{(r.created_at || '').slice(0, 10)} · Zielwährung {r.target_currency}</div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="text-gray-700">{r.customer_name || <span className="text-gray-400">—</span>}</div>
-                        {r.request_number && (
-                          <div className="text-xs text-gray-400">{r.request_number}{r.package_title ? ` · ${r.package_title}` : ''}</div>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 text-center font-semibold text-gray-700">{r.items.length}</td>
-                      <td className="px-3 py-3 text-right tabular-nums text-gray-700">
-                        {totals ? fmtMoney(totals.ekTarget, r.target_currency) : <span className="text-xs text-gray-400" title="Keine Kurse festgeschrieben.">—</span>}
-                      </td>
-                      <td className="px-3 py-3 text-right tabular-nums text-gray-500">
-                        {totals ? `${fmtMoney(totals.marginAmount, r.target_currency)} · ${totals.marginPercent.toFixed(1).replace('.', ',')} %` : '—'}
-                      </td>
-                      <td className="px-3 py-3 text-right font-bold tabular-nums" style={{ color: COLORS.navy }}>
-                        {totals ? fmtMoney(totals.vkTarget, r.target_currency) : '—'}
-                      </td>
-                      <td className="px-3 py-3"><FxBadge fx={r.fx} currency={r.target_currency} /></td>
-                      <td className="px-3 py-3"><Badge tone={STATUS_LABEL[r.status].tone}>{STATUS_LABEL[r.status].label}</Badge></td>
-                      <td className="px-3 py-3">
-                        <div className="flex items-center justify-end gap-1">
-                          <Link
-                            href={`/admin/kalkulation/${r.id}/angebot`}
-                            className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
-                            title="Kundenansicht öffnen"
-                          >
-                            <FileText className="h-4 w-4" />
-                          </Link>
-                          <Link
-                            href={`/admin/kalkulation/${r.id}`}
-                            className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
-                            title="Kalkulation öffnen"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Link>
-                          <button
-                            onClick={() => remove(r.id)}
-                            className="rounded-lg p-1.5 transition hover:bg-red-50"
-                            style={{ color: confirmDelete === r.id ? COLORS.danger : '#9ca3af' }}
-                            title={confirmDelete === r.id ? 'Wirklich löschen? Erneut klicken.' : 'Löschen'}
-                          >
-                            {confirmDelete === r.id ? <span className="px-1 text-xs font-bold">Sicher?</span> : <Trash2 className="h-4 w-4" />}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                    <Fragment key={r.id}>
+                      <tr
+                        className="cursor-pointer border-t transition-colors hover:bg-gray-50"
+                        style={{ borderColor: '#eef2f7', background: expanded ? '#fafbfd' : undefined }}
+                        onClick={() => setExpandedId(expanded ? null : r.id)}
+                      >
+                        <td className="px-2 py-3 text-gray-400">
+                          {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        </td>
+                        <td className="px-3 py-3 font-mono text-xs font-bold" style={{ color: COLORS.navy }}>
+                          {r.calc_number || r.id.slice(0, 8)}
+                        </td>
+                        <td className="px-3 py-3">
+                          <span className="font-bold" style={{ color: COLORS.navy }}>{r.title || '(ohne Titel)'}</span>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-gray-400">
+                            {period && (
+                              <span className="inline-flex items-center gap-1" style={{ color: COLORS.accent }}>
+                                <CalendarDays className="h-3 w-3" /> {period}
+                              </span>
+                            )}
+                            <span>{(r.created_at || '').slice(0, 10)} · {r.items.length} Pos. · {r.target_currency}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="text-gray-700">{r.customer_name || <span className="text-gray-400">—</span>}</div>
+                          {r.request_number && (
+                            <div className="text-xs text-gray-400">{r.request_number}{r.package_title ? ` · ${r.package_title}` : ''}</div>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-right tabular-nums text-gray-700">
+                          {totals ? fmtMoney(totals.ekTarget, r.target_currency) : <span className="text-xs text-gray-400" title="Keine Kurse festgeschrieben.">—</span>}
+                        </td>
+                        <td className="px-3 py-3 text-right tabular-nums" style={{ color: totals && totals.marginAmount < 0 ? COLORS.danger : '#6b7280' }}>
+                          {totals ? `${totals.marginPercent.toFixed(1).replace('.', ',')} %` : '—'}
+                        </td>
+                        <td className="px-3 py-3 text-right font-bold tabular-nums" style={{ color: COLORS.navy }}>
+                          {totals ? fmtMoney(totals.vkTarget, r.target_currency) : '—'}
+                        </td>
+                        <td className="px-3 py-3"><FxBadge fx={r.fx} currency={r.target_currency} /></td>
+                        <td className="px-3 py-3"><Badge tone={STATUS_LABEL[r.status].tone}>{STATUS_LABEL[r.status].label}</Badge></td>
+                        <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1">
+                            <Link
+                              href={`/admin/kalkulation/${r.id}/angebot`}
+                              className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+                              title="Kundenansicht öffnen"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Link>
+                            <Link
+                              href={`/admin/kalkulation/${r.id}`}
+                              className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+                              title="Kalkulation bearbeiten"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Link>
+                            <button
+                              onClick={() => remove(r.id)}
+                              className="rounded-lg p-1.5 transition hover:bg-red-50"
+                              style={{ color: confirmDelete === r.id ? COLORS.danger : '#9ca3af' }}
+                              title={confirmDelete === r.id ? 'Wirklich löschen? Erneut klicken.' : 'Löschen'}
+                            >
+                              {confirmDelete === r.id ? <span className="px-1 text-xs font-bold">Sicher?</span> : <Trash2 className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {expanded && (
+                        <tr style={{ background: '#fafbfd' }}>
+                          <td colSpan={10} className="px-4 pb-5 pt-1 sm:px-6">
+                            <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs" style={{ color: COLORS.textMuted }}>
+                              {period && <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {period}</span>}
+                              {r.rates_snapshot && <span className="inline-flex items-center gap-1"><Landmark className="h-3.5 w-3.5" /> Kursbasis EZB {r.rates_snapshot.date}</span>}
+                              {r.customer_name && <span>Kunde: {r.customer_name}</span>}
+                              {r.request_number && <span>Anfrage: {r.request_number}</span>}
+                              <Link href={`/admin/kalkulation/${r.id}`} className="ml-auto font-semibold hover:underline" style={{ color: COLORS.accent }}>
+                                Bearbeiten →
+                              </Link>
+                            </div>
+                            <CalculationTable
+                              items={r.items}
+                              target={r.target_currency}
+                              rates={r.rates_snapshot}
+                              marginMode={r.margin_mode}
+                              marginValue={r.margin_value}
+                            />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })}
               </tbody>

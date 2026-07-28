@@ -10,16 +10,25 @@ import { convertAmount, isCalcCurrency, type CalcCurrency, type RatesSnapshot } 
 /* ─── Kategorien ─────────────────────────────────────────────────────────── */
 
 export const CALC_CATEGORIES = [
-  { id: 'ticket', label: 'Ticket' },
-  { id: 'hotel', label: 'Unterkunft (Hotel)' },
-  { id: 'flug', label: 'Anreise (Flug)' },
-  { id: 'transfer', label: 'Transfer' },
-  { id: 'reisefuehrer', label: 'Reiseführer' },
-  { id: 'extras', label: 'Extras' },
-  { id: 'gifts', label: 'Gifts' },
+  { id: 'ticket', label: 'Ticket', hint: '' },
+  { id: 'hotel', label: 'Unterkunft (Hotel)', hint: 'Mit Zimmerkategorie als Freitext.' },
+  { id: 'flug', label: 'Anreise (Flug)', hint: '' },
+  { id: 'transfer', label: 'Transfer', hint: '' },
+  { id: 'extras', label: 'Extras', hint: 'Freitext — z. B. Reiseführer, Gifts, Hospitality, City Tax …' },
 ] as const;
 
 export type CalcCategoryId = (typeof CALC_CATEGORIES)[number]['id'];
+
+/** Entfernte Alt-Kategorien laufen unter Extras weiter. */
+const LEGACY_CATEGORY_MAP: Record<string, CalcCategoryId> = {
+  reisefuehrer: 'extras',
+  gifts: 'extras',
+};
+
+export function normalizeCategory(id: unknown): string {
+  const s = typeof id === 'string' && id ? id : 'extras';
+  return LEGACY_CATEGORY_MAP[s] || s;
+}
 
 export function categoryLabel(id: string): string {
   return CALC_CATEGORIES.find((c) => c.id === id)?.label || id;
@@ -31,14 +40,21 @@ export interface CalcItem {
   id: string;
   category: string;
   description: string;
+  /** Zimmerkategorie (nur bei Unterkunft, Freitext). */
+  room_category?: string;
   currency: CalcCurrency;
-  /** EK je Einheit in `currency`. */
+  /** EK je Einheit in `currency` — immer pro Person. */
   amount: number;
-  /** Menge (z. B. 4 Tickets à 500 USD), Default 1. */
+  /** Menge pro Person (z. B. 3 Hotelnächte), Default 1. */
   qty: number;
 }
 
-export type MarginMode = 'percent' | 'fixed';
+/**
+ * percent   — Marge in % vom EK
+ * fixed     — Marge als Fixbetrag in der Zielwährung
+ * target_vk — fixer Verkaufspreis; Marge (absolut + %) wird rückgerechnet
+ */
+export type MarginMode = 'percent' | 'fixed' | 'target_vk';
 
 /** EK einer Position (Menge × Einzel-EK) in ihrer Währung. */
 export function itemEk(item: Pick<CalcItem, 'amount' | 'qty'>): number {
@@ -54,8 +70,9 @@ export function sanitizeItems(raw: unknown, fallbackCurrency: CalcCurrency = 'CH
     .filter((it): it is Record<string, unknown> => !!it && typeof it === 'object')
     .map((it) => ({
       id: typeof it.id === 'string' && it.id ? it.id : crypto.randomUUID(),
-      category: typeof it.category === 'string' && it.category ? it.category : 'extras',
+      category: normalizeCategory(it.category),
       description: typeof it.description === 'string' ? it.description : '',
+      room_category: typeof it.room_category === 'string' ? it.room_category : '',
       currency: isCalcCurrency(it.currency) ? it.currency : fallbackCurrency,
       amount: Math.max(0, Number(it.amount) || 0),
       qty: Math.max(0, Number(it.qty) || 0) || 1,
@@ -95,13 +112,16 @@ export function computeTotals(
     ekTarget += convertAmount(ek, item.currency, target, rates);
   }
   const value = Math.max(0, Number(marginValue) || 0);
-  const marginAmount = marginMode === 'fixed' ? value : (ekTarget * value) / 100;
+  let marginAmount: number;
+  if (marginMode === 'fixed') marginAmount = value;
+  else if (marginMode === 'target_vk') marginAmount = value - ekTarget; // kann negativ sein → UI warnt
+  else marginAmount = (ekTarget * value) / 100;
   const marginPercent = marginMode === 'percent' ? value : ekTarget > 0 ? (marginAmount / ekTarget) * 100 : 0;
   return {
     ekTarget,
     marginAmount,
     marginPercent,
-    vkTarget: ekTarget + marginAmount,
+    vkTarget: marginMode === 'target_vk' ? value : ekTarget + marginAmount,
     byCurrency: Array.from(byCurrencyMap.entries()).map(([currency, sum]) => ({
       currency,
       sum,
@@ -186,4 +206,55 @@ export function fmtPct(p: number, digits = 1): string {
   const v = Number.isFinite(p) ? p : 0;
   const s = v.toFixed(digits).replace('.', ',');
   return `${v > 0 ? '+' : ''}${s} %`;
+}
+
+/* ─── Reisezeitraum ──────────────────────────────────────────────────────── */
+
+function parseIsoDate(iso: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return null;
+  const d = new Date(`${iso}T12:00:00`); // Mittag → keine TZ-Kippfehler
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** "2027-02-05" → "Fr, 05.02.2027" (de-CH, mit Wochentag). */
+export function fmtDateWeekday(iso: string): string {
+  const d = parseIsoDate(iso);
+  if (!d) return '';
+  const wd = new Intl.DateTimeFormat('de-CH', { weekday: 'short' }).format(d).replace('.', '');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${wd}, ${dd}.${mm}.${d.getFullYear()}`;
+}
+
+/** Anzahl Nächte zwischen zwei ISO-Daten (null, wenn unvollständig/ungültig). */
+export function nightsBetween(startIso: string, endIso: string): number | null {
+  const a = parseIsoDate(startIso);
+  const b = parseIsoDate(endIso);
+  if (!a || !b) return null;
+  const nights = Math.round((b.getTime() - a.getTime()) / 86_400_000);
+  return nights >= 0 ? nights : null;
+}
+
+/** "Fr, 05.02.2027 – Mo, 08.02.2027 · 3 Nächte" (null ohne gültigen Zeitraum). */
+export function fmtPeriod(startIso: string, endIso: string): string | null {
+  const from = fmtDateWeekday(startIso);
+  const to = fmtDateWeekday(endIso);
+  if (!from && !to) return null;
+  if (from && to) {
+    const n = nightsBetween(startIso, endIso);
+    const nights = n === null ? '' : ` · ${n} ${n === 1 ? 'Nacht' : 'Nächte'}`;
+    return `${from} – ${to}${nights}`;
+  }
+  return from || to;
+}
+
+/** Kompakter Zeitraum für Titel: "05.02.–08.02.2027 (3 Nächte)". */
+export function fmtPeriodShort(startIso: string, endIso: string): string | null {
+  const a = parseIsoDate(startIso);
+  const b = parseIsoDate(endIso);
+  if (!a || !b) return null;
+  const dm = (d: Date) => `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.`;
+  const n = nightsBetween(startIso, endIso);
+  const nights = n === null ? '' : ` (${n} ${n === 1 ? 'Nacht' : 'Nächte'})`;
+  return `${dm(a)}–${dm(b)}${b.getFullYear()}${nights}`;
 }

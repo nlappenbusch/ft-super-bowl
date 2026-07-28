@@ -22,6 +22,9 @@ export interface OfferCalculation {
   title: string;
   customer_id: string | null;
   booking_id: string | null;
+  /** Reisezeitraum (ISO-Datum "YYYY-MM-DD" oder ''). */
+  travel_start: string;
+  travel_end: string;
   target_currency: CalcCurrency;
   margin_mode: MarginMode;
   margin_value: number;
@@ -47,6 +50,8 @@ interface DbRow {
   title: string;
   customer_id: string | null;
   booking_id: string | null;
+  travel_start: string | null;
+  travel_end: string | null;
   target_currency: string;
   margin_mode: string;
   margin_value: number;
@@ -65,7 +70,13 @@ function normStatus(s: unknown): CalcStatus {
 }
 
 function normMarginMode(m: unknown): MarginMode {
-  return m === 'fixed' ? 'fixed' : 'percent';
+  return m === 'fixed' || m === 'target_vk' ? m : 'percent';
+}
+
+/** ISO-Datum "YYYY-MM-DD" oder leerer String. */
+function normDate(v: unknown): string {
+  const s = typeof v === 'string' ? v.trim() : '';
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : '';
 }
 
 function normMarginValue(v: unknown): number {
@@ -96,7 +107,9 @@ function parseRow(r: DbRow): OfferCalculationRow {
     title: r.title || '',
     customer_id: r.customer_id || null,
     booking_id: r.booking_id || null,
-    target_currency: isCalcCurrency(r.target_currency) ? r.target_currency : 'CHF',
+    travel_start: r.travel_start || '',
+    travel_end: r.travel_end || '',
+    target_currency: isCalcCurrency(r.target_currency) ? r.target_currency : 'EUR',
     margin_mode: normMarginMode(r.margin_mode),
     margin_value: normMarginValue(r.margin_value),
     items,
@@ -139,6 +152,8 @@ export interface CalculationInput {
   title?: unknown;
   customer_id?: unknown;
   booking_id?: unknown;
+  travel_start?: unknown;
+  travel_end?: unknown;
   target_currency?: unknown;
   margin_mode?: unknown;
   margin_value?: unknown;
@@ -148,7 +163,7 @@ export interface CalculationInput {
 }
 
 function normTarget(c: unknown): CalcCurrency {
-  return isCalcCurrency(c) ? c : 'CHF';
+  return isCalcCurrency(c) ? c : 'EUR';
 }
 
 function normIdRef(v: unknown): string | null {
@@ -167,8 +182,9 @@ export async function createCalculation(
   await dbRun(
     `INSERT INTO offer_calculations (
       id, calc_number, created_at, updated_at, title, customer_id, booking_id,
+      travel_start, travel_end,
       target_currency, margin_mode, margin_value, items, rates_snapshot, status, notes, created_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       await nextCalcNumber(),
@@ -177,6 +193,8 @@ export async function createCalculation(
       typeof input.title === 'string' ? input.title.trim() : '',
       normIdRef(input.customer_id),
       normIdRef(input.booking_id),
+      normDate(input.travel_start),
+      normDate(input.travel_end),
       target,
       normMarginMode(input.margin_mode),
       normMarginValue(input.margin_value),
@@ -203,6 +221,8 @@ export async function updateCalculation(id: string, updates: CalculationUpdate):
   if ('title' in updates) { sets.push('title = ?'); vals.push(typeof updates.title === 'string' ? updates.title.trim() : ''); }
   if ('customer_id' in updates) { sets.push('customer_id = ?'); vals.push(normIdRef(updates.customer_id)); }
   if ('booking_id' in updates) { sets.push('booking_id = ?'); vals.push(normIdRef(updates.booking_id)); }
+  if ('travel_start' in updates) { sets.push('travel_start = ?'); vals.push(normDate(updates.travel_start)); }
+  if ('travel_end' in updates) { sets.push('travel_end = ?'); vals.push(normDate(updates.travel_end)); }
   if ('target_currency' in updates) { sets.push('target_currency = ?'); vals.push(target); }
   if ('margin_mode' in updates) { sets.push('margin_mode = ?'); vals.push(normMarginMode(updates.margin_mode)); }
   if ('margin_value' in updates) { sets.push('margin_value = ?'); vals.push(normMarginValue(updates.margin_value)); }
