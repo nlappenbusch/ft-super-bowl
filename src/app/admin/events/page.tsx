@@ -1103,21 +1103,47 @@ export default function AdminEventsPage() {
                         {form.auto_reply_pdfs.length > 0 ? (
                           <div className="mt-2 grid gap-2">
                             {form.auto_reply_pdfs.map((pdf, idx) => (
-                              <div key={`${pdf.file}-${idx}`} className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm" style={{ background: '#f0fdf4', color: COLORS.navy }}>
-                                <span className="min-w-0 truncate">
-                                  📎 {pdf.name || pdf.file}
-                                  {formatFileSize(pdf.size) && (
-                                    <span className="ml-1.5 text-xs" style={{ color: COLORS.textMuted }}>· {formatFileSize(pdf.size)}</span>
-                                  )}
-                                </span>
-                                <button
-                                  type="button"
-                                  className="shrink-0 text-xs font-semibold underline"
-                                  style={{ color: COLORS.danger }}
-                                  onClick={() => setForm((prev) => ({ ...prev, auto_reply_pdfs: prev.auto_reply_pdfs.filter((_, i) => i !== idx) }))}
-                                >
-                                  Entfernen
-                                </button>
+                              <div key={`${pdf.file}-${idx}`} className="rounded-lg px-3 py-2 text-sm" style={{ background: '#f0fdf4', color: COLORS.navy }}>
+                                <div className="flex items-center justify-between gap-3">
+                                  <span className="min-w-0 truncate">
+                                    📎 {pdf.name || pdf.file}
+                                    {formatFileSize(pdf.size) && (
+                                      <span className="ml-1.5 text-xs" style={{ color: COLORS.textMuted }}>· {formatFileSize(pdf.size)}</span>
+                                    )}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="shrink-0 text-xs font-semibold underline"
+                                    style={{ color: COLORS.danger }}
+                                    onClick={() => setForm((prev) => ({ ...prev, auto_reply_pdfs: prev.auto_reply_pdfs.filter((_, i) => i !== idx) }))}
+                                  >
+                                    Entfernen
+                                  </button>
+                                </div>
+                                {/* Öffentlicher Link zur Datei (TASK-00120) — z.B. um im Text auf das Angebot zu verlinken. */}
+                                <div className="mt-1 flex items-center gap-2 text-xs">
+                                  <Link2 className="h-3 w-3 shrink-0" style={{ color: COLORS.textMuted }} />
+                                  <a
+                                    href={`/dokumente/${encodeURIComponent(pdf.file)}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="min-w-0 truncate underline"
+                                    style={{ color: COLORS.info }}
+                                  >
+                                    /dokumente/{pdf.file}
+                                  </a>
+                                  <button
+                                    type="button"
+                                    className="shrink-0 font-semibold underline"
+                                    style={{ color: COLORS.textMuted }}
+                                    onClick={() => {
+                                      const url = `${window.location.origin}/dokumente/${encodeURIComponent(pdf.file)}`;
+                                      navigator.clipboard?.writeText(url).catch(() => window.prompt('URL kopieren:', url));
+                                    }}
+                                  >
+                                    URL kopieren
+                                  </button>
+                                </div>
                               </div>
                             ))}
                           </div>

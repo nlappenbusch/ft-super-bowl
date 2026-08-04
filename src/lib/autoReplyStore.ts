@@ -11,7 +11,7 @@
  * versendet — sie braucht keine öffentliche URL.
  * ─────────────────────────────────────────────────────────────────────────────
  */
-import { mkdir, writeFile, readFile, stat, unlink } from 'fs/promises';
+import { mkdir, writeFile, readFile, readdir, stat, unlink } from 'fs/promises';
 import path from 'path';
 
 const DATA_DIR = path.join(process.cwd(), 'data', 'uploads', 'auto-reply');
@@ -114,4 +114,59 @@ export async function deleteAutoReplyPdf(file: string): Promise<void> {
   const name = safeStoredName(file);
   if (!name) return;
   await unlink(path.join(DATA_DIR, name)).catch(() => {});
+}
+
+/* ─── Mediathek / öffentliche Links (TASK-00120) ──────────────────────────── */
+
+/**
+ * Öffentliche URL eines Anhangs. Die Route /dokumente/<datei> liefert die Datei
+ * aus data/uploads/auto-reply aus (siehe src/app/dokumente/[file]/route.ts) —
+ * damit lässt sich z.B. direkt auf ein Angebots-PDF verlinken.
+ */
+export function autoReplyPublicPath(file: string): string {
+  return `/dokumente/${encodeURIComponent(safeStoredName(file))}`;
+}
+
+export interface AutoReplyStoredFile {
+  /** Dateiname auf der Platte */
+  file: string;
+  size: number;
+  /** mtime als ISO-String */
+  updatedAt: string;
+  mime: string;
+}
+
+/** Alle physisch vorhandenen Auto-Antwort-Anhänge (neueste zuerst). */
+export async function listAutoReplyFiles(): Promise<AutoReplyStoredFile[]> {
+  await mkdir(DATA_DIR, { recursive: true });
+  const entries = await readdir(DATA_DIR, { withFileTypes: true }).catch(() => []);
+  const files = await Promise.all(
+    entries
+      .filter((e) => e.isFile() && !e.name.startsWith('.'))
+      .map(async (e) => {
+        const s = await stat(path.join(DATA_DIR, e.name)).catch(() => null);
+        if (!s) return null;
+        return {
+          file: e.name,
+          size: s.size,
+          updatedAt: s.mtime.toISOString(),
+          mime: autoReplyContentType(e.name),
+        } as AutoReplyStoredFile;
+      })
+  );
+  return files
+    .filter((f): f is AutoReplyStoredFile => Boolean(f))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+/** Liest einen Anhang als Buffer (für die öffentliche Auslieferung). null wenn nicht vorhanden. */
+export async function readAutoReplyFile(file: string): Promise<{ buf: Buffer; mime: string } | null> {
+  const name = safeStoredName(file);
+  if (!name) return null;
+  try {
+    const buf = await readFile(path.join(DATA_DIR, name));
+    return { buf, mime: autoReplyContentType(name) };
+  } catch {
+    return null;
+  }
 }
