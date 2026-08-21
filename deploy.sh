@@ -45,6 +45,12 @@ s = re.sub(r'\n\s*- /opt/databasus/wal-queue:/opt/databasus/wal-queue', '', s)
 s = re.sub(r'    command:\n(?:      - .*\n)+', '', s)
 if '"5432:5432"' not in s:
     s = s.replace('    environment:\n      - POSTGRES_USER=faltin', '    ports:\n      - "5432:5432"\n    environment:\n      - POSTGRES_USER=faltin')
+# Daten (SQLite, Uploads, Einstellungen) liegen in einem benannten Volume,
+# das Deploys ueberlebt - ein Bind-Mount im Projektordner wuerde bei jedem
+# Deploy ersetzt (so geschehen am 21.08.2026).
+s = s.replace('- ./data:/app/data', '- appdaten:/app/data')
+if '\n  appdaten:' not in s:
+    s = s.rstrip('\n') + '\n  appdaten:\n'
 open(p, 'w', encoding='utf-8').write(s)
 PY
 tar czf /tmp/next-deploy.tgz -C "$PAKET" .
