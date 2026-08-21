@@ -1,34 +1,25 @@
 name: Deploy Super Bowl App
-
 on:
   push:
-    branches:
-      - main
-
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: deploy-next
+  cancel-in-progress: false
 jobs:
   deploy:
     runs-on: [self-hosted, Linux, X64, docker-prod-01]
-    
+    timeout-minutes: 30
     steps:
-      - name: Heal Docker build cache
+      - name: Deploy über die Managed-Hosting-API
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bash /opt/super-bowl/deploy.sh
+      - name: Smoke-Test (intern, kein NAT-Hairpin)
         run: |
-          echo "Pruning dangling Docker build cache (fix für 'parent snapshot does not exist')..."
-          docker builder prune -f || true
-          docker image prune -f || true
-
-      - name: Deploy to Production
-        run: |
-          echo "Starting deployment..."
-          bash /opt/super-bowl/deploy.sh
-          
-      - name: Deployment Status
-        if: success()
-        run: |
-          echo "✅ Deployment successful!"
-          echo "App is running on the configured domain or http://<server>:8085"
-          
-      - name: Deployment Failed
-        if: failure()
-        run: |
-          echo "❌ Deployment failed!"
-          echo "Check container logs with: cd /opt/super-bowl && docker compose logs --tail=100"
+          for i in $(seq 1 10); do
+            code=$(curl -sS -m 10 -o /dev/null -w '%{http_code}' "http://192.168.50.153:8084/" || true)
+            case "$code" in 2*|3*) echo "OK ($code)"; exit 0 ;; esac
+            sleep 3
+          done
+          echo "next auf web-faltin-travel antwortet nicht"; exit 1
