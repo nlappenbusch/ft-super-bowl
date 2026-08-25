@@ -249,6 +249,7 @@ export function initDatabase() {
       margin_mode TEXT NOT NULL DEFAULT 'percent',
       margin_value REAL NOT NULL DEFAULT 0,
       items TEXT NOT NULL DEFAULT '[]',
+      offer_extras TEXT NOT NULL DEFAULT '[]',
       rates_snapshot TEXT NOT NULL DEFAULT '',
       hotel_info TEXT NOT NULL DEFAULT '',
       invoice_id TEXT,
@@ -558,6 +559,7 @@ export function initDatabase() {
   if (occols.length && !occols.some((c) => c.name === 'travel_end')) addColumn('offer_calculations', "travel_end TEXT NOT NULL DEFAULT ''");
   if (occols.length && !occols.some((c) => c.name === 'hotel_info')) addColumn('offer_calculations', "hotel_info TEXT NOT NULL DEFAULT ''");
   if (occols.length && !occols.some((c) => c.name === 'invoice_id')) addColumn('offer_calculations', 'invoice_id TEXT');
+  if (occols.length && !occols.some((c) => c.name === 'offer_extras')) addColumn('offer_calculations', "offer_extras TEXT NOT NULL DEFAULT '[]'");
 
   const ttcols = sqlite.prepare(`PRAGMA table_info(task_time)`).all() as Array<{ name: string }>;
   if (ttcols.length && !ttcols.some((c) => c.name === 'work_date')) addColumn('task_time', "work_date TEXT NOT NULL DEFAULT ''");

@@ -47,6 +47,22 @@ export interface InvoiceSettings {
   reisegarantie_logo: string; // path in /public
 }
 
+export interface OfferExtraPreset {
+  /** Freitext der Option, z. B. "Zusatznacht im Doppelzimmer (pro Person/Nacht)" */
+  label: string;
+  /** Standardbetrag pro Person; negativ = Abzug */
+  amount: number;
+}
+
+export interface OfferSettings {
+  /** Gültigkeitsdauer eines Angebots in Tagen (für "Gültig bis" auf dem PDF) */
+  valid_days: number;
+  /** Rechtstext unten auf dem Angebots-PDF */
+  legal_note: string;
+  /** Vordefinierte Zusatzoptionen (Schnellauswahl im Kalkulations-Editor) */
+  extra_presets: OfferExtraPreset[];
+}
+
 export interface EventSettings {
   /** Name shown on invoice, e.g. "Super Bowl LXI 2027" or "French Open 2027" */
   event_name: string;
@@ -97,6 +113,7 @@ export interface AllSettings {
   company: CompanySettings;
   bank: BankSettings;
   invoice: InvoiceSettings;
+  offer: OfferSettings;
   event: EventSettings;
   site: SiteSettings;
   mail: MailSettings;
@@ -164,6 +181,17 @@ const DEFAULT_SETTINGS: AllSettings = {
       'Der Rechnungsbetrag ist zahlbar bis zum Fälligkeitsdatum auf unten genanntes Konto. Mit der Buchung akzeptieren Sie unsere AGB. Vielen Dank für Ihr Vertrauen.',
     show_qr: true,
     reisegarantie_logo: '/reisegarantielogo-de-768x258.webp',
+  },
+  offer: {
+    valid_days: 14,
+    legal_note:
+      'Angebot freibleibend — Verfügbarkeit und Preis werden bei Buchung bestätigt. Alle Preise pro Person in der angegebenen Währung.',
+    extra_presets: [
+      { label: 'Zusatznacht im Doppelzimmer inkl. Frühstück (pro Person/Nacht)', amount: 450 },
+      { label: 'Einzelzimmer-Zuschlag (gesamte Reisedauer)', amount: 1485 },
+      { label: 'Reiseversicherung inkl. Annullationskosten (pro Person)', amount: 120 },
+      { label: 'Flughafentransfer vor Ort (pro Person, hin & zurück)', amount: 90 },
+    ],
   },
   event: {
     event_name: 'Super Bowl LXI 2027',
@@ -242,6 +270,7 @@ export function getSettings(): AllSettings {
       company: { ...DEFAULT_SETTINGS.company, ...parsed.company },
       bank: { ...DEFAULT_SETTINGS.bank, ...parsed.bank },
       invoice: { ...DEFAULT_SETTINGS.invoice, ...parsed.invoice },
+      offer: { ...DEFAULT_SETTINGS.offer, ...parsed.offer },
       event: { ...DEFAULT_SETTINGS.event, ...parsed.event },
       site: stripLegacySiteFields({ ...DEFAULT_SETTINGS.site, ...parsed.site }),
       mail: { ...DEFAULT_SETTINGS.mail, ...parsed.mail },
@@ -261,6 +290,7 @@ export function saveSettings(updates: Partial<AllSettings>): AllSettings {
     company: { ...current.company, ...(updates.company || {}) },
     bank: { ...current.bank, ...(updates.bank || {}) },
     invoice: { ...current.invoice, ...(updates.invoice || {}) },
+    offer: { ...current.offer, ...(updates.offer || {}) },
     event: { ...current.event, ...(updates.event || {}) },
     site: stripLegacySiteFields({ ...current.site, ...(updates.site || {}) }),
     mail: { ...current.mail, ...(updates.mail || {}) },

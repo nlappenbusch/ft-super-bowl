@@ -22,8 +22,8 @@ import {
 } from 'lucide-react';
 import {
   CALC_CATEGORIES, EXTRAS_QUICK, DEFAULT_EXTRAS, computeTotals, compareEk, itemEk, fmtMoney, fmtPct,
-  fmtPeriod, fmtPeriodShort, buildIncludedServices,
-  type CalcItem, type MarginMode,
+  fmtPeriod, fmtPeriodShort, buildIncludedServices, fmtSignedMoney,
+  type CalcItem, type MarginMode, type OfferExtra,
 } from '@/lib/calcModel';
 import { CALC_CURRENCIES, convertAmount, type CalcCurrency, type RatesSnapshot } from '@/lib/fxRates';
 import type { HotelInfo } from '@/lib/hotelLookup';
@@ -76,6 +76,8 @@ export default function KalkulationEditorPage() {
   const [current, setCurrent] = useState<RatesSnapshot | null>(null);
   const [hotelInfo, setHotelInfo] = useState<HotelInfo | null>(null);
   const [invoiceId, setInvoiceId] = useState<string | null>(null);
+  const [offerExtras, setOfferExtras] = useState<OfferExtra[]>([]);
+  const [extraPresets, setExtraPresets] = useState<Array<{ label: string; amount: number }>>([]);
 
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [bookings, setBookings] = useState<BookingOption[]>([]);
@@ -90,6 +92,7 @@ export default function KalkulationEditorPage() {
   const [invPersons, setInvPersons] = useState(1);
   const [invDueDays, setInvDueDays] = useState(14);
   const [invServices, setInvServices] = useState('');
+  const [invExtraIds, setInvExtraIds] = useState<string[]>([]);
   const [invCreating, setInvCreating] = useState(false);
 
   /* ─── Laden ─────────────────────────────────────────────────────────── */
@@ -98,12 +101,16 @@ export default function KalkulationEditorPage() {
     setLoading(true);
     setErr(null);
     try {
-      const [customersRes, bookingsRes] = await Promise.all([
+      const [customersRes, bookingsRes, settingsRes] = await Promise.all([
         fetch('/api/admin/customers').then((r) => r.json()).catch(() => null),
         fetch('/api/bookings').then((r) => r.json()).catch(() => null),
+        fetch('/api/settings').then((r) => r.json()).catch(() => null),
       ]);
       if (customersRes?.success) setCustomers(customersRes.data || []);
       if (bookingsRes?.success) setBookings(bookingsRes.data || []);
+      if (settingsRes?.success && Array.isArray(settingsRes.data?.offer?.extra_presets)) {
+        setExtraPresets(settingsRes.data.offer.extra_presets);
+      }
 
       if (isNew) {
         // Standard-Extras (Inklusivleistungen, EK 0) vorbelegen
@@ -135,6 +142,7 @@ export default function KalkulationEditorPage() {
         setCurrent(res.current_rates || null);
         setHotelInfo(d.hotel_info || null);
         setInvoiceId(d.invoice_id || null);
+        setOfferExtras(Array.isArray(d.offer_extras) ? d.offer_extras : []);
         if (d.hotel_info?.url) setHotelUrl(d.hotel_info.url);
       }
     } catch {
@@ -169,6 +177,14 @@ export default function KalkulationEditorPage() {
   const patchItem = (itemId: string, patch: Partial<CalcItem>) =>
     setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, ...patch } : i)));
 
+  /* ─── Optionale Zusatzleistungen (+/− Freitext) ─────────────────────── */
+
+  const addExtra = (preset?: { label: string; amount: number }) =>
+    setOfferExtras((prev) => [...prev, { id: crypto.randomUUID(), label: preset?.label || '', amount: preset?.amount ?? 0 }]);
+  const removeExtra = (extraId: string) => setOfferExtras((prev) => prev.filter((e) => e.id !== extraId));
+  const patchExtra = (extraId: string, patch: Partial<OfferExtra>) =>
+    setOfferExtras((prev) => prev.map((e) => (e.id === extraId ? { ...e, ...patch } : e)));
+
   const onBookingChange = (v: string) => {
     setBookingId(v);
     if (v && !customerId) {
@@ -195,7 +211,7 @@ export default function KalkulationEditorPage() {
       customer_id: customerId || null, booking_id: bookingId || null,
       travel_start: travelStart || '', travel_end: travelEnd || '',
       target_currency: target, margin_mode: marginMode, margin_value: marginValue,
-      items, status, notes, hotel_info: hotelInfo,
+      items, offer_extras: offerExtras, status, notes, hotel_info: hotelInfo,
     };
     try {
       if (isNew) {
@@ -267,6 +283,7 @@ export default function KalkulationEditorPage() {
     setInvServices(buildIncludedServices(items));
     const b = bookings.find((x) => x.id === bookingId);
     setInvPersons(Math.max(1, Number(b?.number_of_persons) || 1));
+    setInvExtraIds([]);
     setInvoiceOpen(true);
   };
 
@@ -276,7 +293,7 @@ export default function KalkulationEditorPage() {
     try {
       const res = await fetch(`/api/admin/calculations/${id}/invoice`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ persons: invPersons, due_in_days: invDueDays, included_services: invServices }),
+        body: JSON.stringify({ persons: invPersons, due_in_days: invDueDays, included_services: invServices, extra_ids: invExtraIds }),
       }).then((r) => r.json());
       if (!res?.success) { setErr(res?.error || 'Rechnung konnte nicht erstellt werden'); return; }
       setInvoiceId(res.data?.invoice?.id || null);
@@ -612,6 +629,61 @@ export default function KalkulationEditorPage() {
           >
             <CalculationTable items={items} target={target} rates={baseRates} marginMode={marginMode} marginValue={marginValue} />
           </SectionCard>
+
+          <SectionCard
+            title="Optionale Zusatzleistungen"
+            description={`Erscheinen auf dem Angebot als +/−-Freitextzeilen (pro Person, in ${target}) — nicht im Angebotspreis enthalten. Bei der Rechnung einzeln übernehmbar.`}
+            icon={<Plus className="h-5 w-5" />}
+            actions={extraPresets.length > 0 ? (
+              <SelectInput
+                value=""
+                onChange={(e) => {
+                  const p = extraPresets[Number(e.target.value)];
+                  if (p) addExtra(p);
+                }}
+              >
+                <option value="">Standardwert übernehmen …</option>
+                {extraPresets.map((p, i) => (
+                  <option key={i} value={i}>{p.label} ({fmtSignedMoney(p.amount, target)})</option>
+                ))}
+              </SelectInput>
+            ) : undefined}
+          >
+            <div className="space-y-2">
+              {offerExtras.map((e) => (
+                <div key={e.id} className="flex items-center gap-2">
+                  <TextInput
+                    className="flex-1"
+                    placeholder="Freitext, z. B. Zusatznacht im Doppelzimmer (pro Person/Nacht)"
+                    value={e.label}
+                    onChange={(ev) => patchExtra(e.id, { label: ev.target.value })}
+                  />
+                  <div className="relative w-32">
+                    <TextInput
+                      type="number" step={10}
+                      className="pr-12 text-right"
+                      value={e.amount}
+                      onChange={(ev) => patchExtra(e.id, { amount: Number(ev.target.value) || 0 })}
+                    />
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-bold" style={{ color: COLORS.textMuted }}>
+                      {target}
+                    </span>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => removeExtra(e.id)} title="Zeile entfernen">
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+              {offerExtras.length === 0 && (
+                <p className="text-xs" style={{ color: COLORS.textMuted }}>
+                  Noch keine Zusatzleistungen — über die Standardwerte oben oder «Zeile hinzufügen» ergänzen. Negativer Betrag = Abzug/Rabatt.
+                </p>
+              )}
+              <Button variant="secondary" size="sm" onClick={() => addExtra()}>
+                <Plus className="h-3.5 w-3.5" /> Zeile hinzufügen
+              </Button>
+            </div>
+          </SectionCard>
         </div>
 
         {/* ─── Rechte Spalte: Kalkulation + Kurse ─── */}
@@ -753,11 +825,33 @@ export default function KalkulationEditorPage() {
                   <Field label="Inkludierte Leistungen" hint="Erscheint als Leistungsliste auf der Rechnung — ohne Einzelpreise.">
                     <TextArea rows={6} value={invServices} onChange={(e) => setInvServices(e.target.value)} />
                   </Field>
-                  {totals && (
-                    <p className="text-xs font-semibold" style={{ color: COLORS.navy }}>
-                      Rechnungsbetrag: {invPersons} × {fmtMoney(totals.vkTarget, target)} = {fmtMoney(totals.vkTarget * invPersons, target)}
-                    </p>
+                  {offerExtras.filter((e) => e.label.trim()).length > 0 && (
+                    <Field label="Zusatzleistungen übernehmen" hint="Angehakte Optionen werden als eigene Rechnungspositionen (× Personen) übernommen.">
+                      <div className="space-y-1.5">
+                        {offerExtras.filter((e) => e.label.trim()).map((e) => (
+                          <label key={e.id} className="flex cursor-pointer items-center gap-2 text-xs" style={{ color: COLORS.navy }}>
+                            <input
+                              type="checkbox"
+                              checked={invExtraIds.includes(e.id)}
+                              onChange={(ev) => setInvExtraIds((prev) => ev.target.checked ? [...prev, e.id] : prev.filter((x) => x !== e.id))}
+                              style={{ accentColor: COLORS.accent }}
+                            />
+                            <span className="flex-1">{e.label}</span>
+                            <span className="font-semibold tabular-nums">{fmtSignedMoney(e.amount, target)} p.P.</span>
+                          </label>
+                        ))}
+                      </div>
+                    </Field>
                   )}
+                  {totals && (() => {
+                    const extraSum = offerExtras.filter((e) => invExtraIds.includes(e.id)).reduce((s, e) => s + e.amount, 0);
+                    const totalPP = totals.vkTarget + extraSum;
+                    return (
+                      <p className="text-xs font-semibold" style={{ color: COLORS.navy }}>
+                        Rechnungsbetrag: {invPersons} × {fmtMoney(totalPP, target)}{extraSum !== 0 ? ` (inkl. Zusatzleistungen ${fmtSignedMoney(extraSum, target)} p.P.)` : ''} = {fmtMoney(totalPP * invPersons, target)}
+                      </p>
+                    );
+                  })()}
                   {target !== 'EUR' && (
                     <p className="text-[11px] font-medium" style={{ color: COLORS.warn }}>
                       Hinweis: Das Rechnungs-PDF weist EUR aus — Zielwährung dieser Kalkulation ist {target}.

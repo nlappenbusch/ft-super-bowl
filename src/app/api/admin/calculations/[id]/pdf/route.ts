@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCalculation } from '@/lib/calculationStore';
+import { getCustomer } from '@/lib/customerStore';
 import { buildCalculationPdf, type CalcPdfVariant } from '@/lib/calculationPdf';
 
 /**
@@ -15,7 +16,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     const { searchParams } = new URL(request.url);
     const variant: CalcPdfVariant = searchParams.get('variant') === 'intern' ? 'intern' : 'kunde';
-    const pdf = buildCalculationPdf(calc, variant);
+    const customer = calc.customer_id ? await getCustomer(calc.customer_id) : null;
+    const pdf = buildCalculationPdf(calc, variant, customer);
     const base = (calc.calc_number || calc.id.slice(0, 8)).replace(/[^A-Za-z0-9-]/g, '');
     const filename = variant === 'intern' ? `Kalkulation_${base}_intern.pdf` : `Angebot_${base}.pdf`;
 

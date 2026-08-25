@@ -32,6 +32,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const body = (await req.json().catch(() => ({}))) as {
       persons?: unknown; due_in_days?: unknown; included_services?: unknown; event_name?: unknown; description?: unknown;
+      /** IDs der optionalen Zusatzleistungen, die als Rechnungspositionen übernommen werden. */
+      extra_ids?: unknown;
     };
 
     // Buchung bestimmen: zugeordnete Anfrage (REQ) ODER individuelle Buchung aus dem Kunden.
@@ -107,9 +109,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     });
 
     const dueInDays = Math.max(1, Math.round(Number(body.due_in_days)) || 14);
+
+    // Gewählte Zusatzoptionen (+/− Freitext) als eigene Positionen übernehmen.
+    const extraIds = Array.isArray(body.extra_ids) ? body.extra_ids.map(String) : [];
+    const extraItems = (calc.offer_extras || [])
+      .filter((e) => extraIds.includes(e.id) && e.amount !== 0)
+      .map((e) => ({
+        description: e.label,
+        quantity: persons,
+        unit_price: e.amount,
+        total_price: Math.round(e.amount * persons * 100) / 100,
+      }));
+
     const invoice = await createInvoiceRecord(
       bookingId,
-      [{ description, quantity: persons, unit_price: vkPP, total_price: Math.round(vkPP * persons * 100) / 100 }],
+      [
+        { description, quantity: persons, unit_price: vkPP, total_price: Math.round(vkPP * persons * 100) / 100 },
+        ...extraItems,
+      ],
       dueInDays,
       notesJson
     );

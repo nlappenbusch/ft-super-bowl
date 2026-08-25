@@ -95,6 +95,39 @@ export function sanitizeItems(raw: unknown, fallbackCurrency: CalcCurrency = 'CH
     }));
 }
 
+/* ─── Optionale Zusatzleistungen (Angebot) ───────────────────────────────── */
+
+/**
+ * Freitext-Option auf dem Angebot ("Zusatznacht +…", "Frühbucher-Rabatt −…").
+ * Der Betrag versteht sich pro Person in der Zielwährung; negativ = Abzug.
+ * Optionen fliessen NICHT in den Angebots-Gesamtpreis ein — sie erscheinen als
+ * +/−-Zeilen und können bei der Rechnungserstellung einzeln übernommen werden.
+ */
+export interface OfferExtra {
+  id: string;
+  label: string;
+  amount: number;
+}
+
+/** Rohdaten (Request-Body/DB-JSON) in saubere Zusatzoptionen überführen. */
+export function sanitizeExtras(raw: unknown): OfferExtra[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((e): e is Record<string, unknown> => !!e && typeof e === 'object')
+    .map((e) => ({
+      id: typeof e.id === 'string' && e.id ? e.id : crypto.randomUUID(),
+      label: typeof e.label === 'string' ? e.label.trim() : '',
+      amount: Math.max(-1_000_000, Math.min(1_000_000, Number(e.amount) || 0)),
+    }))
+    .filter((e) => e.label);
+}
+
+/** "+ EUR 450.00" / "- EUR 250.00" (U+2212 fehlt im PDF-Standardfont → ASCII). */
+export function fmtSignedMoney(n: number, currency: string): string {
+  const abs = Math.abs(n || 0).toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${n < 0 ? '-' : '+'} ${currency} ${abs}`;
+}
+
 /* ─── Summen & Marge ─────────────────────────────────────────────────────── */
 
 export interface CalcTotals {
