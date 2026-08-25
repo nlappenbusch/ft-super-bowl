@@ -414,7 +414,8 @@ export function initDatabase() {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       created_by TEXT NOT NULL DEFAULT '',
       last_used_at TEXT,
-      revoked INTEGER NOT NULL DEFAULT 0
+      revoked INTEGER NOT NULL DEFAULT 0,
+      scopes TEXT NOT NULL DEFAULT 'all'
     );
     CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
 
@@ -560,6 +561,8 @@ export function initDatabase() {
   if (occols.length && !occols.some((c) => c.name === 'hotel_info')) addColumn('offer_calculations', "hotel_info TEXT NOT NULL DEFAULT ''");
   if (occols.length && !occols.some((c) => c.name === 'invoice_id')) addColumn('offer_calculations', 'invoice_id TEXT');
   if (occols.length && !occols.some((c) => c.name === 'offer_extras')) addColumn('offer_calculations', "offer_extras TEXT NOT NULL DEFAULT '[]'");
+  const akcols = sqlite.prepare(`PRAGMA table_info(api_keys)`).all() as Array<{ name: string }>;
+  if (akcols.length && !akcols.some((c) => c.name === 'scopes')) addColumn('api_keys', "scopes TEXT NOT NULL DEFAULT 'all'");
 
   const ttcols = sqlite.prepare(`PRAGMA table_info(task_time)`).all() as Array<{ name: string }>;
   if (ttcols.length && !ttcols.some((c) => c.name === 'work_date')) addColumn('task_time', "work_date TEXT NOT NULL DEFAULT ''");

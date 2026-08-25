@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionEmployee } from '@/lib/serverSession';
-import { listApiKeys, createApiKey } from '@/lib/apiKeyStore';
+import { listApiKeys, createApiKey, normalizeScopes } from '@/lib/apiKeyStore';
+import { MCP_TOOL_GROUPS } from '@/lib/mcpServer';
 
 /** GET → Liste aller API-Keys (ohne Klartext/Hash). */
 export async function GET() {
@@ -8,12 +9,13 @@ export async function GET() {
   return NextResponse.json({ success: true, data });
 }
 
-/** POST { name } → neuer Key. Klartext wird NUR EINMAL zurückgegeben. */
+/** POST { name, scopes? } → neuer Key. Klartext wird NUR EINMAL zurückgegeben. */
 export async function POST(req: Request) {
   const ctx = await getSessionEmployee();
   const body = await req.json().catch(() => ({}));
   const name = String(body?.name || '').trim();
   if (!name) return NextResponse.json({ success: false, error: 'name erforderlich' }, { status: 400 });
-  const { key, plaintext } = await createApiKey(name, ctx?.session.name || ctx?.employee?.name || '');
+  const scopes = normalizeScopes(body?.scopes, MCP_TOOL_GROUPS.map((g) => g.id));
+  const { key, plaintext } = await createApiKey(name, ctx?.session.name || ctx?.employee?.name || '', scopes);
   return NextResponse.json({ success: true, data: { ...key, plaintext } });
 }
