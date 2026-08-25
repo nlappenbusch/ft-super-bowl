@@ -17,7 +17,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({ success: false, error: 'Ungültiger oder fehlender API-Key' }, { status: 401 });
   }
   const { id } = await params;
-  const target = new URL(`/api/invoices/${encodeURIComponent(id)}/pdf`, url.origin);
+  // Loopback IMMER gegen den lokalen Listener — die öffentliche URL ist aus dem
+  // Container heraus nicht erreichbar (kein NAT-Loopback am Proxy).
+  const port = process.env.PORT || '3000';
+  const target = `http://127.0.0.1:${port}/api/invoices/${encodeURIComponent(id)}/pdf`;
   const res = await fetch(target, { headers: { [INTERNAL_KEY_HEADER]: internalApiKey() } });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
