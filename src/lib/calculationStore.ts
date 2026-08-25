@@ -10,7 +10,7 @@
 import './database';
 import { dbGet, dbAll, dbRun } from './dbq';
 import { isCalcCurrency, type CalcCurrency, type RatesSnapshot } from './fxRates';
-import { sanitizeItems, type CalcItem, type MarginMode } from './calcModel';
+import { sanitizeItems, sanitizeExtras, type CalcItem, type MarginMode, type OfferExtra } from './calcModel';
 import type { HotelInfo } from './hotelLookup';
 
 export type CalcStatus = 'entwurf' | 'aktiv' | 'archiviert';
@@ -30,6 +30,8 @@ export interface OfferCalculation {
   margin_mode: MarginMode;
   margin_value: number;
   items: CalcItem[];
+  /** Optionale Zusatzleistungen (+/−-Freitextzeilen auf dem Angebot). */
+  offer_extras: OfferExtra[];
   rates_snapshot: RatesSnapshot | null;
   /** Per Booking.com-Import hinterlegte Hoteldaten (für Rechnung/PDF). */
   hotel_info: HotelInfo | null;
@@ -61,6 +63,7 @@ interface DbRow {
   margin_mode: string;
   margin_value: number;
   items: string;
+  offer_extras?: string | null;
   rates_snapshot: string;
   hotel_info: string | null;
   invoice_id: string | null;
@@ -99,6 +102,12 @@ function parseRow(r: DbRow): OfferCalculationRow {
   } catch {
     items = [];
   }
+  let extras: OfferExtra[] = [];
+  try {
+    extras = sanitizeExtras(JSON.parse(r.offer_extras || '[]'));
+  } catch {
+    extras = [];
+  }
   let snapshot: RatesSnapshot | null = null;
   try {
     snapshot = r.rates_snapshot ? (JSON.parse(r.rates_snapshot) as RatesSnapshot) : null;
@@ -127,6 +136,7 @@ function parseRow(r: DbRow): OfferCalculationRow {
     margin_mode: normMarginMode(r.margin_mode),
     margin_value: normMarginValue(r.margin_value),
     items,
+    offer_extras: extras,
     rates_snapshot: snapshot,
     hotel_info: hotelInfo,
     invoice_id: r.invoice_id || null,
@@ -174,6 +184,7 @@ export interface CalculationInput {
   margin_mode?: unknown;
   margin_value?: unknown;
   items?: unknown;
+  offer_extras?: unknown;
   status?: unknown;
   notes?: unknown;
   hotel_info?: unknown;
@@ -212,8 +223,8 @@ export async function createCalculation(
     `INSERT INTO offer_calculations (
       id, calc_number, created_at, updated_at, title, customer_id, booking_id,
       travel_start, travel_end,
-      target_currency, margin_mode, margin_value, items, rates_snapshot, status, notes, created_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      target_currency, margin_mode, margin_value, items, offer_extras, rates_snapshot, status, notes, created_by
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       await nextCalcNumber(),
@@ -228,6 +239,7 @@ export async function createCalculation(
       normMarginMode(input.margin_mode),
       normMarginValue(input.margin_value),
       JSON.stringify(sanitizeItems(input.items, target)),
+      JSON.stringify(sanitizeExtras(input.offer_extras)),
       snapshot ? JSON.stringify(snapshot) : '',
       normStatus(input.status),
       typeof input.notes === 'string' ? input.notes : '',
@@ -256,6 +268,7 @@ export async function updateCalculation(id: string, updates: CalculationUpdate):
   if ('margin_mode' in updates) { sets.push('margin_mode = ?'); vals.push(normMarginMode(updates.margin_mode)); }
   if ('margin_value' in updates) { sets.push('margin_value = ?'); vals.push(normMarginValue(updates.margin_value)); }
   if ('items' in updates) { sets.push('items = ?'); vals.push(JSON.stringify(sanitizeItems(updates.items, target))); }
+  if ('offer_extras' in updates) { sets.push('offer_extras = ?'); vals.push(JSON.stringify(sanitizeExtras(updates.offer_extras))); }
   if ('status' in updates) { sets.push('status = ?'); vals.push(normStatus(updates.status)); }
   if ('notes' in updates) { sets.push('notes = ?'); vals.push(typeof updates.notes === 'string' ? updates.notes : ''); }
   if ('hotel_info' in updates) { const h = normHotelInfo(updates.hotel_info); sets.push('hotel_info = ?'); vals.push(h ? JSON.stringify(h) : ''); }

@@ -26,7 +26,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const body = (await req.json().catch(() => ({}))) as CalculationUpdate & { refresh_rates?: boolean };
 
   const updates: CalculationUpdate = {};
-  for (const key of ['title', 'customer_id', 'booking_id', 'travel_start', 'travel_end', 'target_currency', 'margin_mode', 'margin_value', 'items', 'status', 'notes', 'hotel_info'] as const) {
+  for (const key of ['title', 'customer_id', 'booking_id', 'travel_start', 'travel_end', 'target_currency', 'margin_mode', 'margin_value', 'items', 'offer_extras', 'status', 'notes', 'hotel_info'] as const) {
     if (key in body) updates[key] = body[key];
   }
   if (body.refresh_rates === true) {
