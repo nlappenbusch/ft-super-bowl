@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Inbox, KanbanSquare, Wallet,
   CalendarDays, Layers, Package, HelpCircle, Tag, MapPin,
   Mail, Settings, LogOut, Menu, Bell, AtSign, MessageSquare, StickyNote, UserPlus, Check,
-  Users, Timer, Plane, ListTodo, Trophy, Sparkles, Contact, Activity, Globe, Code2, Wand2, KeyRound, FileClock, Calculator, Bot } from 'lucide-react';
+  Users, Timer, Plane, ListTodo, Trophy, Sparkles, Contact, Activity, Globe, Code2, Wand2, KeyRound, FileClock, Calculator, Bot, Presentation } from 'lucide-react';
 import { COLORS } from './ui';
 
 async function doLogout() {
@@ -38,6 +38,7 @@ const NAV: NavGroup[] = [
       { href: '/admin/kunden', label: 'Kunden', icon: <Contact className={ICON} /> },
       { href: '/admin/kalkulation', label: 'Kalkulation', icon: <Calculator className={ICON} /> },
       { href: '/admin/incentive', label: 'Incentive Builder', icon: <Wand2 className={ICON} /> },
+      { href: '/admin/praesentationen', label: 'Präsentationen', icon: <Presentation className={ICON} /> },
       { href: '/admin/finanzen', label: 'Finanzen', icon: <Wallet className={ICON} /> },
     ],
   },
