@@ -272,6 +272,21 @@ export function initDatabase() {
       progress TEXT NOT NULL DEFAULT ''
     );
 
+    -- ==================== PRAESENTATIONS-BUILDER ====================
+    CREATE TABLE IF NOT EXISTS presentations (
+      id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      title TEXT NOT NULL DEFAULT 'Praesentation',
+      lang TEXT NOT NULL DEFAULT 'de',
+      status TEXT NOT NULL DEFAULT 'draft',
+      share_token TEXT NOT NULL DEFAULT '',
+      share_enabled INTEGER NOT NULL DEFAULT 0,
+      meta TEXT NOT NULL DEFAULT '',
+      slides TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX IF NOT EXISTS idx_presentations_token ON presentations(share_token);
+
     -- ==================== HR / TEAM ====================
     CREATE TABLE IF NOT EXISTS employees (
       id TEXT PRIMARY KEY,

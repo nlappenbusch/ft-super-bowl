@@ -253,6 +253,21 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
       )`);
       await pool.query(`ALTER TABLE incentive_plans ADD COLUMN IF NOT EXISTS error text NOT NULL DEFAULT ''`);
       await pool.query(`ALTER TABLE incentive_plans ADD COLUMN IF NOT EXISTS progress text NOT NULL DEFAULT ''`);
+
+      // Praesentations-Builder (Decks aus Folien; TASK-00126)
+      await pool.query(`CREATE TABLE IF NOT EXISTS presentations (
+        id text PRIMARY KEY,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        title text NOT NULL DEFAULT 'Praesentation',
+        lang text NOT NULL DEFAULT 'de',
+        status text NOT NULL DEFAULT 'draft',
+        share_token text NOT NULL DEFAULT '',
+        share_enabled integer NOT NULL DEFAULT 0,
+        meta text NOT NULL DEFAULT '',
+        slides text NOT NULL DEFAULT ''
+      )`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_presentations_token ON presentations(share_token)`);
       await pool.query(`CREATE TABLE IF NOT EXISTS staff_task_subtasks (
         id text PRIMARY KEY,
         task_id text NOT NULL,

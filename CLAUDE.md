@@ -64,6 +64,36 @@ Laufzeit-Lesen Content: `src/lib/contentStore.ts` (`findPackagesByEvent` etc.).
 - Endpoints: `/api/admin/ai/{config,status,import,fetch}`. Admin-Seite: `/admin/ai`.
 - Modul-Registry (`MODULE_SPECS`) definiert Ziel-JSON pro Modul (intro/highlights/seo/leistungen/wissenswertes/faq).
 
+## Präsentations-Builder (TASK-00126)
+Folienbasierte Kundendecks im Faltin-Design (16:9, dunkler Grund, Textspalte links,
+Bildspalte rechts) — Vorlage ist das gedruckte Ryder-Cup-Deck.
+
+- **Admin:** `/admin/praesentationen` (Übersicht, Anlegen) und `/admin/praesentationen/[id]`
+  (Folienliste, massstabsgetreue Vorschau, Inspector). Speichert automatisch 1.2 s nach
+  der letzten Eingabe.
+- **Datenmodell:** Tabelle `presentations` (Folien + Metadaten als JSON in der Zeile).
+  **Neue Tabellen müssen in `database.ts` UND in `dbq.applyPgSchemaEnhancements()` stehen** —
+  die pg-Migration introspektiert nur Bestandstabellen.
+- **Eine Geometrie, drei Ausgaben:** `lib/presentation/theme.ts` (normierte Flächen 0..1,
+  Schriftgrössen als Anteil der Folienhöhe) und `blocks.ts` (linearer Inhaltsplan je Folie)
+  sind die gemeinsame Quelle für Web (`components/presentation/SlideCanvas.tsx`, feste Bühne
+  1280×720 px + `scale()`), PDF (`pdf.ts`, 960×540 pt) und PPTX (`pptx.ts`, 13.333×7.5 in).
+  Folienhöhe PDF = PPTX = 540 pt, daher sind Schriftgrössen 1:1 übertragbar.
+- **Bilder:** `assets.ts` schneidet serverseitig per sharp auf das Zielverhältnis zu
+  (jsPDF/PPTX können kein „cover"), rendert den Verlauf als Bild und stellt das
+  Reisegarantie-Siegel frei. Nur den weissen RAND trimmen — das Logo hat schwarze Schrift
+  auf weissem Feld, ein Freistellen aller weissen Flächen radiert sie aus.
+- **jsPDF kann nur WinAnsi:** Zeichen wie ★ oder ✓ werden in `pdf.ts` ersetzt (`winAnsi()`),
+  Haken/Kreuze zeichnet der Renderer als Vektor. Fett-Auszeichnung `**…**` wird in allen
+  drei Ausgaben unterstützt; im PDF hält `glue` Satzzeichen ohne Leerzeichen am fetten Wort.
+- **Export:** `GET /api/admin/presentations/[id]/export?format=pdf|pptx`.
+- **Teil-Link:** `/p/[token]` + `GET /api/p/[token]` (PDF) sind bewusst ohne Session — der
+  Token ist die Berechtigung, `getDeckByToken` liefert nur freigegebene Decks. `robots.ts`
+  sperrt `/p/`, die Seite setzt zusätzlich `noindex`.
+- **KI:** `POST /api/admin/presentations/[id]/ai` — Text überarbeiten/kürzen/ausformulieren,
+  Bildsuche (`incentive/images.ts`) und Übersetzung des ganzen Decks (de/en/fr).
+- **Übernahme aus dem Incentive-Planer:** `templates.ts → slidesFromIncentive()`.
+
 ## Wichtige Komponenten
 - `src/components/event/EventPageView.tsx` — rendert alle Event-Module (live-editierbar via `EventLiveEditor`).
 - `src/components/PackageCardPro.tsx` — professionelle Paketkarte (Leistungs-Checkliste).
