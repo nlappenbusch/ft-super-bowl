@@ -8,6 +8,8 @@ export interface ContentEventRecord {
   series_id?: string | null;
   slug: string;
   url_segment?: string | null;
+  /** Frühere Slugs/Segmente — leiten per 301 auf die kanonische URL um. */
+  aliases?: string[] | null;
   name: string;
   title: string;
   description?: string | null;
@@ -573,11 +575,36 @@ export function createEvent(payload: Omit<ContentEventRecord, 'id'>): ContentEve
   return record;
 }
 
+/**
+ * Beim Umbenennen eines Events (Slug oder URL-Segment) den alten Wert als
+ * Alias sichern. Sonst laufen alle bestehenden Verweise — WordPress-Shortcodes,
+ * Newsletter, Google-Treffer, Lesezeichen — nach einem Jahres-Rollover
+ * (…-2026 → …-2027) ins Leere.
+ */
+function withRenameAliases(
+  previous: ContentEventRecord,
+  updates: Partial<ContentEventRecord>,
+  merged: ContentEventRecord,
+): ContentEventRecord {
+  const retired = [
+    updates.slug !== undefined && updates.slug !== previous.slug ? previous.slug : null,
+    updates.url_segment !== undefined && updates.url_segment !== previous.url_segment ? previous.url_segment : null,
+  ].filter((v): v is string => !!v && v.trim() !== '');
+  if (retired.length === 0) return merged;
+
+  const aliases = [...(merged.aliases || [])];
+  for (const old of retired) {
+    if (old !== merged.slug && old !== merged.url_segment && !aliases.includes(old)) aliases.push(old);
+  }
+  return { ...merged, aliases };
+}
+
 export function updateEvent(id: string, updates: Partial<ContentEventRecord>): ContentEventRecord | null {
   const events = getEvents();
   const index = events.findIndex((event) => event.id === id);
   if (index === -1) return null;
-  const updated = { ...events[index], ...updates };
+  const previous = events[index];
+  const updated = withRenameAliases(previous, updates, { ...previous, ...updates });
   events[index] = updated;
   saveEvents(events);
   return updated;

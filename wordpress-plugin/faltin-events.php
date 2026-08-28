@@ -2,8 +2,20 @@
 /**
  * Plugin Name: Faltin Travel – Event Shortcodes
  * Description: SEO-freundliche, serverseitig gerenderte Event-Karten, Package-Karten + natives Anfrageformular. Shortcodes: [faltin_events serie="..."], [faltin_event event="..."], [faltin_packages event="..."], [faltin_anfrage event="..."].
- * Version: 1.8.3
+ * Version: 1.8.4
  * Author: Faltin Travel AG
+ *
+ * 1.8.4: 404 ist KEIN Ausfall. Bis 1.8.3 wertete faltin_events_fetch() jede
+ *        Nicht-200-Antwort als Plattform-Ausfall und setzte den globalen
+ *        Transient `faltin_api_down` (90 s) — ein einziger veralteter Event-Slug
+ *        (z.B. nach einem Jahres-Rollover im System: …-2026 → …-2027) legte
+ *        damit die Wartungsbox über ALLE Event-Seiten der Website. Jetzt gilt:
+ *        404/400 oder success:false → nur dieses eine Modul fällt auf das
+ *        Anfrageformular (bzw. einen HTML-Kommentar) zurück, kein globaler
+ *        Ausfall-Zustand. Wartungsbox nur noch bei WP_Error/Timeout/5xx.
+ *        Zusätzlich: liefert die API einen kanonischen Slug (`event_slug`),
+ *        übernimmt ihn das Anfrageformular — Anfragen landen damit auch bei
+ *        veralteter Einbettung am richtigen Event.
  *
  * 1.8.3: Wartungsbox cache-sicher: (1) DONOTCACHEPAGE + nocache_headers, damit
  *        Page-Caches (WP Rocket, SuperCache, LiteSpeed, W3TC) die Wartungs-
@@ -57,7 +69,17 @@ function faltin_api_is_down() {
     return (bool) get_transient('faltin_api_down');
 }
 
-function faltin_events_fetch($url, $cache_seconds = 600) {
+/**
+ * Holt Daten von der Plattform. $state meldet dem Aufrufer, WARUM nichts kam:
+ *   'ok'        – Daten vorhanden
+ *   'not_found' – Plattform antwortet, kennt aber diesen Slug nicht (404/400/
+ *                 success:false). Betrifft NUR dieses Modul.
+ *   'down'      – Plattform nicht erreichbar (WP_Error/Timeout/5xx) → Wartungsbox.
+ * Die Unterscheidung ist wichtig: ein veralteter Slug darf nicht die ganze
+ * Website in den Wartungsmodus schicken (siehe Changelog 1.8.4).
+ */
+function faltin_events_fetch($url, $cache_seconds = 600, &$state = null) {
+    $state = 'ok';
     $key = 'faltin_ev_' . md5($url);
     if ($cache_seconds > 0) {
         $cached = get_transient($key);
@@ -65,17 +87,34 @@ function faltin_events_fetch($url, $cache_seconds = 600) {
     }
     // Plattform als down markiert → gar nicht erst anfragen. So zeigen ALLE
     // Shortcodes konsistent die Wartungsbox und die API wird nicht gehämmert.
-    if (faltin_api_is_down()) return null;
+    if (faltin_api_is_down()) { $state = 'down'; return null; }
+
     $res = wp_remote_get($url, array('timeout' => 10));
-    if (is_wp_error($res) || wp_remote_retrieve_response_code($res) !== 200) {
-        // Plattform gerade nicht erreichbar (z.B. Deploy) → KEIN Stale-Inhalt:
+    if (is_wp_error($res)) {
+        // Netzwerk/DNS/Timeout → echter Ausfall (z.B. Deploy). KEIN Stale-Inhalt:
         // gecachte Karten würden mit kaputten (hotverlinkten) Bildern und
         // funktionslosen Formularen erscheinen. Stattdessen Wartungsbox.
+        $state = 'down';
         set_transient('faltin_api_down', 1, 90); // nach 90 s automatisch neuer Versuch
         return null;
     }
+
+    $code = (int) wp_remote_retrieve_response_code($res);
+    if ($code === 404 || $code === 400) {
+        // Die Plattform LÄUFT, kennt diesen Slug nur nicht (typisch: Event im
+        // System umbenannt, Einbettung noch auf dem alten Namen). Kein globaler
+        // Ausfall-Zustand — sonst reisst eine einzelne Seite alle anderen mit.
+        $state = 'not_found';
+        return null;
+    }
+    if ($code !== 200) {
+        $state = 'down';
+        set_transient('faltin_api_down', 1, 90);
+        return null;
+    }
+
     $json = json_decode(wp_remote_retrieve_body($res), true);
-    if (empty($json['success'])) return null;
+    if (empty($json['success'])) { $state = 'not_found'; return null; }
     $data = $json['data'];
     if ($cache_seconds > 0) set_transient($key, $data, $cache_seconds);
     return $data;
@@ -235,8 +274,11 @@ function faltin_events_series_shortcode($atts) {
     if (!$atts['serie']) return '<p class="ft-ev-error">[faltin_events]: Parameter serie fehlt.</p>';
 
     $url = rtrim($atts['api_url'], '/') . '/api/events?serie=' . rawurlencode($atts['serie']);
-    $events = faltin_events_fetch($url, (int)$atts['cache']);
-    if (!is_array($events)) return faltin_events_maintenance_box();
+    $events = faltin_events_fetch($url, (int)$atts['cache'], $state);
+    if (!is_array($events)) {
+        if ($state === 'down') return faltin_events_maintenance_box();
+        return '<!-- faltin_events: Serie "' . esc_html($atts['serie']) . '" im System nicht gefunden -->';
+    }
     if (!count($events)) return '<p class="ft-ev-error">Keine Events in dieser Serie.</p>';
 
     $limit = (int)$atts['limit'];
@@ -265,8 +307,11 @@ function faltin_event_single_shortcode($atts) {
     if (!$atts['event']) return '<p class="ft-ev-error">[faltin_event]: Parameter event fehlt.</p>';
 
     $url = rtrim($atts['api_url'], '/') . '/api/events?event=' . rawurlencode($atts['event']);
-    $e = faltin_events_fetch($url, (int)$atts['cache']);
-    if (!is_array($e) || empty($e['url'])) return faltin_events_maintenance_box();
+    $e = faltin_events_fetch($url, (int)$atts['cache'], $state);
+    if (!is_array($e) || empty($e['url'])) {
+        if ($state === 'down') return faltin_events_maintenance_box();
+        return '<!-- faltin_event: Event "' . esc_html($atts['event']) . '" im System nicht gefunden -->';
+    }
 
     $date = faltin_events_format_daterange($e['start_date'] ?? null, $e['end_date'] ?? null);
     $loc = trim(implode(' · ', array_filter(array($e['venue'] ?? '', $e['location_city'] ?? '', $e['location_country'] ?? ''))));
@@ -373,13 +418,19 @@ function faltin_anfrage_shortcode($atts) {
     if ($want_packages && $atts['event'] && $atts['event'] !== 'allgemeine-anfrage') {
         $pk_url = rtrim($atts['api_url'], '/') . '/api/packages-html?event=' . rawurlencode($atts['event'])
                 . '&site=' . rawurlencode(home_url());
-        $pk = faltin_events_fetch($pk_url, (int)$atts['cache']);
+        $pk = faltin_events_fetch($pk_url, (int)$atts['cache'], $pk_state);
         if ($pk && !empty($pk['has_packages']) && !empty($pk['html'])) {
             return $pk['html'];
         }
-        // Plattform nicht erreichbar (Deploy) → Wartungshinweis statt Formular
-        if (!is_array($pk)) {
+        // NUR bei echtem Ausfall die Wartungsbox — ein unbekannter Slug
+        // (Event umbenannt) rendert weiterhin das Anfrageformular.
+        if ($pk_state === 'down') {
             return faltin_events_maintenance_box();
+        }
+        // Hat die Plattform den Slug via Alias/Rollover aufgelöst, übernehmen
+        // wir den kanonischen — die Anfrage landet dann am richtigen Event.
+        if (is_array($pk) && !empty($pk['event_slug'])) {
+            $atts['event'] = $pk['event_slug'];
         }
     }
 
@@ -570,22 +621,22 @@ function faltin_packages_shortcode($atts) {
 
     $url = rtrim($atts['api_url'], '/') . '/api/packages-html?event=' . rawurlencode($atts['event'])
          . '&site=' . rawurlencode(home_url());
-    $data = faltin_events_fetch($url, (int)$atts['cache']);
+    $data = faltin_events_fetch($url, (int)$atts['cache'], $state);
 
     if ($data && !empty($data['has_packages']) && !empty($data['html'])) {
         // Fertiges, selbstenthaltenes HTML aus dem System (inkl. Styles & JSON-LD)
         return $data['html'];
     }
 
-    // Plattform nicht erreichbar (Deploy) und kein Backup-Stand → Wartungshinweis
-    // statt eines Formulars, dessen Absenden ohnehin scheitern würde.
-    if (!is_array($data)) {
+    // Nur bei echtem Ausfall der Plattform der Wartungshinweis — ein Formular
+    // wäre dort funktionslos. Unbekannter Slug (Event umbenannt) ≠ Ausfall.
+    if ($state === 'down') {
         return faltin_events_maintenance_box();
     }
 
-    // Keine aktiven Packages → Anfrageformular
+    // Keine aktiven Packages ODER Slug unbekannt → Anfrageformular
     return faltin_anfrage_shortcode(array(
-        'event' => $atts['event'],
+        'event' => (is_array($data) && !empty($data['event_slug'])) ? $data['event_slug'] : $atts['event'],
         'name' => $atts['name'] ?: (is_array($data) && !empty($data['event_name']) ? $data['event_name'] : ''),
         'api_url' => $atts['api_url'],
         'packages' => '0', // Packages wurden hier bereits geprüft — direkt das Formular rendern
