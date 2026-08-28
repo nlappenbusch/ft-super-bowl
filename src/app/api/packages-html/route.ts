@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getEventBySlug, getPackagesByEventSlug, type PackageRecord } from '@/lib/eventData';
+import { resolveEventBySlugLoose, getPackagesByEventSlug, type PackageRecord } from '@/lib/eventData';
 
 /**
  * Liefert die Package-Karten eines Events als selbstenthaltenes HTML
@@ -160,9 +160,16 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: false, error: 'event fehlt' }, { status: 400 });
   }
 
-  const event = await getEventBySlug(eventSlug);
-  if (!event) {
+  // Alte Slugs (z.B. nach einem Jahres-Rollover im Admin) weiter auflösen —
+  // externe Einbettungen dürfen an einer Umbenennung nicht zerbrechen.
+  const resolved = await resolveEventBySlugLoose(eventSlug);
+  if (!resolved) {
     return NextResponse.json({ success: false, error: 'Event nicht gefunden' }, { status: 404 });
+  }
+  const event = resolved.event;
+  const canonicalSlug = event.slug;
+  if (resolved.via !== 'slug') {
+    console.warn(`[packages-html] Veralteter Event-Slug "${eventSlug}" → "${canonicalSlug}" (via ${resolved.via}); Einbettung sollte nachgezogen werden.`);
   }
 
   // Einbettende Seite (Affiliate-Quelle): Plugin übergibt home_url() als ?site=
@@ -175,12 +182,20 @@ export async function GET(request: Request) {
   const linkSuffix = `&embed=1${refHost ? `&ref=${encodeURIComponent(refHost)}` : ''}`;
 
   const base = (event.base_url || process.env.NEXT_PUBLIC_SITE_URL || 'https://next.faltintravel.com').replace(/\/$/, '');
-  const packages = (await getPackagesByEventSlug(eventSlug)).filter((p) => p.active !== false);
+  const packages = (await getPackagesByEventSlug(canonicalSlug)).filter((p) => p.active !== false);
 
   if (packages.length === 0) {
     return NextResponse.json({
       success: true,
-      data: { has_packages: false, count: 0, event_name: event.name || event.title, html: '' },
+      data: {
+        has_packages: false,
+        count: 0,
+        event_name: event.name || event.title,
+        event_slug: canonicalSlug,
+        requested_slug: eventSlug,
+        resolved_via: resolved.via,
+        html: '',
+      },
     });
   }
 
@@ -189,7 +204,7 @@ export async function GET(request: Request) {
   const sportsEventLd: Record<string, unknown> = {
     '@type': 'SportsEvent',
     name: event.name || event.title,
-    url: `${base}/booking?event=${encodeURIComponent(eventSlug)}`,
+    url: `${base}/booking?event=${encodeURIComponent(canonicalSlug)}`,
   };
   if (event.start_date) sportsEventLd.startDate = event.start_date;
   if (event.end_date) sportsEventLd.endDate = event.end_date;
@@ -218,7 +233,7 @@ export async function GET(request: Request) {
           price: Number(p.price || 0),
           priceCurrency: (p.currency || 'EUR').toUpperCase(),
           availability: p.available_spots === 0 ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock',
-          url: `${base}/booking?event=${encodeURIComponent(eventSlug)}&package=${encodeURIComponent(p.slug || p.id)}`,
+          url: `${base}/booking?event=${encodeURIComponent(canonicalSlug)}&package=${encodeURIComponent(p.slug || p.id)}`,
         },
       },
     })),
@@ -264,7 +279,7 @@ document.addEventListener('click',function(e){
 
   const html =
     STYLE +
-    `<div class="ftpk-grid" data-ftv="1.6.4">${packages.map((p) => renderCard(p, base, eventSlug, linkSuffix)).join('')}</div>` +
+    `<div class="ftpk-grid" data-ftv="1.6.4">${packages.map((p) => renderCard(p, base, canonicalSlug, linkSuffix)).join('')}</div>` +
     LIGHTBOX +
     `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`;
 

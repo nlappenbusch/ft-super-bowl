@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import {
-  getEventsList, getEventsBySeriesSlug, getEventBySlug, getSeriesById, eventPath,
+  getEventsList, getEventsBySeriesSlug, resolveEventBySlugLoose, getSeriesById, eventPath,
   type EventRecord,
 } from '@/lib/eventData';
 import { getLoginBaseUrl } from '@/lib/graphMailer';
@@ -44,9 +44,14 @@ export async function GET(req: Request) {
   const base = publicBaseUrl();
 
   if (eventSlug) {
-    const e = await getEventBySlug(eventSlug);
-    if (!e) return NextResponse.json({ success: false, error: 'Event nicht gefunden' }, { status: 404 });
-    return NextResponse.json({ success: true, data: await toPublicEvent(e, base) });
+    // Alte Slugs (Umbenennung/Jahres-Rollover) weiter auflösen — externe
+    // Einbettungen dürfen daran nicht zerbrechen.
+    const hit = await resolveEventBySlugLoose(eventSlug);
+    if (!hit) return NextResponse.json({ success: false, error: 'Event nicht gefunden' }, { status: 404 });
+    if (hit.via !== 'slug') {
+      console.warn(`[events] Veralteter Event-Slug "${eventSlug}" → "${hit.event.slug}" (via ${hit.via}); Einbettung sollte nachgezogen werden.`);
+    }
+    return NextResponse.json({ success: true, data: await toPublicEvent(hit.event, base) });
   }
 
   if (serie) {

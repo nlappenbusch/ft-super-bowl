@@ -290,6 +290,54 @@ export async function getEventBySlug(slug: string): Promise<EventRecord | null> 
   return data as EventRecord;
 }
 
+/** Slug in Basis + vierstelliges Jahr zerlegen ("wimbledon-tickets-2026"). */
+function splitEditionYear(slug: string): { base: string; year: string } | null {
+  const m = /^(.+)-(\d{4})$/.exec(slug || '');
+  return m ? { base: m[1], year: m[2] } : null;
+}
+
+/**
+ * Event-Auflösung für externe Einbettungen (WordPress-Shortcodes, Altlinks,
+ * Lesezeichen). Reihenfolge: exakter Slug → aliases → url_segment →
+ * Jahres-Rollover derselben Edition.
+ *
+ * Hintergrund: Wird ein Event im Admin aufs neue Jahr umbenannt
+ * (wimbledon-tickets-2026 → …-2027), lieferten die Embed-Endpunkte für den
+ * alten Slug einen 404. Das WordPress-Plugin wertete jeden Nicht-200 als
+ * Plattform-Ausfall und blendete daraufhin auf ALLEN Event-Seiten die
+ * Wartungsbox ein. Alte Slugs müssen deshalb weiterleben.
+ */
+export async function resolveEventBySlugLoose(
+  slug: string,
+): Promise<{ event: EventRecord; via: 'slug' | 'alias' | 'segment' | 'edition' } | null> {
+  if (!slug) return null;
+
+  const exact = await getEventBySlug(slug);
+  if (exact) return { event: exact, via: 'slug' };
+
+  const all = await getEventsList();
+  const usable = all.filter((e) => (e.status || 'active') !== 'archived');
+
+  const alias = usable.find((e) => (e.aliases || []).includes(slug));
+  if (alias) return { event: alias, via: 'alias' };
+
+  const bySegment = usable.filter((e) => (e.url_segment || '') === slug);
+  if (bySegment.length === 1) return { event: bySegment[0], via: 'segment' };
+
+  // Jahres-Rollover: gleiche Basis, andere Edition → neuere bevorzugen.
+  const asked = splitEditionYear(slug);
+  if (asked) {
+    const family = usable
+      .filter((e) => splitEditionYear(e.slug || '')?.base === asked.base)
+      .sort((a, b) => (splitEditionYear(b.slug)?.year || '').localeCompare(splitEditionYear(a.slug)?.year || ''));
+    const newer = family.find((e) => (splitEditionYear(e.slug)?.year || '') > asked.year);
+    const hit = newer || family[0];
+    if (hit) return { event: hit, via: 'edition' };
+  }
+
+  return null;
+}
+
 export async function getEventsList(): Promise<EventRecord[]> {
   if (!isSupabaseConfigured() || !supabase) {
     return (getEvents() as EventRecord[]) || [];
