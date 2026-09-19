@@ -7,9 +7,71 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { RefreshCw, Clock, UserRound, Inbox, ListTodo, FileSpreadsheet, Sparkles, AlertCircle, Moon } from 'lucide-react';
+import { RefreshCw, Clock, UserRound, Inbox, ListTodo, FileSpreadsheet, Sparkles, AlertCircle, Moon, BellRing, Check, X, AlarmClock, Bot, Play } from 'lucide-react';
 import { COLORS, Spinner } from '@/components/admin/ui';
-import { api, relTime, type DaySignals } from './types';
+import { api, jsonInit, relTime, type DaySignals, type AgentSummary } from './types';
+
+type NudgeItem = DaySignals['nudges'][number];
+
+/** Erinnerung der Faltin-KI mit direkten Aktionen (Urlaub entscheiden, angehen, später, erledigt). */
+function NudgeCard({ n, onAsk, onDone }: { n: NudgeItem; onAsk: (text: string, context?: string) => void; onDone: () => void }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const act = async (key: string, fn: () => Promise<unknown>) => {
+    setBusy(key); setError(null);
+    try { await fn(); onDone(); } catch (e) { setError((e as Error).message); } finally { setBusy(null); }
+  };
+  const decide = (status: 'genehmigt' | 'abgelehnt') => act(status, async () => {
+    let comment: string | undefined;
+    if (status === 'abgelehnt') {
+      const c = window.prompt('Kurze Begründung für die Ablehnung (geht an die antragstellende Person):');
+      if (c === null) throw new Error('Abgebrochen');
+      comment = c;
+    }
+    try {
+      await api(`/api/admin/vacation/${n.ref_id}`, jsonInit('PATCH', { status, comment, if_status: 'beantragt' }));
+    } finally {
+      // Auch wenn inzwischen jemand anders entschieden hat (409): Erinnerung schliessen, Meldung zeigen.
+      await api(`/api/admin/workspace/nudges/${n.id}`, jsonInit('PATCH', { action: 'resolved' })).catch(() => {});
+    }
+  });
+  const nudgeAction = (action: 'snooze' | 'dismiss') => act(action, () => api(`/api/admin/workspace/nudges/${n.id}`, jsonInit('PATCH', { action })));
+  const vacation = n.kind === 'urlaub_genehmigen';
+  return (
+    <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: n.priority === 'hoch' ? 'rgba(217,83,30,0.4)' : COLORS.stroke, background: n.priority === 'hoch' ? 'rgba(217,83,30,0.04)' : '#fff' }}>
+      <Link href={n.action_url || '#'} className="block text-[13px] font-semibold hover:underline" style={{ color: COLORS.navy }}>{n.title}</Link>
+      <p className="mt-0.5 whitespace-pre-line text-[11px] leading-snug" style={{ color: COLORS.textMuted }}>{n.body}</p>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        {vacation ? (
+          <>
+            <button onClick={() => decide('genehmigt')} disabled={!!busy} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-60" style={{ background: COLORS.ok }}>
+              {busy === 'genehmigt' ? <Spinner className="h-3 w-3" /> : <Check className="h-3 w-3" />} Genehmigen
+            </button>
+            <button onClick={() => decide('abgelehnt')} disabled={!!busy} className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-semibold disabled:opacity-60" style={{ borderColor: COLORS.stroke, color: COLORS.danger }}>
+              {busy === 'abgelehnt' ? <Spinner className="h-3 w-3" /> : <X className="h-3 w-3" />} Ablehnen
+            </button>
+          </>
+        ) : (
+          <button onClick={() => onAsk(n.prompt, `Erinnerung: ${n.title}`)} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-white" style={{ background: COLORS.accent }}>
+            <Sparkles className="h-3 w-3" /> Angehen
+          </button>
+        )}
+        {vacation && (
+          <button onClick={() => onAsk(n.prompt, `Erinnerung: ${n.title}`)} className="rounded-lg px-1.5 py-1 text-[11px] font-medium hover:underline" style={{ color: COLORS.accent }}>KI fragen</button>
+        )}
+        <button onClick={() => nudgeAction('snooze')} disabled={!!busy} title="Bis morgen zurückstellen" className="ml-auto inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-[11px] hover:bg-gray-100" style={{ color: COLORS.textMuted }}>
+          <AlarmClock className="h-3 w-3" /> Später
+        </button>
+        {!vacation && (
+          <button onClick={() => nudgeAction('dismiss')} disabled={!!busy} title="Erledigt – nicht mehr erinnern" className="inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-[11px] hover:bg-gray-100" style={{ color: COLORS.textMuted }}>
+            <Check className="h-3 w-3" /> Erledigt
+          </button>
+        )}
+      </div>
+      {error && error !== 'Abgebrochen' && <p className="mt-1 text-[11px]" style={{ color: COLORS.danger }}>{error}</p>}
+    </div>
+  );
+}
 
 function Section({ icon, title, count, children, empty }: { icon: React.ReactNode; title: string; count: number; children: React.ReactNode; empty?: string }) {
   return (
@@ -42,8 +104,10 @@ function Row({ title, sub, tone, href, onAsk }: { title: string; sub: string; to
   );
 }
 
-export default function TodayPanel({ onAsk, refreshKey }: { onAsk: (text: string, context?: string) => void; refreshKey: number }) {
+export default function TodayPanel({ onAsk, refreshKey, isAdmin }: { onAsk: (text: string, context?: string) => void; refreshKey: number; isAdmin: boolean }) {
   const [s, setS] = useState<DaySignals | null>(null);
+  const [agent, setAgent] = useState<AgentSummary | null>(null);
+  const [agentBusy, setAgentBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,7 +116,15 @@ export default function TodayPanel({ onAsk, refreshKey }: { onAsk: (text: string
     try { setS(await api<DaySignals>('/api/admin/workspace/signals')); setError(null); }
     catch (e) { setError((e as Error).message); }
     finally { setLoading(false); }
+    api<AgentSummary>('/api/admin/workspace/agent').then(setAgent).catch(() => {});
   }, []);
+
+  const runAgent = async () => {
+    setAgentBusy(true);
+    try { await api('/api/admin/workspace/agent', jsonInit('POST', { action: 'run' })); await load(); }
+    catch (e) { setError((e as Error).message); }
+    finally { setAgentBusy(false); }
+  };
 
   useEffect(() => { load(); }, [load, refreshKey]);
   useEffect(() => {
@@ -61,7 +133,7 @@ export default function TodayPanel({ onAsk, refreshKey }: { onAsk: (text: string
   }, [load]);
 
   const dateLabel = s ? new Date(`${s.today}T12:00:00Z`).toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
-  const nothing = s && !s.my_tasks.length && !s.waiting_customers.length && !s.new_requests.length && !s.stale_requests.length && !s.mail.needs_reply;
+  const nothing = s && !s.nudges.length && !s.my_tasks.length && !s.waiting_customers.length && !s.new_requests.length && !s.stale_requests.length && !s.mail.needs_reply;
 
   return (
     <aside className="flex h-full min-h-0 flex-col bg-white" aria-label="Heute">
@@ -83,6 +155,17 @@ export default function TodayPanel({ onAsk, refreshKey }: { onAsk: (text: string
         )}
         {s && (
           <>
+            {s.nudges.length > 0 && (
+              <div className="border-b px-4 py-3" style={{ borderColor: COLORS.stroke, background: 'rgba(217,83,30,0.03)' }}>
+                <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: COLORS.accent }}>
+                  <BellRing className="h-3.5 w-3.5" /> Die Faltin-KI erinnert dich
+                  <span className="ml-auto rounded-full px-1.5 text-[10px]" style={{ background: 'rgba(217,83,30,0.12)' }}>{s.nudges.length}</span>
+                </div>
+                <div className="space-y-2">
+                  {s.nudges.map((n) => <NudgeCard key={n.id} n={n} onAsk={onAsk} onDone={load} />)}
+                </div>
+              </div>
+            )}
             <Section icon={<Clock className="h-3.5 w-3.5" />} title="Kunden warten" count={s.waiting_customers.length} empty="Niemand wartet auf eine Antwort.">
               {s.waiting_customers.map((w) => (
                 <Row key={w.booking_id}
@@ -143,6 +226,22 @@ export default function TodayPanel({ onAsk, refreshKey }: { onAsk: (text: string
           </>
         )}
       </div>
+      {agent && (
+        <div className="flex items-center gap-2 border-t px-4 py-2 text-[11px]" style={{ borderColor: COLORS.stroke, color: COLORS.textMuted }}
+          title={agent.last_run ? `Letzter Lauf ${relTime(agent.last_run.finished_at)}${agent.last_run.errors.length ? ` · ${agent.last_run.errors[0]}` : ''}` : 'Noch kein Lauf'}>
+          <Bot className="h-3.5 w-3.5 shrink-0" style={{ color: agent.enabled ? COLORS.ok : COLORS.textMuted }} />
+          <span className="min-w-0 flex-1 truncate">
+            {agent.enabled
+              ? `KI im Hintergrund (24 h): ${agent.today.mails_triaged} Mails sortiert · ${agent.today.drafts_prepared} Entwürfe · ${agent.today.notifications} Erinnerungen`
+              : 'Hintergrund-Agent ist ausgeschaltet'}
+          </span>
+          {isAdmin && (
+            <button onClick={runAgent} disabled={agentBusy} title="Agent jetzt laufen lassen" className="rounded p-1 hover:bg-gray-100" aria-label="Agent jetzt laufen lassen">
+              {agentBusy ? <Spinner className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+            </button>
+          )}
+        </div>
+      )}
     </aside>
   );
 }

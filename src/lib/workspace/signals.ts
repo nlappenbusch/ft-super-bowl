@@ -9,6 +9,7 @@ import { getAllBookings, listUnansweredBookingInbound } from '../database';
 import { listCalculations } from '../calculationStore';
 import { dbAll } from '../dbq';
 import { ensureWorkspaceSchema } from './schema';
+import { listMyNudges } from './nudges';
 
 const DAY_MS = 24 * 3600 * 1000;
 
@@ -34,6 +35,8 @@ export interface DaySignals {
   stale_requests: Array<{ booking_id: string; request_number: string | null; package: string; customer: string; days_idle: number }>;
   offer_drafts: Array<{ id: string; offer_number: string | null; title: string; customer: string | null; updated_at: string }>;
   mail: { open: number; high: number; needs_reply: number };
+  /** Offene Erinnerungen des Hintergrund-Agenten (Urlaub genehmigen, überfällig, …). */
+  nudges: Array<{ id: string; kind: string; title: string; body: string; ref_id: string; action_url: string; prompt: string; priority: string }>;
 }
 
 type BookingRow = Awaited<ReturnType<typeof getAllBookings>>[number] & { updated_at?: string | null; assigned_to?: string | null };
@@ -105,9 +108,12 @@ export async function collectSignals(employee: Employee | null): Promise<DaySign
     `SELECT priority, needs_reply FROM ws_mail_triage WHERE status = 'offen' AND triaged_at IS NOT NULL`,
   ).catch(() => []);
 
+  const nudges = employee ? await listMyNudges(employee.id).catch(() => []) : [];
+
   return {
     today,
     me: employee ? { id: employee.id, name: employee.name, role: employee.role } : null,
+    nudges: nudges.map((n) => ({ id: n.id, kind: n.kind, title: n.title, body: n.body, ref_id: n.ref_id, action_url: n.action_url, prompt: n.prompt, priority: n.priority })),
     my_tasks: myTasks,
     unassigned_tasks: unassigned,
     waiting_customers: waiting,
@@ -126,6 +132,10 @@ export async function collectSignals(employee: Employee | null): Promise<DaySign
 export function signalsToText(s: DaySignals): string {
   const time = new Intl.DateTimeFormat('de-CH', { timeZone: 'Europe/Zurich', weekday: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date());
   const lines: string[] = [`Heute: ${s.today} (${time} Uhr, Zürich). Person: ${s.me?.name || 'lokaler Admin'} (${s.me?.role || 'admin'}).`];
+  if (s.nudges.length) {
+    lines.push(`Offene Erinnerungen an diese Person (${s.nudges.length}):`);
+    for (const n of s.nudges) lines.push(`- [${n.kind}${n.priority === 'hoch' ? ', dringend' : ''}] ${n.title} — ${n.body.replace(/\n/g, ' · ')}`);
+  }
   lines.push(`Eigene offene Aufgaben (${s.my_tasks.length}):`);
   for (const t of s.my_tasks) lines.push(`- ${t.ticket_no} „${t.title}“ [${t.status}, ${t.priority}${t.due_date ? `, fällig ${t.due_date}${t.overdue ? ' ÜBERFÄLLIG' : ''}` : ''}] (task_id ${t.id})`);
   if (s.unassigned_tasks.length) {

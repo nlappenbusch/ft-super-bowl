@@ -163,7 +163,7 @@ export default function Workspace() {
 
       <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[300px_minmax(0,1fr)_400px] 2xl:grid-cols-[320px_minmax(0,1fr)_440px]">
         <div className={`${vis('heute', true)} min-h-0 flex-col border-r`} style={{ borderColor: COLORS.stroke }}>
-          <TodayPanel onAsk={ask} refreshKey={refreshKey} />
+          <TodayPanel onAsk={ask} refreshKey={refreshKey} isAdmin={!!status?.person.is_admin} />
         </div>
 
         <div className={`${vis('chat', true)} min-h-0 flex-col`}>

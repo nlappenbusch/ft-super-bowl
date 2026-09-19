@@ -25,6 +25,13 @@ export interface DaySignals {
   stale_requests: Array<{ booking_id: string; request_number: string | null; package: string; customer: string; days_idle: number }>;
   offer_drafts: Array<{ id: string; offer_number: string | null; title: string; customer: string | null; updated_at: string }>;
   mail: { open: number; high: number; needs_reply: number };
+  nudges: Array<{ id: string; kind: string; title: string; body: string; ref_id: string; action_url: string; prompt: string; priority: string }>;
+}
+
+export interface AgentSummary {
+  enabled: boolean;
+  last_run: { finished_at: string; errors: string[]; skipped?: string } | null;
+  today: { runs: number; mails_triaged: number; drafts_prepared: number; nudges_created: number; notifications: number; reminder_mails: number };
 }
 
 export interface TriagedMail {

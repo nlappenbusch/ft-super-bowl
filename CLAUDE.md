@@ -85,6 +85,11 @@ Einrichtung (SharePoint-Berechtigung): `docs/KI-ARBEITSPLATZ.md`.
   frühere Nachrichten umschreiben, sonst werden Prompt-Cache und Thinking-Blöcke ungültig.
 - **Tabellen** `ws_*` legt `src/lib/workspace/schema.ts` selbst an (SQLite und Postgres,
   einmal pro Prozess) — bewusst getrennt von `database.ts`/`dbq.ts`.
+- **Hintergrund-Agent** (`agentRunner.ts`, alle 10 min via `instrumentation.ts`, Schalter
+  `settings.ai.workspace_agent_enabled`): Mails sortieren, Antwortvorschläge für dringende
+  Mails, Erinnerungen (`nudges.ts`: Urlaub genehmigen, überfällige/unverteilte Aufgaben,
+  wartende Kunden, Übergabe vor Abwesenheit, Vertretung) → Glocke + „Heute“, Genehmigende
+  zusätzlich täglich per Mail. Neue Erinnerungsart = Regel in `computeDesiredNudges()`.
 
 ## Präsentations-Builder (TASK-00126)
 Folienbasierte Kundendecks im Faltin-Design (16:9, dunkler Grund, Textspalte links,

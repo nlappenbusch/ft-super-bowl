@@ -837,3 +837,35 @@ export function releaseNotesEmailHtml(input: ReleaseNotesInput): string {
   const preheader = input.items.map((i) => i.title).join(' · ').slice(0, 120);
   return layout(inner, preheader);
 }
+
+export interface AgentReminderEmailInput {
+  /** Vorname der empfangenden Person. */
+  firstName: string;
+  items: Array<{ title: string; body: string }>;
+  /** Absoluter Link zum KI-Arbeitsplatz bzw. zur Zielseite. */
+  url: string;
+  buttonLabel: string;
+}
+
+/**
+ * Erinnerungsmail der Faltin-KI (Hintergrund-Agent) — z.B. an Genehmigende, solange
+ * ein Abwesenheitsantrag offen ist. Höchstens einmal täglich je Person.
+ */
+export function agentReminderEmailHtml(input: AgentReminderEmailInput): string {
+  const items = input.items.map((i) => `
+    <div style="margin:12px 0 0;padding:12px 14px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;">
+      <p style="margin:0;font-size:14px;font-weight:700;color:${NAVY};">${escapeHtml(i.title)}</p>
+      <p style="margin:6px 0 0;font-size:13px;line-height:1.6;color:#374151;">${escapeHtml(i.body).replace(/\n/g, '<br>')}</p>
+    </div>`).join('');
+  const inner = `
+    <p style="margin:0 0 4px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;">Faltin-KI · Erinnerung</p>
+    <p style="margin:8px 0 0;font-size:15px;line-height:1.7;color:#374151;">Hallo ${escapeHtml(input.firstName)}, das wartet noch auf dich:</p>
+    ${items}
+    <p style="margin:22px 0 0;">
+      <a href="${input.url}" style="display:inline-block;background:#d9531e;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:10px;">${escapeHtml(input.buttonLabel)}</a>
+    </p>
+    <p style="margin:22px 0 0;font-size:11px;line-height:1.6;color:#9ca3af;">
+      Automatische Erinnerung aus dem KI-Arbeitsplatz. Sie kommt höchstens einmal am Tag, bis die Sache erledigt ist.
+    </p>`;
+  return layout(inner, input.items.map((i) => i.title).join(' · ').slice(0, 120));
+}
