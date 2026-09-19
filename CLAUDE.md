@@ -97,7 +97,8 @@ Bildspalte rechts) — Vorlage ist das gedruckte Ryder-Cup-Deck.
 ## Wichtige Komponenten
 - `src/components/event/EventPageView.tsx` — rendert alle Event-Module (live-editierbar via `EventLiveEditor`).
 - `src/components/PackageCardPro.tsx` — professionelle Paketkarte (Leistungs-Checkliste).
-- `src/components/admin/AdminShell.tsx` — Admin-Layout + Nav (NAV ist hardcoded).
+- `src/components/admin/AdminShell.tsx` — Admin-Layout (Sidebar mit einklappbaren Gruppen, Topbar mit Faltin-KI-Button, `fullBleed` für Vollhöhen-Seiten).
+- `src/components/admin/adminNav.tsx` — **einzige Quelle der Admin-Navigation** (Gruppen, Einträge, Such-Stichworte). Neue Admin-Seite = hier eintragen; Sidebar, Mobile-Drawer und Schnellsuche (`AdminCommandPalette.tsx`, Cmd/Strg+K) ziehen daraus.
 - `src/components/admin/ui.tsx` — Admin-UI-Kit (SectionCard, InputField, SelectInput, Button, Field, Badge…).
 
 ## Branch-Flow / Zusammenarbeit
