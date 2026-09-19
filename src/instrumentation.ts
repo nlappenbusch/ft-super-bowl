@@ -5,6 +5,8 @@
  *   – Inbound-Mail-Polling (alle 120 s), kein externer Cron auf /api/inbound/poll nötig
  *   – Tägliches Team-Briefing (Check alle 5 min; Versand einmal pro Tag ab der
  *     konfigurierten Stunde, dedupliziert über data/briefing-state.json)
+ *   – KI-Arbeitsplatz-Agent (alle 10 min): Mails sortieren, Antwortvorschläge,
+ *     Erinnerungen an Genehmigende/Zuständige (src/lib/workspace/agentRunner.ts)
  *   – Release-Notes-Mail (einmalig ~90 s nach Start = nach jedem Deploy;
  *     kündigt seit dem letzten Lauf gemergte PRs an, ohne neue Merges keine Mail)
  * Läuft nur im Node.js-Runtime-Prozess; Fehler werden geloggt, crashen aber
@@ -17,6 +19,8 @@ const POLL_INTERVAL_MS = 120_000;
 const BRIEFING_CHECK_MS = 300_000;
 const RELEASE_NOTES_DELAY_MS = 90_000;
 const CONTENT_DRIFT_DELAY_MS = 30_000;
+const AGENT_FIRST_RUN_MS = 120_000;
+const AGENT_INTERVAL_MS = 600_000;
 const GLOBAL_KEY = Symbol.for('faltin.inboundPollTimer');
 
 export async function register() {
@@ -62,6 +66,26 @@ export async function register() {
   (briefingTimer as unknown as { unref?: () => void }).unref?.();
 
   console.log(`[daily-briefing] Scheduler aktiv (Check alle ${BRIEFING_CHECK_MS / 1000}s).`);
+
+  // KI-Arbeitsplatz: Hintergrund-Agent (Mail-Sortierung, Antwortvorschläge, Erinnerungen).
+  // Erster Lauf 2 min nach Start, danach alle 10 min; abschaltbar in den Arbeitsplatz-Einstellungen.
+  const { runWorkspaceAgent } = await import('./lib/workspace/agentRunner');
+  const runAgent = async () => {
+    try {
+      const r = await runWorkspaceAgent();
+      if (!r.skipped && (r.mails_triaged || r.drafts_prepared || r.nudges_created || r.notifications || r.errors.length)) {
+        console.log(`[ki-agent] triaged=${r.mails_triaged} drafts=${r.drafts_prepared} nudges=${r.nudges_created} notified=${r.notifications} mails=${r.reminder_mails} errors=${r.errors.length}`);
+        for (const e of r.errors.slice(0, 3)) console.warn('[ki-agent]', e);
+      }
+    } catch (err) {
+      console.error('[ki-agent] Lauf fehlgeschlagen:', err);
+    }
+  };
+  const agentStart = setTimeout(runAgent, AGENT_FIRST_RUN_MS);
+  (agentStart as unknown as { unref?: () => void }).unref?.();
+  const agentTimer = setInterval(runAgent, AGENT_INTERVAL_MS);
+  (agentTimer as unknown as { unref?: () => void }).unref?.();
+  console.log(`[ki-agent] Hintergrund-Agent aktiv (alle ${AGENT_INTERVAL_MS / 60000} min).`);
 
   // Release-Notes einmalig nach dem Start (= nach jedem Deploy, der Container
   // startet neu). Verzögert, damit der Server erst sauber hochgefahren ist.

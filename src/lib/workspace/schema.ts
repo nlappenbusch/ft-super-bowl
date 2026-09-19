@@ -10,6 +10,8 @@
  *   ws_files          Dateien im Chat / aus SharePoint (Anthropic-Files-API-ID + Bytes)
  *   ws_knowledge      Gemeinsames Teamwissen (von Menschen oder der KI festgehalten)
  *   ws_mail_triage    KI-Einordnung der Mails im Postfach (Kategorie, Priorität, Vorschlag)
+ *   ws_nudges         Erinnerungen des Hintergrund-Agenten je Person (Urlaub, Aufgaben, Kunden)
+ *   ws_agent_runs     Protokoll der Agent-Läufe (was die KI selbständig erledigt hat)
  * ─────────────────────────────────────────────────────────────────────────────
  */
 import { sqlite } from '../dbq';
@@ -91,6 +93,33 @@ const TABLES = [
     created_at TEXT NOT NULL DEFAULT {NOW}
   )`,
   `CREATE INDEX IF NOT EXISTS idx_ws_mail_received ON ws_mail_triage(received_at)`,
+  `CREATE TABLE IF NOT EXISTS ws_nudges (
+    id TEXT PRIMARY KEY,
+    dedupe_key TEXT NOT NULL UNIQUE,
+    employee_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    ref_id TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL DEFAULT '',
+    body TEXT NOT NULL DEFAULT '',
+    action_url TEXT NOT NULL DEFAULT '',
+    prompt TEXT NOT NULL DEFAULT '',
+    priority TEXT NOT NULL DEFAULT 'normal',
+    status TEXT NOT NULL DEFAULT 'offen',
+    snooze_until TEXT,
+    notify_count INTEGER NOT NULL DEFAULT 0,
+    last_notified_at TEXT,
+    last_seen_at TEXT,
+    resolved_at TEXT,
+    created_at TEXT NOT NULL DEFAULT {NOW},
+    updated_at TEXT NOT NULL DEFAULT {NOW}
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_ws_nudges_emp ON ws_nudges(employee_id, status)`,
+  `CREATE TABLE IF NOT EXISTS ws_agent_runs (
+    id TEXT PRIMARY KEY,
+    started_at TEXT NOT NULL,
+    finished_at TEXT,
+    summary TEXT NOT NULL DEFAULT '{}'
+  )`,
 ];
 
 let ensured: Promise<void> | null = null;

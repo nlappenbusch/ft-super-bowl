@@ -63,6 +63,9 @@ function greetingFor(name: string): string {
 /** Regelbasierter Check-in (ohne KI oder wenn die KI nicht erreichbar ist). */
 function ruleCheckin(name: string, s: DaySignals): Checkin {
   const items: CheckinItem[] = [];
+  for (const n of s.nudges.filter((x) => x.kind === 'urlaub_genehmigen').slice(0, 2)) {
+    items.push({ kind: 'team', title: 'Genehmigung', question: `${n.title} — magst du das jetzt entscheiden?`, prompt: n.prompt });
+  }
   const w = s.waiting_customers[0];
   if (w) items.push({ kind: 'kunde', title: `${w.request_number || 'Anfrage'} wartet`, question: `${w.customer} wartet seit ${w.days_waiting} Tag(en) auf eine Antwort — hast du das gesehen?`, prompt: `Hilf mir, ${w.request_number || w.booking_id} zu beantworten: Lies den Verlauf und entwirf eine Antwort.` });
   const t = s.my_tasks.find((x) => x.overdue) || s.my_tasks[0];
@@ -97,7 +100,7 @@ export async function getCheckin(input: { ownerKey: string; employee: Employee |
           'message (1–2 Sätze Lagebild, konkret mit Zahlen), items (2–4 Nachfragen, wichtigste zuerst).',
           'Jede Nachfrage: title (2–5 Wörter, z.B. RQ-Nummer oder Ticket), question (eine Frage im Stil „Hast du an … gedacht?“ / „Soll ich …?“, konkret mit Namen/Nummern),',
           'prompt (was die Person der KI im Chat sagen würde, um genau das anzugehen – in Ich-Form, z.B. „Lies den Verlauf von RQ-10042 und entwirf eine Antwort“).',
-          'Priorität: Kunden, die warten > überfällige Aufgaben > neue Anfragen ohne Zuständigkeit > dringende Mails > Angebotsentwürfe.',
+          'Priorität: offene Genehmigungen (z.B. Urlaubsanträge von Kolleg:innen – freundlich, aber bestimmt daran erinnern) > Kunden, die warten > überfällige Aufgaben > neue Anfragen ohne Zuständigkeit > dringende Mails > Angebotsentwürfe.',
           'Wenn wenig los ist, darf ein Punkt (kind "idee") dazu ermutigen, eine Werkzeug-Idee fürs Portal einzubringen.',
           'Deutsch, Schweizer Schreibweise (ss), du-Form, keine Emojis. Nichts erfinden, nur was in den Daten steht.',
         ].join(' '),

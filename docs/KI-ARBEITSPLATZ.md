@@ -41,6 +41,33 @@ Kern ist die **persönliche Faltin-KI**: ein Chat, der die Werkzeuge des Portals
      oder die Such-Region fest setzen (sonst automatisch `CHE`, `EUR`, `NAM`).
    - Lesen: PDFs direkt, Word/Excel/PowerPoint lässt Graph für die KI als PDF rendern.
 
+## Hintergrund-Agent & Erinnerungen
+
+Die Faltin-KI arbeitet auch selbständig (alle 10 Minuten, abschaltbar unter ⚙︎ *Verbindungen*):
+
+1. **Posteingang:** neue Mails in `request@` abholen und einordnen (nur lesen).
+2. **Antwortvorschläge:** für dringende Kundenmails, die eine Antwort brauchen, einen Entwurf
+   vorbereiten (höchstens 2 pro Lauf) — er liegt im Posteingang bereit, gesendet wird nichts.
+3. **Erinnerungen** („die KI nervt, bis es erledigt ist“) — erscheinen oben in „Heute“ mit
+   Direkt-Aktionen und als Glocke (nur Mo–Fr, 7–19 Uhr):
+   - **Abwesenheitsantrag offen** → die zuständige Genehmigungsperson (Team → „Genehmigt
+     Abwesenheiten“); nach 3 Tagen zusätzlich alle Admins. Genehmigen/Ablehnen direkt in der
+     Karte. Solange offen: täglich Glocke + **Erinnerungsmail** (max. 5×).
+   - **Aufgabe überfällig** → Zuständige:r (täglich).
+   - **Aufgabe seit >24 h ohne Zuständigkeit** → Admins.
+   - **Kunde wartet >24 h auf Antwort** → Zuständige:r bzw. Admins (täglich).
+   - **Abwesenheit beginnt in ≤3 Tagen** und es gibt Offenes → die Person selbst
+     (Übergabe mit der KI vorbereiten, Abwesenheitsnotiz).
+   - **Zuständige:r heute abwesend**, Aufgabe bald fällig/hoch → Stellvertretung bzw. Admins.
+   Erinnerungen schliessen sich von selbst, sobald die Bedingung wegfällt. „Später“ stellt bis
+   morgen zurück, „Erledigt“ beendet sie.
+4. **Protokoll:** Fusszeile in „Heute“ zeigt, was die KI in den letzten 24 h erledigt hat;
+   Admins können einen Lauf sofort starten (▶).
+
+Wichtig für den Genehmigungsweg: Neue Microsoft-Logins sind standardmässig **Admin**. Damit
+Genehmigungen greifen, unter *Team & User* die Rollen setzen (Mitarbeiter:in) und je Person
+eintragen, wer Abwesenheiten genehmigt.
+
 ## Technik (Kurzfassung)
 
 - Chat: `POST /api/admin/workspace/chat` → NDJSON-Stream (`meta`, `text`, `tool`, `draft`,
@@ -50,5 +77,7 @@ Kern ist die **persönliche Faltin-KI**: ein Chat, der die Werkzeuge des Portals
   Arbeitsplatz-Werkzeuge `src/lib/workspace/tools.ts`.
 - Dateien werden einmal zur Anthropic-Files-API hochgeladen und per `file_id` referenziert
   (Verlauf bleibt klein und append-only). Löschen eines Chats löscht auch diese Dateien.
-- Tabellen: `ws_conversations`, `ws_messages`, `ws_files`, `ws_knowledge`, `ws_mail_triage`
-  (angelegt durch `src/lib/workspace/schema.ts`).
+- Tabellen: `ws_conversations`, `ws_messages`, `ws_files`, `ws_knowledge`, `ws_mail_triage`,
+  `ws_nudges`, `ws_agent_runs` (angelegt durch `src/lib/workspace/schema.ts`).
+- Agent: `src/lib/workspace/agentRunner.ts` (Scheduler in `src/instrumentation.ts`),
+  Regeln in `src/lib/workspace/nudges.ts`.
