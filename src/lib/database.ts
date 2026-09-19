@@ -300,7 +300,8 @@ export function initDatabase() {
       vacation_days_per_year REAL NOT NULL DEFAULT 25,
       employment_start TEXT,
       notes TEXT NOT NULL DEFAULT '',
-      briefing_opt_out INTEGER NOT NULL DEFAULT 0
+      briefing_opt_out INTEGER NOT NULL DEFAULT 0,
+      approver_id TEXT
     );
 
     CREATE TABLE IF NOT EXISTS time_entries (
@@ -328,6 +329,8 @@ export function initDatabase() {
       comment TEXT NOT NULL DEFAULT '',
       decided_by TEXT,
       decided_at TEXT,
+      substitute_id TEXT,
+      decision_comment TEXT NOT NULL DEFAULT '',
       FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
     );
 
@@ -532,6 +535,11 @@ export function initDatabase() {
   if (ccols.length && !ccols.some((c) => c.name === 'last_name')) addColumn('customers', "last_name TEXT DEFAULT ''");
   const ecols = sqlite.prepare(`PRAGMA table_info(employees)`).all() as Array<{ name: string }>;
   if (ecols.length && !ecols.some((c) => c.name === 'briefing_opt_out')) addColumn('employees', 'briefing_opt_out INTEGER NOT NULL DEFAULT 0');
+  // Urlaubsplanung 2.0: Genehmigungsweg (wer genehmigt wen), Stellvertretung, Entscheid-Kommentar
+  if (ecols.length && !ecols.some((c) => c.name === 'approver_id')) addColumn('employees', 'approver_id TEXT');
+  const vcols = sqlite.prepare(`PRAGMA table_info(vacation_requests)`).all() as Array<{ name: string }>;
+  if (vcols.length && !vcols.some((c) => c.name === 'substitute_id')) addColumn('vacation_requests', 'substitute_id TEXT');
+  if (vcols.length && !vcols.some((c) => c.name === 'decision_comment')) addColumn('vacation_requests', "decision_comment TEXT NOT NULL DEFAULT ''");
 
   // Ticket-System: fortlaufende Ticketnummer + Zeit-Datum (Bestands-DBs nachrüsten)
   const stcols = sqlite.prepare(`PRAGMA table_info(staff_tasks)`).all() as Array<{ name: string }>;

@@ -9,8 +9,9 @@ import { dbGet, dbAll, dbRun, withTx, type Q } from './dbq';
 import './database';
 import {
   WeeklyHours, DEFAULT_WEEKLY_HOURS,
-  targetHoursForDate, workingDaysBetween, zhHolidays,
+  targetHoursForDate, workingDaysBetween, zhHolidays, eachDay, isZhHoliday,
 } from './holidays';
+import { VACATION_TYPE_LABEL, fmtDayDe, fmtRangeDe, fmtNumDe } from './vacationFormat';
 
 // ==================== EMPLOYEES ====================
 
@@ -28,6 +29,11 @@ export interface Employee {
   notes: string;
   /** Kein tägliches Briefing per Mail erhalten (TASK-00103). */
   briefing_opt_out: boolean;
+  /**
+   * Wer die Abwesenheiten dieser Person genehmigt (employee id). null = alle aktiven
+   * Admins. Siehe getVacationApprovers() für die vollständige Regel.
+   */
+  approver_id: string | null;
 }
 
 interface EmployeeRow {
@@ -35,6 +41,7 @@ interface EmployeeRow {
   name: string; email: string; role: 'admin' | 'mitarbeiter';
   active: number; weekly_hours: string; vacation_days_per_year: number;
   employment_start: string | null; notes: string; briefing_opt_out: number;
+  approver_id?: string | null;
 }
 
 function rowToEmployee(r: EmployeeRow): Employee {
@@ -43,7 +50,10 @@ function rowToEmployee(r: EmployeeRow): Employee {
     const parsed = JSON.parse(r.weekly_hours);
     if (Array.isArray(parsed) && parsed.length === 7) weekly = parsed as WeeklyHours;
   } catch { /* default */ }
-  return { ...r, active: !!r.active, weekly_hours: weekly, briefing_opt_out: !!r.briefing_opt_out };
+  return {
+    ...r, active: !!r.active, weekly_hours: weekly, briefing_opt_out: !!r.briefing_opt_out,
+    approver_id: r.approver_id || null,
+  };
 }
 
 /** Upsert beim Microsoft-Login: legt Mitarbeiter an bzw. aktualisiert Name/E-Mail/Login-Zeit. */
@@ -81,6 +91,8 @@ export interface EmployeeUpdate {
   notes?: string;
   name?: string;
   briefing_opt_out?: boolean;
+  /** Genehmiger:in für Abwesenheiten; null/'' = alle Admins. */
+  approver_id?: string | null;
 }
 
 export async function updateEmployee(id: string, u: EmployeeUpdate): Promise<Employee | null> {
@@ -89,7 +101,7 @@ export async function updateEmployee(id: string, u: EmployeeUpdate): Promise<Emp
   await dbRun(`
     UPDATE employees SET
       role = ?, active = ?, weekly_hours = ?, vacation_days_per_year = ?,
-      employment_start = ?, notes = ?, name = ?, briefing_opt_out = ?
+      employment_start = ?, notes = ?, name = ?, briefing_opt_out = ?, approver_id = ?
     WHERE id = ?
   `, [
     u.role ?? cur.role,
@@ -100,6 +112,7 @@ export async function updateEmployee(id: string, u: EmployeeUpdate): Promise<Emp
     u.notes ?? cur.notes,
     u.name ?? cur.name,
     (u.briefing_opt_out ?? cur.briefing_opt_out) ? 1 : 0,
+    u.approver_id !== undefined ? (u.approver_id && u.approver_id !== id ? u.approver_id : null) : cur.approver_id,
     id,
   ]);
   return getEmployee(id);
@@ -276,11 +289,35 @@ export interface VacationRequest {
   comment: string;
   decided_by: string | null;
   decided_at: string | null;
+  /** Stellvertretung während der Abwesenheit (employee id). */
+  substitute_id: string | null;
+  /** Kommentar der entscheidenden Person (Genehmigung/Ablehnung). */
+  decision_comment: string;
 }
 
+export const VACATION_TYPES: ReadonlyArray<VacationRequest['type']> = ['urlaub', 'krankheit', 'kompensation', 'sonstiges'];
+
+/** decided_by für Krankmeldungen: Krankheit wird gemeldet, nicht genehmigt. */
+export const SICKNESS_DECIDED_BY = 'System (Krankmeldung)';
+
+function normVacation(r: VacationRequest): VacationRequest {
+  return { ...r, substitute_id: r.substitute_id || null, decision_comment: r.decision_comment || '' };
+}
+
+export async function getVacationRequest(id: string): Promise<VacationRequest | null> {
+  const r = await dbGet<VacationRequest>('SELECT * FROM vacation_requests WHERE id = ?', [id]);
+  return r ? normVacation(r) : null;
+}
+
+/**
+ * Legt eine Abwesenheit an. Typ 'krankheit' wird direkt als 'genehmigt' erfasst
+ * (decided_by = SICKNESS_DECIDED_BY) — Krankheit wird gemeldet, nicht genehmigt.
+ * Berechtigungen prüft der Aufrufer (Route), nicht der Store.
+ */
 export async function createVacationRequest(input: {
   employee_id: string; start_date: string; end_date: string;
   type?: VacationRequest['type']; comment?: string; half_day?: boolean;
+  substitute_id?: string | null;
 }): Promise<VacationRequest | null> {
   const emp = await getEmployee(input.employee_id);
   if (!emp || input.end_date < input.start_date) return null;
@@ -288,19 +325,31 @@ export async function createVacationRequest(input: {
   const days = (input.half_day && input.start_date === input.end_date)
     ? 0.5
     : workingDaysBetween(input.start_date, input.end_date, emp.weekly_hours);
+  const type = input.type || 'urlaub';
+  const sick = type === 'krankheit';
+  const substitute = input.substitute_id && input.substitute_id !== input.employee_id ? input.substitute_id : null;
   const id = crypto.randomUUID();
   await dbRun(`
-    INSERT INTO vacation_requests (id, employee_id, start_date, end_date, days, type, comment)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `, [id, input.employee_id, input.start_date, input.end_date, days, input.type || 'urlaub', input.comment || '']);
-  return (await dbGet<VacationRequest>('SELECT * FROM vacation_requests WHERE id = ?', [id])) ?? null;
+    INSERT INTO vacation_requests (id, employee_id, start_date, end_date, days, type, comment, status, decided_by, decided_at, substitute_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
+    id, input.employee_id, input.start_date, input.end_date, days, type, input.comment || '',
+    sick ? 'genehmigt' : 'beantragt', sick ? SICKNESS_DECIDED_BY : null, sick ? new Date().toISOString() : null,
+    substitute,
+  ]);
+  return getVacationRequest(id);
 }
 
-export async function decideVacation(id: string, status: 'genehmigt' | 'abgelehnt', decidedBy: string): Promise<VacationRequest | null> {
-  const r = await dbGet<VacationRequest>('SELECT * FROM vacation_requests WHERE id = ?', [id]);
+export async function decideVacation(
+  id: string, status: 'genehmigt' | 'abgelehnt', decidedBy: string, comment?: string,
+): Promise<VacationRequest | null> {
+  const r = await getVacationRequest(id);
   if (!r) return null;
-  await dbRun(`UPDATE vacation_requests SET status = ?, decided_by = ?, decided_at = ? WHERE id = ?`, [status, decidedBy, new Date().toISOString(), id]);
-  return (await dbGet<VacationRequest>('SELECT * FROM vacation_requests WHERE id = ?', [id])) ?? null;
+  await dbRun(
+    `UPDATE vacation_requests SET status = ?, decided_by = ?, decided_at = ?, decision_comment = ? WHERE id = ?`,
+    [status, decidedBy, new Date().toISOString(), (comment || '').trim().slice(0, 2000), id],
+  );
+  return getVacationRequest(id);
 }
 
 export async function deleteVacationRequest(id: string): Promise<boolean> {
@@ -309,16 +358,16 @@ export async function deleteVacationRequest(id: string): Promise<boolean> {
 
 export async function listVacations(year: number, employeeId?: string): Promise<VacationRequest[]> {
   const from = `${year}-01-01`, to = `${year}-12-31`;
-  if (employeeId) {
-    return dbAll<VacationRequest>(
+  const rows = employeeId
+    ? await dbAll<VacationRequest>(
       `SELECT * FROM vacation_requests WHERE employee_id = ? AND end_date >= ? AND start_date <= ? ORDER BY start_date`,
       [employeeId, from, to]
+    )
+    : await dbAll<VacationRequest>(
+      `SELECT * FROM vacation_requests WHERE end_date >= ? AND start_date <= ? ORDER BY start_date`,
+      [from, to]
     );
-  }
-  return dbAll<VacationRequest>(
-    `SELECT * FROM vacation_requests WHERE end_date >= ? AND start_date <= ? ORDER BY start_date`,
-    [from, to]
-  );
+  return rows.map(normVacation);
 }
 
 export interface VacationBalance {
@@ -371,6 +420,314 @@ export async function vacationPlanner(year: number) {
     });
   }
   return { year, holidays: zhHolidays(year), employees: employeesOut };
+}
+
+// ==================== URLAUB: GENEHMIGUNGSWEG ====================
+
+/**
+ * Genehmiger:innen aus einer bereits geladenen Mitarbeiterliste (inkl. inaktiver):
+ *  1. employees.approver_id — sofern aktiv und nicht die Person selbst,
+ *  2. sonst alle aktiven Admins ausser der Person selbst.
+ */
+function resolveApprovers(employeeId: string, all: Employee[]): Employee[] {
+  const emp = all.find((e) => e.id === employeeId);
+  if (emp?.approver_id && emp.approver_id !== employeeId) {
+    const a = all.find((e) => e.id === emp.approver_id);
+    if (a?.active) return [a];
+  }
+  return all.filter((e) => e.active && e.role === 'admin' && e.id !== employeeId);
+}
+
+/**
+ * Wer die Abwesenheiten von employeeId genehmigt: die hinterlegte Genehmiger:in
+ * (approver_id, falls aktiv und nicht die Person selbst), sonst alle aktiven Admins
+ * ausser der Person selbst. Leere Liste = es gibt niemanden sonst (z.B. einzige
+ * Admin-Person) → die Person darf ihre eigenen Anträge als Rückfall selbst entscheiden.
+ */
+export async function getVacationApprovers(employeeId: string): Promise<Employee[]> {
+  return resolveApprovers(employeeId, await listEmployees(true));
+}
+
+/** Handelnde Person für Urlaubs-Entscheide. */
+export interface VacationActor {
+  /** Mitarbeiter-ID; null = lokaler Admin-Login ohne Mitarbeiterprofil. */
+  employee_id: string | null;
+  /** Aktive Admin-Rolle (bzw. lokaler Admin). */
+  is_admin: boolean;
+}
+
+export interface VacationDecisionRight {
+  allowed: boolean;
+  /** Entscheid über den eigenen Antrag, weil es sonst niemanden gibt (Rückfall). */
+  self_fallback: boolean;
+  /** Handelnde Person ist zuständig (Genehmigungsweg) – nicht bloss über die Admin-Rolle berechtigt. */
+  responsible: boolean;
+  approvers: Employee[];
+  /** Deutsche Begründung, falls nicht erlaubt. */
+  reason?: string;
+}
+
+function decisionRightFrom(actor: VacationActor, requesterId: string, all: Employee[]): VacationDecisionRight {
+  const approvers = resolveApprovers(requesterId, all);
+  const names = approvers.map((a) => a.name).join(', ');
+  if (actor.employee_id && actor.employee_id === requesterId) {
+    if (approvers.length === 0) return { allowed: true, self_fallback: true, responsible: true, approvers };
+    return {
+      allowed: false, self_fallback: false, responsible: false, approvers,
+      reason: `Eigene Anträge kannst du nicht selbst entscheiden – zuständig: ${names}.`,
+    };
+  }
+  const responsible = !!actor.employee_id && approvers.some((a) => a.id === actor.employee_id);
+  if (responsible || actor.is_admin) return { allowed: true, self_fallback: false, responsible, approvers };
+  const requester = all.find((e) => e.id === requesterId);
+  return {
+    allowed: false, self_fallback: false, responsible: false, approvers,
+    reason: `Du bist nicht für die Abwesenheiten von ${requester?.name || 'dieser Person'} zuständig (zuständig: ${names || 'Admins'}).`,
+  };
+}
+
+/**
+ * Darf actor über Anträge von requesterId entscheiden?
+ * Erlaubt: zuständige Genehmiger:in oder Admin — nie der eigene Antrag,
+ * ausser es gibt sonst niemanden (self_fallback).
+ */
+export async function vacationDecisionRight(actor: VacationActor, requesterId: string): Promise<VacationDecisionRight> {
+  return decisionRightFrom(actor, requesterId, await listEmployees(true));
+}
+
+/**
+ * Offene Anträge (status 'beantragt'), die approverEmployeeId entscheiden darf.
+ * Standard: nur die, für die die Person laut Genehmigungsweg zuständig ist (inkl.
+ * Selbst-Rückfall) — das, woran ein Erinnerungs-Agent erinnern soll.
+ * `includeAdminScope`: zusätzlich alle, die sie kraft Admin-Rolle entscheiden dürfte.
+ */
+export async function listPendingVacationsForApprover(
+  approverEmployeeId: string, opts?: { includeAdminScope?: boolean },
+): Promise<VacationRequest[]> {
+  const all = await listEmployees(true);
+  const me = all.find((e) => e.id === approverEmployeeId);
+  if (!me || !me.active) return [];
+  const actor: VacationActor = { employee_id: me.id, is_admin: !!opts?.includeAdminScope && me.role === 'admin' };
+  const pending = await dbAll<VacationRequest>(
+    `SELECT * FROM vacation_requests WHERE status = 'beantragt' ORDER BY start_date, created_at`
+  );
+  return pending.map(normVacation).filter((v) => decisionRightFrom(actor, v.employee_id, all).allowed);
+}
+
+export interface AbsenceWithEmployee extends VacationRequest {
+  employee_name: string;
+  employee_email: string;
+  substitute_name: string | null;
+}
+
+/**
+ * Abwesenheiten aktiver Mitarbeitender, die den Zeitraum [fromIso, toIso] berühren —
+ * genehmigt UND beantragt (abgelehnte nicht), sortiert nach Beginn.
+ */
+export async function listUpcomingAbsences(fromIso: string, toIso: string): Promise<AbsenceWithEmployee[]> {
+  const rows = await dbAll<AbsenceWithEmployee>(`
+    SELECT v.*, e.name AS employee_name, e.email AS employee_email, s.name AS substitute_name
+    FROM vacation_requests v
+    JOIN employees e ON e.id = v.employee_id
+    LEFT JOIN employees s ON s.id = v.substitute_id
+    WHERE v.status != 'abgelehnt' AND e.active = 1 AND v.start_date <= ? AND v.end_date >= ?
+    ORDER BY v.start_date, lower(e.name)
+  `, [toIso, fromIso]);
+  return rows.map((r) => ({ ...normVacation(r), employee_name: r.employee_name, employee_email: r.employee_email || '', substitute_name: r.substitute_name || null }));
+}
+
+// ==================== URLAUB: ÜBERSCHNEIDUNGEN / BESETZUNG ====================
+
+export interface VacationConflictAbsence {
+  id: string;
+  employee_id: string;
+  employee_name: string;
+  start_date: string;
+  end_date: string;
+  days: number;
+  type: VacationRequest['type'];
+  status: 'beantragt' | 'genehmigt';
+  /** Diese Person ist die gewählte Stellvertretung. */
+  is_substitute: boolean;
+}
+
+export interface VacationCoverageDay {
+  date: string;
+  /** Aktive Mitarbeitende ohne Abwesenheit an diesem Tag. */
+  present: number;
+  /** Teamgrösse (alle aktiven Mitarbeitenden). */
+  total: number;
+  /** Abwesende an diesem Tag (inkl. antragstellender Person). */
+  absent_names: string[];
+}
+
+export interface VacationConflicts {
+  employee_id: string;
+  start: string;
+  end: string;
+  /** Arbeitstage, die der Antrag kostet. */
+  requested_days: number;
+  team_size: number;
+  /** Andere aktive Mitarbeitende, die im Zeitraum abwesend sind (genehmigt + beantragt). */
+  absences: VacationConflictAbsence[];
+  /** Eigene bestehende Abwesenheiten, die den Zeitraum überschneiden. */
+  own_overlaps: VacationRequest[];
+  /** Je Arbeitstag im Zeitraum (ohne Wochenenden und ZH-Feiertage). */
+  coverage: VacationCoverageDay[];
+  /** Nur Typ 'urlaub': Saldo je betroffenem Jahr nach diesem Antrag und allen offenen. */
+  balance_after: Array<{ year: number; remaining: number; pending: number; requested: number; after: number }>;
+  /** Hinweise auf Deutsch (Stellvertretung abwesend, halbes Team weg, Saldo negativ …). */
+  warnings: string[];
+}
+
+const MAX_CROWDED_DAY_WARNINGS = 3;
+
+/**
+ * Überschneidungs-/Besetzungsprüfung für eine (geplante oder offene) Abwesenheit.
+ * `excludeRequestId`: bei bestehenden Anträgen den Antrag selbst nicht doppelt zählen.
+ */
+export async function vacationConflicts(
+  employeeId: string,
+  start: string,
+  end: string,
+  opts: { substituteId?: string | null; type?: VacationRequest['type']; halfDay?: boolean; excludeRequestId?: string } = {},
+): Promise<VacationConflicts> {
+  const out: VacationConflicts = {
+    employee_id: employeeId, start, end, requested_days: 0, team_size: 0,
+    absences: [], own_overlaps: [], coverage: [], balance_after: [], warnings: [],
+  };
+  const all = await listEmployees(true);
+  const emp = all.find((e) => e.id === employeeId);
+  const active = all.filter((e) => e.active);
+  out.team_size = active.length;
+  if (!emp || !start || !end || end < start) return out;
+
+  const type = opts.type || 'urlaub';
+  const halfDay = !!opts.halfDay && start === end;
+  out.requested_days = halfDay ? 0.5 : workingDaysBetween(start, end, emp.weekly_hours);
+  if (out.requested_days === 0) {
+    out.warnings.push('Im gewählten Zeitraum liegen keine Arbeitstage (Wochenende/Feiertag).');
+  }
+
+  const rows = (await dbAll<VacationRequest>(
+    `SELECT * FROM vacation_requests WHERE status != 'abgelehnt' AND start_date <= ? AND end_date >= ? ORDER BY start_date`,
+    [end, start]
+  )).map(normVacation).filter((v) => v.id !== opts.excludeRequestId);
+
+  const activeIds = new Set(active.map((e) => e.id));
+  const nameOf = (id: string) => all.find((e) => e.id === id)?.name || 'Unbekannt';
+  const subId = opts.substituteId || null;
+
+  // Eigene Überschneidungen
+  out.own_overlaps = rows.filter((v) => v.employee_id === employeeId);
+  for (const v of out.own_overlaps) {
+    out.warnings.push(`Überschneidet sich mit eigener Abwesenheit: ${VACATION_TYPE_LABEL[v.type]} ${fmtRangeDe(v.start_date, v.end_date)} (${v.status}).`);
+  }
+
+  // Kolleg:innen, die im Zeitraum abwesend sind
+  out.absences = rows
+    .filter((v) => v.employee_id !== employeeId && activeIds.has(v.employee_id))
+    .map((v) => ({
+      id: v.id, employee_id: v.employee_id, employee_name: nameOf(v.employee_id),
+      start_date: v.start_date, end_date: v.end_date, days: v.days, type: v.type,
+      status: v.status as 'beantragt' | 'genehmigt', is_substitute: !!subId && v.employee_id === subId,
+    }));
+
+  // Stellvertretung
+  if (subId) {
+    const sub = all.find((e) => e.id === subId);
+    if (subId === employeeId) out.warnings.push('Die Stellvertretung kann nicht die abwesende Person selbst sein.');
+    else if (!sub) out.warnings.push('Die gewählte Stellvertretung existiert nicht (mehr).');
+    else if (!sub.active) out.warnings.push(`Stellvertretung ${sub.name} ist nicht mehr aktiv.`);
+    else {
+      for (const a of out.absences.filter((x) => x.is_substitute)) {
+        out.warnings.push(`Stellvertretung ${sub.name} ist in diesem Zeitraum selbst abwesend: ${VACATION_TYPE_LABEL[a.type]} ${fmtRangeDe(a.start_date, a.end_date)} (${a.status}).`);
+      }
+    }
+  }
+
+  // Besetzung je Arbeitstag (ohne Wochenenden und ZH-Feiertage)
+  const crowded: VacationCoverageDay[] = [];
+  for (const day of eachDay(start, end)) {
+    const dow = new Date(`${day}T00:00:00Z`).getUTCDay();
+    if (dow === 0 || dow === 6 || isZhHoliday(day)) continue;
+    const absentNames: string[] = [];
+    for (const e of active) {
+      const away = e.id === employeeId
+        || rows.some((v) => v.employee_id === e.id && v.start_date <= day && v.end_date >= day);
+      if (away) absentNames.push(e.name);
+    }
+    const c: VacationCoverageDay = { date: day, present: active.length - absentNames.length, total: active.length, absent_names: absentNames };
+    out.coverage.push(c);
+    if (c.total >= 2 && absentNames.length * 2 > c.total) crowded.push(c);
+  }
+  for (const c of crowded.slice(0, MAX_CROWDED_DAY_WARNINGS)) {
+    out.warnings.push(`Am ${fmtDayDe(c.date)} wären ${c.total - c.present} von ${c.total} abwesend (${c.absent_names.join(', ')}).`);
+  }
+  if (crowded.length > MAX_CROWDED_DAY_WARNINGS) {
+    out.warnings.push(`… und an ${crowded.length - MAX_CROWDED_DAY_WARNINGS} weiteren Tagen wäre mehr als die Hälfte des Teams abwesend.`);
+  }
+
+  // Urlaubssaldo (nur Urlaub zählt gegen den Anspruch)
+  if (type === 'urlaub') {
+    const self = opts.excludeRequestId ? await getVacationRequest(opts.excludeRequestId) : null;
+    const y0 = parseInt(start.slice(0, 4), 10), y1 = parseInt(end.slice(0, 4), 10);
+    for (let y = y0; y <= y1; y++) {
+      const from = start > `${y}-01-01` ? start : `${y}-01-01`;
+      const to = end < `${y}-12-31` ? end : `${y}-12-31`;
+      const requested = halfDay ? 0.5 : workingDaysBetween(from, to, emp.weekly_hours);
+      const bal = await vacationBalance(emp, y);
+      let pending = bal.pending;
+      if (self && self.employee_id === employeeId && self.type === 'urlaub' && self.status === 'beantragt') {
+        pending = r2(pending - daysInYear(self, y, emp.weekly_hours));
+      }
+      const after = r2(bal.remaining - pending - requested);
+      out.balance_after.push({ year: y, remaining: bal.remaining, pending, requested, after });
+      if (after < 0) {
+        out.warnings.push(
+          `Urlaubssaldo ${y} würde negativ (${fmtNumDe(after)} Tage): ${fmtNumDe(bal.remaining)} übrig`
+          + `${pending > 0 ? `, ${fmtNumDe(pending)} bereits beantragt` : ''}, dieser Antrag ${fmtNumDe(requested)}.`
+        );
+      }
+    }
+  }
+  return out;
+}
+
+/** Offener Antrag inkl. Kontext für die Genehmigungsansicht. */
+export interface PendingVacationForActor extends VacationRequest {
+  employee_name: string;
+  substitute_name: string | null;
+  approver_names: string[];
+  /** Handelnde Person ist laut Genehmigungsweg zuständig (sonst nur via Admin-Rolle). */
+  responsible: boolean;
+  self_fallback: boolean;
+  conflicts: VacationConflicts;
+}
+
+/** Alle offenen Anträge, über die actor entscheiden darf — mit Überschneidungsprüfung. */
+export async function listPendingVacationsForActor(actor: VacationActor): Promise<PendingVacationForActor[]> {
+  const all = await listEmployees(true);
+  const pending = (await dbAll<VacationRequest>(
+    `SELECT * FROM vacation_requests WHERE status = 'beantragt' ORDER BY start_date, created_at`
+  )).map(normVacation);
+  const out: PendingVacationForActor[] = [];
+  for (const v of pending) {
+    const right = decisionRightFrom(actor, v.employee_id, all);
+    if (!right.allowed) continue;
+    out.push({
+      ...v,
+      employee_name: all.find((e) => e.id === v.employee_id)?.name || 'Unbekannt',
+      substitute_name: v.substitute_id ? all.find((e) => e.id === v.substitute_id)?.name || null : null,
+      approver_names: right.approvers.map((a) => a.name),
+      responsible: right.responsible,
+      self_fallback: right.self_fallback,
+      conflicts: await vacationConflicts(v.employee_id, v.start_date, v.end_date, {
+        substituteId: v.substitute_id, type: v.type, halfDay: v.days === 0.5, excludeRequestId: v.id,
+      }),
+    });
+  }
+  return out;
 }
 
 // ==================== STAFF TASKS ====================
