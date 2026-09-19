@@ -3,7 +3,8 @@ import type { NextRequest } from 'next/server';
 import { verifySessionToken, SESSION_COOKIE } from '@/lib/auth';
 
 /**
- * Schützt /admin und /api/admin. Ohne gültige Session → Login (Seiten) bzw. 401 (API).
+ * Schützt /admin, /api/admin und den KI-Arbeitsplatz /working-dashboard.
+ * Ohne gültige Session → Login (Seiten) bzw. 401 (API).
  * /admin/login und /api/auth/* bleiben offen.
  */
 export async function middleware(req: NextRequest) {
@@ -27,5 +28,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*'],
+  matcher: ['/admin/:path*', '/api/admin/:path*', '/working-dashboard/:path*'],
 };

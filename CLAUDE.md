@@ -64,6 +64,28 @@ Laufzeit-Lesen Content: `src/lib/contentStore.ts` (`findPackagesByEvent` etc.).
 - Endpoints: `/api/admin/ai/{config,status,import,fetch}`. Admin-Seite: `/admin/ai`.
 - Modul-Registry (`MODULE_SPECS`) definiert Ziel-JSON pro Modul (intro/highlights/seo/leistungen/wissenswertes/faq).
 
+## KI-Arbeitsplatz `/working-dashboard` (persönliche Faltin-KI)
+Arbeitsplatz für alle Mitarbeitenden (Startseite nach dem Login): Chat mit der persönlichen
+Faltin-KI, „Heute“-Übersicht, KI-sortierter Posteingang, Teamwissen, Werkstatt. Details und
+Einrichtung (SharePoint-Berechtigung): `docs/KI-ARBEITSPLATZ.md`.
+
+- **Code:** `src/lib/workspace/*` (Server), `src/components/workspace/*` (UI),
+  `src/app/api/admin/workspace/*` (API, durch die Middleware geschützt), Seite
+  `src/app/working-dashboard/page.tsx` (Middleware-Matcher + NavBar/Footer-Ausnahme).
+- **Werkzeuge:** `src/lib/portalTools.ts` ist die gemeinsame Werkzeug-Registry für den
+  MCP-Server UND die Faltin-KI (nur `ToolContext` unterscheidet sich). Neues Portal-Werkzeug =
+  dort eintragen → steht beiden zur Verfügung. Arbeitsplatz-eigene Werkzeuge (Posteingang,
+  SharePoint, Teamwissen, Werkstatt, Entwürfe) in `src/lib/workspace/tools.ts`.
+- **KI-Regeln (hart):** versendet NIE selbst Mails (nur `prepare_reply_draft` → Mensch sendet
+  per Klick bzw. Outlook-Entwurf), erzeugt keine Rechnungen (`create_invoice_from_offer`
+  ausgeschlossen). Postfach wird nur gelesen — Gelesen-Status bleibt unberührt (Inbound-Poll!).
+- **Modell/SDK:** `@anthropic-ai/sdk`, Modell aus `settings.ai.workspace_model` (Standard
+  `claude-opus-5`), Server-Fallback bei Ablehnungen (`fallbacks: 'default'`). Chatverlauf ist
+  **append-only** (System-Prompt pro Chat eingefroren, Dateien per Files-API-`file_id`) — nie
+  frühere Nachrichten umschreiben, sonst werden Prompt-Cache und Thinking-Blöcke ungültig.
+- **Tabellen** `ws_*` legt `src/lib/workspace/schema.ts` selbst an (SQLite und Postgres,
+  einmal pro Prozess) — bewusst getrennt von `database.ts`/`dbq.ts`.
+
 ## Präsentations-Builder (TASK-00126)
 Folienbasierte Kundendecks im Faltin-Design (16:9, dunkler Grund, Textspalte links,
 Bildspalte rechts) — Vorlage ist das gedruckte Ryder-Cup-Deck.

@@ -96,6 +96,14 @@ export interface AiSettings {
   anthropic_api_key: string;
   /** Modell-ID, z.B. claude-sonnet-4-6 */
   model: string;
+  /** KI-Arbeitsplatz (/working-dashboard): Modell der persönlichen Faltin-KI. */
+  workspace_model?: string;
+  /** KI-Arbeitsplatz: Hintergrund-Agent (Mail-Sortierung, Erinnerungen) aktiv. */
+  workspace_agent_enabled?: boolean;
+  /** SharePoint-Suche (App-only Graph): Region für /search/query, z.B. CHE oder EUR. Leer = automatisch. */
+  sharepoint_region?: string;
+  /** Optional: SharePoint-Site-URLs (eine pro Zeile), auf die die Suche beschränkt wird. */
+  sharepoint_sites?: string;
 }
 
 export interface GithubSettings {
@@ -229,6 +237,10 @@ const DEFAULT_SETTINGS: AllSettings = {
   ai: {
     anthropic_api_key: '',
     model: 'claude-sonnet-4-6',
+    workspace_model: 'claude-opus-5',
+    workspace_agent_enabled: true,
+    sharepoint_region: '',
+    sharepoint_sites: '',
   },
   github: {
     token: '',

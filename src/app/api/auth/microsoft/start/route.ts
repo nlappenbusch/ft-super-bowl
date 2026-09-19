@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { OAUTH_STATE_COOKIE, isSecureRequest } from '@/lib/auth';
+import { OAUTH_STATE_COOKIE, OAUTH_RETURN_COOKIE, isSecureRequest, safeReturnPath } from '@/lib/auth';
 import { siteConfig } from '@/lib/siteConfig';
 import { getGraphCredentials, getLoginBaseUrl } from '@/lib/graphMailer';
 
@@ -34,5 +34,7 @@ export async function GET(req: Request) {
 
   const res = NextResponse.redirect(`https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize?${params.toString()}`);
   res.cookies.set(OAUTH_STATE_COOKIE, state, { httpOnly: true, sameSite: 'lax', secure: isSecureRequest(req), path: '/', maxAge: 600 });
+  const from = safeReturnPath(new URL(req.url).searchParams.get('from'));
+  if (from) res.cookies.set(OAUTH_RETURN_COOKIE, from, { httpOnly: true, sameSite: 'lax', secure: isSecureRequest(req), path: '/', maxAge: 600 });
   return res;
 }

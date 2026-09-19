@@ -7,6 +7,16 @@
 export const SESSION_COOKIE = 'ft_session';
 export const SESSION_MAX_AGE = 60 * 60 * 12; // 12h
 export const OAUTH_STATE_COOKIE = 'ft_oauth_state';
+/** Rücksprungziel nach dem Microsoft-Login (nur interne Pfade, siehe safeReturnPath). */
+export const OAUTH_RETURN_COOKIE = 'ft_oauth_return';
+/** Startseite nach dem Login: der KI-Arbeitsplatz. */
+export const DEFAULT_AFTER_LOGIN = '/working-dashboard';
+
+/** Nur geschützte interne Pfade als Rücksprung zulassen (kein Open Redirect). */
+export function safeReturnPath(p: string | null | undefined): string | null {
+  if (!p || !p.startsWith('/') || p.startsWith('//') || p.includes('\\')) return null;
+  return p.startsWith('/admin') || p.startsWith('/working-dashboard') ? p : null;
+}
 
 export interface Session {
   sub: string;
