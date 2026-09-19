@@ -516,3 +516,96 @@ export async function markMessageRead(messageId: string): Promise<void> {
     }
   ).catch((e) => console.error('[Graph] markRead Fehler:', e));
 }
+
+// ───────────────── KI-Arbeitsplatz: generischer Graph-Zugriff ─────────────────
+
+/**
+ * Authentifizierter Graph-Request (App-only, gleicher Token wie der Mailversand).
+ * `path` relativ zu /v1.0 (z.B. `/search/query`) oder absolute Graph-URL.
+ */
+export async function graphRequest(path: string, init: RequestInit = {}): Promise<Response> {
+  const token = await getGraphToken();
+  if (!token) throw new Error('Microsoft 365 (Graph) ist nicht konfiguriert oder liefert kein Token.');
+  const url = path.startsWith('https://') ? path : `${GRAPH_BASE}${path}`;
+  const headers = new Headers(init.headers);
+  headers.set('Authorization', `Bearer ${token}`);
+  return fetch(url, { ...init, headers });
+}
+
+/**
+ * Welche Application-Permissions hat die App tatsächlich? (roles-Claim des Tokens)
+ * Dient der Statusanzeige im KI-Arbeitsplatz (z.B. fehlt Sites.Read.All für SharePoint).
+ */
+export async function graphTokenRoles(): Promise<string[]> {
+  const token = await getGraphToken();
+  if (!token) return [];
+  try {
+    const payload = token.split('.')[1] || '';
+    const json = JSON.parse(Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8')) as { roles?: string[] };
+    return Array.isArray(json.roles) ? json.roles : [];
+  } catch {
+    return [];
+  }
+}
+
+export interface GraphMessageDetail extends GraphInboxMessage {
+  toRecipients: string[];
+  ccRecipients: string[];
+  hasAttachments: boolean;
+  conversationId: string;
+  webLink: string;
+  isRead: boolean;
+}
+
+/** Eine Mail des Postfachs vollständig lesen (ändert den Gelesen-Status NICHT). */
+export async function getMailboxMessage(messageId: string): Promise<GraphMessageDetail | null> {
+  if (!isGraphConfigured()) return null;
+  const mailbox = getMailbox();
+  const res = await graphRequest(
+    `/users/${encodeURIComponent(mailbox)}/messages/${encodeURIComponent(messageId)}` +
+      `?$select=id,subject,bodyPreview,body,from,toRecipients,ccRecipients,receivedDateTime,hasAttachments,conversationId,webLink,isRead`,
+  );
+  if (!res.ok) return null;
+  const m = (await res.json()) as {
+    id: string; subject?: string; bodyPreview?: string; body?: { content?: string };
+    from?: { emailAddress?: { address?: string; name?: string } };
+    toRecipients?: Array<{ emailAddress?: { address?: string } }>;
+    ccRecipients?: Array<{ emailAddress?: { address?: string } }>;
+    receivedDateTime: string; hasAttachments?: boolean; conversationId?: string; webLink?: string; isRead?: boolean;
+  };
+  return {
+    id: m.id,
+    subject: m.subject || '',
+    bodyPreview: m.bodyPreview || '',
+    bodyHtml: m.body?.content || m.bodyPreview || '',
+    fromAddress: m.from?.emailAddress?.address || '',
+    fromName: m.from?.emailAddress?.name || '',
+    receivedAt: m.receivedDateTime,
+    toRecipients: (m.toRecipients || []).map((r) => r.emailAddress?.address || '').filter(Boolean),
+    ccRecipients: (m.ccRecipients || []).map((r) => r.emailAddress?.address || '').filter(Boolean),
+    hasAttachments: !!m.hasAttachments,
+    conversationId: m.conversationId || '',
+    webLink: m.webLink || '',
+    isRead: !!m.isRead,
+  };
+}
+
+/**
+ * Antwort-ENTWURF im Postfach anlegen (createReply + Kommentar). Es wird NICHTS
+ * versendet — der Entwurf liegt in den Entwürfen des Postfachs und wird von einem
+ * Menschen in Outlook geprüft und abgeschickt.
+ */
+export async function createReplyDraft(messageId: string, text: string): Promise<{ ok: true; webLink: string } | { ok: false; error: string }> {
+  if (!isGraphConfigured()) return { ok: false, error: 'Microsoft 365 (Graph) ist nicht konfiguriert.' };
+  const mailbox = getMailbox();
+  const res = await graphRequest(
+    `/users/${encodeURIComponent(mailbox)}/messages/${encodeURIComponent(messageId)}/createReply`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comment: text }) },
+  );
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    return { ok: false, error: `Graph ${res.status}: ${txt.slice(0, 300)}` };
+  }
+  const draft = (await res.json()) as { webLink?: string };
+  return { ok: true, webLink: draft.webLink || '' };
+}

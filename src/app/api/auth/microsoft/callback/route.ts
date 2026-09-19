@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import {
   createSessionToken, decodeJwtPayload, isSecureRequest,
-  SESSION_COOKIE, SESSION_MAX_AGE, OAUTH_STATE_COOKIE,
+  SESSION_COOKIE, SESSION_MAX_AGE, OAUTH_STATE_COOKIE, OAUTH_RETURN_COOKIE, DEFAULT_AFTER_LOGIN, safeReturnPath,
 } from '@/lib/auth';
 import { siteConfig } from '@/lib/siteConfig';
 import { getGraphCredentials, getLoginBaseUrl } from '@/lib/graphMailer';
@@ -65,8 +65,10 @@ export async function GET(req: Request) {
   }
 
   const token = await createSessionToken({ sub, name, email, src: 'microsoft' });
-  const res = NextResponse.redirect(`${base}/admin`);
+  const target = safeReturnPath(jar.get(OAUTH_RETURN_COOKIE)?.value) || DEFAULT_AFTER_LOGIN;
+  const res = NextResponse.redirect(`${base}${target}`);
   res.cookies.set(SESSION_COOKIE, token, { httpOnly: true, sameSite: 'lax', secure: isSecureRequest(req), path: '/', maxAge: SESSION_MAX_AGE });
   res.cookies.set(OAUTH_STATE_COOKIE, '', { path: '/', maxAge: 0 });
+  res.cookies.set(OAUTH_RETURN_COOKIE, '', { path: '/', maxAge: 0 });
   return res;
 }

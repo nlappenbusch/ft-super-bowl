@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Lock, User, LoaderCircle } from 'lucide-react';
+import { DEFAULT_AFTER_LOGIN, safeReturnPath } from '@/lib/auth';
 
 const BLUE_GLOW: React.CSSProperties = {
   background:
@@ -23,7 +24,7 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [from, setFrom] = useState('/admin');
+  const [from, setFrom] = useState(DEFAULT_AFTER_LOGIN);
   const [msConfigured, setMsConfigured] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -31,7 +32,8 @@ export default function AdminLoginPage() {
     const e = p.get('error');
     if (e) setError(ERRORS[e] || 'Anmeldung fehlgeschlagen.');
     const f = p.get('from');
-    if (f && f.startsWith('/admin')) setFrom(f);
+    const safe = safeReturnPath(f);
+    if (safe) setFrom(safe);
   }, []);
 
   useEffect(() => {
