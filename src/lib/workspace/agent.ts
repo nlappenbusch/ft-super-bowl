@@ -30,6 +30,13 @@ export const CONTEXT_PREFIX = '<kontext>';
 
 const MAX_ITERATIONS = 14;
 
+/** Laufende Runden je Chat — pro Chat immer nur eine gleichzeitig (Verlauf bleibt gültig). */
+const activeTurns = new Set<string>();
+
+export class ConversationBusyError extends Error {
+  constructor() { super('In diesem Chat läuft noch eine Antwort. Bitte kurz warten.'); }
+}
+
 export type ChatEvent =
   | { t: 'meta'; conversation_id: string; title: string; created: boolean }
   | { t: 'text'; d: string }
@@ -124,6 +131,23 @@ export interface ChatTurnInput {
 }
 
 export async function runChatTurn(input: ChatTurnInput): Promise<void> {
+  const lockKey = input.conversationId || '';
+  if (lockKey) {
+    if (activeTurns.has(lockKey)) throw new ConversationBusyError();
+    activeTurns.add(lockKey);
+  }
+  let lockedNew = '';
+  try {
+    await runChatTurnLocked(input, (id) => {
+      if (!lockKey && !activeTurns.has(id)) { activeTurns.add(id); lockedNew = id; }
+    });
+  } finally {
+    if (lockKey) activeTurns.delete(lockKey);
+    if (lockedNew) activeTurns.delete(lockedNew);
+  }
+}
+
+async function runChatTurnLocked(input: ChatTurnInput, onConversation: (id: string) => void): Promise<void> {
   const { emit } = input;
   const { model } = workspaceAiConfig();
   const client = anthropicClient();
@@ -137,6 +161,7 @@ export async function runChatTurn(input: ChatTurnInput): Promise<void> {
     conv = await createConversation(input.ownerKey, title, await buildSystemPrompt({ name: input.personName, role: input.personRole }));
     created = true;
   }
+  onConversation(conv.id);
   emit({ t: 'meta', conversation_id: conv.id, title: conv.title, created });
 
   // 2) Verlauf + neue Nutzernachricht
@@ -148,7 +173,8 @@ export async function runChatTurn(input: ChatTurnInput): Promise<void> {
   const files: WsFile[] = [];
   for (const id of input.fileIds.slice(0, 10)) {
     const f = await getFile(id);
-    if (f && f.employee_id === input.ownerKey && f.anthropic_file_id) {
+    // Nur eigene Dateien, die noch keinem oder genau diesem Chat gehören (Löschen eines Chats löscht seine Dateien).
+    if (f && f.employee_id === input.ownerKey && f.anthropic_file_id && (!f.conversation_id || f.conversation_id === conv.id)) {
       await attachFileToConversation(f.id, conv.id);
       files.push(f);
     }
@@ -201,7 +227,9 @@ export async function runChatTurn(input: ChatTurnInput): Promise<void> {
     const content = sanitizeAssistantContent(msg.content);
 
     if (msg.stop_reason === 'refusal') {
-      await appendMessages(conv.id, [{ role: 'assistant', content: content.length ? content : [{ type: 'text', text: '(abgelehnt)' }] }]);
+      // Abgelehnte Ausgabe nicht weiterverwenden — nur Text behalten (keine halben tool_use-Blöcke).
+      const texts = content.filter((b) => b.type === 'text');
+      await appendMessages(conv.id, [{ role: 'assistant', content: texts.length ? texts : [{ type: 'text', text: '(abgelehnt)' }] }]);
       emit({ t: 'notice', message: 'Die KI hat diese Anfrage abgelehnt. Formuliere sie bitte anders.' });
       break;
     }

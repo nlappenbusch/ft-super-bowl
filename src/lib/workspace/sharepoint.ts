@@ -11,6 +11,11 @@
  * stattdessen nur in deren Dokumentbibliotheken gesucht.
  * Lesen: PDFs direkt, Office-Dateien lässt Graph als PDF rendern (?format=pdf),
  * Text als Text, Bilder als Bild.
+ *
+ * Zugriffsgrenzen (App-only kennt keine Rechte der einzelnen Person!):
+ *   – Persönliche OneDrives werden nie gelesen oder gelistet.
+ *   – Sind Site-URLs hinterlegt, gilt die Liste für Suche UND Lesen.
+ *   – Empfohlen: App-Recht „Sites.Selected“ und nur die Team-Sites freigeben.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 import { graphRequest, graphTokenRoles, isGraphConfigured } from '../graphMailer';
@@ -75,13 +80,14 @@ async function graphJson<T>(path: string, init?: RequestInit): Promise<T> {
 interface DriveItem {
   id: string; name: string; webUrl?: string; size?: number; lastModifiedDateTime?: string;
   lastModifiedBy?: { user?: { displayName?: string } };
-  parentReference?: { driveId?: string; path?: string; siteId?: string };
+  parentReference?: { driveId?: string; driveType?: string; path?: string; siteId?: string };
   file?: { mimeType?: string };
   folder?: unknown;
 }
 
 function hitFrom(item: DriveItem, snippet = ''): SharePointHit | null {
   if (!item.parentReference?.driveId || item.folder) return null;
+  if (item.parentReference.driveType === 'personal') return null; // OneDrives bleiben privat
   return {
     drive_id: item.parentReference.driveId,
     item_id: item.id,
@@ -172,7 +178,35 @@ const CONVERT_TO_PDF = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'rtf', 'odt
 const MAX_READ_BYTES = 20 * 1024 * 1024;
 
 /** Datei herunterladen — Office-Formate als PDF gerendert, damit die KI Layout und Tabellen sieht. */
+/** Erlaubte Laufwerke der hinterlegten Sites (10 min zwischengespeichert). */
+let allowedDrivesCache: { key: string; at: number; ids: Set<string> } | null = null;
+
+async function allowedDriveIds(sites: string[]): Promise<Set<string>> {
+  const key = sites.join('|');
+  if (allowedDrivesCache && allowedDrivesCache.key === key && Date.now() - allowedDrivesCache.at < 600_000) return allowedDrivesCache.ids;
+  const ids = new Set<string>();
+  for (const siteUrl of sites) {
+    const u = new URL(siteUrl);
+    const site = await graphJson<{ id: string }>(`/sites/${u.hostname}:${u.pathname.replace(/\/$/, '') || '/'}`);
+    const drives = await graphJson<{ value: Array<{ id: string }> }>(`/sites/${encodeURIComponent(site.id)}/drives?$select=id`);
+    for (const d of drives.value || []) ids.add(d.id);
+  }
+  allowedDrivesCache = { key, at: Date.now(), ids };
+  return ids;
+}
+
+/** Darf dieses Laufwerk gelesen werden? (kein OneDrive, ggf. nur hinterlegte Sites) */
+async function assertDriveAllowed(driveId: string): Promise<void> {
+  const drive = await graphJson<{ id: string; driveType?: string }>(`/drives/${encodeURIComponent(driveId)}?$select=id,driveType`);
+  if (drive.driveType === 'personal') throw new Error('Persönliche OneDrive-Dateien kann die Faltin-KI nicht öffnen.');
+  const sites = configuredSites();
+  if (sites.length && !(await allowedDriveIds(sites)).has(drive.id)) {
+    throw new Error('Diese Datei liegt ausserhalb der freigegebenen SharePoint-Sites.');
+  }
+}
+
 export async function readSharePointFile(driveId: string, itemId: string): Promise<SharePointFile> {
+  await assertDriveAllowed(driveId);
   const base = `/drives/${encodeURIComponent(driveId)}/items/${encodeURIComponent(itemId)}`;
   const meta = await graphJson<DriveItem>(`${base}?$select=id,name,size,webUrl,file,folder,lastModifiedDateTime`);
   if (meta.folder) throw new Error(`„${meta.name}“ ist ein Ordner, keine Datei.`);

@@ -310,6 +310,8 @@ export interface ToolContext {
   offerPdfUrl: (calcId: string) => string;
   /** Link auf das Rechnungs-PDF. */
   invoicePdfUrl: (invoiceId: string) => string;
+  /** Mitarbeiter:in, der Zeitbuchungen zugeordnet werden (Arbeitsplatz); MCP: keine Zuordnung. */
+  employeeId?: string | null;
 }
 
 /** Kalkulation per ID oder Angebotsnummer finden. */
@@ -620,7 +622,7 @@ export async function callTool(name: string, args: Record<string, unknown>, ctx:
       const existing = await getStaffTask(id);
       if (!existing) return { error: 'Aufgabe nicht gefunden.' };
       const workDate = /^\d{4}-\d{2}-\d{2}$/.test(String(args.work_date || '')) ? String(args.work_date) : undefined;
-      const entry = await addTaskTime(id, minutes, String(args.note || '').trim() || undefined, null, workDate);
+      const entry = await addTaskTime(id, minutes, String(args.note || '').trim() || undefined, ctx.employeeId ?? null, workDate);
       return { booked: true, minutes, entry_id: (entry as { id?: string })?.id ?? null, ticket_no: formatTicketNo(existing.ticket_number) };
     }
 

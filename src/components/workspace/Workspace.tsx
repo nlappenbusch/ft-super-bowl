@@ -111,6 +111,7 @@ export default function Workspace() {
   const [pane, setPane] = useState<Pane>('chat');
   const [side, setSide] = useState<SidePane>('post');
   const [request, setRequest] = useState<ChatRequest | null>(null);
+  const [prefill, setPrefill] = useState<{ n: number; text: string } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -118,10 +119,11 @@ export default function Workspace() {
     api<WorkspaceStatus>('/api/admin/workspace/status').then(setStatus).catch(() => {});
     const stored = readStored('ft-ws-side');
     if (stored === 'post' || stored === 'wissen' || stored === 'werkstatt') setSide(stored);
-    // ?q=… aus der Schnellsuche: direkt an die KI geben
+    // ?q=… aus der Schnellsuche: nur ins Eingabefeld übernehmen — gesendet wird erst per Klick/Enter
+    // (ein fremder Link soll die KI nie im Namen der Person handeln lassen).
     const q = new URLSearchParams(window.location.search).get('q');
     if (q && q.trim()) {
-      setRequest({ n: Date.now(), text: q.trim(), newChat: true });
+      setPrefill({ n: Date.now(), text: q.trim().slice(0, 2000) });
       window.history.replaceState(null, '', window.location.pathname);
     }
   }, []);
@@ -165,7 +167,7 @@ export default function Workspace() {
         </div>
 
         <div className={`${vis('chat', true)} min-h-0 flex-col`}>
-          <ChatPanel personName={personName} request={request} onActivity={onActivity} aiReady={aiReady} />
+          <ChatPanel personName={personName} request={request} prefill={prefill} onActivity={onActivity} aiReady={aiReady} />
         </div>
 
         {/* Rechte Spalte (≥xl): Reiter Posteingang / Wissen / Werkstatt */}

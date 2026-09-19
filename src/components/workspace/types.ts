@@ -3,7 +3,7 @@
 export type AssistantPart =
   | { type: 'text'; text: string }
   | { type: 'tool'; id: string; name: string; label: string; write: boolean; ok: boolean | null; error?: string; links: Array<{ label: string; url: string }>; input_preview?: string }
-  | { type: 'draft'; id: string; mail_id: string | null; request: string | null; body: string; note: string }
+  | { type: 'draft'; id: string; mail_id: string | null; request: string | null; body: string; note: string; done?: { action: 'sent' | 'outlook'; web_link: string } | null }
   | { type: 'notice'; text: string; tone: 'warn' | 'error' };
 
 export type DisplayItem =

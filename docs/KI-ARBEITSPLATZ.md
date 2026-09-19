@@ -31,9 +31,17 @@ Kern ist die **persönliche Faltin-KI**: ein Chat, der die Werkzeuge des Portals
 2. **Postfach:** nutzt die bestehende M365-Anbindung (*Admin → E-Mail / M365*), keine neuen Rechte.
    Antwort-Entwürfe landen in den Entwürfen von `request@` (Graph `createReply`, Recht `Mail.ReadWrite` ist vorhanden).
 3. **SharePoint (einmalig durch eine:n M365-Admin):**
-   - Entra ID → App-Registrierung der Portal-App → *API-Berechtigungen* →
+   - **Wichtig:** Die App liest mit eigenen Rechten, nicht mit denen der einzelnen Person.
+     Alle Mitarbeitenden sehen über die KI also, was die App lesen darf. Persönliche
+     OneDrives sperrt das Portal grundsätzlich. Darüber hinaus gilt: so eng wie möglich freigeben.
+   - **Empfohlen:** Anwendungsberechtigung **`Sites.Selected`** und nur die Team-Sites
+     freigeben, die die KI lesen soll (Graph `POST /sites/{site-id}/permissions`, Rolle `read`).
+     Zusätzlich diese Sites im Arbeitsplatz unter ⚙︎ → „Nur diese SharePoint-Sites“ eintragen.
+     Die Liste gilt dann für Suche **und** Lesen.
+   - Einfacher, aber breiter: Entra ID → App-Registrierung der Portal-App → *API-Berechtigungen* →
      *Microsoft Graph* → *Anwendungsberechtigungen* → **`Sites.Read.All`** hinzufügen →
-     **Administratorzustimmung erteilen**.
+     **Administratorzustimmung erteilen**. Das öffnet alle SharePoint-Sites des Tenants (ausser
+     OneDrives). Auch hier die Site-Liste setzen, sonst sucht die KI überall.
    - Danach die App neu starten (der Graph-Token wird ~1 h zwischengespeichert).
    - Der Status (Fusszeile des Arbeitsplatzes, ⚙︎ *Verbindungen*) zeigt die tatsächlich
      erteilten Berechtigungen der App.

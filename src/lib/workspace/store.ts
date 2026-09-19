@@ -2,7 +2,7 @@
  * workspace/store.ts — Datenzugriff des KI-Arbeitsplatzes (Chats, Dateien, Teamwissen).
  * Läuft über die Backend-Abstraktion `dbq` (SQLite ODER Postgres).
  */
-import { dbGet, dbAll, dbRun } from '../dbq';
+import { dbGet, dbAll, dbRun, withTx } from '../dbq';
 import { ensureWorkspaceSchema, nowIso } from './schema';
 
 /* ── Chats ─────────────────────────────────────────────────────────────────── */
@@ -87,24 +87,30 @@ export async function listMessages(conversationId: string): Promise<StoredMessag
   );
 }
 
-/** Hängt Nachrichten an (append-only — frühere Einträge werden nie verändert). */
+/**
+ * Hängt Nachrichten an (append-only — frühere Einträge werden nie verändert).
+ * Alle Nachrichten eines Aufrufs landen gemeinsam in einer Transaktion (z.B.
+ * tool_use + tool_result), die Reihenfolge sichert ein eindeutiger Index.
+ */
 export async function appendMessages(
   conversationId: string,
   msgs: Array<{ role: 'user' | 'assistant' | 'system'; content: unknown }>,
 ): Promise<void> {
   if (!msgs.length) return;
   await ensureWorkspaceSchema();
-  const last = await dbGet<{ m: number | null }>(
-    `SELECT MAX(seq) AS m FROM ws_messages WHERE conversation_id = ?`, [conversationId],
-  );
-  let seq = (last?.m ?? 0) + 1;
-  for (const m of msgs) {
-    await dbRun(
-      `INSERT INTO ws_messages (id, conversation_id, seq, role, content, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
-      [crypto.randomUUID(), conversationId, seq++, m.role, JSON.stringify(m.content), nowIso()],
+  await withTx(async (q) => {
+    const last = await q.get<{ m: number | null }>(
+      `SELECT MAX(seq) AS m FROM ws_messages WHERE conversation_id = ?`, [conversationId],
     );
-  }
-  await touchConversation(conversationId);
+    let seq = (last?.m ?? 0) + 1;
+    for (const m of msgs) {
+      await q.run(
+        `INSERT INTO ws_messages (id, conversation_id, seq, role, content, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+        [crypto.randomUUID(), conversationId, seq++, m.role, JSON.stringify(m.content), nowIso()],
+      );
+    }
+    await q.run(`UPDATE ws_conversations SET updated_at = ? WHERE id = ?`, [nowIso(), conversationId]);
+  });
 }
 
 /* ── Dateien ───────────────────────────────────────────────────────────────── */
@@ -154,10 +160,12 @@ export async function attachFileToConversation(id: string, conversationId: strin
   await dbRun(`UPDATE ws_files SET conversation_id = ? WHERE id = ? AND conversation_id IS NULL`, [conversationId, id]);
 }
 
-export async function findFileBySourceRef(source: string, ref: string): Promise<WsFile | null> {
+/** Bereits aufbereitete Datei im SELBEN Chat finden (nie chatübergreifend — Löschen eines Chats löscht seine Dateien). */
+export async function findFileBySourceRef(source: string, ref: string, conversationId: string): Promise<WsFile | null> {
   await ensureWorkspaceSchema();
   return (await dbGet<WsFile>(
-    `SELECT ${FILE_COLS} FROM ws_files WHERE source = ? AND source_ref = ? ORDER BY created_at DESC LIMIT 1`, [source, ref],
+    `SELECT ${FILE_COLS} FROM ws_files WHERE source = ? AND source_ref = ? AND conversation_id = ? ORDER BY created_at DESC LIMIT 1`,
+    [source, ref, conversationId],
   )) ?? null;
 }
 
@@ -268,4 +276,21 @@ export async function pinnedKnowledge(): Promise<KnowledgeEntry[]> {
 export async function listConversationFiles(conversationId: string): Promise<WsFile[]> {
   await ensureWorkspaceSchema();
   return dbAll<WsFile>(`SELECT ${FILE_COLS} FROM ws_files WHERE conversation_id = ?`, [conversationId]);
+}
+
+/* ── Entwurfs-Aktionen (damit gesendete Entwürfe nach dem Neuladen nicht erneut sendbar sind) ── */
+
+export interface DraftAction { draft_id: string; conversation_id: string; action: 'sent' | 'outlook'; web_link: string; by_name: string; created_at: string }
+
+export async function recordDraftAction(a: { draft_id: string; conversation_id: string; action: 'sent' | 'outlook'; web_link?: string; by_name: string }): Promise<void> {
+  await ensureWorkspaceSchema();
+  await dbRun(
+    `INSERT OR IGNORE INTO ws_draft_actions (draft_id, conversation_id, action, web_link, by_name, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+    [a.draft_id, a.conversation_id, a.action, a.web_link || '', a.by_name, nowIso()],
+  );
+}
+
+export async function listDraftActions(conversationId: string): Promise<DraftAction[]> {
+  await ensureWorkspaceSchema();
+  return dbAll<DraftAction>(`SELECT * FROM ws_draft_actions WHERE conversation_id = ?`, [conversationId]);
 }

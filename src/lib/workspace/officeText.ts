@@ -9,8 +9,16 @@
  */
 import { inflateRawSync } from 'zlib';
 
+/** Schutz vor „Zip-Bomben“: max. entpackte Grösse je Eintrag und insgesamt. */
+const MAX_ENTRY_BYTES = 40 * 1024 * 1024;
+const MAX_TOTAL_BYTES = 80 * 1024 * 1024;
+/** Excel kennt max. 16'384 Spalten; Zellen darüber hinaus sind manipuliert. */
+const MAX_COLUMNS = 16384;
+const MAX_CELLS_PER_SHEET = 300_000;
+
 function readZip(buf: Buffer): Map<string, () => Buffer> {
   const entries = new Map<string, () => Buffer>();
+  let totalOut = 0;
   // End of Central Directory suchen (max. 64 KB Kommentar am Ende)
   let eocd = -1;
   for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65557); i--) {
@@ -23,19 +31,31 @@ function readZip(buf: Buffer): Map<string, () => Buffer> {
     if (buf.readUInt32LE(p) !== 0x02014b50) break;
     const method = buf.readUInt16LE(p + 10);
     const compSize = buf.readUInt32LE(p + 20);
+    const uncompSize = buf.readUInt32LE(p + 24);
     const nameLen = buf.readUInt16LE(p + 28);
     const extraLen = buf.readUInt16LE(p + 30);
     const commentLen = buf.readUInt16LE(p + 32);
     const localOffset = buf.readUInt32LE(p + 42);
     const name = buf.subarray(p + 46, p + 46 + nameLen).toString('utf-8');
     entries.set(name, () => {
+      if (uncompSize > MAX_ENTRY_BYTES) throw new Error('Datei enthält einen zu grossen Teil (entpackt > 40 MB).');
+      if (localOffset + 30 > buf.length) throw new Error('Beschädigte Office-Datei.');
       const lNameLen = buf.readUInt16LE(localOffset + 26);
       const lExtraLen = buf.readUInt16LE(localOffset + 28);
       const start = localOffset + 30 + lNameLen + lExtraLen;
       const data = buf.subarray(start, start + compSize);
-      if (method === 0) return Buffer.from(data);
-      if (method === 8) return inflateRawSync(data);
-      throw new Error(`ZIP-Kompression ${method} nicht unterstützt.`);
+      let out: Buffer;
+      if (method === 0) out = Buffer.from(data);
+      else if (method === 8) {
+        try {
+          out = inflateRawSync(data, { maxOutputLength: MAX_ENTRY_BYTES });
+        } catch {
+          throw new Error('Office-Datei lässt sich nicht entpacken (beschädigt oder zu gross).');
+        }
+      } else throw new Error(`ZIP-Kompression ${method} nicht unterstützt.`);
+      totalOut += out.length;
+      if (totalOut > MAX_TOTAL_BYTES) throw new Error('Office-Datei ist entpackt zu gross (> 80 MB).');
+      return out;
     });
     p += 46 + nameLen + extraLen + commentLen;
   }
@@ -65,7 +85,9 @@ function docxText(zip: Map<string, () => Buffer>): string {
 }
 
 function colIndex(ref: string): number {
-  const letters = (ref.match(/^[A-Z]+/) || ['A'])[0];
+  const m = ref.match(/^[A-Z]+/);
+  if (!m || m[0].length > 3) return MAX_COLUMNS; // ungültig → wird übersprungen
+  const letters = m[0];
   let n = 0;
   for (const ch of letters) n = n * 26 + (ch.charCodeAt(0) - 64);
   return n - 1;
@@ -89,7 +111,9 @@ function xlsxText(zip: Map<string, () => Buffer>): string {
   sheetFiles.forEach((file, i) => {
     const xml = zip.get(file)!().toString('utf-8');
     const rows: string[] = [];
+    let cellCount = 0;
     for (const row of xml.match(/<row[\s\S]*?<\/row>/g) || []) {
+      if (cellCount > MAX_CELLS_PER_SHEET) { rows.push('[… weitere Zeilen ausgelassen]'); break; }
       const cells: string[] = [];
       for (const c of row.match(/<c [^>]*?(?:\/>|>[\s\S]*?<\/c>)/g) || []) {
         const ref = (c.match(/ r="([A-Z]+)\d+"/) || [])[1] || '';
@@ -101,6 +125,8 @@ function xlsxText(zip: Map<string, () => Buffer>): string {
           val = type === 's' ? shared[Number(v)] ?? '' : decodeXml(v);
         }
         const idx = ref ? colIndex(ref) : cells.length;
+        if (idx >= MAX_COLUMNS) continue;
+        cellCount++;
         while (cells.length < idx) cells.push('');
         cells[idx] = val.replace(/\s+/g, ' ').trim();
       }

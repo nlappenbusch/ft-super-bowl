@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { workspaceSession, unauthorized } from '@/lib/workspace/session';
-import { getConversation, listMessages, listConversationFiles, updateConversation, deleteConversation } from '@/lib/workspace/store';
+import { getConversation, listMessages, listConversationFiles, listDraftActions, updateConversation, deleteConversation } from '@/lib/workspace/store';
 import { toDisplay } from '@/lib/workspace/display';
 import { deleteAnthropicFiles } from '@/lib/workspace/files';
 
@@ -21,11 +21,11 @@ export async function GET(_req: Request, { params }: Ctx) {
   const { id } = await params;
   const r = await ownConversation(id);
   if ('error' in r) return r.error;
-  const [messages, files] = await Promise.all([listMessages(id), listConversationFiles(id)]);
+  const [messages, files, drafts] = await Promise.all([listMessages(id), listConversationFiles(id), listDraftActions(id)]);
   const byAnthropicId = new Map(files.map((f) => [f.anthropic_file_id, f]));
   return NextResponse.json({
     success: true,
-    data: { id: r.conv.id, title: r.conv.title, items: toDisplay(messages, byAnthropicId) },
+    data: { id: r.conv.id, title: r.conv.title, items: toDisplay(messages, byAnthropicId, drafts) },
   });
 }
 
