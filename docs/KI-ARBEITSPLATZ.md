@@ -58,12 +58,13 @@ Die Faltin-KI arbeitet auch selbständig (alle 10 Minuten, abschaltbar unter ⚙
    vorbereiten (höchstens 2 pro Lauf) — er liegt im Posteingang bereit, gesendet wird nichts.
 3. **Erinnerungen** („die KI nervt, bis es erledigt ist“) — erscheinen oben in „Heute“ mit
    Direkt-Aktionen und als Glocke (nur Mo–Fr, 7–19 Uhr):
-   - **Abwesenheitsantrag offen** → die zuständige Genehmigungsperson (Team → „Genehmigt
+   - **Abwesenheitsantrag offen** (Zeitraum noch nicht vorbei) → die zuständige Genehmigungsperson (Team → „Genehmigt
      Abwesenheiten“); nach 3 Tagen zusätzlich alle Admins. Genehmigen/Ablehnen direkt in der
      Karte. Solange offen: täglich Glocke + **Erinnerungsmail** (max. 5×).
    - **Aufgabe überfällig** → Zuständige:r (täglich).
-   - **Aufgabe seit >24 h ohne Zuständigkeit** → Admins.
-   - **Kunde wartet >24 h auf Antwort** → Zuständige:r bzw. Admins (täglich).
+   - **Aufgabe seit >24 h ohne Zuständigkeit** → Admins (nur im Arbeitsplatz, ohne Glocke).
+   - **Kunde wartet >24 h auf Antwort** → Zuständige:r (täglich); ohne Zuständigkeit an die
+     Admins, dann nur im Arbeitsplatz.
    - **Abwesenheit beginnt in ≤3 Tagen** und es gibt Offenes → die Person selbst
      (Übergabe mit der KI vorbereiten, Abwesenheitsnotiz).
    - **Zuständige:r heute abwesend**, Aufgabe bald fällig/hoch → Stellvertretung bzw. Admins.

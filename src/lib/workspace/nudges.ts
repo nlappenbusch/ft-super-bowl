@@ -64,6 +64,12 @@ interface DesiredNudge {
 }
 
 const DAY_MS = 24 * 3600 * 1000;
+/**
+ * Team-Hinweise ohne feste Zuständigkeit (an alle Admins): nur im Arbeitsplatz sichtbar,
+ * keine Glocke — sonst bekäme jede:r Admin jede Kleinigkeit einzeln gemeldet.
+ */
+const SILENT_KEY_PREFIXES = ['aufgabe_offen:', 'kunde_wartet_team:'];
+
 /** Arten, an die täglich erneut erinnert wird, solange sie offen sind. */
 const REMIND_DAILY: NudgeKind[] = ['urlaub_genehmigen', 'kunde_wartet', 'aufgabe_ueberfaellig'];
 const MAX_REMINDERS = 5;
@@ -106,7 +112,8 @@ export async function computeDesiredNudges(): Promise<DesiredNudge[]> {
   const admins = employees.filter((e) => e.role === 'admin');
 
   // 1) Offene Abwesenheitsanträge → Genehmigende
-  const pending = await dbAll<VacationRequest>(`SELECT * FROM vacation_requests WHERE status = 'beantragt' ORDER BY created_at`);
+  // Nur Anträge, deren Zeitraum noch nicht vorbei ist (alte, vergessene Anträge nicht wieder aufrollen).
+  const pending = await dbAll<VacationRequest>(`SELECT * FROM vacation_requests WHERE status = 'beantragt' AND end_date >= ? ORDER BY created_at`, [today]);
   for (const v of pending) {
     const requester = byId.get(v.employee_id);
     if (!requester) continue;
@@ -193,7 +200,7 @@ export async function computeDesiredNudges(): Promise<DesiredNudge[]> {
     const who = w.assigned_to && byId.has(w.assigned_to) ? [byId.get(w.assigned_to)!] : (unassignedWaiting++ < 5 ? admins : []);
     for (const e of who) {
       out.push({
-        key: `kunde_wartet:${w.booking_id}:${e.id}`,
+        key: `${w.assigned_to ? 'kunde_wartet' : 'kunde_wartet_team'}:${w.booking_id}:${e.id}`,
         employee_id: e.id,
         kind: 'kunde_wartet',
         ref_id: w.booking_id,
@@ -310,6 +317,7 @@ export async function reconcileNudges(desired: DesiredNudge[]): Promise<Reconcil
   if (working) {
     const open = await dbAll<Nudge>(`SELECT * FROM ws_nudges WHERE status = 'offen'`);
     for (const n of open) {
+      if (SILENT_KEY_PREFIXES.some((p) => n.dedupe_key.startsWith(p))) continue;
       const first = !n.last_notified_at;
       const again = !first && REMIND_DAILY.includes(n.kind) && n.notify_count < MAX_REMINDERS
         && Date.now() - ts(n.last_notified_at) > 20 * 3600 * 1000;
