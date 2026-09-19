@@ -20,6 +20,7 @@ interface Employee {
   employment_start: string | null;
   notes: string;
   briefing_opt_out: boolean;
+  approver_id: string | null;
   last_login_at: string | null;
   vacation: { entitlement: number; used: number; pending: number; remaining: number };
 }
@@ -38,6 +39,7 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -54,8 +56,9 @@ export default function TeamPage() {
   const save = async () => {
     if (!editing) return;
     setSaving(true);
+    setSaveError(null);
     try {
-      await fetch(`/api/admin/team/${editing.id}`, {
+      const res = await fetch(`/api/admin/team/${editing.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -67,8 +70,13 @@ export default function TeamPage() {
           employment_start: editing.employment_start,
           notes: editing.notes,
           briefing_opt_out: editing.briefing_opt_out,
+          approver_id: editing.approver_id || null,
         }),
-      });
+      }).then((x) => x.json()).catch(() => ({ success: false, error: 'Speichern fehlgeschlagen.' }));
+      if (!res.success) {
+        setSaveError(res.error || 'Speichern fehlgeschlagen.');
+        return;
+      }
       setEditing(null);
       await load();
     } finally {
@@ -77,6 +85,8 @@ export default function TeamPage() {
   };
 
   const weekTotal = (w: WeeklyHours) => Math.round(w.reduce((s, h) => s + h, 0) * 100) / 100;
+  const nameOf = (id: string | null) => employees.find((x) => x.id === id)?.name || null;
+  const closeEditor = () => { setEditing(null); setSaveError(null); };
 
   return (
     <AdminShell title="Team">
@@ -103,6 +113,7 @@ export default function TeamPage() {
                 <th className="px-5 py-3">Rolle</th>
                 <th className="px-5 py-3">Pensum/Woche</th>
                 <th className="px-5 py-3">Urlaub (Rest)</th>
+                <th className="px-5 py-3">Genehmigung</th>
                 <th className="px-5 py-3">Letzter Login</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3"></th>
@@ -123,6 +134,9 @@ export default function TeamPage() {
                       <span className="ml-1.5 text-xs" style={{ color: COLORS.textMuted }}>({e.vacation.pending} beantragt)</span>
                     )}
                   </td>
+                  <td className="px-5 py-3 text-xs" style={{ color: COLORS.textMuted }}>
+                    {nameOf(e.approver_id) || 'alle Admins'}
+                  </td>
                   <td className="px-5 py-3 text-xs" style={{ color: COLORS.textMuted }}>{fmtDate(e.last_login_at)}</td>
                   <td className="px-5 py-3">
                     <Badge tone={e.active ? 'ok' : 'muted'}>{e.active ? 'aktiv' : 'inaktiv'}</Badge>
@@ -142,11 +156,11 @@ export default function TeamPage() {
       {/* Edit-Dialog */}
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setEditing(null)} />
+          <div className="absolute inset-0 bg-black/40" onClick={closeEditor} />
           <Card className="relative z-10 max-h-[90vh] w-full max-w-2xl overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold" style={{ color: COLORS.navy }}>{editing.name}</h2>
-              <button onClick={() => setEditing(null)} className="rounded-lg p-1.5 hover:bg-gray-100">
+              <button onClick={closeEditor} className="rounded-lg p-1.5 hover:bg-gray-100">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -155,7 +169,7 @@ export default function TeamPage() {
               <Field label="Name">
                 <TextInput value={editing.name} onChange={(ev) => setEditing({ ...editing, name: ev.target.value })} />
               </Field>
-              <Field label="Rolle" hint="Aktuell haben alle Tenant-Logins Vollzugriff; die Rolle ist für spätere Rechte-Trennung vorgesehen.">
+              <Field label="Rolle" hint="Admins dürfen Abwesenheiten aller entscheiden und für andere erfassen. Sonst haben aktuell alle Tenant-Logins Vollzugriff.">
                 <SelectInput value={editing.role} onChange={(ev) => setEditing({ ...editing, role: ev.target.value as Employee['role'] })}>
                   <option value="admin">Admin</option>
                   <option value="mitarbeiter">Mitarbeiter</option>
@@ -174,6 +188,25 @@ export default function TeamPage() {
                   value={editing.employment_start || ''}
                   onChange={(ev) => setEditing({ ...editing, employment_start: ev.target.value || null })}
                 />
+              </Field>
+              <Field
+                label="Genehmigt Abwesenheiten"
+                hint="Wer Urlaubsanträge dieser Person genehmigt. Ohne Auswahl: alle aktiven Admins (ausser der Person selbst)."
+                className="sm:col-span-2"
+              >
+                <SelectInput
+                  value={editing.approver_id || ''}
+                  onChange={(ev) => setEditing({ ...editing, approver_id: ev.target.value || null })}
+                >
+                  <option value="">— alle Admins —</option>
+                  {employees
+                    .filter((x) => x.id !== editing.id && (x.active || x.id === editing.approver_id))
+                    .map((x) => (
+                      <option key={x.id} value={x.id}>
+                        {x.name}{x.role === 'admin' ? ' (Admin)' : ''}{x.active ? '' : ' – inaktiv'}
+                      </option>
+                    ))}
+                </SelectInput>
               </Field>
             </div>
 
@@ -212,10 +245,14 @@ export default function TeamPage() {
               />
             </div>
 
+            {saveError && (
+              <div className="mt-4 rounded-lg px-3 py-2 text-xs" style={{ background: '#fee2e2', color: '#991b1b' }}>{saveError}</div>
+            )}
+
             <div className="mt-5 flex items-center justify-between">
               <Toggle checked={editing.active} onChange={(v) => setEditing({ ...editing, active: v })} label="Aktiv" />
               <div className="flex gap-2">
-                <Button variant="secondary" onClick={() => setEditing(null)}>Abbrechen</Button>
+                <Button variant="secondary" onClick={closeEditor}>Abbrechen</Button>
                 <Button variant="accent" onClick={save} disabled={saving}>
                   {saving ? <Spinner className="h-4 w-4" /> : <Save className="h-4 w-4" />} Speichern
                 </Button>
