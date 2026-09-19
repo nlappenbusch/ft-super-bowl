@@ -28,8 +28,12 @@ function NudgeCard({ n, onAsk, onDone }: { n: NudgeItem; onAsk: (text: string, c
       if (c === null) throw new Error('Abgebrochen');
       comment = c;
     }
-    await api(`/api/admin/vacation/${n.ref_id}`, jsonInit('PATCH', { status, comment }));
-    await api(`/api/admin/workspace/nudges/${n.id}`, jsonInit('PATCH', { action: 'resolved' }));
+    try {
+      await api(`/api/admin/vacation/${n.ref_id}`, jsonInit('PATCH', { status, comment, if_status: 'beantragt' }));
+    } finally {
+      // Auch wenn inzwischen jemand anders entschieden hat (409): Erinnerung schliessen, Meldung zeigen.
+      await api(`/api/admin/workspace/nudges/${n.id}`, jsonInit('PATCH', { action: 'resolved' })).catch(() => {});
+    }
   });
   const nudgeAction = (action: 'snooze' | 'dismiss') => act(action, () => api(`/api/admin/workspace/nudges/${n.id}`, jsonInit('PATCH', { action })));
   const vacation = n.kind === 'urlaub_genehmigen';

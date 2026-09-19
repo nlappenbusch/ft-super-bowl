@@ -134,6 +134,7 @@ const TABLES = [
 /** Nachträgliche Spalten (für Tabellen, die schon vor der Spalte angelegt wurden). */
 const COLUMN_MIGRATIONS: Array<[string, string, string]> = [
   ['ws_mail_triage', 'attempts', 'INTEGER NOT NULL DEFAULT 0'],
+  ['ws_mail_triage', 'suggest_attempts', 'INTEGER NOT NULL DEFAULT 0'],
 ];
 
 let ensured: Promise<void> | null = null;

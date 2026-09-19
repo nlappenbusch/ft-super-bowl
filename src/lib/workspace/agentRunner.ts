@@ -75,11 +75,13 @@ async function doRun(opts: { force?: boolean }): Promise<AgentRunSummary> {
       const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
       const urgent = await dbAll<{ graph_id: string }>(
         `SELECT graph_id FROM ws_mail_triage
-         WHERE status = 'offen' AND needs_reply = 1 AND priority = 'hoch' AND suggestion = '' AND triaged_at IS NOT NULL AND received_at >= ?
+         WHERE status = 'offen' AND needs_reply = 1 AND priority = 'hoch' AND suggestion = '' AND triaged_at IS NOT NULL
+           AND suggest_attempts < 2 AND received_at >= ?
          ORDER BY received_at DESC LIMIT 2`,
         [since],
       );
       for (const m of urgent) {
+        await dbRun(`UPDATE ws_mail_triage SET suggest_attempts = suggest_attempts + 1 WHERE graph_id = ?`, [m.graph_id]);
         try {
           await suggestReply(m.graph_id, { name: 'Faltin-KI', signature: 'Ihr Faltin-Travel-Team\\nFaltin Travel AG' });
           s.drafts_prepared++;

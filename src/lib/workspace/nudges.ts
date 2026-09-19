@@ -59,6 +59,8 @@ interface DesiredNudge {
   action_url: string;
   prompt: string;
   priority: 'hoch' | 'normal';
+  /** Schon anderweitig benachrichtigt (z.B. Mail beim Anlegen des Antrags) → zählt als erste Erinnerung. */
+  notified_at?: string;
 }
 
 const DAY_MS = 24 * 3600 * 1000;
@@ -137,6 +139,8 @@ export async function computeDesiredNudges(): Promise<DesiredNudge[]> {
           !designated ? `Zuständig wäre: ${approvers.map((a) => a.name).join(', ') || 'Admins'} (wartet seit ${ageDays} Tagen).` : '',
         ].filter(Boolean).join('\n'),
         action_url: '/admin/urlaub',
+        // Zuständige wurden beim Anlegen schon per Glocke + Mail informiert → nicht gleich nochmals.
+        notified_at: designated && ageDays < 1 ? new Date(ts(v.created_at)).toISOString() : undefined,
         prompt: `Hilf mir beim Abwesenheitsantrag von ${requester.name} (${fmtRangeDe(v.start_date, v.end_date)}): Gibt es Überschneidungen oder offene Aufgaben/Anfragen, die in der Zeit kritisch werden? Was spricht für oder gegen die Genehmigung?`,
         priority: ageDays >= 2 || v.start_date <= addDaysIso(today, 7) ? 'hoch' : 'normal',
       });
@@ -149,7 +153,7 @@ export async function computeDesiredNudges(): Promise<DesiredNudge[]> {
     const due = (t.due_date || '').slice(0, 10);
     if (t.assignee_id && byId.has(t.assignee_id) && due && due < today) {
       out.push({
-        key: `aufgabe_ueberfaellig:${t.id}`,
+        key: `aufgabe_ueberfaellig:${t.id}:${t.assignee_id}`,
         employee_id: t.assignee_id,
         kind: 'aufgabe_ueberfaellig',
         ref_id: t.id,
@@ -275,9 +279,11 @@ export async function reconcileNudges(desired: DesiredNudge[]): Promise<Reconcil
     const cur = byKey.get(d.key);
     if (!cur) {
       await dbRun(
-        `INSERT OR IGNORE INTO ws_nudges (id, dedupe_key, employee_id, kind, ref_id, title, body, action_url, prompt, priority, status, last_seen_at, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'offen', ?, ?, ?)`,
-        [crypto.randomUUID(), d.key, d.employee_id, d.kind, d.ref_id, d.title, d.body, d.action_url, d.prompt, d.priority, now, now, now],
+        `INSERT OR IGNORE INTO ws_nudges (id, dedupe_key, employee_id, kind, ref_id, title, body, action_url, prompt, priority, status,
+           notify_count, last_notified_at, last_seen_at, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'offen', ?, ?, ?, ?, ?)`,
+        [crypto.randomUUID(), d.key, d.employee_id, d.kind, d.ref_id, d.title, d.body, d.action_url, d.prompt, d.priority,
+          d.notified_at ? 1 : 0, d.notified_at || null, now, now, now],
       );
       res.created++;
       continue;
