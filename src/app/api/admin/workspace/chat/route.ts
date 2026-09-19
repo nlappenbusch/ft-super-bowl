@@ -8,7 +8,8 @@ export const maxDuration = 300;
 
 /**
  * POST /api/admin/workspace/chat — eine Chat-Runde mit der Faltin-KI.
- * Body: { text, conversation_id?, file_ids?: string[], page_context? }
+ * Body: { text, conversation_id?, file_ids?: string[], page_context?, retry? }
+ * retry: nach einem vorübergehenden Fehler ohne neue Nachricht fortsetzen.
  * Antwort: NDJSON-Stream (eine JSON-Zeile je Ereignis, siehe ChatEvent).
  */
 export async function POST(req: Request) {
@@ -18,11 +19,12 @@ export async function POST(req: Request) {
     return Response.json({ success: false, error: 'Kein Anthropic API-Key hinterlegt (Admin → KI-Redaktion).' }, { status: 503 });
   }
   const body = (await req.json().catch(() => ({}))) as {
-    text?: string; conversation_id?: string | null; file_ids?: unknown; page_context?: string;
+    text?: string; conversation_id?: string | null; file_ids?: unknown; page_context?: string; retry?: boolean;
   };
+  const retry = body.retry === true && !!body.conversation_id;
   const text = String(body.text || '').slice(0, 20000);
   const fileIds = Array.isArray(body.file_ids) ? body.file_ids.filter((x): x is string => typeof x === 'string') : [];
-  if (!text.trim() && !fileIds.length) {
+  if (!retry && !text.trim() && !fileIds.length) {
     return Response.json({ success: false, error: 'Nachricht fehlt.' }, { status: 400 });
   }
 
@@ -46,6 +48,7 @@ export async function POST(req: Request) {
           text,
           fileIds,
           pageContext: typeof body.page_context === 'string' ? body.page_context.slice(0, 500) : undefined,
+          retry,
           emit,
           signal: req.signal,
         });

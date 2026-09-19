@@ -129,28 +129,40 @@ export default function ChatPanel({ personName, request, prefill, onActivity, ai
     });
   };
 
-  const send = useCallback(async (textArg?: string, opts: { context?: string; forceNew?: boolean } = {}) => {
-    const text = (textArg ?? input).trim();
-    const readyFiles = files.filter((f) => f.id && !f.error);
-    if (streaming || (!text && !readyFiles.length) || files.some((f) => f.uploading)) return;
+  const send = useCallback(async (textArg?: string, opts: { context?: string; forceNew?: boolean; retry?: boolean } = {}) => {
+    const text = opts.retry ? '' : (textArg ?? input).trim();
+    const readyFiles = opts.retry ? [] : files.filter((f) => f.id && !f.error);
+    if (streaming || (!opts.retry && !text && !readyFiles.length) || (!opts.retry && files.some((f) => f.uploading))) return;
     const convId = opts.forceNew ? null : activeIdRef.current;
+    if (opts.retry && !convId) return;
     if (opts.forceNew) { setActiveId(null); setItems([]); }
 
     const now = new Date().toISOString();
-    setItems((prev) => [
-      ...(opts.forceNew ? [] : prev),
-      { kind: 'user', id: newId(), text, files: readyFiles.map((f) => ({ id: f.id!, name: f.name })), at: now },
-      { kind: 'assistant', id: newId(), parts: [], at: now },
-    ]);
-    if (textArg === undefined) setInput('');
-    setFiles([]);
+    if (opts.retry) {
+      // Fehlerhinweis entfernen und in derselben Antwort weiterschreiben
+      setItems((prev) => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+        if (last?.kind === 'assistant') next[next.length - 1] = { ...last, parts: last.parts.filter((p) => !(p.type === 'notice' && p.retry)) };
+        else next.push({ kind: 'assistant', id: newId(), parts: [], at: now });
+        return next;
+      });
+    } else {
+      setItems((prev) => [
+        ...(opts.forceNew ? [] : prev),
+        { kind: 'user', id: newId(), text, files: readyFiles.map((f) => ({ id: f.id!, name: f.name })), at: now },
+        { kind: 'assistant', id: newId(), parts: [], at: now },
+      ]);
+      if (textArg === undefined) setInput('');
+      setFiles([]);
+    }
     setStreaming(true);
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
     try {
       const res = await fetch('/api/admin/workspace/chat', {
-        ...jsonInit('POST', { text, conversation_id: convId, file_ids: readyFiles.map((f) => f.id), page_context: opts.context }),
+        ...jsonInit('POST', { text, conversation_id: convId, file_ids: readyFiles.map((f) => f.id), page_context: opts.context, retry: !!opts.retry }),
         signal: ctrl.signal,
       });
       if (!res.ok || !res.body) {
@@ -207,7 +219,7 @@ export default function ChatPanel({ personName, request, prefill, onActivity, ai
               patchLastAssistant((parts) => [...parts, { type: 'notice', text: String(ev.message), tone: 'warn' }]);
               break;
             case 'error':
-              patchLastAssistant((parts) => [...parts, { type: 'notice', text: String(ev.message), tone: 'error' }]);
+              patchLastAssistant((parts) => [...parts, { type: 'notice', text: String(ev.message), tone: 'error', retry: !!ev.retryable }]);
               break;
           }
         }
@@ -383,7 +395,12 @@ export default function ChatPanel({ personName, request, prefill, onActivity, ai
                     return (
                       <div key={pi} className="my-1.5 flex items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-xs"
                         style={{ background: p.tone === 'error' ? 'rgba(220,38,38,0.07)' : 'rgba(217,119,6,0.08)', color: p.tone === 'error' ? COLORS.danger : COLORS.warn }}>
-                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {p.text}
+                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> <span className="flex-1">{p.text}</span>
+                        {p.retry && idx === items.length - 1 && !streaming && (
+                          <button onClick={() => send(undefined, { retry: true })} className="ml-2 inline-flex shrink-0 items-center gap-1 rounded-md bg-white px-2 py-0.5 font-semibold shadow-sm hover:underline" style={{ color: COLORS.accent }}>
+                            <RefreshCw className="h-3 w-3" /> Nochmal versuchen
+                          </button>
+                        )}
                       </div>
                     );
                   }

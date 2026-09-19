@@ -12,7 +12,9 @@
  */
 import type Anthropic from '@anthropic-ai/sdk';
 import type { Employee } from '../staffStore';
-import { anthropicClient, workspaceAiConfig, describeAiError, FALLBACK_BETA } from './claude';
+import { anthropicClient, workspaceAiConfig, describeAiError, isRetryableAiError, FALLBACK_BETA } from './claude';
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 import {
   createConversation, getConversation, listMessages, appendMessages, getFile, attachFileToConversation,
   pinnedKnowledge, type WsFile,
@@ -44,7 +46,7 @@ export type ChatEvent =
   | { t: 'tool'; id: string; name: string; label: string; phase: 'done'; ok: boolean; summary: string; links: Array<{ label: string; url: string }>; error?: string }
   | { t: 'draft'; id: string; mail_id: string | null; request: string | null; body: string; note: string }
   | { t: 'notice'; message: string }
-  | { t: 'error'; message: string }
+  | { t: 'error'; message: string; retryable?: boolean }
   | { t: 'done' };
 
 function zurichNowLabel(): string {
@@ -126,6 +128,8 @@ export interface ChatTurnInput {
   fileIds: string[];
   /** Optionaler Seitenkontext (z.B. „Posteingang: Mail xy geöffnet“). */
   pageContext?: string;
+  /** Nach einem vorübergehenden Fehler: ohne neue Nachricht dort weitermachen, wo der Verlauf endet. */
+  retry?: boolean;
   emit: (ev: ChatEvent) => void;
   signal?: AbortSignal;
 }
@@ -169,6 +173,15 @@ async function runChatTurnLocked(input: ChatTurnInput, onConversation: (id: stri
     role: m.role,
     content: JSON.parse(m.content) as MessageParam['content'],
   }));
+  let messages: MessageParam[];
+  if (input.retry) {
+    // Nur fortsetzen, wenn der Verlauf auf eine Nutzernachricht bzw. Werkzeug-Ergebnisse endet.
+    if (!history.length || history[history.length - 1].role !== 'user') {
+      emit({ t: 'notice', message: 'Hier gibt es nichts zu wiederholen – die letzte Antwort ist vollständig.' });
+      return;
+    }
+    messages = [...history];
+  } else {
 
   const files: WsFile[] = [];
   for (const id of input.fileIds.slice(0, 10)) {
@@ -186,7 +199,8 @@ async function runChatTurnLocked(input: ChatTurnInput, onConversation: (id: stri
   ];
   const userMsg: MessageParam = { role: 'user', content: userContent };
   await appendMessages(conv.id, [userMsg]);
-  const messages: MessageParam[] = [...history, userMsg];
+  messages = [...history, userMsg];
+  }
 
   const toolCtx: WorkspaceToolContext = {
     employee: input.employee,
@@ -203,7 +217,11 @@ async function runChatTurnLocked(input: ChatTurnInput, onConversation: (id: stri
   // 3) Tool-Schleife
   for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
     if (input.signal?.aborted) break;
-    let msg: Anthropic.Beta.Messages.BetaMessage;
+    let msg: Anthropic.Beta.Messages.BetaMessage | null = null;
+    // Vorübergehende Fehler (v.a. Überlastung mitten im Stream) still wiederholen,
+    // solange in diesem Schritt noch nichts angezeigt wurde — sonst Knopf „Nochmal versuchen“.
+    for (let attempt = 0; attempt < 3 && !msg; attempt++) {
+    let emitted = false;
     try {
       const stream = client.beta.messages.stream({
         model,
@@ -217,12 +235,18 @@ async function runChatTurnLocked(input: ChatTurnInput, onConversation: (id: stri
         cache_control: { type: 'ephemeral' },
         messages,
       }, { signal: input.signal });
-      stream.on('text', (d) => emit({ t: 'text', d }));
+      stream.on('text', (d) => { emitted = true; emit({ t: 'text', d }); });
       msg = await stream.finalMessage();
     } catch (e) {
-      emit({ t: 'error', message: describeAiError(e) });
+      if (!emitted && attempt < 2 && isRetryableAiError(e) && !input.signal?.aborted) {
+        await sleep(2000 * (attempt + 1));
+        continue;
+      }
+      emit({ t: 'error', message: describeAiError(e), retryable: isRetryableAiError(e) });
       return;
     }
+    }
+    if (!msg) return;
 
     const content = sanitizeAssistantContent(msg.content);
 

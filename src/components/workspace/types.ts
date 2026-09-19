@@ -4,7 +4,7 @@ export type AssistantPart =
   | { type: 'text'; text: string }
   | { type: 'tool'; id: string; name: string; label: string; write: boolean; ok: boolean | null; error?: string; links: Array<{ label: string; url: string }>; input_preview?: string }
   | { type: 'draft'; id: string; mail_id: string | null; request: string | null; body: string; note: string; done?: { action: 'sent' | 'outlook'; web_link: string } | null }
-  | { type: 'notice'; text: string; tone: 'warn' | 'error' };
+  | { type: 'notice'; text: string; tone: 'warn' | 'error'; retry?: boolean };
 
 export type DisplayItem =
   | { kind: 'user'; id: string; text: string; files: Array<{ id: string; name: string }>; at: string }
@@ -21,6 +21,7 @@ export interface DaySignals {
   my_tasks: Array<{ id: string; ticket_no: string; title: string; status: string; priority: string; due_date: string | null; overdue: boolean }>;
   unassigned_tasks: Array<{ id: string; ticket_no: string; title: string; created_at: string; priority: string }>;
   waiting_customers: Array<{ booking_id: string; request_number: string | null; package: string; customer: string; last_in_at: string; mine: boolean; assignee: string | null; days_waiting: number }>;
+  unreachable: Array<{ booking_id: string; request_number: string | null; package: string; customer: string; kind: 'bounce' | 'abwesend'; days: number; mine: boolean }>;
   new_requests: Array<{ booking_id: string; request_number: string | null; package: string; customer: string; created_at: string; persons: number }>;
   stale_requests: Array<{ booking_id: string; request_number: string | null; package: string; customer: string; days_idle: number }>;
   offer_drafts: Array<{ id: string; offer_number: string | null; title: string; customer: string | null; updated_at: string }>;

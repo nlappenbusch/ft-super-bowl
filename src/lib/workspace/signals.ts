@@ -10,6 +10,7 @@ import { listCalculations } from '../calculationStore';
 import { dbAll } from '../dbq';
 import { ensureWorkspaceSchema } from './schema';
 import { listMyNudges } from './nudges';
+import { lastInboundKinds } from './inboundKind';
 
 const DAY_MS = 24 * 3600 * 1000;
 
@@ -31,6 +32,8 @@ export interface DaySignals {
   my_tasks: Array<{ id: string; ticket_no: string; title: string; status: string; priority: string; due_date: string | null; overdue: boolean }>;
   unassigned_tasks: Array<{ id: string; ticket_no: string; title: string; created_at: string; priority: string }>;
   waiting_customers: Array<{ booking_id: string; request_number: string | null; package: string; customer: string; last_in_at: string; mine: boolean; assignee: string | null; days_waiting: number }>;
+  /** Letzte „Antwort“ war ein Bounce oder eine Abwesenheitsnotiz — anrufen bzw. nachfassen statt antworten. */
+  unreachable: Array<{ booking_id: string; request_number: string | null; package: string; customer: string; kind: 'bounce' | 'abwesend'; days: number; mine: boolean }>;
   new_requests: Array<{ booking_id: string; request_number: string | null; package: string; customer: string; created_at: string; persons: number }>;
   stale_requests: Array<{ booking_id: string; request_number: string | null; package: string; customer: string; days_idle: number }>;
   offer_drafts: Array<{ id: string; offer_number: string | null; title: string; customer: string | null; updated_at: string }>;
@@ -72,8 +75,19 @@ export async function collectSignals(employee: Employee | null): Promise<DaySign
     .slice(0, 8)
     .map((t) => ({ id: t.id, ticket_no: formatTicketNo(t.ticket_number), title: t.title, created_at: t.created_at, priority: t.priority }));
 
-  const waiting = unanswered
-    .filter((u) => !u.assigned_to || u.assigned_to === meId)
+  const relevant = unanswered.filter((u) => !u.assigned_to || u.assigned_to === meId);
+  const kinds = await lastInboundKinds(relevant.map((u) => u.booking_id)).catch(() => new Map<string, string>());
+  const unreachable = relevant
+    .filter((u) => kinds.get(u.booking_id) === 'bounce' || kinds.get(u.booking_id) === 'abwesend')
+    .map((u) => ({
+      booking_id: u.booking_id, request_number: u.request_number, package: u.package_title,
+      customer: u.customer_name || u.email, kind: kinds.get(u.booking_id) as 'bounce' | 'abwesend',
+      days: Math.floor((now - ts(u.last_in_at)) / DAY_MS), mine: !!meId && u.assigned_to === meId,
+    }))
+    .sort((a, b) => Number(b.mine) - Number(a.mine) || b.days - a.days)
+    .slice(0, 10);
+  const waiting = relevant
+    .filter((u) => (kinds.get(u.booking_id) || 'kunde') === 'kunde')
     .map((u) => ({
       booking_id: u.booking_id, request_number: u.request_number, package: u.package_title,
       customer: u.customer_name || u.email, last_in_at: u.last_in_at, mine: !!meId && u.assigned_to === meId,
@@ -117,6 +131,7 @@ export async function collectSignals(employee: Employee | null): Promise<DaySign
     my_tasks: myTasks,
     unassigned_tasks: unassigned,
     waiting_customers: waiting,
+    unreachable,
     new_requests: newRequests,
     stale_requests: stale,
     offer_drafts: drafts,
@@ -144,6 +159,10 @@ export function signalsToText(s: DaySignals): string {
   }
   lines.push(`Kunden warten auf Antwort (${s.waiting_customers.length}):`);
   for (const w of s.waiting_customers) lines.push(`- ${w.request_number || w.booking_id} ${w.customer} – ${w.package}: wartet seit ${w.days_waiting} Tag(en)${w.mine ? ' (dir zugewiesen)' : w.assignee ? ` (${w.assignee})` : ' (nicht zugewiesen)'}`);
+  if (s.unreachable.length) {
+    lines.push(`Kunden nicht erreichbar bzw. abwesend (letzte „Antwort“ war Bounce/Abwesenheitsnotiz) (${s.unreachable.length}):`);
+    for (const u of s.unreachable) lines.push(`- ${u.request_number || u.booking_id} ${u.customer} – ${u.package}: ${u.kind === 'bounce' ? 'Mail unzustellbar → anrufen/Adresse klären' : 'Abwesenheitsnotiz → später nachfassen'} (seit ${u.days} Tagen)`);
+  }
   lines.push(`Neue, nicht zugewiesene Anfragen (${s.new_requests.length}):`);
   for (const n of s.new_requests) lines.push(`- ${n.request_number || n.booking_id} ${n.customer} – ${n.package}, ${n.persons} Pers., eingegangen ${n.created_at.slice(0, 10)}`);
   if (s.stale_requests.length) {

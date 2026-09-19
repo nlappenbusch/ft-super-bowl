@@ -14,7 +14,7 @@ import { TOOLS as PORTAL_TOOLS, callTool as callPortalTool, type ToolContext } f
 import { getBooking, updateBooking } from '../bookingStore';
 import { findBookingByRequestNumber, getMessagesByBooking } from '../database';
 import { getCustomer } from '../customerStore';
-import { createStaffTask, listProjects, createProject, formatTicketNo, type Employee } from '../staffStore';
+import { createStaffTask, listProjects, createProject, formatTicketNo, listEmployees, type Employee } from '../staffStore';
 import { collectSignals, signalsToText } from './signals';
 import { listTriagedMails, readMail, syncInbox, MAIL_CATEGORIES } from './mailTriage';
 import { searchSharePoint, readSharePointFile } from './sharepoint';
@@ -58,13 +58,14 @@ const WORKSPACE_TOOLS: BetaTool[] = [
   },
   {
     name: 'update_request',
-    description: 'Anfrage im CRM ändern: Status setzen, mir zuweisen und/oder eine interne Notiz anhängen. Vorher bestätigen lassen, außer die Person hat es verlangt.',
+    description: 'Anfrage im CRM ändern: Status setzen, zuweisen (mir oder einer Kollegin/einem Kollegen) und/oder eine interne Notiz anhängen. Vorher bestätigen lassen, ausser die Person hat es verlangt.',
     input_schema: {
       type: 'object',
       properties: {
         request: STR('RQ-Nummer oder Anfrage-ID'),
         status: { type: 'string', enum: ['new', 'in_progress', 'booked', 'rejected'], description: 'Neuer Status' },
         assign_to_me: { type: 'boolean', description: 'true = der angemeldeten Person zuweisen' },
+        assign_to: STR('Einer Kollegin/einem Kollegen zuweisen: voller Name oder eindeutiger Vorname (aktive Mitarbeitende)'),
         add_note: STR('Interne Notiz, wird mit Datum und Name angehängt'),
       },
       required: ['request'], additionalProperties: false,
@@ -356,6 +357,16 @@ export async function runWorkspaceTool(name: string, input: Record<string, unkno
       if (input.assign_to_me === true) {
         if (!ctx.employee) return done({ error: 'Zuweisen geht nur mit Microsoft-Login (Mitarbeiterprofil).' });
         updates.assigned_to = ctx.employee.id;
+      } else if (typeof input.assign_to === 'string' && input.assign_to.trim()) {
+        const q = input.assign_to.trim().toLowerCase();
+        const active = await listEmployees(false);
+        const exact = active.filter((e) => e.name.trim().toLowerCase() === q);
+        const byFirst = active.filter((e) => e.name.trim().toLowerCase().split(/\s+/)[0] === q);
+        const hit = exact.length === 1 ? exact[0] : byFirst.length === 1 ? byFirst[0] : null;
+        if (!hit) {
+          return done({ error: `Niemand eindeutig gefunden für „${input.assign_to}“. Aktive Mitarbeitende: ${active.map((e) => e.name).join(', ')}` });
+        }
+        updates.assigned_to = hit.id;
       }
       if (typeof input.add_note === 'string' && input.add_note.trim()) {
         const cur = ((b as { notes?: string }).notes || '').trim();
@@ -364,7 +375,7 @@ export async function runWorkspaceTool(name: string, input: Record<string, unkno
       }
       if (!Object.keys(updates).length) return done({ error: 'Nichts zu ändern (status, assign_to_me oder add_note angeben).' });
       await updateBooking(b.id, updates);
-      return done({ updated: Object.keys(updates), request_number: b.request_number, admin_url: `${ctx.base}/admin/crm` });
+      return done({ updated: Object.keys(updates), request_number: b.request_number, admin_url: `${ctx.base}/admin/crm` }, b.request_number || '');
     }
 
     case 'list_inbox': {

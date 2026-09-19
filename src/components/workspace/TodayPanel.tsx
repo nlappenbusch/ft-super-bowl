@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { RefreshCw, Clock, UserRound, Inbox, ListTodo, FileSpreadsheet, Sparkles, AlertCircle, Moon, BellRing, Check, X, AlarmClock, Bot, Play } from 'lucide-react';
+import { RefreshCw, Clock, UserRound, Inbox, ListTodo, FileSpreadsheet, Sparkles, AlertCircle, Moon, BellRing, Check, X, AlarmClock, Bot, Play, PhoneCall } from 'lucide-react';
 import { COLORS, Spinner } from '@/components/admin/ui';
 import { api, jsonInit, relTime, type DaySignals, type AgentSummary } from './types';
 
@@ -176,6 +176,20 @@ export default function TodayPanel({ onAsk, refreshKey, isAdmin }: { onAsk: (tex
                   onAsk={() => onAsk(`Lies den Verlauf von ${w.request_number || w.booking_id} und entwirf eine Antwort an den Kunden.`, `Heute: Kunde wartet (${w.request_number})`)} />
               ))}
             </Section>
+            {s.unreachable.length > 0 && (
+              <Section icon={<PhoneCall className="h-3.5 w-3.5" />} title="Nicht erreichbar / abwesend" count={s.unreachable.length}>
+                {s.unreachable.map((u) => (
+                  <Row key={u.booking_id}
+                    title={`${u.request_number || 'Anfrage'} · ${u.customer}`}
+                    sub={`${u.kind === 'bounce' ? 'Mail unzustellbar – anrufen' : 'Abwesenheitsnotiz – nachfassen'} · ${u.package} · seit ${u.days} T.`}
+                    tone={u.kind === 'bounce' ? 'warn' : undefined}
+                    href="/admin/crm"
+                    onAsk={() => onAsk(u.kind === 'bounce'
+                      ? `Bei ${u.request_number || u.booking_id} kam unsere Mail als unzustellbar zurück. Such mir Telefonnummer und Anliegen heraus, damit ich anrufen kann, und hänge eine interne Notiz an.`
+                      : `Bei ${u.request_number || u.booking_id} kam nur eine Abwesenheitsnotiz. Lies den Verlauf und entwirf ein freundliches Nachfassen.`, `Heute: ${u.kind === 'bounce' ? 'Bounce' : 'Abwesenheitsnotiz'} ${u.request_number}`)} />
+                ))}
+              </Section>
+            )}
             <Section icon={<ListTodo className="h-3.5 w-3.5" />} title="Meine Aufgaben" count={s.my_tasks.length} empty="Keine offenen Aufgaben.">
               {s.my_tasks.map((t) => (
                 <Row key={t.id}

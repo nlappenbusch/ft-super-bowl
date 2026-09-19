@@ -26,6 +26,7 @@ import {
 import { listUnansweredBookingInbound } from '../database';
 import { fmtRangeDe, fmtDaysDe, firstName, VACATION_TYPE_LABEL } from '../vacationFormat';
 import { ensureWorkspaceSchema, nowIso } from './schema';
+import { lastInboundKinds } from './inboundKind';
 
 export const NUDGE_KINDS = ['urlaub_genehmigen', 'aufgabe_ueberfaellig', 'aufgabe_offen', 'kunde_wartet', 'uebergabe', 'vertretung'] as const;
 export type NudgeKind = (typeof NUDGE_KINDS)[number];
@@ -193,8 +194,10 @@ export async function computeDesiredNudges(): Promise<DesiredNudge[]> {
 
   // 4) Kunden warten >24 h
   const waiting = await listUnansweredBookingInbound().catch(() => []);
+  const inboundKinds = await lastInboundKinds(waiting.map((w) => w.booking_id)).catch(() => new Map<string, string>());
   let unassignedWaiting = 0;
   for (const w of waiting) {
+    if ((inboundKinds.get(w.booking_id) || 'kunde') !== 'kunde') continue; // Bounce/Abwesenheit: keine „Kunde wartet“-Erinnerung
     const days = Math.floor((now - ts(w.last_in_at)) / DAY_MS);
     if (days < 1) continue;
     const who = w.assigned_to && byId.has(w.assigned_to) ? [byId.get(w.assigned_to)!] : (unassignedWaiting++ < 5 ? admins : []);
