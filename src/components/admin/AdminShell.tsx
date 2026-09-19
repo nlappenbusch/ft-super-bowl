@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
-  LayoutDashboard, Inbox, KanbanSquare, Wallet,
-  CalendarDays, Layers, Package, HelpCircle, Tag, MapPin,
-  Mail, Settings, LogOut, Menu, Bell, AtSign, MessageSquare, StickyNote, UserPlus, Check,
-  Users, Timer, Plane, ListTodo, Trophy, Sparkles, Contact, Activity, Globe, Code2, Wand2, KeyRound, FileClock, Calculator, Bot, Presentation } from 'lucide-react';
+  LogOut, Menu, Bell, AtSign, MessageSquare, StickyNote, UserPlus, Check,
+  Sparkles, Search, ChevronRight,
+} from 'lucide-react';
 import { COLORS } from './ui';
+import { ADMIN_NAV, AI_WORKSPACE_HREF, activeNavGroupId, isNavItemActive, type AdminNavGroup } from './adminNav';
+import AdminCommandPalette from './AdminCommandPalette';
 
 async function doLogout() {
   try { await fetch('/api/auth/logout', { method: 'POST' }); } catch { /* ignore */ }
@@ -21,67 +22,88 @@ interface AdminShellProps {
   children: React.ReactNode;
   /** Volle Content-Breite (z.B. für Board-Ansichten) statt max-w-7xl. */
   wide?: boolean;
+  /**
+   * Randlos: `<main>` ohne Padding/Max-Breite, exakt so hoch wie der Viewport unter der
+   * Topbar und ohne eigenen Scroll — für Seiten mit eigenem, intern scrollendem
+   * Vollhöhen-Layout (z.B. Chat).
+   */
+  fullBleed?: boolean;
 }
-
-interface NavItem { href: string; label: string; icon: React.ReactNode; exact?: boolean }
-interface NavGroup { label?: string; items: NavItem[] }
 
 const ICON = 'h-[18px] w-[18px]';
 
-const NAV: NavGroup[] = [
-  { items: [{ href: '/admin', label: 'Dashboard', icon: <LayoutDashboard className={ICON} />, exact: true }] },
-  {
-    label: 'Vertrieb',
-    items: [
-      { href: '/admin/buchungen', label: 'Buchungen', icon: <Inbox className={ICON} /> },
-      { href: '/admin/crm', label: 'CRM', icon: <KanbanSquare className={ICON} /> },
-      { href: '/admin/kunden', label: 'Kunden', icon: <Contact className={ICON} /> },
-      { href: '/admin/kalkulation', label: 'Kalkulation', icon: <Calculator className={ICON} /> },
-      { href: '/admin/incentive', label: 'Incentive Builder', icon: <Wand2 className={ICON} /> },
-      { href: '/admin/praesentationen', label: 'Präsentationen', icon: <Presentation className={ICON} /> },
-      { href: '/admin/finanzen', label: 'Finanzen', icon: <Wallet className={ICON} /> },
-    ],
-  },
-  {
-    label: 'Content',
-    items: [
-      { href: '/admin/events', label: 'Events', icon: <CalendarDays className={ICON} /> },
-      { href: '/admin/series', label: 'Serien', icon: <Layers className={ICON} /> },
-      { href: '/admin/packages', label: 'Packages', icon: <Package className={ICON} /> },
-      { href: '/admin/faqs', label: 'FAQs', icon: <HelpCircle className={ICON} /> },
-      { href: '/admin/categories', label: 'Kategorien SEO', icon: <Tag className={ICON} /> },
-      { href: '/admin/shortcodes', label: 'WP-Shortcodes', icon: <Code2 className={ICON} /> },
-      { href: '/admin/pins', label: 'Lageplan-Icons', icon: <MapPin className={ICON} /> },
-      { href: '/admin/tippspiel', label: 'WM-Tippspiel', icon: <Trophy className={ICON} /> },
-    ],
-  },
-  {
-    label: 'Team',
-    items: [
-      { href: '/admin/team', label: 'Team & User', icon: <Users className={ICON} /> },
-      { href: '/admin/zeit', label: 'Zeiterfassung', icon: <Timer className={ICON} /> },
-      { href: '/admin/urlaub', label: 'Urlaub', icon: <Plane className={ICON} /> },
-      { href: '/admin/aufgaben', label: 'Aufgaben', icon: <ListTodo className={ICON} /> },
-      { href: '/admin/rapporte', label: 'Zeit-Rapporte', icon: <FileClock className={ICON} /> },
-    ],
-  },
-  {
-    label: 'System',
-    items: [
-      { href: '/admin/mail', label: 'E-Mail / M365', icon: <Mail className={ICON} /> },
-      { href: '/admin/ai', label: 'KI-Redaktion', icon: <Sparkles className={ICON} /> },
-      { href: '/admin/status', label: 'Status', icon: <Activity className={ICON} /> },
-      { href: '/admin/seo', label: 'SEO & GEO', icon: <Globe className={ICON} /> },
-      { href: '/admin/mcp', label: 'KI-Zugang (MCP)', icon: <Bot className={ICON} /> },
-      { href: '/admin/api-keys', label: 'API-Keys', icon: <KeyRound className={ICON} /> },
-      { href: '/admin/settings', label: 'Einstellungen', icon: <Settings className={ICON} /> },
-    ],
-  },
-];
+/** Höhe der Topbar; `fullBleed`-Seiten ziehen genau diese Höhe vom Viewport ab. */
+const TOPBAR_HEIGHT_CLASS = 'h-16';
+const FULL_BLEED_MAIN_CLASS = 'h-[calc(100dvh-4rem)] overflow-hidden';
 
-function isActive(pathname: string, item: NavItem): boolean {
-  if (item.exact) return pathname === item.href;
-  return pathname === item.href || pathname.startsWith(item.href + '/');
+// ==================== Auf-/Zu-Zustand der Nav-Gruppen (localStorage) ====================
+// Als externer Store (useSyncExternalStore): Server/Hydration sehen die Defaults, danach
+// gilt der gespeicherte Zustand. Sidebar und Mobile-Drawer teilen ihn. Ohne Storage
+// (privater Modus, gesperrt) funktioniert das Auf-/Zuklappen trotzdem, nur ohne Gedächtnis.
+
+const NAV_STATE_KEY = 'ft-admin-nav-groups';
+type NavOpenState = Record<string, boolean>;
+
+let navStateRaw: string | null = null;
+const navStateListeners = new Set<() => void>();
+
+function readNavStateRaw(): string {
+  if (navStateRaw === null) {
+    try { navStateRaw = window.localStorage.getItem(NAV_STATE_KEY) ?? ''; } catch { navStateRaw = ''; }
+  }
+  return navStateRaw;
+}
+
+function subscribeNavState(onChange: () => void): () => void {
+  navStateListeners.add(onChange);
+  const onStorage = (e: StorageEvent) => {
+    if (e.key !== NAV_STATE_KEY) return;
+    navStateRaw = e.newValue ?? '';
+    onChange();
+  };
+  window.addEventListener('storage', onStorage);
+  return () => {
+    navStateListeners.delete(onChange);
+    window.removeEventListener('storage', onStorage);
+  };
+}
+
+function parseNavState(raw: string): NavOpenState {
+  if (!raw) return {};
+  try {
+    const v: unknown = JSON.parse(raw);
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
+    const out: NavOpenState = {};
+    for (const [k, val] of Object.entries(v)) if (typeof val === 'boolean') out[k] = val;
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function writeNavState(next: NavOpenState) {
+  navStateRaw = JSON.stringify(next);
+  try { window.localStorage.setItem(NAV_STATE_KEY, navStateRaw); } catch { /* ohne Storage: nur im Speicher */ }
+  navStateListeners.forEach((l) => l());
+}
+
+function useNavGroupState() {
+  const raw = useSyncExternalStore(subscribeNavState, readNavStateRaw, () => '');
+  const stored = useMemo(() => parseNavState(raw), [raw]);
+  const setOpen = useCallback((groupId: string, open: boolean) => {
+    writeNavState({ ...parseNavState(readNavStateRaw()), [groupId]: open });
+  }, []);
+  return { stored, setOpen };
+}
+
+// Tastenkürzel-Hinweis passend zur Plattform (Server/Hydration: ⌘K).
+const noopSubscribe = () => () => {};
+function useShortcutHint(): string {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => (/Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent) ? '⌘K' : 'Strg K'),
+    () => '⌘K',
+  );
 }
 
 // ==================== Benachrichtigungs-Center (Glocke) ====================
@@ -221,50 +243,133 @@ function NotificationBell() {
   );
 }
 
-function SidebarContent({ pathname, onNavigate, user }: { pathname: string; onNavigate?: () => void; user: { name: string; src: string } | null }) {
+function NavGroupSection({
+  group, pathname, activeGroup, stored, setOpen, onNavigate,
+}: {
+  group: AdminNavGroup;
+  pathname: string;
+  activeGroup: string | null;
+  stored: Record<string, boolean>;
+  setOpen: (groupId: string, open: boolean) => void;
+  onNavigate?: () => void;
+}) {
+  const listId = useId();
+  const collapsible = !!group.label;
+  const forced = group.id === activeGroup;
+  const open = !collapsible || forced || (stored[group.id] ?? !!group.defaultOpen);
+
+  return (
+    <div className={collapsible ? 'mb-1.5' : 'mb-4'}>
+      {collapsible && (
+        <button
+          type="button"
+          onClick={() => { if (!forced) setOpen(group.id, !open); }}
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-disabled={forced || undefined}
+          title={forced ? 'Enthält die aktuelle Seite' : open ? 'Einklappen' : 'Aufklappen'}
+          className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-[10px] font-bold uppercase tracking-widest transition ${
+            forced ? 'cursor-default text-white/45' : 'text-white/35 hover:bg-white/5 hover:text-white/70'
+          }`}
+        >
+          <span>{group.label}</span>
+          <ChevronRight
+            className={`h-3.5 w-3.5 transition-transform duration-150 ${open ? 'rotate-90' : ''} ${forced ? 'opacity-40' : ''}`}
+            aria-hidden="true"
+          />
+        </button>
+      )}
+      <div id={listId} hidden={!open} className="space-y-0.5 pb-1">
+        {group.items.map((item) => {
+          const active = isNavItemActive(pathname, item);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onNavigate}
+              aria-current={active ? 'page' : undefined}
+              className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all ${
+                active ? 'text-white' : 'text-white/[0.72] hover:bg-white/5 hover:text-white'
+              }`}
+              style={active ? { background: COLORS.accent } : undefined}
+            >
+              <Icon className={`${ICON} shrink-0`} aria-hidden="true" />
+              <span className="truncate">{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SidebarContent({
+  pathname, onNavigate, onOpenSearch, user,
+}: {
+  pathname: string;
+  onNavigate?: () => void;
+  onOpenSearch: () => void;
+  user: { name: string; src: string } | null;
+}) {
+  const { stored, setOpen } = useNavGroupState();
+  const shortcut = useShortcutHint();
+  const activeGroup = activeNavGroupId(pathname);
+  const navRef = useRef<HTMLElement>(null);
+
+  // Aktiven Eintrag in der (eigenständig scrollenden) Nav sichtbar machen.
+  useEffect(() => {
+    navRef.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest' });
+  }, [pathname]);
+
   return (
     <div className="flex h-full flex-col" style={{ background: COLORS.navy }}>
       {/* Brand */}
-      <div className="flex items-center gap-2.5 px-6 py-6">
+      <div className="flex shrink-0 items-center gap-2.5 px-6 pb-4 pt-6">
         <Image src="/faltin-logo.svg" alt="Faltin Travel" width={118} height={38} />
         <span className="rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white/60" style={{ background: 'rgba(255,255,255,0.08)' }}>
           Admin
         </span>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-3 pb-6">
-        {NAV.map((group, gi) => (
-          <div key={gi} className="mb-5">
-            {group.label && (
-              <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-widest text-white/35">{group.label}</div>
-            )}
-            <div className="space-y-0.5">
-              {group.items.map((item) => {
-                const active = isActive(pathname, item);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onNavigate}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all"
-                    style={{
-                      background: active ? COLORS.accent : 'transparent',
-                      color: active ? '#fff' : 'rgba(255,255,255,0.72)',
-                    }}
-                  >
-                    {item.icon}
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
+      {/* Schnellsuche */}
+      <div className="shrink-0 px-3 pb-4">
+        <button
+          type="button"
+          onClick={onOpenSearch}
+          aria-haspopup="dialog"
+          aria-keyshortcuts="Meta+K Control+K"
+          className="flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm text-white/55 transition hover:bg-white/10 hover:text-white/85"
+          style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }}
+        >
+          <Search className={`${ICON} shrink-0`} aria-hidden="true" />
+          <span className="flex-1 text-left">Suchen …</span>
+          <kbd
+            className="rounded-md px-1.5 py-0.5 font-sans text-[10px] font-semibold text-white/50"
+            style={{ background: 'rgba(255,255,255,0.08)' }}
+          >
+            {shortcut}
+          </kbd>
+        </button>
+      </div>
+
+      {/* Nav (scrollt eigenständig) */}
+      <nav ref={navRef} aria-label="Admin-Navigation" className="min-h-0 flex-1 overflow-y-auto px-3 pb-6">
+        {ADMIN_NAV.map((group) => (
+          <NavGroupSection
+            key={group.id}
+            group={group}
+            pathname={pathname}
+            activeGroup={activeGroup}
+            stored={stored}
+            setOpen={setOpen}
+            onNavigate={onNavigate}
+          />
         ))}
       </nav>
 
       {/* User + Logout */}
-      <div className="border-t px-3 py-4" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+      <div className="shrink-0 border-t px-3 py-4" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
         {user && (
           <div className="mb-2 px-3">
             <div className="truncate text-xs font-semibold text-white/90">{user.name}</div>
@@ -282,53 +387,92 @@ function SidebarContent({ pathname, onNavigate, user }: { pathname: string; onNa
   );
 }
 
-export default function AdminShell({ title, children }: AdminShellProps) {
-  const pathname = usePathname();
+export default function AdminShell({ title, children, fullBleed = false }: AdminShellProps) {
+  const pathname = usePathname() ?? '';
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [user, setUser] = useState<{ name: string; src: string } | null>(null);
 
   useEffect(() => {
     fetch('/api/auth/session').then((r) => r.json()).then((d) => { if (d?.user) setUser(d.user); }).catch(() => {});
   }, []);
 
+  // Cmd+K / Strg+K öffnet (bzw. schliesst) die Schnellsuche auf jeder Admin-Seite.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.altKey || e.shiftKey) return;
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'k') return;
+      e.preventDefault();
+      setMobileOpen(false);
+      setPaletteOpen((o) => !o);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const openSearch = () => { setMobileOpen(false); setPaletteOpen(true); };
+  const closeSearch = useCallback(() => setPaletteOpen(false), []);
+  const onAiWorkspace = pathname === AI_WORKSPACE_HREF || pathname.startsWith(AI_WORKSPACE_HREF + '/');
+
   return (
     <div className="min-h-screen" style={{ background: COLORS.surfaceMuted }}>
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 lg:block">
-        <SidebarContent pathname={pathname} user={user} />
+        <SidebarContent pathname={pathname} user={user} onOpenSearch={openSearch} />
       </aside>
 
-        {/* Mobile drawer */}
-        {mobileOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden">
-            <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
-            <div className="absolute inset-y-0 left-0 w-64">
-              <SidebarContent pathname={pathname} onNavigate={() => setMobileOpen(false)} user={user} />
+      {/* Mobile drawer */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
+          <div className="absolute inset-y-0 left-0 w-64">
+            <SidebarContent pathname={pathname} onNavigate={() => setMobileOpen(false)} onOpenSearch={openSearch} user={user} />
+          </div>
+        </div>
+      )}
+
+      {/* Schnellsuche (Cmd+K) */}
+      {paletteOpen && <AdminCommandPalette pathname={pathname} onClose={closeSearch} />}
+
+      {/* Main column */}
+      <div className="lg:pl-64">
+        {/* Topbar (feste Höhe, siehe TOPBAR_HEIGHT_CLASS) */}
+        <header className={`sticky top-0 z-20 ${TOPBAR_HEIGHT_CLASS} border-b bg-white/80 backdrop-blur`} style={{ borderColor: COLORS.stroke }}>
+          <div className="flex h-full items-center gap-3 px-4 sm:px-6">
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 lg:hidden"
+              aria-label="Menü"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <h1 className="min-w-0 truncate text-sm font-bold" style={{ color: COLORS.navy }}>{title}</h1>
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              {!onAiWorkspace && (
+                <Link
+                  href={AI_WORKSPACE_HREF}
+                  title="Faltin-KI – KI-Arbeitsplatz öffnen"
+                  className="flex items-center gap-1.5 rounded-lg border p-2 text-sm font-semibold transition hover:bg-orange-50 sm:px-3 sm:py-1.5"
+                  style={{ color: COLORS.accent, borderColor: 'rgba(217,83,30,0.3)' }}
+                >
+                  <Sparkles className="h-5 w-5 sm:h-4 sm:w-4" aria-hidden="true" />
+                  <span className="sr-only sm:not-sr-only">Faltin-KI</span>
+                </Link>
+              )}
+              <NotificationBell />
             </div>
           </div>
-        )}
+        </header>
 
-        {/* Main column */}
-        <div className="lg:pl-64">
-          {/* Topbar */}
-          <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur" style={{ borderColor: COLORS.stroke }}>
-            <div className="flex items-center gap-3 px-4 py-3.5 sm:px-6">
-              <button
-                onClick={() => setMobileOpen(true)}
-                className="rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 lg:hidden"
-                aria-label="Menü"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
-              <h1 className="text-sm font-bold" style={{ color: COLORS.navy }}>{title}</h1>
-              <div className="ml-auto"><NotificationBell /></div>
-            </div>
-          </header>
-
-          {/* Einheitlich volle Content-Breite auf allen Admin-Seiten (TASK-00083);
-              `wide` bleibt als Prop für Abwärtskompatibilität, hat aber keine Wirkung mehr. */}
+        {/* Einheitlich volle Content-Breite auf allen Admin-Seiten (TASK-00083);
+            `wide` bleibt als Prop für Abwärtskompatibilität, hat aber keine Wirkung mehr.
+            `fullBleed`: randlos, genau Viewport minus Topbar, Seite scrollt selbst. */}
+        {fullBleed ? (
+          <main className={FULL_BLEED_MAIN_CLASS}>{children}</main>
+        ) : (
           <main className="mx-auto max-w-none px-4 py-6 sm:px-6 lg:px-8">{children}</main>
-        </div>
+        )}
       </div>
+    </div>
   );
 }
