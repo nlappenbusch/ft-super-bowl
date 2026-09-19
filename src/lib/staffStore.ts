@@ -340,15 +340,23 @@ export async function createVacationRequest(input: {
   return getVacationRequest(id);
 }
 
+/**
+ * Antrag entscheiden. Mit `expectedStatus` nur, wenn der Antrag noch diesen Status hat
+ * (optimistische Sperre: veraltete Ansichten überschreiben keinen fremden Entscheid) —
+ * dann `null`, falls sich der Status inzwischen geändert hat.
+ */
 export async function decideVacation(
   id: string, status: 'genehmigt' | 'abgelehnt', decidedBy: string, comment?: string,
+  expectedStatus?: VacationRequest['status'],
 ): Promise<VacationRequest | null> {
   const r = await getVacationRequest(id);
   if (!r) return null;
-  await dbRun(
-    `UPDATE vacation_requests SET status = ?, decided_by = ?, decided_at = ?, decision_comment = ? WHERE id = ?`,
-    [status, decidedBy, new Date().toISOString(), (comment || '').trim().slice(0, 2000), id],
+  const { changes } = await dbRun(
+    `UPDATE vacation_requests SET status = ?, decided_by = ?, decided_at = ?, decision_comment = ?
+     WHERE id = ?${expectedStatus ? ' AND status = ?' : ''}`,
+    [status, decidedBy, new Date().toISOString(), (comment || '').trim().slice(0, 2000), id, ...(expectedStatus ? [expectedStatus] : [])],
   );
+  if (!changes) return null;
   return getVacationRequest(id);
 }
 

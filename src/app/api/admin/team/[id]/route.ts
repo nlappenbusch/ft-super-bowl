@@ -12,6 +12,22 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const cur = await getEmployee(id);
   if (!cur) return NextResponse.json({ success: false, error: 'Mitarbeiter nicht gefunden' }, { status: 404 });
 
+  // Nicht-Admins: nur den eigenen Datensatz und dort nur die Briefing-Einstellung
+  // (Arbeitszeiten, Urlaubsanspruch, Name, Notizen usw. pflegen Admins).
+  if (!vacationActorFromSession(ctx).is_admin) {
+    if (ctx.employee?.id !== id) {
+      return NextResponse.json({ success: false, error: 'Stammdaten anderer Personen können nur Admins ändern.' }, { status: 403 });
+    }
+    const other = (Object.keys(body) as Array<keyof EmployeeUpdate>).filter((k) => {
+      if (k === 'briefing_opt_out' || body[k] === undefined) return false;
+      if (k === 'approver_id') return (body.approver_id || null) !== (cur.approver_id || null);
+      return JSON.stringify(body[k]) !== JSON.stringify((cur as unknown as Record<string, unknown>)[k]);
+    });
+    if (other.length) {
+      return NextResponse.json({ success: false, error: 'Deine Stammdaten (Arbeitszeit, Urlaubsanspruch, Rolle …) pflegen Admins.' }, { status: 403 });
+    }
+  }
+
   // Rolle, Aktiv-Status und Genehmigungsweg bestimmen, wer Abwesenheiten genehmigt →
   // nur Admins dürfen sie ändern (sonst könnte man sich selbst die Genehmigung zuschanzen).
   const approverId = body.approver_id !== undefined ? (body.approver_id || null) : undefined;

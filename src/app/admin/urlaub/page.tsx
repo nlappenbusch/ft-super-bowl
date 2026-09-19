@@ -293,7 +293,7 @@ export default function UrlaubPage() {
       const res = await fetch(`/api/admin/vacation/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, comment }),
+        body: JSON.stringify({ status, comment, if_status: 'beantragt' }),
       }).then((x) => x.json()).catch(() => ({ success: false }));
       setNotice(res.success
         ? { tone: 'ok', text: `Antrag ${status}.` }
