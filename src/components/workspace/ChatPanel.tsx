@@ -32,9 +32,11 @@ function newId(): string {
   return Math.random().toString(36).slice(2);
 }
 
-export default function ChatPanel({ personName, request, onActivity, aiReady }: {
+export default function ChatPanel({ personName, request, prefill, onActivity, aiReady }: {
   personName: string;
   request: ChatRequest | null;
+  /** Text nur ins Eingabefeld übernehmen (z.B. aus der Schnellsuche), nicht senden. */
+  prefill?: { n: number; text: string } | null;
   onActivity?: () => void;
   aiReady: boolean;
 }) {
@@ -231,6 +233,14 @@ export default function ChatPanel({ personName, request, onActivity, aiReady }: 
     send(request.text, { context: request.context, forceNew: request.newChat });
   }, [request, send]);
 
+  useEffect(() => {
+    if (!prefill) return;
+    setActiveId(null);
+    setItems([]);
+    setInput(prefill.text);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }, [prefill]);
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
@@ -368,7 +378,7 @@ export default function ChatPanel({ personName, request, onActivity, aiReady }: 
                 )}
                 {it.parts.map((p, pi) => {
                   if (p.type === 'text') return <Markdown key={pi} text={p.text} />;
-                  if (p.type === 'draft') return <DraftCard key={`${p.id}-d`} mailId={p.mail_id} request={p.request} body={p.body} note={p.note} personName={personName} />;
+                  if (p.type === 'draft') return <DraftCard key={`${p.id}-d`} mailId={p.mail_id} request={p.request} body={p.body} note={p.note} personName={personName} draftId={p.id} conversationId={activeId} initialDone={p.done} />;
                   if (p.type === 'notice') {
                     return (
                       <div key={pi} className="my-1.5 flex items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-xs"

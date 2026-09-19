@@ -4,14 +4,14 @@
  * KI-Antworten mit Text, Werkzeug-Chips (inkl. Ergebnis-Links) und Entwurfskarten.
  * Kontextblöcke (<kontext>…) und Thinking bleiben unsichtbar.
  */
-import type { StoredMessage, WsFile } from './store';
+import type { StoredMessage, WsFile, DraftAction } from './store';
 import { TOOL_LABELS, WRITE_TOOLS, linksFromResult } from './tools';
 import { CONTEXT_PREFIX } from './agent';
 
 export type AssistantPart =
   | { type: 'text'; text: string }
   | { type: 'tool'; id: string; name: string; label: string; write: boolean; ok: boolean | null; error?: string; links: Array<{ label: string; url: string }> }
-  | { type: 'draft'; id: string; mail_id: string | null; request: string | null; body: string; note: string };
+  | { type: 'draft'; id: string; mail_id: string | null; request: string | null; body: string; note: string; done?: { action: 'sent' | 'outlook'; web_link: string } | null };
 
 export type DisplayItem =
   | { kind: 'user'; id: string; text: string; files: Array<{ id: string; name: string }>; at: string }
@@ -36,7 +36,8 @@ function resultValue(content: unknown): unknown {
   return null;
 }
 
-export function toDisplay(messages: StoredMessage[], filesByAnthropicId: Map<string, WsFile>): DisplayItem[] {
+export function toDisplay(messages: StoredMessage[], filesByAnthropicId: Map<string, WsFile>, draftActions: DraftAction[] = []): DisplayItem[] {
+  const doneById = new Map(draftActions.map((a) => [a.draft_id, { action: a.action, web_link: a.web_link }]));
   const out: DisplayItem[] = [];
   let current: Extract<DisplayItem, { kind: 'assistant' }> | null = null;
   const toolParts = new Map<string, Extract<AssistantPart, { type: 'tool' }>>();
@@ -89,6 +90,7 @@ export function toDisplay(messages: StoredMessage[], filesByAnthropicId: Map<str
             request: typeof b.input?.request === 'string' ? b.input.request : null,
             body: String(b.input?.body || ''),
             note: typeof b.input?.note === 'string' ? b.input.note : '',
+            done: doneById.get(b.id) || null,
           });
         }
         const part: Extract<AssistantPart, { type: 'tool' }> = {
@@ -99,6 +101,10 @@ export function toDisplay(messages: StoredMessage[], filesByAnthropicId: Map<str
         current.parts.push(part);
       }
     }
+  }
+  // Entwürfe nur zeigen, wenn das Werkzeug erfolgreich lief (sonst nie sendbar anbieten).
+  for (const it of out) {
+    if (it.kind === 'assistant') it.parts = it.parts.filter((p) => p.type !== 'draft' || toolParts.get(p.id)?.ok === true);
   }
   return out;
 }

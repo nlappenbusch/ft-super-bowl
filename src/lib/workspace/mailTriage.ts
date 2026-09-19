@@ -127,7 +127,7 @@ async function doSync(opts: { fetch?: number; triageLimit?: number }): Promise<S
   }
 
   const pending = await dbAll<{ graph_id: string }>(
-    `SELECT graph_id FROM ws_mail_triage WHERE triaged_at IS NULL ORDER BY received_at DESC LIMIT ?`,
+    `SELECT graph_id FROM ws_mail_triage WHERE triaged_at IS NULL AND attempts < 3 ORDER BY received_at DESC LIMIT ?`,
     [Math.min(30, opts.triageLimit || 20)],
   );
   if (!pending.length) return result;
@@ -144,7 +144,12 @@ async function doSync(opts: { fetch?: number; triageLimit?: number }): Promise<S
     try {
       result.triaged += await triageBatch(chunk);
     } catch (e) {
-      result.errors.push((e as Error).message);
+      const msg = (e as Error).message;
+      result.errors.push(msg);
+      // Fehlversuch zählen; nach 3 Versuchen bleibt die Mail uneingeordnet stehen (kein Endlos-Retry).
+      for (const m of chunk) {
+        await dbRun(`UPDATE ws_mail_triage SET attempts = attempts + 1, error = ? WHERE graph_id = ?`, [msg.slice(0, 300), m.id]);
+      }
     }
   }
   return result;

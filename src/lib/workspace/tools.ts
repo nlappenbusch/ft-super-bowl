@@ -303,6 +303,7 @@ export async function runWorkspaceTool(name: string, input: Record<string, unkno
       base: ctx.base,
       offerPdfUrl: (id) => `${ctx.base}/api/admin/calculations/${id}/pdf`,
       invoicePdfUrl: (id) => `${ctx.base}/api/invoices/${id}/pdf`,
+      employeeId: ctx.employee?.id ?? null,
     };
     const value = await callPortalTool(name, input, portalCtx);
     return done(value);
@@ -418,7 +419,7 @@ export async function runWorkspaceTool(name: string, input: Record<string, unkno
       const itemId = String(input.item_id || '');
       const file = await readSharePointFile(driveId, itemId);
       const ref = `${driveId}:${itemId}:${file.modified}`;
-      const ws = (await findFileBySourceRef('sharepoint', ref)) || (await ingestFile({
+      const ws = (await findFileBySourceRef('sharepoint', ref, ctx.conversationId)) || (await ingestFile({
         employeeId: ctx.ownerKey,
         conversationId: ctx.conversationId,
         filename: file.name,

@@ -39,7 +39,7 @@ const TABLES = [
     content TEXT NOT NULL DEFAULT '[]',
     created_at TEXT NOT NULL DEFAULT {NOW}
   )`,
-  `CREATE INDEX IF NOT EXISTS idx_ws_msg_conv ON ws_messages(conversation_id, seq)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_ws_msg_conv_seq ON ws_messages(conversation_id, seq)`,
   `CREATE TABLE IF NOT EXISTS ws_files (
     id TEXT PRIMARY KEY,
     employee_id TEXT NOT NULL DEFAULT '',
@@ -89,6 +89,7 @@ const TABLES = [
     suggestion_at TEXT,
     draft_created_at TEXT,
     triaged_at TEXT,
+    attempts INTEGER NOT NULL DEFAULT 0,
     error TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT {NOW}
   )`,
@@ -120,6 +121,19 @@ const TABLES = [
     finished_at TEXT,
     summary TEXT NOT NULL DEFAULT '{}'
   )`,
+  `CREATE TABLE IF NOT EXISTS ws_draft_actions (
+    draft_id TEXT PRIMARY KEY,
+    conversation_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    web_link TEXT NOT NULL DEFAULT '',
+    by_name TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT {NOW}
+  )`,
+];
+
+/** Nachträgliche Spalten (für Tabellen, die schon vor der Spalte angelegt wurden). */
+const COLUMN_MIGRATIONS: Array<[string, string, string]> = [
+  ['ws_mail_triage', 'attempts', 'INTEGER NOT NULL DEFAULT 0'],
 ];
 
 let ensured: Promise<void> | null = null;
@@ -130,10 +144,17 @@ async function apply(): Promise<void> {
     for (const ddl of TABLES) {
       await pool.query(ddl.replace(/\{NOW\}/g, NOW_PG));
     }
+    for (const [table, col, def] of COLUMN_MIGRATIONS) {
+      await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${col} ${def}`);
+    }
     return;
   }
   for (const ddl of TABLES) {
     sqlite.exec(ddl.replace(/\{NOW\}/g, `(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`));
+  }
+  for (const [table, col, def] of COLUMN_MIGRATIONS) {
+    const cols = sqlite.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+    if (!cols.some((c) => c.name === col)) sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`);
   }
 }
 

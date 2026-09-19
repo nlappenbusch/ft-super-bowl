@@ -1,6 +1,6 @@
 import { workspaceSession, unauthorized, requestBase } from '@/lib/workspace/session';
 import { isWorkspaceAiConfigured, describeAiError } from '@/lib/workspace/claude';
-import { runChatTurn, type ChatEvent } from '@/lib/workspace/agent';
+import { runChatTurn, ConversationBusyError, type ChatEvent } from '@/lib/workspace/agent';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
           signal: req.signal,
         });
       } catch (e) {
-        emit({ t: 'error', message: describeAiError(e) });
+        emit({ t: 'error', message: e instanceof ConversationBusyError ? e.message : describeAiError(e) });
       }
       emit({ t: 'done' });
       closed = true;

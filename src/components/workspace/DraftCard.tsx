@@ -13,12 +13,22 @@ import { api, jsonInit } from './types';
 
 interface RequestInfo { id: string; request_number: string | null; email: string; package: string; customer: string | null }
 
-export default function DraftCard({ mailId, request, body, note, personName }: {
+export default function DraftCard({ mailId, request, body, note, personName, draftId, conversationId, initialDone }: {
   mailId: string | null; request: string | null; body: string; note: string; personName: string;
+  /** Entwurf aus dem Chat: ID + Chat, damit „gesendet“ gespeichert wird (kein doppeltes Senden nach Neuladen). */
+  draftId?: string; conversationId?: string | null;
+  initialDone?: { action: 'sent' | 'outlook'; web_link: string } | null;
 }) {
   const [text, setText] = useState(body);
   const [busy, setBusy] = useState<'send' | 'draft' | null>(null);
-  const [done, setDone] = useState<{ kind: 'sent' | 'draft'; link?: string } | null>(null);
+  const [done, setDone] = useState<{ kind: 'sent' | 'draft'; link?: string } | null>(
+    initialDone ? { kind: initialDone.action === 'sent' ? 'sent' : 'draft', link: initialDone.web_link || undefined } : null,
+  );
+
+  const remember = (action: 'sent' | 'outlook', webLink?: string) => {
+    if (!draftId || !conversationId) return;
+    api(`/api/admin/workspace/drafts/${encodeURIComponent(draftId)}`, jsonInit('POST', { conversation_id: conversationId, action, web_link: webLink })).catch(() => {});
+  };
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [info, setInfo] = useState<RequestInfo | null>(null);
@@ -35,6 +45,7 @@ export default function DraftCard({ mailId, request, body, note, personName }: {
     try {
       await api(`/api/bookings/${info.id}/reply`, jsonInit('POST', { body: text, agentName: personName }));
       setDone({ kind: 'sent' });
+      remember('sent');
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(null); }
   };
@@ -45,6 +56,7 @@ export default function DraftCard({ mailId, request, body, note, personName }: {
     try {
       const r = await api<{ web_link: string }>(`/api/admin/workspace/mail/${encodeURIComponent(mailId)}/draft`, jsonInit('POST', { text }));
       setDone({ kind: 'draft', link: r.web_link });
+      remember('outlook', r.web_link);
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(null); }
   };
