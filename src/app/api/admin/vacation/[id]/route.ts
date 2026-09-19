@@ -6,7 +6,8 @@ import {
 import { vacationActorFromSession, notifyVacationDecided, notifyVacationWithdrawn } from '@/lib/vacationWorkflow';
 
 /**
- * PATCH { status: 'genehmigt' | 'abgelehnt', comment? } – Antrag entscheiden.
+ * PATCH { status: 'genehmigt' | 'abgelehnt', comment?, if_status? } – Antrag entscheiden.
+ * `if_status` (z.B. 'beantragt'): nur entscheiden, wenn der Antrag noch so steht — sonst 409.
  * Nur zuständige Genehmiger:innen oder Admins; nie der eigene Antrag – ausser es gibt
  * sonst niemanden, der genehmigen könnte (self_approval_fallback).
  */
@@ -29,8 +30,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const comment = typeof body.comment === 'string' ? body.comment : '';
-  const updated = await decideVacation(id, body.status, actor.name, comment);
-  if (!updated) return NextResponse.json({ success: false, error: 'Antrag nicht gefunden' }, { status: 404 });
+  const ifStatus = ['beantragt', 'genehmigt', 'abgelehnt'].includes(body.if_status) ? body.if_status : undefined;
+  const updated = await decideVacation(id, body.status, actor.name, comment, ifStatus);
+  if (!updated) {
+    const now = await getVacationRequest(id);
+    if (now && ifStatus) {
+      return NextResponse.json({
+        success: false,
+        error: `Der Antrag wurde inzwischen bereits entschieden (${now.status}${now.decided_by ? ` von ${now.decided_by}` : ''}).`,
+        data: now,
+      }, { status: 409 });
+    }
+    return NextResponse.json({ success: false, error: 'Antrag nicht gefunden' }, { status: 404 });
+  }
 
   await notifyVacationDecided(updated, { actor });
 
