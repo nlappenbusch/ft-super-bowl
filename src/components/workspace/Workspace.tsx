@@ -128,8 +128,9 @@ export default function Workspace() {
     }
   }, []);
 
+  /** Aus Heute/Posteingang/Wissen/Werkstatt: eigenes Thema → eigener, neuer Chat. */
   const ask = useCallback((text: string, context?: string) => {
-    setRequest({ n: Date.now(), text, context });
+    setRequest({ n: Date.now(), text, context, newChat: true });
     setPane('chat');
   }, []);
 

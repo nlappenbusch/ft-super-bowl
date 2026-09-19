@@ -28,13 +28,38 @@ export function anthropicClient(): Anthropic {
   const { apiKey } = workspaceAiConfig();
   if (!apiKey) throw new Error('Kein Anthropic API-Key konfiguriert (Admin → KI-Redaktion).');
   if (!cached || cached.key !== apiKey) {
-    cached = { key: apiKey, client: new Anthropic({ apiKey, maxRetries: 2, timeout: 10 * 60 * 1000 }) };
+    cached = { key: apiKey, client: new Anthropic({ apiKey, maxRetries: 5, timeout: 10 * 60 * 1000 }) };
   }
   return cached.client;
 }
 
+/**
+ * Überlastung — auch wenn sie mitten im Stream als error-Event kommt (dann ohne HTTP-Status,
+ * nur mit type „overloaded_error“; solche Fehler wiederholt das SDK nicht selbst).
+ */
+export function isOverloadedAiError(e: unknown): boolean {
+  if (e instanceof Anthropic.APIError && e.status === 529) return true;
+  const inner = (e as { error?: { error?: { type?: string }; type?: string } })?.error;
+  return inner?.error?.type === 'overloaded_error' || inner?.type === 'overloaded_error'
+    || /overloaded_error/.test(String((e as Error)?.message || ''));
+}
+
+/** Vorübergehende Fehler (Überlastung, Rate-Limit, Serverfehler): lohnt „Nochmal versuchen“. */
+export function isRetryableAiError(e: unknown): boolean {
+  if (isOverloadedAiError(e)) return true;
+  if (e instanceof Anthropic.RateLimitError || e instanceof Anthropic.InternalServerError) return true;
+  if (e instanceof Anthropic.APIConnectionError) return true;
+  return e instanceof Anthropic.APIError && (e.status === 503 || e.status === 502);
+}
+
 /** Verständliche deutsche Fehlermeldung aus einem SDK-Fehler. */
 export function describeAiError(e: unknown): string {
+  if (isOverloadedAiError(e)) {
+    return 'Die KI ist gerade überlastet (Anthropic). Bitte gleich nochmal versuchen – deine Nachricht ist gespeichert.';
+  }
+  if (e instanceof Anthropic.InternalServerError || e instanceof Anthropic.APIConnectionError) {
+    return 'Die KI ist gerade nicht erreichbar. Bitte gleich nochmal versuchen – deine Nachricht ist gespeichert.';
+  }
   if (e instanceof Anthropic.AuthenticationError) return 'Der Anthropic API-Key ist ungültig (Admin → KI-Redaktion).';
   if (e instanceof Anthropic.RateLimitError) return 'Die KI ist gerade ausgelastet (Rate-Limit). Bitte gleich nochmal versuchen.';
   if (e instanceof Anthropic.BadRequestError) return `Anfrage an die KI abgelehnt: ${e.message.slice(0, 300)}`;
