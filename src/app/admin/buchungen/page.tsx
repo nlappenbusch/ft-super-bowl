@@ -6,6 +6,7 @@ import {
   Download, Search, Mail, Phone, Users, Bed, DollarSign, Eye, Plus, Receipt, X, Inbox,
 } from 'lucide-react';
 import AdminShell from '@/components/admin/AdminShell';
+import { analyzeWishes } from '@/lib/specialRequests';
 import InvoiceEditor, { InvoiceLead } from '@/components/admin/InvoiceEditor';
 import {
   Card,
@@ -357,7 +358,9 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {filteredBookings.map((booking) => (
+                    {filteredBookings.map((booking) => {
+                      const wish = analyzeWishes(booking.message, booking.notes);
+                      return (
                       <tr key={booking.id} className="hover:bg-gray-50">
                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                           {new Date(booking.created_at).toLocaleDateString('de-DE', {
@@ -370,8 +373,17 @@ export default function AdminDashboard() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm">
-                            <div className="font-semibold text-gray-900">
-                              {booking.travelers[0]?.firstName} {booking.travelers[0]?.lastName}
+                            <div className="flex items-center gap-1.5 font-semibold text-gray-900">
+                              <span>{booking.travelers[0]?.firstName} {booking.travelers[0]?.lastName}</span>
+                              {wish.lead && (
+                                <span
+                                  title={`Besonderer Wunsch (${wish.categories.map(c => c.label).join(', ')}): ${wish.snippet}`}
+                                  className="inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+                                  style={{ color: wish.lead.color, background: wish.lead.bg, border: `1px solid ${wish.lead.color}33` }}
+                                >
+                                  <span aria-hidden>{wish.lead.emoji}</span>{wish.lead.label}
+                                </span>
+                              )}
                             </div>
                             <div className="mt-1 flex items-center gap-1 text-gray-500">
                               <Mail className="h-3 w-3" />
@@ -436,7 +448,8 @@ export default function AdminDashboard() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

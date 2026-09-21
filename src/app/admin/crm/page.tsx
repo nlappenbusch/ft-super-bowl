@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef, type ReactNode, type CSSProperties } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef, type ReactNode, type CSSProperties } from 'react';
 import InvoiceEditor, { type InvoiceLead } from '@/components/admin/InvoiceEditor';
 import AdminShell from '@/components/admin/AdminShell';
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
@@ -9,8 +9,13 @@ import {
   ChevronRight, X, FileText, RefreshCw, Receipt,
   Plus, Trash2, Download, CheckCircle, Clock, AlertCircle,
   TrendingUp, Banknote, BarChart3, Target,
-  MessageSquare, Send, Hash, CornerDownRight, Paperclip
+  MessageSquare, Send, Hash, CornerDownRight, Paperclip,
+  Sparkles, StickyNote,
 } from 'lucide-react';
+import {
+  WISH_CATEGORIES, FREITEXT_CATEGORY, analyzeWishes, wishCounts,
+  type WishInfo, type WishKey,
+} from '@/lib/specialRequests';
 
 /* ─── Types ──────────────────────────────────────────────────────────── */
 
@@ -153,20 +158,135 @@ function ErpStats({ leads, invoices }: { leads: Lead[]; invoices: Invoice[] }) {
   );
 }
 
+/* ─── Wunsch-Dashboard ───────────────────────────────────────────────── */
+
+/** 'alle' = kein Filter, 'nur' = alle erkannten Themen, 'freitext' = Text ohne Thema. */
+type WishFilter = 'alle' | 'nur' | 'freitext' | WishKey;
+
+function FilterChip({
+  active, color, bg, count, children, onClick,
+}: {
+  active: boolean; color: string; bg: string; count?: number; children: ReactNode; onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition hover:-translate-y-px"
+      style={{
+        color: active ? 'white' : color,
+        background: active ? color : bg,
+        border: `1.5px solid ${active ? color : `${color}33`}`,
+      }}
+    >
+      {children}
+      {count !== undefined && (
+        <span
+          className="rounded-full px-1.5 text-[10px] tabular-nums"
+          style={{ background: active ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.75)', color: active ? 'white' : color }}
+        >
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function WishDashboard({
+  leads, infos, filter, onFilter,
+}: {
+  leads: Lead[];
+  infos: Map<string, WishInfo>;
+  filter: WishFilter;
+  onFilter: (f: WishFilter) => void;
+}) {
+  const alle = leads.map(l => infos.get(l.id)).filter((x): x is WishInfo => !!x);
+  const { total, freitext, byKey } = wishCounts(alle);
+  const offen = leads.filter(l => (l.status === 'new' || l.status === 'in_progress') && infos.get(l.id)?.has).length;
+  const quote = leads.length ? Math.round((total / leads.length) * 100) : 0;
+
+  return (
+    <div className="mb-6 rounded-2xl p-4" style={{ background: '#fffdf6', border: '1.5px solid #f59e0b40' }}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-start gap-2.5">
+          <Sparkles className="mt-0.5 h-5 w-5 shrink-0" style={{ color: '#d97706' }} />
+          <div>
+            <div className="text-sm font-extrabold" style={{ color: '#143047' }}>Besondere Wünsche &amp; Anmerkungen</div>
+            <div className="text-xs text-gray-500">
+              <span className="font-bold" style={{ color: '#d97706' }}>{total}</span> von {leads.length} Anfragen mit erkanntem Thema ({quote}&nbsp;%)
+              {offen > 0 && <> · <span className="font-bold" style={{ color: '#d9531e' }}>{offen}</span> davon noch unbearbeitet</>}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          <FilterChip active={filter === 'alle'} color="#143047" bg="#eef2f7" onClick={() => onFilter('alle')}>
+            Alle Anfragen
+          </FilterChip>
+          <FilterChip active={filter === 'nur'} color="#d97706" bg="#fffbeb" count={total} onClick={() => onFilter(filter === 'nur' ? 'alle' : 'nur')}>
+            Nur mit Wunsch
+          </FilterChip>
+          <FilterChip
+            active={filter === 'freitext'}
+            color={FREITEXT_CATEGORY.color}
+            bg={FREITEXT_CATEGORY.bg}
+            count={freitext}
+            onClick={() => onFilter(filter === 'freitext' ? 'alle' : 'freitext')}
+          >
+            <span title="Nachricht vorhanden, aber ohne erkennbares Thema">Nur Freitext</span>
+          </FilterChip>
+        </div>
+      </div>
+
+      {/* Anteil der Anfragen mit Freitext */}
+      <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full" style={{ background: '#f1e6d2' }}>
+        <div className="h-full rounded-full transition-all" style={{ width: `${quote}%`, background: '#d97706' }} />
+      </div>
+
+      {/* Themen – ein Klick filtert das Board */}
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {total === 0 ? (
+          <span className="text-xs text-gray-400">
+            Kein erkanntes Thema. Sobald ein Kunde z.&nbsp;B. Rollstuhl, Allergie oder Geburtstag erwähnt, erscheint es hier.
+          </span>
+        ) : (
+          WISH_CATEGORIES.filter(c => byKey[c.key as WishKey] > 0).map(c => (
+            <FilterChip
+              key={c.key}
+              active={filter === c.key}
+              color={c.color}
+              bg={c.bg}
+              count={byKey[c.key as WishKey]}
+              onClick={() => onFilter(filter === c.key ? 'alle' : (c.key as WishKey))}
+            >
+              <span aria-hidden>{c.emoji}</span>
+              <span title={c.hint}>{c.label}</span>
+            </FilterChip>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Lead Card ──────────────────────────────────────────────────────── */
 
-function LeadCard({ lead, hasInvoice, onClick, assigneeName }: { lead: Lead; hasInvoice: boolean; onClick: () => void; assigneeName?: string }) {
+function LeadCard({ lead, hasInvoice, onClick, assigneeName, wish }: { lead: Lead; hasInvoice: boolean; onClick: () => void; assigneeName?: string; wish: WishInfo }) {
   const col = COLUMNS.find(c => c.id === lead.status) || COLUMNS[0];
   const initials = assigneeName ? assigneeName.split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase() : null;
+  const mark = wish.lead;
   return (
     <button
       onClick={onClick}
       className="w-full text-left p-4 rounded-xl bg-white transition-all hover:-translate-y-0.5 hover:shadow-md group"
-      style={{ border: '1.5px solid #e5e8ed', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}
+      style={{
+        border: `1.5px solid ${mark ? `${mark.color}55` : '#e5e8ed'}`,
+        borderLeft: mark ? `5px solid ${mark.color}` : undefined,
+        boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+      }}
     >
       <div className="flex items-start justify-between gap-2 mb-1">
-        <div className="font-bold text-sm truncate" style={{ color: '#143047' }}>
-          {getLeadName(lead)}
+        <div className="font-bold text-sm truncate flex items-center gap-1.5" style={{ color: '#143047' }}>
+          {mark && <span title={`Besonderer Wunsch: ${wish.categories.map(c => c.label).join(', ')}`} aria-hidden>{mark.emoji}</span>}
+          <span className="truncate">{getLeadName(lead)}</span>
         </div>
         <ChevronRight className="w-4 h-4 shrink-0 text-gray-400 group-hover:text-gray-600 transition mt-0.5" />
       </div>
@@ -189,6 +309,26 @@ function LeadCard({ lead, hasInvoice, onClick, assigneeName }: { lead: Lead; has
         {formatDate(lead.created_at)}
       </div>
 
+      {mark && (
+        <div className="mb-2 rounded-lg px-2 py-1.5" style={{ background: mark.bg, border: `1px solid ${mark.color}22` }}>
+          <div className="flex flex-wrap items-center gap-1">
+            {wish.categories.slice(0, 3).map(c => (
+              <span
+                key={c.key}
+                className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+                style={{ color: c.color, background: 'rgba(255,255,255,0.8)' }}
+              >
+                <span aria-hidden>{c.emoji}</span>{c.label}
+              </span>
+            ))}
+            {wish.categories.length > 3 && (
+              <span className="text-[10px] font-bold" style={{ color: mark.color }}>+{wish.categories.length - 3}</span>
+            )}
+          </div>
+          <div className="mt-1 text-[11px] leading-snug text-gray-600 line-clamp-2">{wish.snippet}</div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         {lead.total_price && lead.total_price > 0 ? (
           <span className="text-xs font-bold" style={{ color: col.color }}>
@@ -198,6 +338,16 @@ function LeadCard({ lead, hasInvoice, onClick, assigneeName }: { lead: Lead; has
           <span className="text-xs text-gray-300">Anfrage</span>
         )}
         <span className="flex items-center gap-1.5">
+          {wish.hasText && (
+            <span title={`Nachricht des Kunden: ${wish.snippet}`}>
+              <MessageSquare className="w-3.5 h-3.5 text-gray-400" />
+            </span>
+          )}
+          {wish.hasNotes && (
+            <span title="Interne Notiz vorhanden">
+              <StickyNote className="w-3.5 h-3.5 text-gray-400" />
+            </span>
+          )}
           {hasInvoice && (
             <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
               <Receipt className="w-3 h-3" /> RE
@@ -762,14 +912,40 @@ function DetailDrawer({
                 );
               })()}
 
-              {lead.message && (
-                <div>
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Nachricht</h3>
-                  <div className="rounded-xl p-4 text-sm text-gray-700 whitespace-pre-wrap" style={{ background: '#f5f7fa', border: '1px solid #e5e8ed' }}>
-                    {lead.message}
+              {lead.message && (() => {
+                const wish = analyzeWishes(lead.message, lead.notes);
+                const mark = wish.lead;
+                return (
+                  <div>
+                    <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      {mark ? <><Sparkles className="h-3.5 w-3.5" style={{ color: mark.color }} /> Besonderer Wunsch</> : 'Nachricht'}
+                    </h3>
+                    {mark && (
+                      <div className="mb-2 flex flex-wrap gap-1.5">
+                        {wish.categories.map(c => (
+                          <span
+                            key={c.key}
+                            title={c.hint}
+                            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold"
+                            style={{ color: c.color, background: c.bg, border: `1px solid ${c.color}33` }}
+                          >
+                            <span aria-hidden>{c.emoji}</span>{c.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div
+                      className="whitespace-pre-wrap rounded-xl p-4 text-sm text-gray-700"
+                      style={{
+                        background: mark ? mark.bg : '#f5f7fa',
+                        border: `1px solid ${mark ? `${mark.color}33` : '#e5e8ed'}`,
+                      }}
+                    >
+                      {lead.message}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               <div className="flex gap-3 pt-2">
                 <a
@@ -852,6 +1028,16 @@ export default function CrmPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Lead | null>(null);
   const [search, setSearch] = useState('');
+  const [wishFilter, setWishFilter] = useState<WishFilter>('alle');
+
+  // Tiefenlink aus dem Dashboard: /admin/crm?wunsch=nur oder ?wunsch=barrierefrei
+  useEffect(() => {
+    const wunsch = new URLSearchParams(window.location.search).get('wunsch');
+    if (!wunsch) return;
+    if (wunsch === 'nur' || wunsch === 'alle' || wunsch === 'freitext' || WISH_CATEGORIES.some(c => c.key === wunsch)) {
+      setWishFilter(wunsch as WishFilter);
+    }
+  }, []);
 
   useEffect(() => {
     fetch('/api/admin/team').then(r => r.json()).then(r => {
@@ -926,6 +1112,11 @@ export default function CrmPage() {
     }).catch(() => loadData());
   };
 
+  const wishInfos = useMemo(
+    () => new Map(leads.map(l => [l.id, analyzeWishes(l.message, l.notes)] as const)),
+    [leads],
+  );
+
   const invoicesByBooking = invoices.reduce<Record<string, Invoice[]>>((acc, inv) => {
     if (!acc[inv.booking_id]) acc[inv.booking_id] = [];
     acc[inv.booking_id].push(inv);
@@ -933,13 +1124,25 @@ export default function CrmPage() {
   }, {});
 
   const filtered = leads.filter(l => {
+    if (wishFilter !== 'alle') {
+      const info = wishInfos.get(l.id);
+      if (!info) return false;
+      if (wishFilter === 'freitext') {
+        if (!info.hasText) return false;
+      } else if (!info.has) {
+        return false;
+      } else if (wishFilter !== 'nur' && !info.keys.includes(wishFilter)) {
+        return false;
+      }
+    }
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
       getLeadName(l).toLowerCase().includes(q) ||
       (l.email || '').toLowerCase().includes(q) ||
       (l.event_slug || '').toLowerCase().includes(q) ||
-      (l.package_title || '').toLowerCase().includes(q)
+      (l.package_title || '').toLowerCase().includes(q) ||
+      (l.message || '').toLowerCase().includes(q)
     );
   });
 
@@ -947,6 +1150,9 @@ export default function CrmPage() {
     <AdminShell title="CRM & ERP">
       {/* ERP Stats */}
       <ErpStats leads={leads} invoices={invoices} />
+
+      {/* Wunsch-Dashboard: wo stecken Anmerkungen drin? */}
+      <WishDashboard leads={leads} infos={wishInfos} filter={wishFilter} onFilter={setWishFilter} />
 
       {/* Search + Refresh */}
       <div className="flex gap-3 mb-6">
@@ -974,6 +1180,7 @@ export default function CrmPage() {
         {COLUMNS.map(col => {
           const colLeads = filtered.filter(l => l.status === col.id);
           const colRevenue = colLeads.reduce((s, l) => s + (l.total_price || 0), 0);
+          const colWishes = colLeads.filter(l => wishInfos.get(l.id)?.has).length;
           return (
             <div key={col.id} className="flex flex-col gap-3">
               <div
@@ -989,17 +1196,28 @@ export default function CrmPage() {
                     {colLeads.length}
                   </span>
                 </div>
-                {colRevenue > 0 && (
-                  <div className="text-xs font-semibold" style={{ color: col.color, opacity: 0.8 }}>
-                    {formatCurrency(colRevenue)}
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  {colRevenue > 0 && (
+                    <span className="text-xs font-semibold" style={{ color: col.color, opacity: 0.8 }}>
+                      {formatCurrency(colRevenue)}
+                    </span>
+                  )}
+                  {colWishes > 0 && (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+                      style={{ color: '#d97706', background: '#fffbeb', border: '1px solid #f59e0b33' }}
+                      title={`${colWishes} Anfrage(n) mit besonderem Wunsch`}
+                    >
+                      <Sparkles className="h-3 w-3" /> {colWishes}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <DropCol id={col.id}>
                 {!loading && colLeads.length === 0 && (
                   <div className="rounded-xl p-6 text-center text-xs text-gray-400" style={{ border: '1.5px dashed #e5e8ed' }}>
-                    Hierher ziehen
+                    {wishFilter === 'alle' ? 'Hierher ziehen' : 'Kein Treffer im Filter'}
                   </div>
                 )}
                 {colLeads.map((lead) => (
@@ -1009,6 +1227,7 @@ export default function CrmPage() {
                       hasInvoice={!!invoicesByBooking[lead.id]?.length}
                       onClick={() => setSelected(lead)}
                       assigneeName={employees.find(e => e.id === lead.assigned_to)?.name}
+                      wish={wishInfos.get(lead.id) ?? analyzeWishes(lead.message, lead.notes)}
                     />
                   </DraggableLead>
                 ))}

@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import DashboardAnalytics from '@/components/admin/DashboardAnalytics';
 import MyWork from '@/components/admin/MyWork';
+import WishOverview from '@/components/admin/WishOverview';
+import { analyzeWishes } from '@/lib/specialRequests';
 
 interface Lead {
   id: string;
@@ -22,6 +24,8 @@ interface Lead {
   total_price?: number;
   status: 'new' | 'in_progress' | 'booked' | 'rejected';
   created_at?: string;
+  message?: string;
+  notes?: string;
   travelers?: string | Array<{ firstName?: string; lastName?: string; first_name?: string; last_name?: string }>;
 }
 interface Invoice {
@@ -84,6 +88,9 @@ export default function DashboardPage() {
   const openAmount = openInvoices.reduce((s, i) => s + (i.total_amount - (i.paid_amount || 0)), 0);
   const conversion = leads.length ? Math.round((booked.length / leads.length) * 100) : 0;
   const newLeads = leads.filter(l => l.status === 'new');
+  const offeneWuensche = leads.filter(
+    l => (l.status === 'new' || l.status === 'in_progress') && analyzeWishes(l.message, l.notes).has,
+  ).length;
   const recent = [...leads].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')).slice(0, 6);
 
   const quickLinks = [
@@ -136,6 +143,7 @@ export default function DashboardPage() {
               <div className="divide-y" style={{ borderColor: COLORS.stroke }}>
                 {recent.map(l => {
                   const s = STATUS[l.status];
+                  const wish = analyzeWishes(l.message, l.notes);
                   return (
                     <Link key={l.id} href="/admin/crm" className="flex items-center justify-between gap-3 py-3 transition hover:opacity-70">
                       <div className="min-w-0">
@@ -144,6 +152,15 @@ export default function DashboardPage() {
                           {l.request_number && (
                             <span className="inline-flex items-center gap-0.5 text-[11px] font-bold" style={{ color: COLORS.textMuted }}>
                               <Hash className="h-3 w-3" />{l.request_number}
+                            </span>
+                          )}
+                          {wish.lead && (
+                            <span
+                              title={`Besonderer Wunsch: ${wish.categories.map(c => c.label).join(', ')}`}
+                              className="inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+                              style={{ color: wish.lead.color, background: wish.lead.bg, border: `1px solid ${wish.lead.color}33` }}
+                            >
+                              <span aria-hidden>{wish.lead.emoji}</span>{wish.lead.label}
                             </span>
                           )}
                         </div>
@@ -165,12 +182,19 @@ export default function DashboardPage() {
 
         {/* Side column */}
         <div className="space-y-6">
+          {/* Anfragen mit Anmerkungen */}
+          <WishOverview leads={leads} />
+
           {/* To-dos */}
           <SectionCard title="Zu erledigen" icon={<Target className="h-5 w-5" />}>
             <div className="space-y-3">
               <Link href="/admin/crm" className="flex items-center justify-between rounded-xl px-4 py-3 transition hover:opacity-80" style={{ background: '#fff1ea' }}>
                 <span className="text-sm font-semibold" style={{ color: COLORS.accent }}>Neue Anfragen bearbeiten</span>
                 <Badge tone="accent">{newLeads.length}</Badge>
+              </Link>
+              <Link href="/admin/crm?wunsch=nur" className="flex items-center justify-between rounded-xl px-4 py-3 transition hover:opacity-80" style={{ background: '#fffbeb' }}>
+                <span className="text-sm font-semibold" style={{ color: COLORS.warn }}>Anfragen mit Wunsch prüfen</span>
+                <Badge tone="warn">{offeneWuensche}</Badge>
               </Link>
               <Link href="/admin/finanzen" className="flex items-center justify-between rounded-xl px-4 py-3 transition hover:opacity-80" style={{ background: '#f0f7ff' }}>
                 <span className="text-sm font-semibold" style={{ color: COLORS.info }}>Offene Rechnungen</span>
