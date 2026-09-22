@@ -51,6 +51,8 @@ export default function AdminDashboard() {
   const [bookings, setBookings] = useState<BookingRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'new' | 'in_progress' | 'booked' | 'rejected'>('all');
+  const [eventFilter, setEventFilter] = useState<string>('all');
+  const [eventNames, setEventNames] = useState<Record<string, string>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBooking, setSelectedBooking] = useState<BookingRequest | null>(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
@@ -61,6 +63,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchBookings();
+    fetchEventNames();
   }, []);
 
   const fetchBookings = async () => {
@@ -80,6 +83,26 @@ export default function AdminDashboard() {
       alert('Fehler beim Laden der Buchungen: ' + (error as Error).message);
     }
     setLoading(false);
+  };
+
+  /**
+   * Klartextnamen der Events, damit im Filter «PDC Darts WM 2027» steht und nicht
+   * «darts-wm-2026». Schlägt der Abruf fehl, zeigt der Filter den Slug — das ist
+   * kein Grund, die Seite zu stören.
+   */
+  const fetchEventNames = async () => {
+    try {
+      const response = await fetch('/api/events');
+      const result = await response.json();
+      if (!result?.success) return;
+      const names: Record<string, string> = {};
+      for (const event of result.data || []) {
+        if (event?.slug) names[event.slug] = event.name || event.title || event.slug;
+      }
+      setEventNames(names);
+    } catch (error) {
+      console.warn('Eventnamen nicht abrufbar:', error);
+    }
   };
 
   const updateStatus = async (id: string, newStatus: string) => {
@@ -195,38 +218,96 @@ export default function AdminDashboard() {
     }
   };
 
+  /**
+   * Ein CSV-Feld. Semikolon, Anführungszeichen und Zeilenumbrüche müssen maskiert
+   * werden — sonst zerlegt eine Nachricht mit Semikolon die ganze Zeile.
+   */
+  const csvCell = (value: unknown) => {
+    const text = value === null || value === undefined ? '' : String(value);
+    return /[";\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+
   const exportToCSV = () => {
-    const headers = ['Datum', 'Name', 'Email', 'Telefon', 'Personen', 'DZ', 'EZ', 'Preis', 'Status'];
-    const rows = filteredBookings.map(b => [
+    const headers = [
+      'Anfrage-Nr', 'Datum', 'Event', 'Event-Slug', 'Paket', 'Reisezeitraum', 'Anreise',
+      'Anrede', 'Vorname', 'Nachname', 'Email', 'Telefon',
+      'Personen', 'DZ', 'EZ', 'Preis EUR', 'Status', 'Quelle',
+    ];
+    const rows = filteredBookings.map((b) => [
+      b.request_number || '',
       new Date(b.created_at).toLocaleDateString('de-DE'),
-      b.travelers[0]?.firstName + ' ' + b.travelers[0]?.lastName,
+      eventLabelOf(b),
+      b.event_slug || '',
+      b.package_title,
+      b.travel_period || '',
+      b.start_date,
+      b.travelers[0]?.salutation || '',
+      b.travelers[0]?.firstName || '',
+      b.travelers[0]?.lastName || '',
       b.email,
       b.phone,
       b.number_of_persons,
       b.double_rooms,
       b.single_rooms,
-      b.total_price + ' €',
-      b.status
+      // Dezimalkomma, damit Excel die Spalte als Zahl liest und nicht als Text.
+      (b.total_price ?? 0).toFixed(2).replace('.', ','),
+      getStatusLabel(b.status),
+      b.source || '',
     ]);
 
-    const csv = [headers, ...rows].map(row => row.join(';')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const csv = [headers, ...rows].map((row) => row.map(csvCell).join(';')).join('\r\n');
+    // Byte Order Mark: ohne sie zeigt Excel äöü als Buchstabensalat.
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `buchungen_${new Date().toISOString().split('T')[0]}.csv`;
+    const scope = eventFilter === 'all' ? 'alle-events' : eventFilter;
+    link.download = `anfragen_${scope}_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
+    URL.revokeObjectURL(link.href);
   };
+
+  /** Anfragen ohne Event landen in einem eigenen Topf, statt aus dem Filter zu fallen. */
+  const NO_EVENT = '__ohne__';
+
+  const eventKeyOf = (booking: BookingRequest) => booking.event_slug?.trim() || NO_EVENT;
+
+  const eventLabelOf = (booking: BookingRequest) => {
+    const key = eventKeyOf(booking);
+    if (key === NO_EVENT) return '';
+    return eventNames[key] || key;
+  };
+
+  /** Auswahlliste des Event-Filters — nur Events, zu denen es auch Anfragen gibt. */
+  const eventOptions = Object.entries(
+    bookings.reduce<Record<string, number>>((counts, b) => {
+      const key = eventKeyOf(b);
+      counts[key] = (counts[key] ?? 0) + 1;
+      return counts;
+    }, {}),
+  )
+    .map(([key, count]) => ({
+      key,
+      count,
+      label: key === NO_EVENT ? 'Ohne Event' : eventNames[key] || key,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'de'));
 
   const filteredBookings = bookings.filter(b => {
     const matchesFilter = filter === 'all' || b.status === filter;
-    const matchesSearch = searchTerm === '' ||
-      b.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.phone.includes(searchTerm) ||
+    const matchesEvent = eventFilter === 'all' || eventKeyOf(b) === eventFilter;
+    const term = searchTerm.trim().toLowerCase();
+    const matchesSearch = term === '' ||
+      b.email.toLowerCase().includes(term) ||
+      b.phone.includes(searchTerm.trim()) ||
+      (b.request_number || '').toLowerCase().includes(term) ||
+      b.package_title.toLowerCase().includes(term) ||
+      (b.event_slug || '').toLowerCase().includes(term) ||
+      eventLabelOf(b).toLowerCase().includes(term) ||
       b.travelers.some(t =>
-        t.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.lastName.toLowerCase().includes(searchTerm.toLowerCase())
+        t.firstName.toLowerCase().includes(term) ||
+        t.lastName.toLowerCase().includes(term)
       );
-    return matchesFilter && matchesSearch;
+    return matchesFilter && matchesEvent && matchesSearch;
   });
 
   const getStatusTone = (status: string): BadgeTone => {
@@ -306,18 +387,32 @@ export default function AdminDashboard() {
 
           {/* Filters */}
           <SectionCard className="mb-6">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               {/* Search */}
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
                 <TextInput
                   type="text"
-                  placeholder="Suche nach Name, Email oder Telefon..."
+                  placeholder="Suche nach Name, Email, Telefon, Paket oder Anfrage-Nr..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
+
+              {/* Event-Filter — der Knopf «CSV Export» nimmt genau diese Auswahl mit. */}
+              <SelectInput
+                value={eventFilter}
+                onChange={(e) => setEventFilter(e.target.value)}
+                aria-label="Event"
+              >
+                <option value="all">Alle Events ({bookings.length})</option>
+                {eventOptions.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {option.label} ({option.count})
+                  </option>
+                ))}
+              </SelectInput>
 
               {/* Status Filter */}
               <div className="flex flex-wrap gap-2">
