@@ -1,5 +1,5 @@
 # Multi-stage build for Next.js with SQLite
-FROM node:24-alpine AS base
+FROM node:24.22.1-alpine AS base
 # npm-CLI gepinnt (reproduzierbar) – Build UND Laufzeit erben dieselbe Version.
 # Höherziehen, wenn der Status-Check eine neuere npm-Version meldet.
 RUN npm install -g npm@11.17.0
