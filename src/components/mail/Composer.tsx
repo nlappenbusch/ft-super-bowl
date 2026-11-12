@@ -569,6 +569,15 @@ export default function Composer(p: Props) {
           <Paperclip className="h-4 w-4" /> Anhang
         </button>
         <input ref={fileInput} type="file" multiple hidden onChange={(e) => { if (e.target.files) void addFiles(e.target.files); e.target.value = ''; }} />
+        <span className="mx-1 h-5 w-px bg-slate-200" />
+        <button
+          onMouseDown={(e) => { e.preventDefault(); setAiOpen((o) => !o); }}
+          disabled={!accounts.aiReady || aiBusy}
+          className="flex items-center gap-1 rounded-md bg-violet-50 px-2 py-1 text-[12.5px] font-medium text-violet-700 hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50"
+          title={accounts.aiReady ? 'KI-Schreibhilfe: Rechtschreibung, Faltin-Ton, kürzer, wärmer, Englisch' : 'KI ist nicht eingerichtet (Admin → KI-Redaktion: Anthropic-Key)'}
+        >
+          {aiBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} KI
+        </button>
         <span className="flex-1" />
         {gaps > 0 && (
           <button onClick={nextGap} className="flex items-center gap-1 rounded-md bg-amber-100 px-2 py-1 text-[12px] font-medium text-amber-800 hover:bg-amber-200" title="Zur nächsten Lücke (Tab)">
@@ -678,20 +687,20 @@ export default function Composer(p: Props) {
         </button>
 
         {/* KI-Split-Button */}
-        {accounts.aiReady && (
+        {(
           <div className="relative flex">
             <button
               onClick={() => void runAi(mode)}
-              disabled={aiBusy || !!busy}
-              className="flex items-center gap-1.5 rounded-l-xl border py-2 pl-3 pr-2.5 text-[13px] font-medium text-violet-700 transition hover:bg-violet-50 disabled:opacity-60"
+              disabled={aiBusy || !!busy || !accounts.aiReady}
+              className="flex items-center gap-1.5 rounded-l-xl border py-2 pl-3 pr-2.5 text-[13px] font-medium text-violet-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
               style={{ borderColor: '#ddd6fe' }}
-              title={modeInfo.hint}
+              title={accounts.aiReady ? `${modeInfo.hint} — einfach Stichworte tippen, dann klicken` : 'KI ist nicht eingerichtet (Admin → KI-Redaktion: Anthropic-Key)'}
             >
               {aiBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               <span className="hidden sm:inline">{modeInfo.label}</span>
               <span className="sm:hidden">KI</span>
             </button>
-            <button onClick={() => setAiOpen((o) => !o)} disabled={aiBusy} className="rounded-r-xl border border-l-0 px-1.5 text-violet-700 hover:bg-violet-50" style={{ borderColor: '#ddd6fe' }} title="KI-Aktion wählen">
+            <button onClick={() => setAiOpen((o) => !o)} disabled={aiBusy || !accounts.aiReady} className="rounded-r-xl border border-l-0 px-1.5 text-violet-700 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50" style={{ borderColor: '#ddd6fe' }} title="KI-Aktion wählen">
               <ChevronDown className="h-4 w-4" />
             </button>
             {aiOpen && (
