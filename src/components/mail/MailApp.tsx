@@ -106,10 +106,23 @@ export default function MailApp() {
     if (r) { setTemplates(r.templates); setPlaceholders(r.placeholders); }
   }, []);
 
+  // Postfächer, deren Ordner schon einmal angezeigt wurden (dann kein Vorab-Laden aus der DB mehr)
+  const foldersShown = useRef(new Set<string>());
   const loadFolders = useCallback(async (mb: string) => {
-    const r = await api<{ folders: MailFolder[] }>(`folders?mb=${encodeURIComponent(mb)}`).catch(() => null);
+    const q = `folders?mb=${encodeURIComponent(mb)}`;
+    // Erstes Laden: den gespeicherten Stand sofort zeigen, live kommt hinterher (Microsoft hängt mitunter 20–60 s).
+    if (!foldersShown.current.has(mb)) {
+      void api<{ folders: MailFolder[] | null }>(`${q}&cache=1`).then((c) => {
+        if (!c?.folders) return;
+        foldersShown.current.add(mb);
+        setFolders((f) => (f[mb] ? f : { ...f, [mb]: c.folders }));
+      }).catch(() => {});
+    }
+    const r = await api<{ folders: MailFolder[]; stale?: boolean }>(q).catch(() => null);
+    if (r) foldersShown.current.add(mb);
     // Bei einem Fehler den bisherigen Stand behalten; nur ohne Stand als Fehler markieren.
-    setFolders((f) => ({ ...f, [mb]: r ? r.folders : f[mb] || null }));
+    // Ein gespeicherter Ersatzstand (stale) ersetzt nie einen schon angezeigten.
+    setFolders((f) => ({ ...f, [mb]: r && !(r.stale && f[mb]) ? r.folders : f[mb] || null }));
   }, []);
 
   // Fehlen die Freigaben wegen einer Exchange-Störung, jede Minute still neu versuchen.
