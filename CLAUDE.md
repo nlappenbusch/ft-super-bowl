@@ -118,6 +118,7 @@ mit Übernahme in Prozesse, Vorlagen/Textbausteine und Schreib-Assistent.
   gesendeten Faltin-Mails abgeleitet, wird nur bei leerer Tabelle eingespielt). Platzhalter
   `{{key}}`, fehlende Werte werden im Editor als gelbe Lücke `[[key]]` markiert und vor dem
   Senden angemahnt. Tonalität für die KI: `tone.ts`.
+- **Teams-Wechsel:** `teams.ts` prüft je Beteiligtem im Verzeichnis (intern mit Teams-Lizenz `TeamspaceAPI`, Gast, extern) und baut Deep-Links `teams.microsoft.com/l/chat/0/0?users=…` (1:1 bzw. Gruppenchat mit Betreff als Thema). Externe sind nur per Föderation erreichbar — app-only nicht vorab prüfbar.
 - **Tabellen** `mail_templates`, `mail_prefs`, `mail_links` legt `src/lib/mailbox/schema.ts` selbst
   an (wie `ws_*`).
 
