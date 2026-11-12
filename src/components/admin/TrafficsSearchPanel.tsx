@@ -14,7 +14,10 @@ import { COLORS, SectionCard, Button, Field, TextInput, SelectInput, Badge, Spin
 import { Plane, Search, Plus, ShieldCheck, KeyRound, ChevronDown, ChevronUp } from 'lucide-react';
 import { fmtMoney, fmtServiceDate, type CalcItem } from '@/lib/calcModel';
 import { isCalcCurrency } from '@/lib/fxRates';
-import { fmtLegs, offerToItems, nightsBetweenIso, type TrafficsOffer, type TrafficsProductType } from '@/lib/trafficsModel';
+import {
+  fmtLegs, offerToItems, nightsBetweenIso, COMPARE_PRODUCTS,
+  type TrafficsOffer, type TrafficsProductType, type CompareRow,
+} from '@/lib/trafficsModel';
 import type { HotelInfo } from '@/lib/hotelLookup';
 
 interface ConfigInfo {
@@ -29,11 +32,20 @@ interface ConfigInfo {
 
 interface SearchMeta { total: number; cached: boolean; mock: boolean; fetched_at: string }
 
-const PRODUCT_LABEL: Record<TrafficsProductType, string> = {
+type SearchMode = TrafficsProductType | 'vergleich';
+
+const PRODUCT_LABEL: Record<SearchMode, string> = {
   pauschal: 'Pauschal (Flug + Hotel)',
   hotelonly: 'Nur Hotel',
   flight: 'Nur Flug',
+  vergleich: 'Vergleich: Pauschal vs. Flug + Hotel',
 };
+
+type ComparePart = { ok: true; data: { offers: TrafficsOffer[]; total: number; cached: boolean; mock: boolean } } | { ok: false; error: string };
+interface CompareData {
+  parts: Record<TrafficsProductType, ComparePart>;
+  comparison: { cheapestFlight: TrafficsOffer | null; rows: CompareRow[] };
+}
 
 const BOARD_OPTIONS = [
   { v: '', l: 'egal' },
@@ -59,7 +71,7 @@ export default function TrafficsSearchPanel({
   const [savingKey, setSavingKey] = useState(false);
 
   // Suchformular — Voreinstellung passend zu Gruppen-Incentives (EZ, 5*, DER)
-  const [productType, setProductType] = useState<TrafficsProductType>('pauschal');
+  const [productType, setProductType] = useState<SearchMode>('pauschal');
   const [fromDate, setFromDate] = useState(travelStart);
   const [toDate, setToDate] = useState(travelEnd);
   const [departure, setDeparture] = useState('ZRH');
@@ -77,6 +89,7 @@ export default function TrafficsSearchPanel({
   const [err, setErr] = useState<string | null>(null);
   const [offers, setOffers] = useState<TrafficsOffer[]>([]);
   const [meta, setMeta] = useState<SearchMeta | null>(null);
+  const [compare, setCompare] = useState<CompareData | null>(null);
   const [verify, setVerify] = useState<Record<string, { loading?: boolean; text?: string; ok?: boolean }>>({});
   const [adopted, setAdopted] = useState<string[]>([]);
 
@@ -121,7 +134,8 @@ export default function TrafficsSearchPanel({
     setErr(null);
     setVerify({});
     try {
-      const res = await fetch('/api/admin/traffics/search', {
+      const isCompare = productType === 'vergleich';
+      const res = await fetch(isCompare ? '/api/admin/traffics/compare' : '/api/admin/traffics/search', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productType, fromDate, toDate, adults,
@@ -131,8 +145,15 @@ export default function TrafficsSearchPanel({
         }),
       }).then((r) => r.json());
       if (!res?.success) { setErr(res?.error || 'Suche fehlgeschlagen'); return; }
-      setOffers(res.data.offers || []);
-      setMeta({ total: res.data.total, cached: res.data.cached, mock: res.data.mock, fetched_at: res.data.fetched_at });
+      if (isCompare) {
+        setCompare(res.data);
+        setOffers([]);
+        setMeta(null);
+      } else {
+        setCompare(null);
+        setOffers(res.data.offers || []);
+        setMeta({ total: res.data.total, cached: res.data.cached, mock: res.data.mock, fetched_at: res.data.fetched_at });
+      }
       setAdopted([]);
       loadConfig(); // Zähler aktualisieren (eigener Server, keine Connector-Anfrage)
     } catch {
@@ -232,8 +253,8 @@ export default function TrafficsSearchPanel({
           {/* Suchformular */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Field label="Produkt">
-              <SelectInput value={productType} onChange={(e) => setProductType(e.target.value as TrafficsProductType)}>
-                {(Object.keys(PRODUCT_LABEL) as TrafficsProductType[]).map((p) => <option key={p} value={p}>{PRODUCT_LABEL[p]}</option>)}
+              <SelectInput value={productType} onChange={(e) => setProductType(e.target.value as SearchMode)}>
+                {(Object.keys(PRODUCT_LABEL) as SearchMode[]).map((p) => <option key={p} value={p}>{PRODUCT_LABEL[p]}</option>)}
               </SelectInput>
             </Field>
             <Field label="Anreise">
@@ -300,6 +321,11 @@ export default function TrafficsSearchPanel({
             <Button variant="accent" onClick={search} disabled={searching || !canSearch}>
               {searching ? <Spinner className="h-4 w-4" /> : <Search className="h-4 w-4" />} Suchen
             </Button>
+            {productType === 'vergleich' && (
+              <span className="text-[11px] font-semibold" style={{ color: COLORS.warn }}>
+                Vergleich = bis zu 3 Anfragen (Pauschal, Flug, Hotel); bereits gesuchte Teile kommen aus dem Cache.
+              </span>
+            )}
             <span className="text-[11px]" style={{ color: '#9ca3af' }}>
               Preise kommen pro Person für den ganzen Zeitraum. Für {pax > 1 ? `${pax} Personen` : 'Gruppen'} ist das ein Richtwert,
               kein Kontingent. Die Gruppe bitte separat bei DERTOUR anfragen.
@@ -393,11 +419,135 @@ export default function TrafficsSearchPanel({
               </table>
             </div>
           )}
+          {compare && (
+            <CompareView
+              data={compare}
+              adopted={adopted}
+              onAdopt={adopt}
+            />
+          )}
+
           {meta && offers.length === 0 && !err && (
             <p className="text-sm" style={{ color: COLORS.textMuted }}>Keine Angebote gefunden. Filter lockern, z. B. ohne Airline oder Verpflegung.</p>
           )}
         </div>
       )}
     </SectionCard>
+  );
+}
+
+/* ─── Vergleichsansicht: Pauschal | Nur Flug | Nur Hotel ─────────────────── */
+
+const COMPARE_LABEL: Record<TrafficsProductType, string> = {
+  pauschal: 'Pauschal (Flug + Hotel)',
+  flight: 'Nur Flug',
+  hotelonly: 'Nur Hotel',
+};
+
+function CompareView({
+  data, adopted, onAdopt,
+}: {
+  data: CompareData;
+  adopted: string[];
+  onAdopt: (o: TrafficsOffer) => void;
+}) {
+  const { rows, cheapestFlight } = data.comparison;
+  const money = (n: number | null, cur: string) => (n === null ? '—' : fmtMoney(n, cur));
+  return (
+    <div className="space-y-4">
+      {rows.length > 0 && (
+        <div className="overflow-x-auto rounded-xl border" style={{ borderColor: COLORS.stroke }}>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-[10px] uppercase tracking-wider" style={{ color: COLORS.textMuted, background: COLORS.surfaceMuted }}>
+                <th className="px-2 py-2 font-bold">Hotel</th>
+                <th className="px-2 py-2 text-right font-bold">Pauschal p.P.</th>
+                <th className="px-2 py-2 text-right font-bold">Hotel p.P.</th>
+                <th className="px-2 py-2 text-right font-bold">+ Flug p.P.</th>
+                <th className="px-2 py-2 text-right font-bold">Flug + Hotel</th>
+                <th className="px-2 py-2 text-right font-bold">Ergebnis</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.slice(0, 15).map((r) => {
+                const packageWins = r.diff !== null && r.diff > 0;
+                const separateWins = r.diff !== null && r.diff < 0;
+                return (
+                  <tr key={`${r.giataId}-${r.hotelName}`} className="border-t" style={{ borderColor: '#f1f4f8' }}>
+                    <td className="px-2 py-2" style={{ color: COLORS.navy }}>
+                      <span className="font-semibold">{r.hotelName}</span>
+                      {r.category > 0 && <span className="ml-1 text-xs" style={{ color: COLORS.accent }}>{'★'.repeat(Math.min(6, Math.round(r.category)))}</span>}
+                    </td>
+                    <td className="px-2 py-2 text-right tabular-nums" style={{ color: packageWins ? COLORS.ok : COLORS.navy, fontWeight: packageWins ? 700 : 400 }}>
+                      {money(r.packagePrice, r.currency)}
+                    </td>
+                    <td className="px-2 py-2 text-right tabular-nums" style={{ color: COLORS.navy }}>{money(r.hotelPrice, r.currency)}</td>
+                    <td className="px-2 py-2 text-right tabular-nums" style={{ color: COLORS.textMuted }}>{money(r.flightPrice, cheapestFlight?.currency || r.currency)}</td>
+                    <td className="px-2 py-2 text-right tabular-nums" style={{ color: separateWins ? COLORS.ok : COLORS.navy, fontWeight: separateWins ? 700 : 400 }}>
+                      {money(r.separatePrice, r.currency)}
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-2 text-right text-xs font-semibold">
+                      {r.diff === null ? <span style={{ color: COLORS.textMuted }}>nicht vergleichbar</span>
+                        : r.diff === 0 ? <span style={{ color: COLORS.textMuted }}>gleich</span>
+                        : packageWins ? <span style={{ color: COLORS.ok }}>Pauschal {fmtMoney(r.diff, r.currency)} günstiger</span>
+                        : <span style={{ color: COLORS.ok }}>Einzeln {fmtMoney(-r.diff, r.currency)} günstiger</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <p className="px-3 py-2 text-[11px]" style={{ color: '#9ca3af' }}>
+            Je Hotel die günstigste Pauschale gegen das günstigste Nur-Hotel plus den günstigsten Nur-Flug
+            {cheapestFlight ? ` (${fmtLegs(cheapestFlight.outbound)})` : ''}. Alle Preise pro Person für den ganzen Zeitraum.
+          </p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+        {COMPARE_PRODUCTS.map((pt) => {
+          const part = data.parts[pt];
+          return (
+            <div key={pt} className="overflow-hidden rounded-xl border" style={{ borderColor: COLORS.stroke }}>
+              <div className="flex items-center justify-between gap-2 px-3 py-2" style={{ background: COLORS.surfaceMuted }}>
+                <span className="text-sm font-bold" style={{ color: COLORS.navy }}>{COMPARE_LABEL[pt]}</span>
+                {part?.ok && (
+                  <span className="text-[11px]" style={{ color: COLORS.textMuted }}>
+                    {part.data.offers.length}/{part.data.total}{part.data.cached ? ' · Cache' : ''}{part.data.mock ? ' · Beispiel' : ''}
+                  </span>
+                )}
+              </div>
+              {!part?.ok ? (
+                <p className="px-3 py-3 text-xs" style={{ color: COLORS.danger }}>{part?.error || 'Keine Daten'}</p>
+              ) : part.data.offers.length === 0 ? (
+                <p className="px-3 py-3 text-xs" style={{ color: COLORS.textMuted }}>Keine Angebote gefunden.</p>
+              ) : (
+                <ul>
+                  {part.data.offers.slice(0, 8).map((o) => (
+                    <li key={o.code} className="flex items-start justify-between gap-2 border-t px-3 py-2" style={{ borderColor: '#f1f4f8' }}>
+                      <div className="min-w-0 text-xs" style={{ color: COLORS.navy }}>
+                        <span className="block truncate text-sm font-semibold">
+                          {o.hotelName || fmtLegs(o.outbound) || 'Flug'}
+                          {o.category > 0 && <span className="ml-1 text-xs" style={{ color: COLORS.accent }}>{'★'.repeat(Math.min(6, Math.round(o.category)))}</span>}
+                        </span>
+                        {o.hotelName && <span className="block" style={{ color: COLORS.textMuted }}>{[o.roomType, o.board].filter(Boolean).join(' · ')}</span>}
+                        {o.outbound.length > 0 && <span className="block whitespace-nowrap">Hin: {fmtLegs(o.outbound)}</span>}
+                        {o.inbound.length > 0 && <span className="block whitespace-nowrap">Rück: {fmtLegs(o.inbound)}</span>}
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <span className="text-sm font-bold tabular-nums" style={{ color: COLORS.navy }}>{fmtMoney(o.personPrice, o.currency)}</span>
+                        <Button variant={adopted.includes(o.code) ? 'secondary' : 'accent'} size="sm" onClick={() => onAdopt(o)}>
+                          <Plus className="h-3.5 w-3.5" /> {adopted.includes(o.code) ? 'Nochmals' : 'Übernehmen'}
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }

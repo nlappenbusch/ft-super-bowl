@@ -348,3 +348,84 @@ export function offerToItems(offer: TrafficsOffer, newId: () => string): Adopted
   }
   return items;
 }
+
+/* ─── Vergleich Pauschal vs. Flug + Hotel ────────────────────────────────── */
+
+export const COMPARE_PRODUCTS: TrafficsProductType[] = ['pauschal', 'flight', 'hotelonly'];
+
+export interface CompareRow {
+  hotelName: string;
+  category: number;
+  giataId: string;
+  /** Günstigste Pauschale für dieses Hotel (p.P.), sonst null. */
+  packagePrice: number | null;
+  packageCode: string;
+  /** Günstigstes Nur-Hotel-Angebot für dieses Hotel (p.P.), sonst null. */
+  hotelPrice: number | null;
+  hotelCode: string;
+  /** Günstigster Nur-Flug (p.P.), für alle Zeilen gleich. */
+  flightPrice: number | null;
+  /** Flug + Hotel einzeln (p.P.), null wenn ein Teil fehlt. */
+  separatePrice: number | null;
+  /** separat − Pauschal (> 0 = Pauschale günstiger). */
+  diff: number | null;
+  currency: string;
+}
+
+const hotelKey = (o: TrafficsOffer) => (o.giataId ? `g:${o.giataId}` : `n:${o.hotelName.trim().toLowerCase()}`);
+
+/** Günstigstes Angebot je Hotel (Schlüssel: GIATA-ID, sonst Name). */
+function cheapestByHotel(list: TrafficsOffer[]): Map<string, TrafficsOffer> {
+  const m = new Map<string, TrafficsOffer>();
+  for (const o of list) {
+    if (!o.hotelName || o.personPrice <= 0) continue;
+    const k = hotelKey(o);
+    const cur = m.get(k);
+    if (!cur || o.personPrice < cur.personPrice) m.set(k, o);
+  }
+  return m;
+}
+
+/**
+ * Vergleicht je Hotel die günstigste Pauschale mit „günstigster Nur-Flug +
+ * günstigstes Nur-Hotel". Preise pro Person; Währungen werden NICHT umgerechnet —
+ * weichen sie ab, bleibt separatePrice/diff leer.
+ * Sortierung: Hotels mit beiden Varianten zuerst, dann nach günstigstem Preis.
+ */
+export function compareOffers(packages: TrafficsOffer[], flights: TrafficsOffer[], hotels: TrafficsOffer[]): {
+  cheapestFlight: TrafficsOffer | null;
+  rows: CompareRow[];
+} {
+  const cheapestFlight = flights.filter((f) => f.personPrice > 0).sort((a, b) => a.personPrice - b.personPrice)[0] || null;
+  const pk = cheapestByHotel(packages);
+  const ho = cheapestByHotel(hotels);
+  const keys = Array.from(new Set([...pk.keys(), ...ho.keys()]));
+  const rows: CompareRow[] = keys.map((k) => {
+    const p = pk.get(k) || null;
+    const h = ho.get(k) || null;
+    const ref = (p || h) as TrafficsOffer;
+    const currency = ref.currency;
+    const sameCur = !!h && !!cheapestFlight && h.currency === cheapestFlight.currency;
+    const separate = h && cheapestFlight && sameCur ? Math.round((h.personPrice + cheapestFlight.personPrice) * 100) / 100 : null;
+    return {
+      hotelName: ref.hotelName,
+      category: ref.category,
+      giataId: ref.giataId,
+      packagePrice: p ? p.personPrice : null,
+      packageCode: p ? p.code : '',
+      hotelPrice: h ? h.personPrice : null,
+      hotelCode: h ? h.code : '',
+      flightPrice: cheapestFlight ? cheapestFlight.personPrice : null,
+      separatePrice: separate,
+      diff: separate !== null && p && p.currency === currency && h?.currency === p.currency
+        ? Math.round((separate - p.personPrice) * 100) / 100 : null,
+      currency,
+    };
+  });
+  const best = (r: CompareRow) => Math.min(r.packagePrice ?? Infinity, r.separatePrice ?? r.hotelPrice ?? Infinity);
+  rows.sort((a, b) => {
+    const both = (r: CompareRow) => (r.packagePrice !== null && r.separatePrice !== null ? 0 : 1);
+    return both(a) - both(b) || best(a) - best(b);
+  });
+  return { cheapestFlight, rows };
+}

@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  sanitizeSearchParams, buildSearchQuery, searchPath, normalizeOffers, offerToItems, nightsBetweenIso,
+  sanitizeSearchParams, buildSearchQuery, searchPath, normalizeOffers, offerToItems, nightsBetweenIso, compareOffers,
 } from '../src/lib/trafficsModel.ts';
 
 const malaga = {
@@ -136,4 +136,26 @@ test('Übernahme: Nächte × Nachtpreis ergibt wieder den Pauschalpreis', () => 
   const [o] = normalizeOffers(sample).offers;
   const [hotel] = offerToItems({ ...o, personPrice: 1310 }, () => 'x');
   assert.equal(Math.round(hotel.amount * hotel.qty * 100) / 100, 1310);
+});
+
+test('Vergleich: Pauschal gegen Nur-Flug + Nur-Hotel je Hotel', () => {
+  const [base] = normalizeOffers(sample).offers;
+  const pkg = { ...base, code: 'P1', giataId: '42', personPrice: 1400 };
+  const pkgOther = { ...base, code: 'P2', giataId: '99', hotelName: 'Anderes Hotel', personPrice: 1100 };
+  const hotel = { ...base, code: 'H1', productType: 'hotelonly', giataId: '42', personPrice: 980, outbound: [], inbound: [] };
+  const hotelPricier = { ...hotel, code: 'H2', personPrice: 1050 };
+  const flights = [
+    { ...base, code: 'F2', productType: 'flight', hotelName: '', personPrice: 520 },
+    { ...base, code: 'F1', productType: 'flight', hotelName: '', personPrice: 440 },
+  ];
+  const { cheapestFlight, rows } = compareOffers([pkg, pkgOther], flights, [hotelPricier, hotel]);
+  assert.equal(cheapestFlight?.code, 'F1');
+  assert.equal(rows.length, 2);
+  const miramar = rows[0];
+  assert.equal(miramar.giataId, '42');
+  assert.equal(miramar.hotelCode, 'H1');
+  assert.equal(miramar.separatePrice, 1420);
+  assert.equal(miramar.diff, 20); // Pauschale 20 günstiger
+  assert.equal(rows[1].hotelPrice, null);
+  assert.equal(rows[1].diff, null);
 });
