@@ -20,6 +20,8 @@ import TrafficsSearchPanel from '@/components/admin/TrafficsSearchPanel';
 import InquiriesPanel from '@/components/admin/InquiriesPanel';
 import CalcItemDetails from '@/components/admin/CalcItemDetails';
 import ProgramView from '@/components/admin/ProgramView';
+import PlanningPanel from '@/components/admin/PlanningPanel';
+import { EMPTY_PLANNING, sanitizePlanning, isPlanningEmpty, type Planning } from '@/lib/planningModel';
 import {
   ArrowLeft, Plus, X, Save, Trash2, FileText, TrendingDown, TrendingUp, Minus, RefreshCw, AlertTriangle,
   Landmark, CalendarDays, Table2, ArrowDownToLine, FileDown, Receipt, Hotel, Search, ExternalLink,
@@ -75,6 +77,8 @@ export default function KalkulationEditorPage() {
   const [travelEnd, setTravelEnd] = useState('');
   const [pax, setPax] = useState(1);
   const [programInOffer, setProgramInOffer] = useState(false);
+  const [planning, setPlanning] = useState<Planning>(EMPTY_PLANNING);
+  const [inquiryRefs, setInquiryRefs] = useState<Array<{ id: string; supplier: string }>>([]);
   const [target, setTarget] = useState<CalcCurrency>('EUR');
   const [marginMode, setMarginMode] = useState<MarginMode>('percent');
   const [marginValue, setMarginValue] = useState(10);
@@ -143,6 +147,10 @@ export default function KalkulationEditorPage() {
         setTravelEnd(d.travel_end || '');
         setPax(normPax(d.pax));
         setProgramInOffer(!!d.program_in_offer);
+        setPlanning(sanitizePlanning(d.planning || {}));
+        fetch(`/api/admin/calculations/${id}/inquiries`).then((r) => r.json())
+          .then((q) => { if (q?.success) setInquiryRefs((q.data || []).map((x: { id: string; supplier: string }) => ({ id: x.id, supplier: x.supplier }))); })
+          .catch(() => {});
         setTarget(d.target_currency || 'EUR');
         setMarginMode(d.margin_mode || 'percent');
         setMarginValue(Number(d.margin_value) || 0);
@@ -231,7 +239,7 @@ export default function KalkulationEditorPage() {
     const payload = {
       title: effectiveTitle,
       customer_id: customerId || null, booking_id: bookingId || null,
-      travel_start: travelStart || '', travel_end: travelEnd || '', pax, program_in_offer: programInOffer,
+      travel_start: travelStart || '', travel_end: travelEnd || '', pax, program_in_offer: programInOffer, planning,
       target_currency: target, margin_mode: marginMode, margin_value: marginValue,
       items, offer_extras: offerExtras, status, notes, hotel_info: hotelInfo,
     };
@@ -707,8 +715,12 @@ export default function KalkulationEditorPage() {
               </label>
             }
           >
-            <ProgramView items={items} />
+            {isPlanningEmpty(planning) || planning.days.length === 0
+              ? <ProgramView items={items} />
+              : <p className="text-xs" style={{ color: COLORS.textMuted }}>Der Ablauf wird in der Reiseplanung unten gepflegt — diese wird in den PDFs bevorzugt. Ohne Reiseplanung entsteht der Ablauf aus den Positionen.</p>}
           </SectionCard>
+
+          <PlanningPanel planning={planning} onChange={setPlanning} items={items} inquiries={inquiryRefs} />
 
           <SectionCard
             title="Optionale Zusatzleistungen"

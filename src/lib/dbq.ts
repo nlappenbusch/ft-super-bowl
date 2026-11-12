@@ -398,6 +398,7 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
         travel_end text NOT NULL DEFAULT '',
         pax integer NOT NULL DEFAULT 1,
         program_in_offer integer NOT NULL DEFAULT 0,
+        planning text NOT NULL DEFAULT '',
         target_currency text NOT NULL DEFAULT 'EUR',
         margin_mode text NOT NULL DEFAULT 'percent',
         margin_value double precision NOT NULL DEFAULT 0,
@@ -417,6 +418,7 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
       await pool.query(`ALTER TABLE offer_calculations ADD COLUMN IF NOT EXISTS offer_extras text NOT NULL DEFAULT '[]'`);
       await pool.query(`ALTER TABLE offer_calculations ADD COLUMN IF NOT EXISTS pax integer NOT NULL DEFAULT 1`);
       await pool.query(`ALTER TABLE offer_calculations ADD COLUMN IF NOT EXISTS program_in_offer integer NOT NULL DEFAULT 0`);
+      await pool.query(`ALTER TABLE offer_calculations ADD COLUMN IF NOT EXISTS planning text NOT NULL DEFAULT ''`);
       await pool.query(`INSERT INTO counters (name, value) SELECT 'calculation_number', 1000 WHERE NOT EXISTS (SELECT 1 FROM counters WHERE name = 'calculation_number')`);
       // Benachrichtigungs-Center (Glocke im Admin)
       await pool.query(`CREATE TABLE IF NOT EXISTS admin_notifications (

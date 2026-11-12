@@ -17,13 +17,16 @@ import { getSettings } from './settingsStore';
 import {
   CALC_CATEGORIES, categoryLabel, computeTotals, computeGroupTotals, itemEk, fmtPeriod, nightsBetween,
   fmtSignedMoney, fmtServiceDate, fmtRoute, fmtTimeRange, priceStatusLabel, buildProgram, programTime,
-  hasProgramData, programDayLabel, programPrefix, type CalcItem,
+  hasProgramData, programDayLabel, programPrefix, fmtDateWeekday, type CalcItem,
 } from './calcModel';
 import { convertAmount } from './fxRates';
 import { hotelInfoLine } from './hotelLookup';
 import { normalizeSalutation, type CustomerDetail } from './customerStore';
 import type { OfferCalculationRow } from './calculationStore';
 import { inquiryStatusLabel, type CalcInquiry } from './inquiryModel';
+import {
+  dayBlocks, timelineRange, kindColor, kindLabel, entryRoute, entryTime, PLAN_KINDS, SUPPLIER_TYPES, SUPPLIER_STATUSES, SOURCE_KINDS,
+} from './planningModel';
 
 export type CalcPdfVariant = 'kunde' | 'intern';
 
@@ -369,7 +372,227 @@ export function buildCalculationPdf(
   doc.setTextColor(0, 0, 0);
 
   /* ─── Programm / Tagesablauf (intern immer, Angebot nur mit Schalter) ─── */
-  const showProgram = hasProgramData(calc.items) && (variant === 'intern' || calc.program_in_offer);
+  const plan = calc.planning;
+  const planDays = plan?.days?.filter((d) => d.entries.length) || [];
+  const hex = (h: string): [number, number, number] => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+
+  if (planDays.length && (variant === 'intern' || calc.program_in_offer)) {
+    /* Programm aus der Reiseplanung (bevorzugt) */
+    const internal = variant === 'intern';
+    doc.addPage();
+    let y = 18;
+    const left = leftMargin;
+    const textX = left + 27;
+    const width = right - textX;
+    const space = (needed: number) => { if (y + needed > 280) { doc.addPage(); y = 18; } };
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(...NAVY);
+    doc.text(winAnsi(`Programm${calc.title ? ` — ${calc.title}` : ''}`), left, y);
+    if (internal) {
+      doc.setFontSize(8);
+      doc.setTextColor(200, 0, 0);
+      doc.text('INTERN — mit Anbietern, Preisen und Status', right, y, { align: 'right' });
+    }
+    y += 10;
+    planDays.forEach((d, di) => {
+      space(14);
+      doc.setFillColor(245, 247, 250);
+      doc.rect(left, y - 4.2, right - left, 6.2, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(...ACCENT);
+      doc.text(winAnsi(`Tag ${di + 1}${d.date ? ` · ${fmtDateWeekday(d.date)}` : ''}${d.title ? ` · ${d.title}` : ''}`), left + 1.5, y);
+      y += 7;
+      for (const e of d.entries) {
+        const title = doc.splitTextToSize(winAnsi(e.title + (e.location ? ` — ${e.location}` : '')), width);
+        const sub: string[] = [];
+        const route = entryRoute(e, '->');
+        if (route) sub.push(route);
+        if (e.note) sub.push(e.note);
+        if (internal) {
+          const meta = [e.supplier, e.price_note, e.status].filter(Boolean).join(' · ');
+          if (meta) sub.push(meta);
+        }
+        const subLines = sub.flatMap((t) => doc.splitTextToSize(winAnsi(t), width) as string[]);
+        space(title.length * 4.2 + subLines.length * 3.7 + 2);
+        doc.setFillColor(...hex(kindColor(e.kind)));
+        doc.rect(left + 0.5, y - 2.6, 1.6, 3.2, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(...NAVY);
+        doc.text(winAnsi(entryTime(e) || '—'), left + 3.5, y);
+        doc.text(title, textX, y);
+        y += title.length * 4.2;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...MUTED);
+        for (const l of subLines) { doc.text(l, textX, y); y += 3.7; }
+        y += 1.8;
+      }
+      y += 3;
+    });
+    if (internal && plan.not_included) {
+      space(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(...NAVY);
+      doc.text('Nicht kalkuliert / offen:', left, y);
+      y += 4;
+      doc.setFont('helvetica', 'normal');
+      const lines = doc.splitTextToSize(winAnsi(plan.not_included), right - left);
+      space(lines.length * 3.8);
+      doc.text(lines, left, y);
+      y += lines.length * 3.8;
+    }
+
+    /* Schema (nur intern): Zeitachse je Tag mit farbigen Blöcken, Transfers als Pfeile */
+    if (internal) {
+      doc.addPage('a4', 'landscape');
+      const W = 297;
+      const L = 38;
+      const R = W - 12;
+      let yy = 16;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(...NAVY);
+      doc.text(winAnsi(`Ablauf schematisch${calc.title ? ` — ${calc.title}` : ''}`), 12, yy);
+      // Legende
+      let lx = 150;
+      doc.setFontSize(7);
+      for (const k of PLAN_KINDS) {
+        doc.setFillColor(...hex(k.color));
+        doc.rect(lx, yy - 2.6, 3, 3, 'F');
+        doc.setTextColor(...NAVY);
+        doc.setFont('helvetica', 'normal');
+        doc.text(winAnsi(k.label), lx + 4, yy);
+        lx += 22;
+      }
+      yy += 9;
+      const { from, to } = timelineRange(planDays);
+      const x = (m: number) => L + ((m - from) / (to - from)) * (R - L);
+      for (const [di, d] of planDays.entries()) {
+        const blocks = dayBlocks(d);
+        const lanes: number[] = [];
+        const placed = blocks.map((b) => {
+          const end = b.point ? b.start + 75 : b.end;
+          let lane = lanes.findIndex((l) => l <= b.start);
+          if (lane < 0) { lane = lanes.length; lanes.push(end); } else lanes[lane] = end;
+          return { ...b, lane };
+        });
+        const rows = Math.max(1, lanes.length);
+        const h = rows * 9 + 6;
+        if (yy + h > 200) { doc.addPage('a4', 'landscape'); yy = 16; }
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(...ACCENT);
+        doc.text(winAnsi(`Tag ${di + 1}`), 12, yy + 3);
+        doc.setTextColor(...NAVY);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.5);
+        doc.text(doc.splitTextToSize(winAnsi(`${d.date ? fmtDateWeekday(d.date) : ''}${d.title ? ` ${d.title}` : ''}`), L - 14), 12, yy + 6.5);
+        doc.setDrawColor(230, 233, 238);
+        doc.setLineWidth(0.2);
+        for (let m = from; m <= to; m += 60) {
+          doc.line(x(m), yy, x(m), yy + h);
+          doc.setTextColor(160, 160, 160);
+          doc.text(String(Math.floor(m / 60) % 24).padStart(2, '0'), x(m) + 0.5, yy + 2.2);
+        }
+        for (const b of placed) {
+          const by = yy + 4 + b.lane * 9;
+          const x1 = x(b.start);
+          const x2 = Math.max(x(b.end), x1 + (b.point ? 0 : 1));
+          const c = hex(kindColor(b.entry.kind));
+          if (b.entry.kind === 'transfer' && !b.point) {
+            doc.setDrawColor(...c);
+            doc.setLineWidth(0.6);
+            doc.line(x1, by + 3, x2 - 1.2, by + 3);
+            doc.setFillColor(...c);
+            doc.triangle(x2 - 1.6, by + 1.8, x2, by + 3, x2 - 1.6, by + 4.2, 'F');
+            doc.setFontSize(5.5);
+            doc.setTextColor(...c);
+            const lbl = [b.entry.distance_km ? `${b.entry.distance_km} km` : '', b.entry.duration_min ? `${b.entry.duration_min} min` : '', b.entry.route_to].filter(Boolean).join(' · ') || b.entry.title;
+            doc.text(doc.splitTextToSize(winAnsi(lbl), Math.max(14, x2 - x1))[0] || '', x1, by + 7);
+          } else if (b.point) {
+            doc.setFillColor(...c);
+            doc.circle(x1, by + 3, 1.2, 'F');
+            doc.setFontSize(5.5);
+            doc.setTextColor(...NAVY);
+            const w = Math.max(10, x(b.start + 70) - x1 - 2);
+            doc.text(doc.splitTextToSize(winAnsi(entryTime(b.entry)), w)[0] || '', x1 + 1.8, by + 2.8);
+            doc.text(doc.splitTextToSize(winAnsi(b.entry.title), w)[0] || '', x1 + 1.8, by + 5.6);
+          } else {
+            doc.setFillColor(...c);
+            doc.roundedRect(x1, by, x2 - x1, 7, 0.8, 0.8, 'F');
+            doc.setFontSize(5.5);
+            doc.setTextColor(255, 255, 255);
+            const w = Math.max(4, x2 - x1 - 1.4);
+            doc.text(doc.splitTextToSize(winAnsi(entryTime(b.entry)), w)[0] || '', x1 + 0.7, by + 2.8);
+            doc.text(doc.splitTextToSize(winAnsi(b.entry.title), w)[0] || '', x1 + 0.7, by + 5.6);
+          }
+        }
+        yy += h + 5;
+      }
+      doc.setFontSize(6.5);
+      doc.setTextColor(...MUTED);
+      doc.text(winAnsi(`Kategorien: ${PLAN_KINDS.map((k) => kindLabel(k.id)).join(', ')} · Transfers als Pfeile mit km und Fahrzeit`), 12, 203);
+    }
+
+    /* DMC / Anbieter + Belege (nur intern) */
+    if (internal && (plan.suppliers.length || plan.sources.length)) {
+      doc.addPage('a4', 'portrait');
+      let y2 = 18;
+      const sp = (n: number) => { if (y2 + n > 280) { doc.addPage('a4', 'portrait'); y2 = 18; } };
+      const head = (t: string) => {
+        sp(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.setTextColor(...NAVY);
+        doc.text(winAnsi(t), left, y2);
+        y2 += 7;
+      };
+      if (plan.suppliers.length) {
+        head('DMC- und Anbieter-Optionen');
+        for (const r of plan.suppliers) {
+          const lab = (list: readonly { id: string; label: string }[], v: string) => list.find((x) => x.id === v)?.label || v;
+          const body = [r.contact, r.coverage, r.source ? `Quelle: ${r.source}` : '', r.note].filter(Boolean)
+            .flatMap((t) => doc.splitTextToSize(winAnsi(t), right - left - 4) as string[]);
+          sp(6 + body.length * 3.7);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(...ACCENT);
+          doc.text(winAnsi(r.name), left, y2);
+          doc.setFontSize(7.5);
+          doc.setTextColor(...NAVY);
+          doc.text(winAnsi(`${lab(SUPPLIER_TYPES, r.type)} · ${lab(SUPPLIER_STATUSES, r.status)}`), right, y2, { align: 'right' });
+          y2 += 4.2;
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(...MUTED);
+          for (const l of body) { doc.text(l, left + 2, y2); y2 += 3.7; }
+          y2 += 3;
+        }
+      }
+      if (plan.sources.length) {
+        y2 += 3;
+        head('Belege / Quellen');
+        for (const r of plan.sources) {
+          const kind = SOURCE_KINDS.find((x) => x.id === r.kind)?.label || r.kind;
+          const lines = doc.splitTextToSize(winAnsi(`${r.what}${r.what && r.ref ? ' — ' : ''}${r.ref} (${kind})`), right - left - 12);
+          sp(lines.length * 3.7 + 1);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(7.5);
+          doc.setTextColor(...NAVY);
+          doc.text(winAnsi(r.nr), left, y2);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(...MUTED);
+          doc.text(lines, left + 12, y2);
+          y2 += lines.length * 3.7 + 1;
+        }
+      }
+    }
+  }
+
+  const showProgram = !planDays.length && hasProgramData(calc.items) && (variant === 'intern' || calc.program_in_offer);
   if (showProgram) {
     const internal = variant === 'intern';
     doc.addPage();
@@ -437,7 +660,7 @@ export function buildCalculationPdf(
 
   /* ─── Interne Variante: Kalkulationstabelle auf Seite 2 ─── */
   if (variant === 'intern') {
-    doc.addPage();
+    doc.addPage('a4', 'portrait');
     let y = 18;
     const left = leftMargin;
     doc.setFont('helvetica', 'bold');

@@ -21,6 +21,7 @@ import { getCurrentRates } from './fxRates';
 import { createInvoiceFromCalculation } from './offerInvoice';
 import { listInquiries, createInquiry, updateInquiry, getInquiry } from './inquiryStore';
 import { INQUIRY_STATUSES } from './inquiryModel';
+import { sanitizePlanning, PLAN_KINDS, SUPPLIER_TYPES, SUPPLIER_STATUSES, SOURCE_KINDS } from './planningModel';
 
 export const MCP_TOOL_GROUPS = [
   { id: 'content', label: 'Website-Inhalte', description: 'Events, Serien, Pakete, FAQs (nur lesen)' },
@@ -247,6 +248,34 @@ export const TOOLS: ToolDef[] = [
         extras: { type: 'array', description: 'Neue Zusatzoptionen (ersetzen die bestehenden)', items: { type: 'object' } },
         status: { type: 'string', enum: ['entwurf', 'aktiv', 'archiviert'] },
         notes: STR('Notiz'),
+      },
+      required: ['offer'], additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_offer_planning', group: 'offers',
+    description: 'Reiseplanung einer Kalkulation lesen: Programm/Tagesablauf (Tage mit Einträgen), DMC-/Anbieter-Optionen, Belege/Quellen, nicht Kalkuliertes.',
+    inputSchema: { type: 'object', properties: { offer: STR('Kalkulations-ID oder Angebotsnummer') }, required: ['offer'], additionalProperties: false },
+  },
+  {
+    name: 'set_offer_planning', group: 'offers',
+    description:
+      'Reiseplanung einer Kalkulation schreiben. Jede übergebene Liste (days, suppliers, sources) ERSETZT die bisherige komplett; ' +
+      'nicht übergebene Teile bleiben. Vorher get_offer_planning lesen. ' +
+      `days[].entries[].kind: ${PLAN_KINDS.map((k) => k.id).join('|')}. suppliers[].type: ${SUPPLIER_TYPES.map((k) => k.id).join('|')}, ` +
+      `status: ${SUPPLIER_STATUSES.map((k) => k.id).join('|')}. sources[].kind: ${SOURCE_KINDS.map((k) => k.id).join('|')}. ` +
+      'Uhrzeiten HH:MM, Datum YYYY-MM-DD. supplier/price_note/status eines Eintrags sind intern (nie im Kunden-PDF).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        offer: STR('Kalkulations-ID oder Angebotsnummer'),
+        days: {
+          type: 'array', description: 'Tage: { date, title, entries: [{ time_from, time_to, title, kind, location, supplier, item_id, route_from, route_to, distance_km, duration_min, vehicle, price_note, status, note }] }',
+          items: { type: 'object' },
+        },
+        suppliers: { type: 'array', description: 'DMC/Anbieter: { name, type, contact, coverage, source, status, inquiry_ids[], note }', items: { type: 'object' } },
+        sources: { type: 'array', description: 'Belege: { nr, ref (URL oder interne Quelle), what, kind, item_ids[] }', items: { type: 'object' } },
+        not_included: STR('Freitext: was nicht kalkuliert ist'),
       },
       required: ['offer'], additionalProperties: false,
     },
@@ -638,6 +667,24 @@ export async function callTool(name: string, args: Record<string, unknown>, ctx:
       const calc = await updateCalculation(existing.id, updates);
       if (!calc) return { error: 'Aktualisierung fehlgeschlagen.' };
       return offerSummary(calc, ctx);
+    }
+    case 'get_offer_planning': {
+      const c = await resolveOffer(String(args.offer || ''));
+      if (!c) return { error: 'Angebot nicht gefunden.' };
+      return { offer_number: c.calc_number, ...c.planning };
+    }
+    case 'set_offer_planning': {
+      const c = await resolveOffer(String(args.offer || ''));
+      if (!c) return { error: 'Angebot nicht gefunden.' };
+      const next = { ...c.planning } as Record<string, unknown>;
+      for (const k of ['days', 'suppliers', 'sources', 'not_included'] as const) if (k in args) next[k] = args[k];
+      const calc = await updateCalculation(c.id, { planning: sanitizePlanning(next) });
+      if (!calc) return { error: 'Speichern fehlgeschlagen.' };
+      const p = calc.planning;
+      return {
+        offer_number: calc.calc_number, days: p.days.length, entries: p.days.reduce((n, d) => n + d.entries.length, 0),
+        suppliers: p.suppliers.length, sources: p.sources.length, admin_url: `${ctx.base}/admin/kalkulation/${calc.id}`,
+      };
     }
     case 'list_offer_inquiries': {
       const c = await resolveOffer(String(args.offer || ''));
