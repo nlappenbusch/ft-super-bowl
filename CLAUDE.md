@@ -128,6 +128,15 @@ mit Übernahme in Prozesse, Vorlagen/Textbausteine und Schreib-Assistent.
   Versuch ein Zeitlimit und ein Gesamtbudget; die Sammelansicht gibt hängende Postfächer als `slow`
   zurück, der Client zeigt die übrigen sofort und lädt still nach. Listen werden je Ansicht im Client
   zwischengespeichert (sofortige Anzeige, Aktualisierung im Hintergrund).
+- **Mail öffnen:** `open()` in `MailApp.tsx` hat eine Reihenfolge-Sperre (`openSeq` + Abort), nur die
+  zuletzt angeklickte Mail füllt den Leser. Inhalt (`&thread=0`) und Verlauf (`part=thread&cid=`)
+  laden getrennt und parallel. Geöffnete Mails liegen im Client-Cache (60), die Nachbarn werden
+  vorgeladen. Zeitlimits: Inhalt 12/20 s, Verlauf 6/9 s.
+- **Exchange-Ausfall:** Graph und Exchange wiederholen auch bei Verbindungsfehlern («fetch failed»;
+  einzelne Microsoft-Frontends sind zeitweise unerreichbar). Der letzte vollständige Stand der
+  Freigaben liegt in `mail_prefs` (`__state__:exchange_directory`) und springt ein, wenn Exchange
+  nicht antwortet. Scheitert eine einzelne Rechteabfrage, gilt der ganze Lauf als Fehler (lieber alt
+  als unvollständig).
 - **Tabellen** `mail_templates`, `mail_prefs`, `mail_links` legt `src/lib/mailbox/schema.ts` selbst
   an (wie `ws_*`).
 

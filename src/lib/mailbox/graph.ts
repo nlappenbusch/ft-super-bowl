@@ -122,7 +122,8 @@ async function gjson<T>(path: string, init?: RequestInit, o: GraphCallOptions = 
     try {
       return await graphRequest(path, { ...init, signal: AbortSignal.timeout(Math.max(1000, Math.min(perTry, deadline - Date.now()))) });
     } catch (e) {
-      if ((e as Error).name === 'TimeoutError' || (e as Error).name === 'AbortError') return null;
+      // Zeitüberschreitung oder Verbindungsfehler («fetch failed») → wie vorübergehender Fehler behandeln
+      if (e instanceof TypeError || (e as Error).name === 'TimeoutError' || (e as Error).name === 'AbortError') return null;
       throw e;
     }
   };
@@ -232,27 +233,29 @@ export async function searchMessages(mb: string, q: string, top = 25): Promise<M
 }
 
 /** Alle Mails eines Verlaufs (ordnerübergreifend: Posteingang, Gesendet, Archiv …). */
-export async function conversationMessages(mb: string, conversationId: string): Promise<MailSummary[]> {
+export async function conversationMessages(mb: string, conversationId: string, timing?: GraphCallOptions): Promise<MailSummary[]> {
   if (!conversationId) return [];
   const qs = new URLSearchParams({
     $filter: `conversationId eq '${conversationId.replace(/'/g, "''")}'`,
     $select: SUMMARY_SELECT,
     $top: '50',
   });
-  const r = await gjson<{ value: GMsg[] }>(`${base(mb)}/messages?${qs}`);
+  const r = await gjson<{ value: GMsg[] }>(`${base(mb)}/messages?${qs}`, undefined, timing);
   return (r.value || []).map((m) => toSummary(mb, m)).sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
 }
 
 // ───────────────────────── Einzelne Mail ─────────────────────────
 
-export async function getMessage(mb: string, id: string): Promise<MailDetail> {
+export async function getMessage(mb: string, id: string, timing?: GraphCallOptions): Promise<MailDetail> {
   const m = await gjson<GMsg>(
     `${base(mb)}/messages/${enc(id)}?$select=${SUMMARY_SELECT},ccRecipients,bccRecipients,replyTo,sentDateTime,body,internetMessageId,webLink,sender`,
+    undefined, timing,
   );
   let attachments: MailAttachmentInfo[] = [];
   if (m.hasAttachments || /cid:/i.test(m.body?.content || '')) {
     const a = await gjson<{ value: Array<{ id: string; name?: string; contentType?: string; size?: number; isInline?: boolean; contentId?: string }> }>(
       `${base(mb)}/messages/${enc(id)}/attachments?$select=id,name,contentType,size,isInline`,
+      undefined, timing,
     ).catch(() => ({ value: [] }));
     attachments = (a.value || []).map((x) => ({
       id: x.id, name: x.name || 'Anhang', contentType: x.contentType || 'application/octet-stream', size: x.size || 0,

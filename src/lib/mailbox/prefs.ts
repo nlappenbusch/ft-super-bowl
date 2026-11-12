@@ -118,3 +118,13 @@ export async function savePersonalPrefs(owner: string, patch: Partial<PersonalMa
   await write(owner.toLowerCase(), next);
   return next;
 }
+
+/** Freie JSON-Ablage in mail_prefs (z. B. letzter guter Stand der Exchange-Freigaben). */
+export async function loadMailState<T extends object>(key: string): Promise<T | null> {
+  const v = await read<Partial<T>>(`__state__:${key}`, {});
+  return Object.keys(v).length ? (v as T) : null;
+}
+
+export async function saveMailState<T extends object>(key: string, data: T): Promise<void> {
+  await write(`__state__:${key}`, data);
+}
