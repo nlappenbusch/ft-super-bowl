@@ -6,7 +6,7 @@
  * Die KI versendet NIE selbst etwas. Modell + Key wie der KI-Arbeitsplatz (settings.ai).
  */
 import type Anthropic from '@anthropic-ai/sdk';
-import { anthropicClient, structuredCall, FALLBACK_BETA } from '../workspace/claude';
+import { anthropicClient, workspaceAiConfig, structuredCall, FALLBACK_BETA } from '../workspace/claude';
 import { TOOLS as PORTAL_TOOLS, callTool as callPortalTool, type ToolContext } from '../portalTools';
 import { getSettings } from '../settingsStore';
 import { getMessage, searchMessages, type MailSummary } from './graph';
@@ -96,7 +96,7 @@ export async function aiSearch(
   signal?: AbortSignal,
 ): Promise<AiSearchResult> {
   const client = anthropicClient();
-  const model = mailSearchModel();
+  let model = mailSearchModel();
   const tools = searchTools();
   const known = new Map<string, MailSummary>();
   const steps: string[] = [];
@@ -122,7 +122,7 @@ export async function aiSearch(
   step('KI plant die Suche …');
   for (let round = 0; round < MAX_ROUNDS; round++) {
     if (signal?.aborted) throw new Error('Suche abgebrochen.');
-    const res = await client.beta.messages.create({
+    const call = () => client.beta.messages.create({
       model,
       max_tokens: 16000,
       betas: [FALLBACK_BETA],
@@ -133,6 +133,17 @@ export async function aiSearch(
       output_config: { effort: 'low' },
       messages,
     } as Anthropic.Beta.Messages.MessageCreateParamsNonStreaming, { signal });
+    let res: Awaited<ReturnType<typeof call>>;
+    try {
+      res = await call();
+    } catch (e) {
+      // Such-Modell für diesen Key nicht verfügbar → einmalig auf das Arbeitsplatz-Modell ausweichen
+      const fallbackModel = workspaceAiConfig().model;
+      if ((e as { status?: number }).status !== 404 || model === fallbackModel) throw e;
+      console.warn(`[Mail] KI-Suche: Modell ${model} nicht verfügbar, nutze ${fallbackModel}`);
+      model = fallbackModel;
+      res = await call();
+    }
     messages.push({ role: 'assistant', content: res.content as Anthropic.Beta.Messages.BetaContentBlockParam[] });
     if (res.stop_reason === 'refusal') return { answer: 'Die KI hat diese Suche abgelehnt. Bitte anders formulieren.', sources: [], steps };
     const uses = res.content.filter((b): b is Anthropic.Beta.Messages.BetaToolUseBlock => b.type === 'tool_use');
