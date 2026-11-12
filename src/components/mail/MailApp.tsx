@@ -81,6 +81,10 @@ export default function MailApp() {
   const searchRef = useRef<HTMLInputElement>(null);
   const listSeq = useRef(0);
   const readTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Mail-Öffnen: nur die zuletzt angeklickte Mail darf den Leser füllen; Zwischenspeicher + Vorladen der Nachbarn.
+  const openSeq = useRef(0);
+  const openAbort = useRef<AbortController | null>(null);
+  const detailCache = useRef(new Map<string, { message: MailDetail; thread: MailSummary[] | null; at: number }>());
 
   const showToast = useCallback((m: string) => { setToast(m); setTimeout(() => setToast((t) => (t === m ? null : t)), 3500); }, []);
 
@@ -204,6 +208,8 @@ export default function MailApp() {
   const patchLocal = (mb: string, id: string, patch: Partial<MailSummary>) => {
     setMessages((ms) => ms.map((m) => (m.mailbox === mb && m.id === id ? { ...m, ...patch } : m)));
     setDetail((d) => (d && d.mailbox === mb && d.id === id ? { ...d, ...patch } : d));
+    const c = detailCache.current.get(`${mb}|${id}`);
+    if (c) c.message = { ...c.message, ...patch };
   };
 
   const setRead = useCallback(async (mb: string, id: string, isRead: boolean) => {
@@ -216,26 +222,88 @@ export default function MailApp() {
     await api('message', { method: 'PATCH', json: { mb, id, isRead } }).catch((e) => showToast((e as Error).message));
   }, [showToast]);
 
-  const open = useCallback(async (m: { mailbox: string; id: string; isRead?: boolean }) => {
+  const remember = useCallback((mb: string, id: string, patch: { message?: MailDetail; thread?: MailSummary[] | null }) => {
+    const c = detailCache.current;
+    const k = `${mb}|${id}`;
+    const prev = c.get(k);
+    const message = patch.message ?? prev?.message;
+    if (!message) return;
+    c.delete(k); // ans Ende = zuletzt benutzt
+    c.set(k, { message, thread: patch.thread !== undefined ? patch.thread : prev?.thread ?? null, at: Date.now() });
+    while (c.size > 60) c.delete(c.keys().next().value as string);
+  }, []);
+  const fetchDetail = useCallback((mb: string, id: string, signal?: AbortSignal) =>
+    api<{ message: MailDetail }>(`message?mb=${encodeURIComponent(mb)}&id=${encodeURIComponent(id)}&thread=0`, { signal })
+      .then((r) => ({ ...r.message, mailbox: mb })), []);
+  const fetchThread = useCallback((mb: string, cid: string, signal?: AbortSignal) =>
+    api<{ thread: MailSummary[] }>(`message?mb=${encodeURIComponent(mb)}&part=thread&cid=${encodeURIComponent(cid)}`, { signal })
+      .then((r) => r.thread.map((t) => ({ ...t, mailbox: mb }))), []);
+
+  /** Nachbarn im Hintergrund laden, damit Weiterklicken sofort geht (nur Inhalt, Verlauf beim Öffnen). */
+  const prefetch = useCallback((list: Array<{ mailbox: string; id: string } | undefined>) => {
+    for (const n of list) {
+      if (!n || detailCache.current.has(`${n.mailbox}|${n.id}`)) continue;
+      void fetchDetail(n.mailbox, n.id).then((msg) => remember(n.mailbox, n.id, { message: msg })).catch(() => {});
+    }
+  }, [fetchDetail, remember]);
+
+  const open = useCallback(async (m: { mailbox: string; id: string; isRead?: boolean; conversationId?: string }) => {
+    const seq = ++openSeq.current;
+    openAbort.current?.abort();
+    const ctrl = new AbortController();
+    openAbort.current = ctrl;
+    const current = () => seq === openSeq.current;
     setSelected({ mailbox: m.mailbox, id: m.id });
     setPane('reader');
-    setDetailLoading(true); setDetailError(null);
+    setDetailError(null);
     if (readTimer.current) clearTimeout(readTimer.current);
+    const markRead = (isRead: boolean) => {
+      if (!isRead) readTimer.current = setTimeout(() => { if (current()) void setRead(m.mailbox, m.id, true); }, 1500);
+    };
+    const loadThread = (cid: string) => {
+      if (!cid) { setThread([]); return; }
+      void fetchThread(m.mailbox, cid, ctrl.signal).then((t) => {
+        remember(m.mailbox, m.id, { thread: t });
+        if (current()) setThread(t);
+      }).catch(() => { if (current()) setThread([]); });
+    };
+
+    const hit = detailCache.current.get(`${m.mailbox}|${m.id}`);
+    if (hit) {
+      setDetail(hit.message); setDetailLoading(false);
+      setThread(hit.thread ?? []);
+      markRead(m.isRead ?? hit.message.isRead);
+      if (!hit.thread || Date.now() - hit.at > 60_000) loadThread(hit.message.conversationId);
+      return;
+    }
+    // Alte Mail nicht stehen lassen: sonst wirkt der Klick, als passiere nichts.
+    setDetail(null); setThread([]); setDetailLoading(true);
+    if (m.conversationId) loadThread(m.conversationId); // parallel zum Inhalt
     try {
-      const r = await api<{ message: MailDetail; thread: MailSummary[] }>(`message?mb=${encodeURIComponent(m.mailbox)}&id=${encodeURIComponent(m.id)}`);
-      setDetail({ ...r.message, mailbox: m.mailbox });
-      setThread(r.thread.map((t) => ({ ...t, mailbox: m.mailbox })));
-      if (!r.message.isRead) readTimer.current = setTimeout(() => void setRead(m.mailbox, m.id, true), 1500);
+      const msg = await fetchDetail(m.mailbox, m.id, ctrl.signal);
+      remember(m.mailbox, m.id, { message: msg });
+      if (!current()) return;
+      setDetail(msg);
+      if (!m.conversationId) loadThread(msg.conversationId);
+      markRead(msg.isRead);
     } catch (e) {
+      if (!current() || (e as Error).name === 'AbortError') return;
       setDetail(null);
       setDetailError((e as Error).message);
     } finally {
-      setDetailLoading(false);
+      if (current()) setDetailLoading(false);
     }
-  }, [setRead]);
+  }, [setRead, fetchDetail, fetchThread, remember]);
 
   const idx = selected ? messages.findIndex((m) => m.mailbox === selected.mailbox && m.id === selected.id) : -1;
-  const step = (dir: 1 | -1) => {
+  // Sobald die Mail steht: Nachbarn vorladen (Pfeiltasten/Weiterklicken ohne Wartezeit).
+  const detailKey = detail ? `${detail.mailbox}|${detail.id}` : '';
+  useEffect(() => {
+    if (!detailKey || idx < 0) return;
+    const t = setTimeout(() => prefetch([messages[idx + 1], messages[idx - 1]]), 300);
+    return () => clearTimeout(t);
+  }, [detailKey, idx]); // eslint-disable-line react-hooks/exhaustive-deps
+  const step =(dir: 1 | -1) => {
     const next = messages[idx < 0 ? 0 : idx + dir];
     if (next) void open(next);
   };

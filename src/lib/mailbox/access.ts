@@ -14,7 +14,7 @@
  * prüft JEDE Mail-API vor dem Zugriff `assertMailbox()`.
  */
 import { exchangeGet, ExchangeError } from './exchange';
-import { getGlobalMailConfig } from './prefs';
+import { getGlobalMailConfig, loadMailState, saveMailState } from './prefs';
 
 export interface MailboxInfo {
   address: string;
@@ -40,6 +40,27 @@ interface Directory {
   error: string | null;
   /** HTTP-Status des Exchange-Fehlers (401/403 = Rechte, sonst meist Störung). */
   errorStatus?: number;
+  /** Stand stammt aus der Ablage (Exchange gerade nicht erreichbar). */
+  fromSnapshot?: boolean;
+}
+
+interface DirectorySnapshot {
+  loadedAt: number;
+  mailboxes: Directory['mailboxes'];
+  fullAccess: Array<[string, string[]]>;
+  sendAs: Array<[string, string[]]>;
+}
+
+const SNAPSHOT_KEY = 'exchange_directory';
+
+function toSnapshot(d: Directory): DirectorySnapshot {
+  const ser = (m: Map<string, Set<string>>) => [...m.entries()].map(([k, v]) => [k, [...v]] as [string, string[]]);
+  return { loadedAt: d.loadedAt, mailboxes: d.mailboxes, fullAccess: ser(d.fullAccess), sendAs: ser(d.sendAs) };
+}
+
+function fromSnapshot(s: DirectorySnapshot): Directory {
+  const de = (l: Array<[string, string[]]>) => new Map(l.map(([k, v]) => [k, new Set(v)]));
+  return { loadedAt: s.loadedAt, mailboxes: s.mailboxes, fullAccess: de(s.fullAccess), sendAs: de(s.sendAs), error: null, fromSnapshot: true };
 }
 
 const TTL_MS = 15 * 60 * 1000;
@@ -72,10 +93,13 @@ async function loadDirectory(): Promise<Directory> {
         map.get(k)!.add(mb);
       }
     };
+    let failed = 0;
+    let lastErr: unknown = null;
+    const soft = <T>(p: Promise<T[]>) => p.catch((e) => { failed++; lastErr = e; return [] as T[]; });
     await pool(d.mailboxes, 6, async (mb) => {
       const [perms, recip] = await Promise.all([
-        exchangeGet<PermRow>('Get-MailboxPermission', { Identity: mb.address }).catch(() => [] as PermRow[]),
-        exchangeGet<RecipPermRow>('Get-RecipientPermission', { Identity: mb.address }).catch(() => [] as RecipPermRow[]),
+        soft(exchangeGet<PermRow>('Get-MailboxPermission', { Identity: mb.address })),
+        soft(exchangeGet<RecipPermRow>('Get-RecipientPermission', { Identity: mb.address })),
       ]);
       for (const p of perms) {
         if (p.IsInherited || String(p.Deny) === 'true' || p.Deny === true) continue;
@@ -90,6 +114,8 @@ async function loadDirectory(): Promise<Directory> {
         add(d.sendAs, r.Trustee, mb.address);
       }
     });
+    // Unvollständig ist schlimmer als veraltet: sonst fehlen Postfächer still.
+    if (failed) throw lastErr instanceof Error ? lastErr : new Error(`${failed} Berechtigungsabfragen in Exchange fehlgeschlagen`);
   } catch (e) {
     d.error = (e as Error).message;
     d.errorStatus = e instanceof ExchangeError ? e.status : 0;
@@ -102,10 +128,24 @@ async function directory(force = false): Promise<Directory> {
   const fresh = dir && Date.now() - dir.loadedAt < TTL_MS && !dir.error;
   if (!force && fresh) return dir!;
   if (!loading) {
-    loading = loadDirectory().then((d) => {
-      // Fehler nicht für 15 min festhalten: bei Fehler nach 1 min erneut versuchen.
-      if (d.error && dir && !dir.error) { dir.loadedAt = Date.now() - TTL_MS + 60_000; return dir; }
-      if (d.error) d.loadedAt = Date.now() - TTL_MS + 60_000;
+    loading = loadDirectory().then(async (d) => {
+      const retrySoon = Date.now() - TTL_MS + 60_000; // bei Fehler nach 1 min erneut versuchen
+      if (!d.error) {
+        dir = d;
+        void saveMailState(SNAPSHOT_KEY, toSnapshot(d)).catch((e) => console.error('[Mail] Freigaben-Stand nicht gespeichert:', (e as Error).message));
+        return d;
+      }
+      // Exchange gestört: letzten guten Stand behalten (Speicher, sonst Ablage aus der DB)
+      if (dir && !dir.error) { dir.loadedAt = retrySoon; return dir; }
+      const snap = await loadMailState<DirectorySnapshot>(SNAPSHOT_KEY).catch(() => null);
+      if (snap?.mailboxes?.length) {
+        const s = fromSnapshot(snap);
+        s.loadedAt = retrySoon;
+        dir = s;
+        console.warn('[Mail] Exchange nicht erreichbar, nutze gespeicherte Freigaben vom', new Date(snap.loadedAt).toISOString());
+        return s;
+      }
+      d.loadedAt = retrySoon;
       dir = d;
       return d;
     }).finally(() => { loading = null; });

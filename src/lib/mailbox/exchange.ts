@@ -64,13 +64,22 @@ export async function exchangeGet<T = Record<string, unknown>>(cmdlet: string, p
     body: JSON.stringify({ CmdletInput: { CmdletName: cmdlet, Parameters: params } }),
     signal: AbortSignal.timeout(60_000),
   });
-  // Nur Get-* → gefahrlos wiederholbar. Exchange antwortet bei Last/Störung mit 429/5xx.
-  let res = await call();
-  for (let i = 0; i < 2 && [429, 500, 502, 503, 504].includes(res.status); i++) {
-    const ra = Number(res.headers.get('retry-after'));
-    await new Promise((r) => setTimeout(r, ra > 0 ? Math.min(ra, 15) * 1000 : i ? 4000 : 1500));
-    res = await call();
+  // Nur Get-* → gefahrlos wiederholbar. Exchange antwortet bei Last/Störung mit 429/5xx, und
+  // einzelne Microsoft-Frontends sind manchmal gar nicht erreichbar («fetch failed», Connect-Timeout):
+  // ein neuer Versuch landet per DNS meist auf einem anderen, funktionierenden Server.
+  const attempt = async (): Promise<Response | null> => {
+    try { return await call(); } catch (e) {
+      if (e instanceof TypeError || (e as Error).name === 'TimeoutError') return null;
+      throw e;
+    }
+  };
+  let res = await attempt();
+  for (let i = 0; i < 3 && (!res || [429, 500, 502, 503, 504].includes(res.status)); i++) {
+    const ra = res ? Number(res.headers.get('retry-after')) : 0;
+    await new Promise((r) => setTimeout(r, ra > 0 ? Math.min(ra, 15) * 1000 : res ? (i ? 4000 : 1500) : 300));
+    res = await attempt();
   }
+  if (!res) throw new ExchangeError(0, `Exchange ${cmdlet}: Microsoft-Server nicht erreichbar (Verbindungsfehler)`);
   const text = await res.text();
   let data: unknown = null;
   try { data = text ? JSON.parse(text) : {}; } catch { /* Rohtext */ }

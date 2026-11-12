@@ -4,16 +4,32 @@ import { getMessage, conversationMessages, updateMessage, moveMessage } from '@/
 
 export const dynamic = 'force-dynamic';
 
-/** GET ?mb=&id= — Mail vollständig + Verlauf (ordnerübergreifend, ohne Bodies). Markiert NICHT automatisch als gelesen. */
+/**
+ * GET ?mb=&id=[&cid=] — Mail vollständig + Verlauf (ordnerübergreifend, ohne Bodies). Markiert NICHT als gelesen.
+ * Mit cid (conversationId aus der Liste) laufen Mail und Verlauf parallel statt nacheinander.
+ * &thread=0 liefert nur die Mail; ?part=thread&cid= nur den Verlauf (der Client lädt ihn getrennt,
+ * damit die Mail sofort erscheint). Der Verlauf ist Beiwerk: knappes Zeitlimit, bei Fehler leer.
+ */
+const DETAIL_TIMING = { timeoutMs: 12_000, deadlineMs: 20_000 };
+const THREAD_TIMING = { timeoutMs: 6_000, deadlineMs: 9_000 };
+
 export async function GET(req: Request) {
   try {
     const sp = new URL(req.url).searchParams;
     const user = await mailUser();
     const [mb] = await resolveMailboxes(user, sp.get('mb'));
     const id = sp.get('id');
+    const cid = sp.get('cid') || '';
+    if (sp.get('part') === 'thread') {
+      if (!mb || !cid) throw new HttpError(400, 'mb und cid erforderlich');
+      const thread = await conversationMessages(mb.address, cid, THREAD_TIMING).catch(() => []);
+      return NextResponse.json({ success: true, thread });
+    }
     if (!mb || !id) throw new HttpError(400, 'mb und id erforderlich');
-    const message = await getMessage(mb.address, id);
-    const thread = await conversationMessages(mb.address, message.conversationId).catch(() => []);
+    const withThread = sp.get('thread') !== '0';
+    const threadP = withThread && cid ? conversationMessages(mb.address, cid, THREAD_TIMING).catch(() => []) : null;
+    const message = await getMessage(mb.address, id, DETAIL_TIMING);
+    const thread = !withThread ? [] : await (threadP ?? conversationMessages(mb.address, message.conversationId, THREAD_TIMING).catch(() => []));
     return NextResponse.json({ success: true, message, thread });
   } catch (e) {
     return fail(e);
