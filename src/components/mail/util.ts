@@ -16,6 +16,36 @@ export async function api<T = Record<string, unknown>>(path: string, init?: Requ
   return data as T;
 }
 
+/**
+ * POST mit NDJSON-Antwort (eine JSON-Zeile je Ereignis), z. B. KI-Suche mit Live-Fortschritt.
+ * Ruft onEvent für jede Zeile auf; wirft bei HTTP-Fehler.
+ */
+export async function apiStream(path: string, json: unknown, onEvent: (ev: Record<string, unknown>) => void, signal?: AbortSignal): Promise<void> {
+  const res = await fetch(`/api/admin/mailbox/${path}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(json), signal,
+  });
+  if (res.status === 401 && typeof window !== 'undefined') window.location.href = `/admin/login?from=${encodeURIComponent('/mail')}`;
+  if (!res.ok || !res.body) {
+    const data = await res.json().catch(() => ({ error: `Fehler ${res.status}` }));
+    throw new Error((data as { error?: string }).error || `Fehler ${res.status}`);
+  }
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (value) buf += dec.decode(value, { stream: true });
+    let i: number;
+    while ((i = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, i).trim();
+      buf = buf.slice(i + 1);
+      if (line) { try { onEvent(JSON.parse(line)); } catch { /* unvollständige Zeile */ } }
+    }
+    if (done) break;
+  }
+  if (buf.trim()) { try { onEvent(JSON.parse(buf)); } catch { /* ignorieren */ } }
+}
+
 /** Stabile Farbe je Postfach (Faltin-nahe Palette, gut unterscheidbar). */
 const PALETTE = ['#143047', '#d9531e', '#2f7d6d', '#7a4fb3', '#b8862b', '#2c6fbb', '#a23d5c', '#4f6b2a', '#5b5f97', '#c0582b'];
 export function mailboxColor(address: string, all: MailboxInfo[]): string {

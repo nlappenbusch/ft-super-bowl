@@ -7,6 +7,8 @@
  */
 import type Anthropic from '@anthropic-ai/sdk';
 import { anthropicClient, workspaceAiConfig, structuredCall, FALLBACK_BETA } from '../workspace/claude';
+import { TOOLS as PORTAL_TOOLS, callTool as callPortalTool, type ToolContext } from '../portalTools';
+import { getSettings } from '../settingsStore';
 import { getMessage, searchMessages, type MailSummary } from './graph';
 import { mailText } from './context';
 import type { AssistMode } from './prefs';
@@ -23,120 +25,195 @@ export interface AiSearchResult {
   steps: string[];
 }
 
-const SEARCH_TOOLS: Anthropic.Beta.Messages.BetaTool[] = [
-  {
-    name: 'search_mail',
-    description:
-      'Durchsucht Postfächer per Microsoft-Suche (KQL). Beispiele: `Oktoberfest Hotel`, `from:max@firma.ch`, `subject:Rechnung`, `"RQ-12345"`, `hasattachments:true Ticket`, `received>=2026-10-01 Darts`. Liefert Betreff, Absender, Datum, Vorschau und id.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        query: { type: 'string', description: 'KQL-Suchausdruck' },
-        mailbox: { type: 'string', description: 'Adresse eines Postfachs oder "alle" (Standard)' },
-        top: { type: 'integer', description: 'max. Treffer je Postfach (Standard 10, max 25)' },
-      },
-      required: ['query'],
-    },
-  },
-  {
-    name: 'read_mail',
-    description: 'Liest eine Mail vollständig (Text, Empfänger, Anhänge-Namen).',
-    input_schema: {
-      type: 'object',
-      properties: { mailbox: { type: 'string' }, id: { type: 'string' } },
-      required: ['mailbox', 'id'],
-    },
-  },
-  {
-    name: 'answer',
-    description: 'Endgültige Antwort an die Person geben. Immer zum Schluss aufrufen.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        antwort: { type: 'string', description: 'Antwort auf Deutsch (Markdown erlaubt, knapp, konkrete Fakten mit Datum/Absender).' },
-        quellen: {
-          type: 'array',
-          description: 'Mails, auf die sich die Antwort stützt (aus den Suchergebnissen)',
-          items: { type: 'object', properties: { mailbox: { type: 'string' }, id: { type: 'string' } }, required: ['mailbox', 'id'] },
-        },
-      },
-      required: ['antwort', 'quellen'],
-    },
-  },
-];
+/** Fortschritt für die Live-Anzeige im Client. */
+export type AiSearchProgress = (step: string) => void;
 
-export async function aiSearch(question: string, mailboxes: string[], personName: string): Promise<AiSearchResult> {
+/** Portal-Werkzeuge, die die Mail-Suche lesend mitbenutzt (Events mit Datum, Anfragen/Buchungen, Kunden). */
+const PORTAL_READ_TOOLS = ['list_events', 'get_event_info', 'list_bookings', 'search_booking_status', 'find_customers'];
+
+const MAX_ROUNDS = 6;
+
+function searchTools(): Anthropic.Beta.Messages.BetaTool[] {
+  const portal = PORTAL_TOOLS.filter((t) => PORTAL_READ_TOOLS.includes(t.name)).map((t) => ({
+    name: t.name,
+    description: `[Portal next.faltintravel.com] ${t.description}`,
+    input_schema: t.inputSchema as Anthropic.Beta.Messages.BetaTool['input_schema'],
+  }));
+  return [
+    {
+      name: 'search_mail',
+      description:
+        'Durchsucht die Postfächer per Microsoft-Suche (KQL), alle Postfächer gleichzeitig. Beispiele: `Oktoberfest Hotel`, `from:max@firma.ch`, `subject:Rechnung`, `"RQ-12345"`, `hasattachments:true Ticket`, `received>=2026-10-01 Darts`. `received` ist das Eingangsdatum der Mail, NICHT das Datum eines Spiels oder Events. Liefert Betreff, Absender, Datum, Vorschau und id.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'KQL-Suchausdruck' },
+          mailbox: { type: 'string', description: 'Adresse eines Postfachs oder "alle" (Standard)' },
+          top: { type: 'integer', description: 'max. Treffer je Postfach (Standard 10, max 25)' },
+        },
+        required: ['query'],
+      },
+    },
+    {
+      name: 'read_mail',
+      description: 'Liest eine Mail vollständig (Text, Empfänger, Anhänge-Namen). Mehrere Mails in EINER Antwort parallel anfordern.',
+      input_schema: {
+        type: 'object',
+        properties: { mailbox: { type: 'string' }, id: { type: 'string' } },
+        required: ['mailbox', 'id'],
+      },
+    },
+    ...portal,
+    {
+      name: 'answer',
+      description: 'Endgültige Antwort an die Person geben. Immer zum Schluss aufrufen.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          antwort: { type: 'string', description: 'Antwort auf Deutsch (Markdown erlaubt, knapp, konkrete Fakten mit Datum/Absender).' },
+          quellen: {
+            type: 'array',
+            description: 'Mails, auf die sich die Antwort stützt (aus den Suchergebnissen)',
+            items: { type: 'object', properties: { mailbox: { type: 'string' }, id: { type: 'string' } }, required: ['mailbox', 'id'] },
+          },
+        },
+        required: ['antwort', 'quellen'],
+      },
+    },
+  ];
+}
+
+/** Modell der Mail-Suche: eigener Schalter (Tempo), sonst Sonnet 5.5. */
+function mailSearchModel(): string {
+  return (getSettings().ai.mail_search_model || '').trim() || 'claude-sonnet-5-5';
+}
+
+export async function aiSearch(
+  question: string,
+  mailboxes: string[],
+  person: { name: string; employeeId: string | null; base: string },
+  onStep: AiSearchProgress = () => undefined,
+  signal?: AbortSignal,
+): Promise<AiSearchResult> {
   const client = anthropicClient();
-  const { model } = workspaceAiConfig();
+  let model = mailSearchModel();
+  const tools = searchTools();
   const known = new Map<string, MailSummary>();
   const steps: string[] = [];
+  const step = (s: string) => { steps.push(s); onStep(s); };
+  const portalCtx: ToolContext = {
+    actor: `Faltin Mail (${person.name})`,
+    base: person.base,
+    offerPdfUrl: (id) => `${person.base}/api/admin/calculations/${id}/pdf`,
+    invoicePdfUrl: (id) => `${person.base}/api/invoices/${id}/pdf`,
+    employeeId: person.employeeId,
+  };
   const system = [
     `Du bist die Mail-Suche von Faltin Travel AG (Sportreisen, Schweiz). Heute ist ${today()}.`,
-    `Du suchst im Auftrag von ${personName} in diesen Postfächern: ${mailboxes.join(', ')}.`,
-    'Vorgehen: Formuliere 1–4 gezielte Suchen (Synonyme, Namen, Nummern wie RQ-…, Zeiträume), lies die relevantesten Mails und beantworte die Frage präzise.',
-    'Nenne konkrete Fakten (Daten, Beträge, Namen, Absender). Wenn nichts gefunden wird, sag das ehrlich und schlage eine bessere Suche vor.',
+    `Du suchst im Auftrag von ${person.name} in diesen Postfächern: ${mailboxes.join(', ')}.`,
+    'Zusätzlich kannst du im Portal lesen: Events mit Datum (list_events, get_event_info), Anfragen/Buchungen (list_bookings, search_booking_status) und Kunden (find_customers).',
+    'Tempo zählt: Stelle in der ersten Runde 2–4 Suchen GLEICHZEITIG (Synonyme, Namen, Nummern wie RQ-…, Veranstalter wie Ticketmaster/On Location, dazu bei Fragen nach Zeiträumen list_events). Lies danach nur die 2–5 relevantesten Mails, ebenfalls gleichzeitig. Höchstens drei Runden, dann antworten.',
+    'Fragen nach «kommenden Tagen» beziehen sich meist auf das Event- bzw. Spieldatum: Das steht im Mailtext oder in list_events, nicht im Eingangsdatum.',
+    'Nenne konkrete Fakten (Daten, Beträge, Anzahl, Namen, Absender). Wenn nichts gefunden wird, sag das ehrlich und schlage eine bessere Suche vor.',
     'Rufe zum Schluss IMMER das Werkzeug answer auf. Erfinde nichts.',
   ].join('\n');
   const messages: Anthropic.Beta.Messages.BetaMessageParam[] = [{ role: 'user', content: question }];
 
-  for (let round = 0; round < 8; round++) {
-    const res = await client.beta.messages.create({
+  step('KI plant die Suche …');
+  for (let round = 0; round < MAX_ROUNDS; round++) {
+    if (signal?.aborted) throw new Error('Suche abgebrochen.');
+    const call = () => client.beta.messages.create({
       model,
-      max_tokens: 8000,
+      max_tokens: 16000,
       betas: [FALLBACK_BETA],
       fallbacks: 'default',
       system,
-      tools: SEARCH_TOOLS,
-      tool_choice: round === 7 ? { type: 'tool', name: 'answer' } : { type: 'auto' },
+      tools,
+      tool_choice: { type: 'auto' },
       output_config: { effort: 'low' },
       messages,
-    } as Anthropic.Beta.Messages.MessageCreateParamsNonStreaming);
+    } as Anthropic.Beta.Messages.MessageCreateParamsNonStreaming, { signal });
+    let res: Awaited<ReturnType<typeof call>>;
+    try {
+      res = await call();
+    } catch (e) {
+      // Such-Modell für diesen Key nicht verfügbar → einmalig auf das Arbeitsplatz-Modell ausweichen
+      const fallbackModel = workspaceAiConfig().model;
+      if ((e as { status?: number }).status !== 404 || model === fallbackModel) throw e;
+      console.warn(`[Mail] KI-Suche: Modell ${model} nicht verfügbar, nutze ${fallbackModel}`);
+      model = fallbackModel;
+      res = await call();
+    }
     messages.push({ role: 'assistant', content: res.content as Anthropic.Beta.Messages.BetaContentBlockParam[] });
+    if (res.stop_reason === 'refusal') return { answer: 'Die KI hat diese Suche abgelehnt. Bitte anders formulieren.', sources: [], steps };
     const uses = res.content.filter((b): b is Anthropic.Beta.Messages.BetaToolUseBlock => b.type === 'tool_use');
     if (!uses.length) {
       const text = res.content.filter((b) => b.type === 'text').map((b) => (b as { text: string }).text).join('\n');
       return { answer: text || 'Keine Antwort erhalten.', sources: [], steps };
     }
-    const results: Anthropic.Beta.Messages.BetaToolResultBlockParam[] = [];
-    for (const u of uses) {
+    const fin = uses.find((u) => u.name === 'answer');
+    if (fin) {
+      const input = fin.input as Record<string, unknown>;
+      const q = (input.quellen as Array<{ mailbox: string; id: string }> | undefined) || [];
+      const sources = q.map((s) => known.get(`${String(s.mailbox).toLowerCase()}|${s.id}`)).filter((x): x is MailSummary => !!x);
+      return { answer: String(input.antwort || ''), sources, steps };
+    }
+
+    // Alle Werkzeugaufrufe dieser Runde gleichzeitig ausführen, Ergebnisse in Aufruf-Reihenfolge zurückgeben.
+    const results = await Promise.all(uses.map(async (u): Promise<Anthropic.Beta.Messages.BetaToolResultBlockParam> => {
       const input = u.input as Record<string, unknown>;
-      if (u.name === 'answer') {
-        const q = (input.quellen as Array<{ mailbox: string; id: string }> | undefined) || [];
-        const sources = q.map((s) => known.get(`${s.mailbox.toLowerCase()}|${s.id}`)).filter((x): x is MailSummary => !!x);
-        return { answer: String(input.antwort || ''), sources, steps };
-      }
       try {
         if (u.name === 'search_mail') {
           const query = String(input.query || '').slice(0, 300);
           const mbArg = String(input.mailbox || 'alle').toLowerCase();
           const top = Math.min(Number(input.top) || 10, 25);
           const targets = mbArg && mbArg !== 'alle' && mailboxes.includes(mbArg) ? [mbArg] : mailboxes;
-          steps.push(`Suche: ${query}${targets.length === 1 ? ` (${targets[0]})` : ''}`);
+          step(`Suche «${query}»${targets.length === 1 ? ` in ${targets[0]}` : ` in ${targets.length} Postfächern`}`);
           const lists = await Promise.all(targets.map((mb) => searchMessages(mb, query, top).catch(() => [] as MailSummary[])));
           const hits = lists.flat().sort((a, b) => b.receivedAt.localeCompare(a.receivedAt)).slice(0, 30);
           hits.forEach((h) => known.set(`${h.mailbox}|${h.id}`, h));
+          step(`→ ${hits.length} Treffer für «${query}»`);
           const lines = hits.map((h) =>
             `- mailbox=${h.mailbox} id=${h.id}\n  ${h.receivedAt.slice(0, 16).replace('T', ' ')} · von ${h.from.name || h.from.address} <${h.from.address}> · an ${h.to.map((t) => t.address).join(', ')}\n  Betreff: ${h.subject}\n  ${clip(h.preview, 220)}`);
-          results.push({ type: 'tool_result', tool_use_id: u.id, content: lines.length ? lines.join('\n') : 'Keine Treffer.' });
-        } else if (u.name === 'read_mail') {
+          return { type: 'tool_result', tool_use_id: u.id, content: lines.length ? lines.join('\n') : 'Keine Treffer.' };
+        }
+        if (u.name === 'read_mail') {
           const mb = String(input.mailbox || '').toLowerCase();
           if (!mailboxes.includes(mb)) throw new Error('Kein Zugriff auf dieses Postfach.');
           const m = await getMessage(mb, String(input.id));
           known.set(`${mb}|${m.id}`, m);
-          steps.push(`Gelesen: ${m.subject}`);
-          results.push({
+          step(`Gelesen: ${m.subject || '(ohne Betreff)'}`);
+          return {
             type: 'tool_result', tool_use_id: u.id,
             content: `Von: ${m.from.name} <${m.from.address}>\nAn: ${m.to.map((t) => t.address).join(', ')}${m.cc.length ? `\nCc: ${m.cc.map((t) => t.address).join(', ')}` : ''}\nDatum: ${m.receivedAt}\nBetreff: ${m.subject}\nAnhänge: ${m.attachments.map((a) => a.name).join(', ') || '–'}\n\n${clip(mailText(m), 12000)}`,
-          });
+          };
         }
+        if (PORTAL_READ_TOOLS.includes(u.name)) {
+          step(PORTAL_STEP[u.name] || `Portal: ${u.name}`);
+          const value = await callPortalTool(u.name, input, portalCtx);
+          return { type: 'tool_result', tool_use_id: u.id, content: clip(JSON.stringify(value), 20000) };
+        }
+        throw new Error(`Unbekanntes Werkzeug ${u.name}`);
       } catch (e) {
-        results.push({ type: 'tool_result', tool_use_id: u.id, content: `Fehler: ${(e as Error).message}`, is_error: true });
+        return { type: 'tool_result', tool_use_id: u.id, content: `Fehler: ${(e as Error).message}`, is_error: true };
       }
-    }
-    messages.push({ role: 'user', content: results });
+    }));
+    // Vorletzte Runde: Hinweis, dass jetzt geantwortet werden muss (erzwungene Werkzeugwahl lehnen neuere Modelle ab).
+    const content: Array<Anthropic.Beta.Messages.BetaToolResultBlockParam | Anthropic.Beta.Messages.BetaTextBlockParam> = [...results];
+    if (round >= MAX_ROUNDS - 2) content.push({ type: 'text', text: 'Genug gesucht: Rufe jetzt answer mit dem bisherigen Stand auf.' });
+    messages.push({ role: 'user', content });
+    step('KI wertet aus …');
   }
   return { answer: 'Die Suche hat zu lange gedauert. Bitte die Frage genauer stellen.', sources: [...known.values()].slice(0, 5), steps };
 }
+
+const PORTAL_STEP: Record<string, string> = {
+  list_events: 'Portal: Events mit Datum nachschlagen',
+  get_event_info: 'Portal: Event-Details lesen',
+  list_bookings: 'Portal: Anfragen/Buchungen durchsehen',
+  search_booking_status: 'Portal: Anfrage nachschlagen',
+  find_customers: 'Portal: Kunden suchen',
+};
 
 // ───────────────────────── Extraktion ─────────────────────────
 

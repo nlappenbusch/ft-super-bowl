@@ -119,6 +119,15 @@ mit Übernahme in Prozesse, Vorlagen/Textbausteine und Schreib-Assistent.
   `{{key}}`, fehlende Werte werden im Editor als gelbe Lücke `[[key]]` markiert und vor dem
   Senden angemahnt. Tonalität für die KI: `tone.ts`.
 - **Teams-Wechsel:** `teams.ts` prüft je Beteiligtem im Verzeichnis (intern mit Teams-Lizenz `TeamspaceAPI`, Gast, extern) und baut Deep-Links `teams.microsoft.com/l/chat/0/0?users=…` (1:1 bzw. Gruppenchat mit Betreff als Thema). Externe sind nur per Föderation erreichbar — app-only nicht vorab prüfbar.
+- **KI-Suche** (`ai.ts → aiSearch`): eigenes Modell `settings.ai.mail_search_model` (Standard
+  `claude-sonnet-5-5`, Tempo), Werkzeuge laufen pro Runde parallel, liest zusätzlich Portal-Daten
+  (Events, Anfragen/Buchungen, Kunden aus `portalTools`). Fortschritt kommt als NDJSON-Stream
+  (`{action:'search', stream:true}`), der Client zeigt die Schritte live und kann abbrechen.
+  Keine erzwungene Werkzeugwahl (`tool_choice: tool` lehnen neuere Modelle ab).
+- **Zeitlimits:** Einzelne Postfächer hängen bei Exchange sporadisch 20–60 s. `gjson()` hat je
+  Versuch ein Zeitlimit und ein Gesamtbudget; die Sammelansicht gibt hängende Postfächer als `slow`
+  zurück, der Client zeigt die übrigen sofort und lädt still nach. Listen werden je Ansicht im Client
+  zwischengespeichert (sofortige Anzeige, Aktualisierung im Hintergrund).
 - **Tabellen** `mail_templates`, `mail_prefs`, `mail_links` legt `src/lib/mailbox/schema.ts` selbst
   an (wie `ws_*`).
 

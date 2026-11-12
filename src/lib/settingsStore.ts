@@ -98,6 +98,8 @@ export interface AiSettings {
   model: string;
   /** KI-Arbeitsplatz (/working-dashboard): Modell der persönlichen Faltin-KI. */
   workspace_model?: string;
+  /** Faltin Mail: Modell der KI-Suche (Tool-Schleife, auf Tempo ausgelegt). Standard claude-sonnet-5-5. */
+  mail_search_model?: string;
   /** KI-Arbeitsplatz: Hintergrund-Agent (Mail-Sortierung, Erinnerungen) aktiv. */
   workspace_agent_enabled?: boolean;
   /** SharePoint-Suche (App-only Graph): Region für /search/query, z.B. CHE oder EUR. Leer = automatisch. */
