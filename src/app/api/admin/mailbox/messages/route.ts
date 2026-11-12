@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { mailUser, fail, resolveMailboxes } from '@/lib/mailbox/api';
 import { listMessages, searchMessages, type MailSummary } from '@/lib/mailbox/graph';
 import { rememberContacts } from '@/lib/mailbox/contacts';
+import { mirrorList, mirrorSearch } from '@/lib/mailbox/mirror';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,9 @@ export const dynamic = 'force-dynamic';
  *   ?mb=<adresse>|all   (all = alle Posteingänge zusammen)
  *   &folder=<id|inbox|sentitems|…>  &before=<ISO>  &unread=1 &flagged=1 &attachments=1
  *   &q=<suche>          (Microsoft-Suche; deutsche Kürzel von:, an:, betreff:, anhang)
+ *
+ * Listen kommen aus dem Spiegel (mirror.ts), sobald der Ordner abgeglichen ist; sonst live.
+ * Die Suche läuft live; hängt Microsoft, springt die einfache Suche im Spiegel ein.
  */
 export async function GET(req: Request) {
   try {
@@ -25,29 +29,38 @@ export async function GET(req: Request) {
     const multi = boxes.length > 1;
     const timing = multi ? { timeoutMs: 6000, deadlineMs: 9000 } : { timeoutMs: 15000, deadlineMs: 25000 };
     const slow: string[] = [];
-    const lists = await Promise.all(boxes.map(async (m) => {
+    const opts = {
+      folder: sp.get('folder') || 'inbox', before: sp.get('before') || undefined,
+      unread: flag('unread'), flagged: flag('flagged'), attachments: flag('attachments'), top, timing,
+    };
+    const results = await Promise.all(boxes.map(async (m): Promise<{ list: MailSummary[]; more: boolean }> => {
+      if (!q) {
+        const mirrored = await mirrorList(m.address, opts).catch((e) => {
+          console.error(`[Mail-Spiegel] ${m.address}:`, (e as Error).message);
+          return null;
+        });
+        if (mirrored) return { list: mirrored.messages, more: mirrored.more };
+      }
       try {
-        return q
-          ? await searchMessages(m.address, q, top)
-          : await listMessages(m.address, {
-            folder: sp.get('folder') || 'inbox', before: sp.get('before') || undefined,
-            unread: flag('unread'), flagged: flag('flagged'), attachments: flag('attachments'), top, timing,
-          });
+        const list = q ? await searchMessages(m.address, q, top) : await listMessages(m.address, opts);
+        return { list, more: !q && list.length >= top };
       } catch (e) {
         console.error(`[Mail] ${m.address}:`, (e as Error).message);
         slow.push(m.address);
-        return [] as MailSummary[];
+        const local = q ? await mirrorSearch(m.address, q, top).catch(() => [] as MailSummary[]) : [];
+        return { list: local, more: false };
       }
     }));
+    const lists = results.map((r) => r.list);
     let messages = lists.flat().sort((a, b) => b.receivedAt.localeCompare(a.receivedAt));
     // Beim Zusammenführen mehrerer Postfächer nur bis zum ältesten „vollständigen“ Zeitpunkt zeigen,
     // damit das Nachladen (before=…) keine Lücken erzeugt.
     if (!q && boxes.length > 1) {
-      const cut = lists.filter((l) => l.length >= top).map((l) => l[l.length - 1].receivedAt).sort().pop();
+      const cut = results.filter((r) => r.more && r.list.length).map((r) => r.list[r.list.length - 1].receivedAt).sort().pop();
       if (cut) messages = messages.filter((m) => m.receivedAt >= cut);
     }
     rememberContacts(user.email, messages);
-    const more = !q && lists.some((l) => l.length >= top);
+    const more = !q && results.some((r) => r.more);
     return NextResponse.json({ success: true, messages, more, slow });
   } catch (e) {
     return fail(e);

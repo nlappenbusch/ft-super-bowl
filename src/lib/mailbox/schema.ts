@@ -51,6 +51,42 @@ const TABLES: string[] = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_mail_links_conv ON mail_links (conversation_id)`,
   `CREATE INDEX IF NOT EXISTS idx_mail_links_target ON mail_links (target_type, target_id)`,
+  // Spiegel (mirror.ts): nur Kopfdaten, je Postfach einmal (nicht je Person). Inhalte kommen live.
+  `CREATE TABLE IF NOT EXISTS mail_sync_folders (
+    mailbox TEXT NOT NULL,
+    ref TEXT NOT NULL,
+    real_id TEXT NOT NULL DEFAULT '',
+    link TEXT NOT NULL DEFAULT '',
+    since TEXT NOT NULL DEFAULT '',
+    ready INTEGER NOT NULL DEFAULT 0,
+    older INTEGER NOT NULL DEFAULT 0,
+    last_sync TEXT NOT NULL DEFAULT '',
+    last_used TEXT NOT NULL DEFAULT '',
+    error TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (mailbox, ref)
+  )`,
+  `CREATE TABLE IF NOT EXISTS mail_sync_msgs (
+    mailbox TEXT NOT NULL,
+    id TEXT NOT NULL,
+    ref TEXT NOT NULL,
+    folder_id TEXT NOT NULL DEFAULT '',
+    conversation_id TEXT NOT NULL DEFAULT '',
+    subject TEXT NOT NULL DEFAULT '',
+    from_name TEXT NOT NULL DEFAULT '',
+    from_addr TEXT NOT NULL DEFAULT '',
+    to_json TEXT NOT NULL DEFAULT '[]',
+    received_at TEXT NOT NULL DEFAULT '',
+    preview TEXT NOT NULL DEFAULT '',
+    is_read INTEGER NOT NULL DEFAULT 0,
+    flagged INTEGER NOT NULL DEFAULT 0,
+    has_attachments INTEGER NOT NULL DEFAULT 0,
+    importance TEXT NOT NULL DEFAULT 'normal',
+    is_draft INTEGER NOT NULL DEFAULT 0,
+    categories TEXT NOT NULL DEFAULT '[]',
+    PRIMARY KEY (mailbox, id)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_mail_sync_list ON mail_sync_msgs (mailbox, ref, received_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_mail_sync_conv ON mail_sync_msgs (mailbox, conversation_id)`,
 ];
 
 let ensured: Promise<void> | null = null;
