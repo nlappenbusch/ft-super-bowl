@@ -258,6 +258,30 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
       await pool.query(`ALTER TABLE incentive_plans ADD COLUMN IF NOT EXISTS error text NOT NULL DEFAULT ''`);
       await pool.query(`ALTER TABLE incentive_plans ADD COLUMN IF NOT EXISTS progress text NOT NULL DEFAULT ''`);
 
+      // Anfragen an Leistungsträger je Kalkulation
+      await pool.query(`CREATE TABLE IF NOT EXISTS calc_inquiries (
+        id text PRIMARY KEY,
+        calc_id text NOT NULL,
+        created_at text NOT NULL DEFAULT '',
+        updated_at text NOT NULL DEFAULT '',
+        supplier text NOT NULL DEFAULT '',
+        category text NOT NULL DEFAULT '',
+        item_id text NOT NULL DEFAULT '',
+        to_addr text NOT NULL DEFAULT '',
+        cc_addr text NOT NULL DEFAULT '',
+        subject text NOT NULL DEFAULT '',
+        body text NOT NULL DEFAULT '',
+        internal_note text NOT NULL DEFAULT '',
+        status text NOT NULL DEFAULT 'entwurf',
+        sent_at text NOT NULL DEFAULT '',
+        sent_by text NOT NULL DEFAULT '',
+        sent_from text NOT NULL DEFAULT '',
+        send_error text NOT NULL DEFAULT '',
+        history text NOT NULL DEFAULT '[]',
+        sort integer NOT NULL DEFAULT 0,
+        created_by text NOT NULL DEFAULT ''
+      )`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_calc_inquiries_calc ON calc_inquiries(calc_id)`);
       // Praesentations-Builder (Decks aus Folien; TASK-00126)
       await pool.query(`CREATE TABLE IF NOT EXISTS presentations (
         id text PRIMARY KEY,

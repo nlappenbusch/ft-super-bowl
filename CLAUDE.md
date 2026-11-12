@@ -129,6 +129,12 @@ Bildspalte rechts) — Vorlage ist das gedruckte Ryder-Cup-Deck.
 - **Vergleich:** Modus „Vergleich“ ruft `POST /api/admin/traffics/compare` auf: Pauschal, Nur Flug und Nur Hotel laufen parallel (bis zu 3 Anfragen), dazu je Hotel günstigste Pauschale gegen günstigstes Hotel plus günstigsten Flug (`compareOffers()`).
 - **Kalkulation:** `offer_calculations.pax` (Teilnehmer, Gesamtsummen = p.P. × Pax); jede Position hat `service_from`/`service_to` (Leistungsdatum, im Items-JSON). Beides in UI, PDF und MCP (`create_offer`/`update_offer`/`get_offer`).
 
+## Anfragen an Leistungsträger (je Kalkulation)
+- **Code:** `src/lib/inquiryModel.ts` (reine Logik, Tests in `tests/`), `src/lib/inquiryStore.ts` (Tabelle `calc_inquiries`, in `database.ts` UND `dbq.applyPgSchemaEnhancements()`), Routen `/api/admin/calculations/[id]/inquiries[/[inqId][/send]]`, UI `components/admin/InquiriesPanel.tsx` im Kalkulations-Editor.
+- **Ablauf:** Entwurf → „Senden" (Klick + Bestätigung) über Graph aus dem Portal-Postfach (`getMailbox()`, i. d. R. request@) → Status `gesendet`, Zeitpunkt/Absender/Empfänger im Verlauf. Danach sind Text und Empfänger gesperrt, gelöscht werden kann nur ein Entwurf. Statuswerte: entwurf, gesendet, beantwortet, angebot, abgelehnt, erledigt.
+- **Schutz:** Text mit `[INTERN` wird nicht gesendet; interne Hinweise gehören ins Feld `internal_note` (geht nie raus).
+- **PDF/MCP:** Das interne PDF (`?variant=intern`) hängt alle Anfragen mit vollem Text an, das Kunden-PDF nie. MCP: `list_offer_inquiries`, `add_offer_inquiry`, `update_offer_inquiry` — Senden gibt es bewusst NICHT per MCP/KI.
+
 ## Wichtige Komponenten
 - `src/components/event/EventPageView.tsx` — rendert alle Event-Module (live-editierbar via `EventLiveEditor`).
 - `src/components/PackageCardPro.tsx` — professionelle Paketkarte (Leistungs-Checkliste).

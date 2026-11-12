@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server';
 import { getCalculation } from '@/lib/calculationStore';
 import { getCustomer } from '@/lib/customerStore';
 import { buildCalculationPdf, type CalcPdfVariant } from '@/lib/calculationPdf';
+import { listInquiries } from '@/lib/inquiryStore';
 
 /**
  * GET /api/admin/calculations/[id]/pdf[?variant=intern]
  * → Angebots-PDF (Kundenvariante ohne EK/Marge) bzw. interne Variante
- *   mit voller Kalkulationstabelle auf Seite 2.
+ *   mit voller Kalkulationstabelle auf Seite 2 und den Anfragen an Leistungsträger.
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -17,7 +18,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const { searchParams } = new URL(request.url);
     const variant: CalcPdfVariant = searchParams.get('variant') === 'intern' ? 'intern' : 'kunde';
     const customer = calc.customer_id ? await getCustomer(calc.customer_id) : null;
-    const pdf = buildCalculationPdf(calc, variant, customer);
+    const inquiries = variant === 'intern' ? await listInquiries(calc.id) : [];
+    const pdf = buildCalculationPdf(calc, variant, customer, inquiries);
     const base = (calc.calc_number || calc.id.slice(0, 8)).replace(/[^A-Za-z0-9-]/g, '');
     const filename = variant === 'intern' ? `Kalkulation_${base}_intern.pdf` : `Angebot_${base}.pdf`;
 

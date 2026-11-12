@@ -118,6 +118,8 @@ export interface MailAttachment {
 export interface SendMailInput {
   to: string;
   toName?: string;
+  /** Optionale weitere Empfänger in Kopie */
+  cc?: string[];
   subject: string;
   html: string;
   /** Optional Plaintext-Variante (sonst aus HTML grob abgeleitet) */
@@ -171,6 +173,9 @@ export async function sendGraphMail(
       },
     ],
   };
+  if (input.cc && input.cc.length) {
+    message.ccRecipients = input.cc.map((address) => ({ emailAddress: { address } }));
+  }
 
   const attachments = input.attachments || [];
   const totalRawBytes = attachments.reduce((sum, a) => sum + base64RawSize(a.contentBytes), 0);
