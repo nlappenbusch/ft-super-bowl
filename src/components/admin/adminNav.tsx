@@ -10,7 +10,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Sparkles, LayoutDashboard, ListTodo,
-  KanbanSquare, Inbox, Contact, Calculator, Wallet,
+  KanbanSquare, Voicemail, Inbox, Contact, Calculator, Wallet,
   Wand2, Presentation,
   CalendarDays, Layers, Package, HelpCircle, Tag, Globe, Code2, MapPin, Trophy,
   Timer, Plane, FileClock, Users,
@@ -69,6 +69,10 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       {
         href: '/admin/crm', label: 'Anfragen (CRM)', icon: KanbanSquare,
         keywords: ['CRM', 'Leads', 'RQ', 'Pipeline', 'Anfrage', 'Kanban', 'Posteingang', 'Verkaufschance'],
+      },
+      {
+        href: '/admin/voicemails', label: 'Voicemails', icon: Voicemail,
+        keywords: ['Voicemail', 'Anrufbeantworter', 'Combox', 'Telefon', 'Anruf', 'Rückruf', 'Transkript', 'Teams'],
       },
       {
         href: '/admin/buchungen', label: 'Buchungen', icon: Inbox,
