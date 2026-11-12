@@ -34,6 +34,7 @@ export default function AdminLoginPage() {
     const f = p.get('from');
     const safe = safeReturnPath(f);
     if (safe) setFrom(safe);
+    else if (/^mail\./i.test(window.location.hostname)) setFrom('/mail');
   }, []);
 
   useEffect(() => {

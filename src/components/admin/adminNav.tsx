@@ -9,7 +9,7 @@
  */
 import type { LucideIcon } from 'lucide-react';
 import {
-  Sparkles, LayoutDashboard, ListTodo,
+  Sparkles, LayoutDashboard, ListTodo, MailOpen,
   KanbanSquare, Voicemail, Inbox, Contact, Calculator, Wallet,
   Wand2, Presentation,
   CalendarDays, Layers, Package, HelpCircle, Tag, Globe, Code2, MapPin, Trophy,
@@ -50,6 +50,10 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       {
         href: AI_WORKSPACE_HREF, label: 'KI-Arbeitsplatz', icon: Sparkles,
         keywords: ['Chat', 'Assistent', 'KI', 'AI', 'Faltin-KI', 'Copilot', 'fragen', 'Working Dashboard'],
+      },
+      {
+        href: '/mail', label: 'Mail', icon: MailOpen,
+        keywords: ['Mail', 'E-Mail', 'Postfach', 'Posteingang', 'Outlook', 'kontakt@', 'Vorlagen', 'Textbausteine', 'Signatur', 'mail.faltintravel.com'],
       },
       {
         href: '/admin', label: 'Übersicht', icon: LayoutDashboard, exact: true,

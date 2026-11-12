@@ -91,6 +91,36 @@ Einrichtung (SharePoint-Berechtigung): `docs/KI-ARBEITSPLATZ.md`.
   wartende Kunden, Übergabe vor Abwesenheit, Vertretung) → Glocke + „Heute“, Genehmigende
   zusätzlich täglich per Mail. Neue Erinnerungsart = Regel in `computeDesiredNudges()`.
 
+## Faltin Mail (`/mail`, mail.faltintravel.com)
+Eigener Mail-Client für alle Mitarbeitenden: eigenes Postfach + freigegebene Postfächer,
+Geschäftskontext (Kunde, CRM-Anfragen, Tickets, verwandte Mails), KI-Suche, KI-Auswertung
+mit Übernahme in Prozesse, Vorlagen/Textbausteine und Schreib-Assistent.
+
+- **Code:** `src/lib/mailbox/*` (Server), `src/components/mail/*` (UI), `src/app/api/admin/mailbox/*`
+  (API, durch die Middleware geschützt), Seite `src/app/mail/page.tsx` (eigenes Vollbild-Layout,
+  NavBar/Footer-Ausnahme).
+- **Host:** `mail.faltintravel.com` (bzw. `MAIL_CLIENT_HOST`) — die Middleware leitet dort `/` auf
+  `/mail` um; Login/SSO-Callback bleiben auf dem Mail-Host (`src/lib/mailHost.ts`). Die
+  Redirect-URI `https://mail.faltintravel.com/api/auth/microsoft/callback` muss bei der SSO-App
+  registriert sein.
+- **Rechte kommen aus Exchange:** `access.ts` liest per Exchange-REST (`exchange.ts`, nur `Get-*`)
+  Vollzugriff (lesen) und «Senden als» (senden), Cache 15 min, Knopf «neu laden» in der Sidebar.
+  Admin-Einstellungen (Senden mit Vollzugriff, ausgeblendete Postfächer, Zusatzfreigaben) in
+  `mail_prefs` (`__global__`). Jede Route prüft das Postfach über `resolveMailboxes()`.
+- **Versand** immer als Entwurf → `send` (createReply/createReplyAll/createForward, eigener Text vor
+  dem Zitat). Die KI sendet NIE. Mails mit RQ-/TASK-Nummer im Betreff landen zusätzlich im
+  CRM-Verlauf bzw. in den Ticket-Nachrichten.
+- **Signatur hängt an der Person** (wie bisher in Outlook): Faltin-Vorlage in `prefs.ts`
+  (`DEFAULT_SIGNATURE_TEMPLATE`, DE + EN), Funktion/Mobil je Person, eigene HTML-Signatur möglich.
+  Grussformel ist eine eigene Zeile im Editor (Vorlagen setzen sie über das Feld `greeting`).
+  Bei Mails nur an @faltintravel.com fällt die Signatur automatisch weg.
+- **Vorlagen/Bausteine:** Tabelle `mail_templates`, Startbestand `defaultTemplates.ts` (aus den
+  gesendeten Faltin-Mails abgeleitet, wird nur bei leerer Tabelle eingespielt). Platzhalter
+  `{{key}}`, fehlende Werte werden im Editor als gelbe Lücke `[[key]]` markiert und vor dem
+  Senden angemahnt. Tonalität für die KI: `tone.ts`.
+- **Tabellen** `mail_templates`, `mail_prefs`, `mail_links` legt `src/lib/mailbox/schema.ts` selbst
+  an (wie `ws_*`).
+
 ## Präsentations-Builder (TASK-00126)
 Folienbasierte Kundendecks im Faltin-Design (16:9, dunkler Grund, Textspalte links,
 Bildspalte rechts) — Vorlage ist das gedruckte Ryder-Cup-Deck.
