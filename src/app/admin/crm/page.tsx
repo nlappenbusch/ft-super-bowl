@@ -1063,6 +1063,18 @@ export default function CrmPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Tiefenlink aus den Voicemails: /admin/crm?rq=RQ-12345 öffnet die Anfrage direkt.
+  // Nicht gefunden (z. B. archiviert) → Nummer ins Suchfeld.
+  const rqLink = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (rqLink.current === undefined) rqLink.current = new URLSearchParams(window.location.search).get('rq');
+    const rq = rqLink.current;
+    if (!rq || loading) return;
+    rqLink.current = null;
+    const hit = leads.find(l => (l.request_number || '').toUpperCase() === rq.toUpperCase());
+    if (hit) setSelected(hit); else setSearch(rq);
+  }, [leads, loading]);
+
   // Live: Posteingang automatisch abrufen (beim Öffnen + alle 20s), solange das CRM offen ist.
   // Holt Kundenantworten aus request@… und ordnet sie per RQ-Nummer zu – ohne Klick/Cron.
   useEffect(() => {

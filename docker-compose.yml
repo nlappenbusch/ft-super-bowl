@@ -29,6 +29,10 @@ services:
       - GRAPH_FROM_NAME=${GRAPH_FROM_NAME:-Faltin Travel}
       - BREVO_API_KEY=${BREVO_API_KEY:-}
       - INBOUND_POLL_SECRET=${INBOUND_POLL_SECRET:-}
+      # Voicemail-Board (/admin/voicemails): interne API des Dienstes /opt/apps/voicemail
+      # (gleicher Docker-Host, Netz next_default). Token steht in /opt/super-bowl/.env.
+      - VOICEMAIL_API_URL=${VOICEMAIL_API_URL:-http://voicemail:8080}
+      - VOICEMAIL_API_TOKEN=${VOICEMAIL_API_TOKEN:-}
       # DB-Backend (Phase 1: bleibt sqlite -> keine Verhaltensaenderung). Umschalten spaeter auf "postgres".
       - DB_BACKEND=${DB_BACKEND:-sqlite}
       # Diskrete PG-Parameter (robust gegen Sonderzeichen im Passwort, z. B. "/").
