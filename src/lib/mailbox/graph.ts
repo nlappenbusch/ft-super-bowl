@@ -369,26 +369,81 @@ async function addAttachment(mb: string, draftId: string, a: OutgoingAttachment)
   }
 }
 
+// Exchange antwortet beim Schreiben gelegentlich mit 502/503/504 oder gar nicht. Wiederholt wird
+// nur, was sich gefahrlos wiederholen lässt; der eigentliche Versand nur, wenn feststeht, dass er
+// NICHT durchging (sonst bekäme der Kunde die Mail doppelt).
+const WRITE_TIMING: GraphCallOptions = { timeoutMs: 40_000, deadlineMs: 45_000 };
+const isTransient = (e: unknown) => e instanceof GraphError && TRANSIENT.has(e.status);
+
+async function retryWrite<T>(label: string, fn: () => Promise<T>, tries = 3): Promise<T> {
+  for (let i = 0; ; i++) {
+    try { return await fn(); } catch (e) {
+      if (!isTransient(e) || i >= tries - 1) throw e;
+      console.warn(`[Mail] ${label}: ${(e as Error).message.slice(0, 120)} – neuer Versuch`);
+      await sleep(1500 * (i + 1));
+    }
+  }
+}
+
+/** Anhang anhängen; scheitert es vorübergehend, erst nachsehen, ob er trotzdem dran ist (nie doppelt). */
+async function addAttachmentSafe(mb: string, draftId: string, a: OutgoingAttachment): Promise<void> {
+  for (let i = 0; ; i++) {
+    try { await addAttachment(mb, draftId, a); return; } catch (e) {
+      if (!isTransient(e) || i >= 2) throw e;
+      await sleep(1500 * (i + 1));
+      const have = await gjson<{ value?: Array<{ name?: string }> }>(`${base(mb)}/messages/${enc(draftId)}/attachments?$select=name`)
+        .catch(() => null);
+      if (have?.value?.some((x) => x.name === a.name)) return;
+    }
+  }
+}
+
+/** Zustand eines Entwurfs nach einem gescheiterten /send: weg = gesendet, noch Entwurf = nicht gesendet. */
+async function draftState(mb: string, id: string): Promise<'sent' | 'draft' | 'unknown'> {
+  try {
+    const m = await gjson<{ isDraft?: boolean }>(`${base(mb)}/messages/${enc(id)}?$select=isDraft`, undefined, { timeoutMs: 10_000, deadlineMs: 12_000 });
+    return m.isDraft === false ? 'sent' : 'draft';
+  } catch (e) {
+    return e instanceof GraphError && e.status === 404 ? 'sent' : 'unknown';
+  }
+}
+
+/** Versand eines fertigen Entwurfs, abgesichert gegen Doppel-Versand. */
+async function sendDraft(mb: string, id: string): Promise<void> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      await gjson(`${base(mb)}/messages/${enc(id)}/send`, { method: 'POST', body: '' }, WRITE_TIMING);
+      return;
+    } catch (e) {
+      if (!isTransient(e)) throw e;
+      console.warn(`[Mail] Senden ${mb}: ${(e as Error).message.slice(0, 120)} – prüfe, ob die Mail trotzdem raus ist`);
+      // Exchange verschiebt gesendete Entwürfe mit etwas Verzögerung → bis zu ~15 s beobachten.
+      let state: 'sent' | 'draft' | 'unknown' = 'unknown';
+      for (let i = 0; i < 5; i++) {
+        await sleep(3000);
+        state = await draftState(mb, id);
+        if (state === 'sent') return;
+      }
+      if (state === 'unknown') {
+        throw new GraphError(502, 'Microsoft 365 hat beim Senden nicht geantwortet. Ob die Mail raus ist, ist unklar – bitte erst in «Gesendete Elemente» nachsehen, bevor du nochmals sendest.');
+      }
+      // Liegt nach 15 s immer noch als Entwurf da → ging nicht raus → genau ein neuer Versuch.
+    }
+  }
+  throw new GraphError(502, 'Microsoft 365 hat den Versand wegen einer Störung zweimal abgelehnt. Die Mail wurde NICHT gesendet – bitte in ein paar Minuten nochmals senden.');
+}
+
 /** Mail senden (oder als Entwurf ablegen). Immer über einen Entwurf: so klappen Verlauf, Zitat und grosse Anhänge. */
 export async function sendMessage(o: OutgoingMail): Promise<{ draftId: string; webLink: string; sent: boolean }> {
   const mb = o.mailbox;
   let draft: GMsg;
   if (o.reference) {
     const action = o.reference.mode === 'replyAll' ? 'createReplyAll' : o.reference.mode === 'forward' ? 'createForward' : 'createReply';
-    draft = await gjson<GMsg>(`${base(mb)}/messages/${enc(o.reference.messageId)}/${action}`, {
+    draft = await retryWrite('Antwort-Entwurf', () => gjson<GMsg>(`${base(mb)}/messages/${enc(o.reference!.messageId)}/${action}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
-    });
-    await gjson(`${base(mb)}/messages/${enc(draft.id)}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        subject: o.subject,
-        body: { contentType: 'HTML', content: prependToBody(draft.body?.content || '', o.html) },
-        toRecipients: recips(o.to), ccRecipients: recips(o.cc), bccRecipients: recips(o.bcc),
-        ...(o.importance ? { importance: o.importance } : {}),
-      }),
-    });
+    }, WRITE_TIMING));
   } else {
-    draft = await gjson<GMsg>(`${base(mb)}/messages`, {
+    draft = await retryWrite('Entwurf', () => gjson<GMsg>(`${base(mb)}/messages`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         subject: o.subject,
@@ -396,13 +451,31 @@ export async function sendMessage(o: OutgoingMail): Promise<{ draftId: string; w
         toRecipients: recips(o.to), ccRecipients: recips(o.cc), bccRecipients: recips(o.bcc),
         ...(o.importance ? { importance: o.importance } : {}),
       }),
-    });
+    }, WRITE_TIMING));
   }
-  for (const a of o.attachments || []) await addAttachment(mb, draft.id, a);
+  try {
+    if (o.reference) {
+      const patch = JSON.stringify({
+        subject: o.subject,
+        body: { contentType: 'HTML', content: prependToBody(draft.body?.content || '', o.html) },
+        toRecipients: recips(o.to), ccRecipients: recips(o.cc), bccRecipients: recips(o.bcc),
+        ...(o.importance ? { importance: o.importance } : {}),
+      });
+      // PATCH setzt denselben Inhalt → gefahrlos wiederholbar
+      await retryWrite('Entwurf füllen', () => gjson(`${base(mb)}/messages/${enc(draft.id)}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: patch,
+      }, WRITE_TIMING));
+    }
+    for (const a of o.attachments || []) await addAttachmentSafe(mb, draft.id, a);
+  } catch (e) {
+    // Halbfertigen Entwurf nicht liegen lassen (sonst sammeln sich Leichen in «Entwürfe»)
+    await gjson(`${base(mb)}/messages/${enc(draft.id)}`, { method: 'DELETE' }, { timeoutMs: 10_000, deadlineMs: 12_000 }).catch(() => {});
+    throw e;
+  }
   if (o.draftOnly) {
-    const d = await gjson<{ webLink?: string }>(`${base(mb)}/messages/${enc(draft.id)}?$select=webLink`);
+    const d = await gjson<{ webLink?: string }>(`${base(mb)}/messages/${enc(draft.id)}?$select=webLink`).catch(() => ({ webLink: '' }));
     return { draftId: draft.id, webLink: d.webLink || '', sent: false };
   }
-  await gjson(`${base(mb)}/messages/${enc(draft.id)}/send`, { method: 'POST', body: '' });
+  await sendDraft(mb, draft.id);
   return { draftId: draft.id, webLink: '', sent: true };
 }
