@@ -245,6 +245,7 @@ export function initDatabase() {
       booking_id TEXT,
       travel_start TEXT NOT NULL DEFAULT '',
       travel_end TEXT NOT NULL DEFAULT '',
+      pax INTEGER NOT NULL DEFAULT 1,
       target_currency TEXT NOT NULL DEFAULT 'EUR',
       margin_mode TEXT NOT NULL DEFAULT 'percent',
       margin_value REAL NOT NULL DEFAULT 0,
@@ -584,6 +585,7 @@ export function initDatabase() {
   if (occols.length && !occols.some((c) => c.name === 'hotel_info')) addColumn('offer_calculations', "hotel_info TEXT NOT NULL DEFAULT ''");
   if (occols.length && !occols.some((c) => c.name === 'invoice_id')) addColumn('offer_calculations', 'invoice_id TEXT');
   if (occols.length && !occols.some((c) => c.name === 'offer_extras')) addColumn('offer_calculations', "offer_extras TEXT NOT NULL DEFAULT '[]'");
+  if (occols.length && !occols.some((c) => c.name === 'pax')) addColumn('offer_calculations', 'pax INTEGER NOT NULL DEFAULT 1');
   const akcols = sqlite.prepare(`PRAGMA table_info(api_keys)`).all() as Array<{ name: string }>;
   if (akcols.length && !akcols.some((c) => c.name === 'scopes')) addColumn('api_keys', "scopes TEXT NOT NULL DEFAULT 'all'");
 

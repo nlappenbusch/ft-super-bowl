@@ -121,6 +121,13 @@ Bildspalte rechts) — Vorlage ist das gedruckte Ryder-Cup-Deck.
   Bildsuche (`incentive/images.ts`) und Übersetzung des ganzen Decks (de/en/fr).
 - **Übernahme aus dem Incentive-Planer:** `templates.ts → slidesFromIncentive()`.
 
+## DERTOUR-Suche (Traffics Connector API v3) in der Kalkulation
+- **Code:** `src/lib/trafficsModel.ts` (reine Logik: Parameter, Query, Antwort → Treffer, Treffer → Positionen; Tests in `tests/`, `npm test`), `src/lib/traffics.ts` (Server: Fetch, Cache, Drossel), Routen `/api/admin/traffics/{config,search,verify}`, Panel `components/admin/TrafficsSearchPanel.tsx` im Kalkulations-Editor.
+- **Endpunkte:** Suche über `GET /offers` (bzw. `/offers/flight`), weil nur dort Zimmer, Verpflegung und Flugzeiten in EINER Anfrage kommen; `/hotels` bräuchte Folgeanfragen. `/offers/{code}` geht live bis zum Veranstalter und läuft nur per Klick auf „Verfügbarkeit prüfen“.
+- **Key:** `settings.json → traffics.auth_key`, gepflegt nur über das Panel („Zugang“) bzw. `POST /api/admin/traffics/config`. `/api/settings` gibt den Abschnitt `traffics` nie heraus und nimmt ihn nicht an. Wert `mock` = Beispieldaten ohne Netzwerk.
+- **Sparsam (DERTOUR-Beschwerde 22.09.2026):** kein Polling, keine Suche beim Tippen; Cache identischer Suchen (Standard 60 min) und Zusammenlegen paralleler Anfragen; Obergrenze `max_requests_per_hour` (Standard 30).
+- **Kalkulation:** `offer_calculations.pax` (Teilnehmer, Gesamtsummen = p.P. × Pax); jede Position hat `service_from`/`service_to` (Leistungsdatum, im Items-JSON). Beides in UI, PDF und MCP (`create_offer`/`update_offer`/`get_offer`).
+
 ## Wichtige Komponenten
 - `src/components/event/EventPageView.tsx` — rendert alle Event-Module (live-editierbar via `EventLiveEditor`).
 - `src/components/PackageCardPro.tsx` — professionelle Paketkarte (Leistungs-Checkliste).

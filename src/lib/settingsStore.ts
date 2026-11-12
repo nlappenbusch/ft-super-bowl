@@ -117,6 +117,20 @@ export interface GithubSettings {
   base_branch: string;
 }
 
+/** Traffics Connector API v3 (DERTOUR) — Hotel-/Pauschalsuche in der Kalkulation. */
+export interface TrafficsSettings {
+  /** authKey für den Header `Authorization` (Geheimnis — nur im Admin eintragen). Leer = Suche aus. */
+  auth_key: string;
+  /** Basis-URL, Standard https://connector.traffics.de/v3/rest */
+  base_url: string;
+  /** Veranstalter-Codes, kommasepariert (Standard DER). */
+  tour_operators: string;
+  /** Wie lange identische Suchen aus dem Cache kommen (Minuten). */
+  cache_minutes: number;
+  /** Obergrenze Connector-Anfragen pro Stunde (Schutz vor zu vielen Vorabfragen). */
+  max_requests_per_hour: number;
+}
+
 export interface AllSettings {
   company: CompanySettings;
   bank: BankSettings;
@@ -127,6 +141,7 @@ export interface AllSettings {
   mail: MailSettings;
   ai: AiSettings;
   github: GithubSettings;
+  traffics: TrafficsSettings;
   updated_at?: string;
 }
 
@@ -248,6 +263,13 @@ const DEFAULT_SETTINGS: AllSettings = {
     repo: 'ft-super-bowl',
     base_branch: 'main',
   },
+  traffics: {
+    auth_key: '',
+    base_url: 'https://connector.traffics.de/v3/rest',
+    tour_operators: 'DER',
+    cache_minutes: 60,
+    max_requests_per_hour: 30,
+  },
 };
 
 function ensureDataDir() {
@@ -288,6 +310,7 @@ export function getSettings(): AllSettings {
       mail: { ...DEFAULT_SETTINGS.mail, ...parsed.mail },
       ai: { ...DEFAULT_SETTINGS.ai, ...parsed.ai },
       github: { ...DEFAULT_SETTINGS.github, ...parsed.github },
+      traffics: { ...DEFAULT_SETTINGS.traffics, ...parsed.traffics },
       updated_at: parsed.updated_at,
     };
   } catch {
@@ -308,6 +331,7 @@ export function saveSettings(updates: Partial<AllSettings>): AllSettings {
     mail: { ...current.mail, ...(updates.mail || {}) },
     ai: { ...current.ai, ...(updates.ai || {}) },
     github: { ...current.github, ...(updates.github || {}) },
+    traffics: { ...current.traffics, ...(updates.traffics || {}) },
     updated_at: new Date().toISOString(),
   };
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(merged, null, 2), 'utf-8');

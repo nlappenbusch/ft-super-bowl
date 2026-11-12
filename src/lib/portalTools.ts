@@ -16,7 +16,7 @@ import {
   listCalculations, listCalculationsByCustomer, getCalculation, createCalculation, updateCalculation,
   type CalculationInput,
 } from './calculationStore';
-import { computeTotals } from './calcModel';
+import { computeTotals, computeGroupTotals } from './calcModel';
 import { getCurrentRates } from './fxRates';
 import { createInvoiceFromCalculation } from './offerInvoice';
 
@@ -162,7 +162,8 @@ export const TOOLS: ToolDef[] = [
     description:
       'Individuelles Angebot (Kalkulation) anlegen. Positionen sind Einkaufspreise PRO PERSON in EUR/USD/CHF/GBP; ' +
       'der Verkaufspreis entsteht über die Marge. Kunde per customer_id ODER customer_email (wird bei Bedarf angelegt). ' +
-      'Wechselkurse werden automatisch festgeschrieben. Antwort enthält den Angebots-PDF-Link.',
+      'Wechselkurse werden automatisch festgeschrieben. pax = Teilnehmerzahl (Gesamtsummen = Werte p.P. × pax). ' +
+      'Jede Position kann ein Leistungsdatum service_from/service_to (YYYY-MM-DD) tragen. Antwort enthält den Angebots-PDF-Link.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -171,6 +172,7 @@ export const TOOLS: ToolDef[] = [
         customer_email: STR('Kunden-E-Mail — existiert sie nicht, wird der Kunde angelegt'),
         customer_name: STR('Name für Neuanlage per customer_email, z.B. "Max Muster"'),
         travel_start: STR('Reisebeginn YYYY-MM-DD'), travel_end: STR('Reiseende YYYY-MM-DD'),
+        pax: NUM('Teilnehmerzahl (Standard 1) — Basis der Gesamtsummen'),
         target_currency: { type: 'string', enum: ['EUR', 'USD', 'CHF', 'GBP'], description: 'Zielwährung des Angebots (Standard EUR)' },
         margin_mode: { type: 'string', enum: ['percent', 'fixed', 'target_vk'], description: 'Margenmodell (Standard percent)' },
         margin_value: NUM('Marge in % bzw. Fixbetrag bzw. Ziel-VK, je nach margin_mode'),
@@ -186,6 +188,8 @@ export const TOOLS: ToolDef[] = [
               currency: { type: 'string', enum: ['EUR', 'USD', 'CHF', 'GBP'] },
               amount: NUM('EK je Einheit pro Person'),
               qty: NUM('Menge pro Person, z.B. 4 Hotelnächte (Standard 1)'),
+              service_from: STR('Leistungsdatum von YYYY-MM-DD (z.B. Check-in, Flugtag)'),
+              service_to: STR('Leistungsdatum bis YYYY-MM-DD (z.B. Check-out, Rückflug)'),
             },
             required: ['category', 'description', 'amount'],
             additionalProperties: false,
@@ -214,10 +218,15 @@ export const TOOLS: ToolDef[] = [
         offer: STR('Kalkulations-ID oder Angebotsnummer'),
         title: STR('Titel'), customer_id: STR('Kunden-ID'),
         travel_start: STR('YYYY-MM-DD'), travel_end: STR('YYYY-MM-DD'),
+        pax: NUM('Teilnehmerzahl'),
         target_currency: { type: 'string', enum: ['EUR', 'USD', 'CHF', 'GBP'] },
         margin_mode: { type: 'string', enum: ['percent', 'fixed', 'target_vk'] },
         margin_value: NUM('Marge/VK je nach margin_mode'),
-        items: { type: 'array', description: 'Neue Positionsliste (ersetzt die bestehende)', items: { type: 'object' } },
+        items: {
+          type: 'array',
+          description: 'Neue Positionsliste (ersetzt die bestehende). Felder wie bei create_offer inkl. service_from/service_to.',
+          items: { type: 'object' },
+        },
         extras: { type: 'array', description: 'Neue Zusatzoptionen (ersetzen die bestehenden)', items: { type: 'object' } },
         status: { type: 'string', enum: ['entwurf', 'aktiv', 'archiviert'] },
         notes: STR('Notiz'),
@@ -335,8 +344,10 @@ function offerSummary(c: Awaited<ReturnType<typeof listCalculations>>[number], c
     customer_name: c.customer_name,
     travel_start: c.travel_start || null,
     travel_end: c.travel_end || null,
+    pax: c.pax,
     currency: c.target_currency,
     price_per_person: totals ? Math.round(totals.vkTarget * 100) / 100 : null,
+    price_total: totals ? Math.round(totals.vkTarget * c.pax * 100) / 100 : null,
     has_invoice: !!c.invoice_id,
     admin_url: `${ctx.base}/admin/kalkulation/${c.id}`,
     pdf_url: ctx.offerPdfUrl(c.id),
@@ -501,10 +512,16 @@ export async function callTool(name: string, args: Record<string, unknown>, ctx:
         items: c.items.map((i) => ({
           category: i.category, description: i.description, room_category: i.room_category || null,
           currency: i.currency, amount_per_person: i.amount, qty: i.qty,
+          service_from: i.service_from || null, service_to: i.service_to || null,
         })),
         extras: (c.offer_extras || []).map((e) => ({ id: e.id, label: e.label, amount_per_person: e.amount })),
         purchase_total_per_person: totals ? Math.round(totals.ekTarget * 100) / 100 : null,
         margin: totals ? { amount: Math.round(totals.marginAmount * 100) / 100, percent: Math.round(totals.marginPercent * 10) / 10 } : null,
+        group_totals: (() => {
+          const g = computeGroupTotals(totals, c.pax);
+          const r2 = (n: number) => Math.round(n * 100) / 100;
+          return g ? { pax: g.pax, purchase_total: r2(g.ekTotal), margin_total: r2(g.marginTotal), price_total: r2(g.vkTotal) } : null;
+        })(),
         notes: c.notes || null,
         rates_locked: !!c.rates_snapshot,
       };
@@ -522,6 +539,7 @@ export async function callTool(name: string, args: Record<string, unknown>, ctx:
         customer_id: customerId || undefined,
         travel_start: args.travel_start,
         travel_end: args.travel_end,
+        pax: args.pax,
         target_currency: args.target_currency,
         margin_mode: args.margin_mode ?? 'percent',
         margin_value: args.margin_value ?? 15,
@@ -543,7 +561,7 @@ export async function callTool(name: string, args: Record<string, unknown>, ctx:
       if (!existing) return { error: 'Angebot nicht gefunden.' };
       const updates: Record<string, unknown> = {};
       for (const [from, to] of [
-        ['title', 'title'], ['customer_id', 'customer_id'], ['travel_start', 'travel_start'], ['travel_end', 'travel_end'],
+        ['title', 'title'], ['customer_id', 'customer_id'], ['travel_start', 'travel_start'], ['travel_end', 'travel_end'], ['pax', 'pax'],
         ['target_currency', 'target_currency'], ['margin_mode', 'margin_mode'], ['margin_value', 'margin_value'],
         ['items', 'items'], ['extras', 'offer_extras'], ['status', 'status'], ['notes', 'notes'],
       ] as const) {

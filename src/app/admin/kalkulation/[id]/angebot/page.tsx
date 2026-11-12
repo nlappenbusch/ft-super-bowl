@@ -12,7 +12,7 @@ import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Printer, AlertTriangle, CalendarDays } from 'lucide-react';
 import { COLORS, Button, Spinner } from '@/components/admin/ui';
-import { CALC_CATEGORIES, computeTotals, fmtMoney, fmtPeriod, categoryLabel, type CalcItem, type MarginMode } from '@/lib/calcModel';
+import { CALC_CATEGORIES, computeTotals, fmtMoney, fmtPeriod, fmtServiceDate, categoryLabel, type CalcItem, type MarginMode } from '@/lib/calcModel';
 import type { CalcCurrency, RatesSnapshot } from '@/lib/fxRates';
 
 interface CalcData {
@@ -24,6 +24,7 @@ interface CalcData {
   request_number: string | null;
   travel_start: string;
   travel_end: string;
+  pax?: number;
   target_currency: CalcCurrency;
   margin_mode: MarginMode;
   margin_value: number;
@@ -165,6 +166,9 @@ export default function KalkulationAngebotPage() {
                           {(item.room_category || '').trim() && (
                             <span className="block text-xs" style={{ color: COLORS.textMuted }}>{item.room_category}</span>
                           )}
+                          {fmtServiceDate(item.service_from, item.service_to) && (
+                            <span className="block text-xs tabular-nums" style={{ color: COLORS.textMuted }}>{fmtServiceDate(item.service_from, item.service_to)}</span>
+                          )}
                         </span>
                       </li>
                     ))}
@@ -186,6 +190,14 @@ export default function KalkulationAngebotPage() {
               {totals ? fmtMoney(totals.vkTarget, calc.target_currency) : '—'}
             </div>
           </div>
+          {totals && (calc.pax || 1) > 1 && (
+            <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2 border-t pt-3" style={{ borderColor: COLORS.stroke }}>
+              <p className="text-sm font-semibold" style={{ color: COLORS.navy }}>Gesamtpreis für {calc.pax} Personen</p>
+              <div className="text-xl font-extrabold tabular-nums" style={{ color: COLORS.navy }}>
+                {fmtMoney(totals.vkTarget * (calc.pax || 1), calc.target_currency)}
+              </div>
+            </div>
+          )}
         </div>
 
         <p className="mt-3 text-[11px] leading-relaxed" style={{ color: COLORS.textMuted }}>

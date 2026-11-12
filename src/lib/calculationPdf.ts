@@ -15,8 +15,8 @@ import fs from 'fs';
 import path from 'path';
 import { getSettings } from './settingsStore';
 import {
-  CALC_CATEGORIES, categoryLabel, computeTotals, itemEk, fmtPeriod, nightsBetween,
-  fmtSignedMoney, type CalcItem,
+  CALC_CATEGORIES, categoryLabel, computeTotals, computeGroupTotals, itemEk, fmtPeriod, nightsBetween,
+  fmtSignedMoney, fmtServiceDate, type CalcItem,
 } from './calcModel';
 import { convertAmount } from './fxRates';
 import { hotelInfoLine } from './hotelLookup';
@@ -68,6 +68,8 @@ export function buildCalculationPdf(
   const rates = calc.rates_snapshot;
   const totals = computeTotals(calc.items, target, rates, calc.margin_mode, calc.margin_value);
   const period = fmtPeriod(calc.travel_start, calc.travel_end);
+  const pax = calc.pax || 1;
+  const group = computeGroupTotals(totals, pax);
 
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const leftMargin = 20;
@@ -211,7 +213,9 @@ export function buildCalculationPdf(
   };
 
   if (period) row('Reisetermin:', period);
-  row('Anreise:', 'Eigene Anreise');
+  if (pax > 1) row('Teilnehmer:', `${pax} Personen`);
+  const hasFlight = calc.items.some((i) => i.category === 'flug' && i.description.trim());
+  row('Anreise:', hasFlight ? 'Flug (siehe Leistungen)' : 'Eigene Anreise');
   const destination = calc.hotel_info
     ? [calc.hotel_info.city, calc.hotel_info.country].filter(Boolean).join(', ')
     : '';
@@ -253,7 +257,8 @@ export function buildCalculationPdf(
       ensureSpace(6);
       const qty = item.qty > 1 ? `${item.qty}× ` : '';
       const room = (item.room_category || '').trim() ? ` — ${item.room_category}` : '';
-      const text = `Inkl. ${qty}${item.description.trim() || g.label}${room}`;
+      const date = fmtServiceDate(item.service_from, item.service_to);
+      const text = `Inkl. ${qty}${item.description.trim() || g.label}${room}${date ? ` (${date})` : ''}`;
       const lines = doc.splitTextToSize(text, right - valueX);
       doc.text(lines, valueX, currentY);
       currentY += lines.length * 3.8;
@@ -290,6 +295,13 @@ export function buildCalculationPdf(
   doc.text(totals ? fmtAmount(vkPP) : '—', amountX, currentY, { align: 'right' });
   doc.setLineWidth(0.5);
   doc.line(amountX - 28, currentY + 1, amountX + 2, currentY + 1);
+  if (group && pax > 1) {
+    currentY += 6;
+    doc.setFontSize(9);
+    doc.text(`Gesamtpreis (${pax} Personen):`, priceLabelX, currentY);
+    doc.text(target, currencyX, currentY);
+    doc.text(fmtAmount(group.vkTotal), amountX, currentY, { align: 'right' });
+  }
   currentY += 10;
 
   /* ─── Optionale Zusatzleistungen (+/− Freitext) ─── */
@@ -356,7 +368,7 @@ export function buildCalculationPdf(
     doc.setTextColor(200, 0, 0);
     doc.text('NUR FÜR DEN INTERNEN GEBRAUCH — nicht an Kunden weitergeben', left, y + 5);
     doc.setTextColor(...MUTED);
-    if (rates) doc.text(`Kursbasis: ${rates.source} · Kursdatum ${rates.date} · Alle Preise pro Person`, left, y + 9.5);
+    if (rates) doc.text(`Kursbasis: ${rates.source} · Kursdatum ${rates.date} · Positionen pro Person · Teilnehmer: ${pax}`, left, y + 9.5);
     y += 16;
 
     const ensureSpace2 = (needed: number) => {
@@ -401,8 +413,9 @@ export function buildCalculationPdf(
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8.5);
         doc.setTextColor(...NAVY);
+        const serviceDate = fmtServiceDate(item.service_from, item.service_to);
         const desc = doc.splitTextToSize(
-          `${item.description.trim() || g.label}${(item.room_category || '').trim() ? ` — ${item.room_category}` : ''}`,
+          `${item.description.trim() || g.label}${(item.room_category || '').trim() ? ` — ${item.room_category}` : ''}${serviceDate ? ` (${serviceDate})` : ''}`,
           92
         );
         doc.text(desc, colPos + 1, y);
@@ -451,6 +464,12 @@ export function buildCalculationPdf(
         { red: totals.marginAmount < 0 }
       );
       sumRow('VK gesamt (p.P.)', money(totals.vkTarget, target), { big: true, accent: true });
+      if (group) {
+        y += 2;
+        sumRow(`EK gesamt (${group.pax} Pax)`, money(group.ekTotal, target));
+        sumRow(`Marge gesamt (${group.pax} Pax)`, money(group.marginTotal, target), { red: group.marginTotal < 0 });
+        sumRow(`VK gesamt (${group.pax} Pax)`, money(group.vkTotal, target), { big: true, accent: true });
+      }
     } else {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8.5);
