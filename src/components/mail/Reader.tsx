@@ -6,6 +6,7 @@ import {
   Loader2, ChevronDown, PanelRightOpen, PanelRightClose, ArrowLeft, Eye,
 } from 'lucide-react';
 import type { MailboxInfo, MailDetail, MailSummary } from './types';
+import TeamsChat from './TeamsChat';
 import { escapeHtml, fileSize, formatAddr, initials, listTime, longTime, mailboxColor, personColor, shortMailbox } from './util';
 
 /** Mail-HTML sicher anzeigen: Sandbox ohne Skripte, Höhe passt sich an. */
@@ -197,6 +198,9 @@ export default function Reader(p: Props) {
                 <div className="mt-0.5 text-[12px] text-slate-500">
                   An: {d.to.map(formatAddr).join(', ') || '–'}
                   {d.cc.length > 0 && <> · Cc: {d.cc.map(formatAddr).join(', ')}</>}
+                </div>
+                <div className="mt-2">
+                  <TeamsChat from={d.from} others={[...d.to, ...d.cc]} own={p.mailboxes.map((m) => m.address)} subject={d.subject.replace(/^((aw|re|wg|fw|fwd):\s*)+/i, '')} />
                 </div>
               </div>
               <time className="shrink-0 text-[12px] text-slate-400" title={longTime(d.receivedAt)}>{longTime(d.receivedAt)}</time>
