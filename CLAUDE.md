@@ -129,6 +129,18 @@ Bildspalte rechts) — Vorlage ist das gedruckte Ryder-Cup-Deck.
 - **Vergleich:** Modus „Vergleich“ ruft `POST /api/admin/traffics/compare` auf: Pauschal, Nur Flug und Nur Hotel laufen parallel (bis zu 3 Anfragen), dazu je Hotel günstigste Pauschale gegen günstigstes Hotel plus günstigsten Flug (`compareOffers()`).
 - **Kalkulation:** `offer_calculations.pax` (Teilnehmer, Gesamtsummen = p.P. × Pax); jede Position hat `service_from`/`service_to` (Leistungsdatum, im Items-JSON). Beides in UI, PDF und MCP (`create_offer`/`update_offer`/`get_offer`).
 
+## Positionsdetails & Programm (Kalkulation)
+- Positionen (`CalcItem`, JSON in `offer_calculations.items`) haben optional: `time_from`/`time_to` (HH:MM), Anbieter `supplier_name`/`supplier_contact`/`supplier_ref`, `price_status` (vorgabe | listenpreis | richtwert | annahme | angebot | bestaetigt), `source_url` und für Transfers `route_from`/`route_to`/`distance_km`/`duration_min`/`vehicle`/`pickup_point`. `sanitizeItems()` übernimmt nur gesetzte Felder.
+- **Tagesablauf:** `buildProgram()` in `calcModel.ts` (Tag aus `service_from`, sortiert nach Uhrzeit; mehrtägige Leistungen am ersten und letzten Tag). UI `components/admin/ProgramView.tsx`, Details-Eingabe `CalcItemDetails.tsx`.
+- **PDF:** Das interne PDF zeigt immer eine Programmseite (mit Anbieter/Preisstatus), das Angebots-PDF nur bei `offer_calculations.program_in_offer = 1` und dann ohne Anbieter, Kontakt, Code und Preisstatus.
+- MCP `create_offer`/`update_offer`/`get_offer` kennen alle Felder. `update_offer.items` ersetzt die Liste — vorher `get_offer` lesen.
+
+## Reiseplanung je Kalkulation (Programm, DMC, Belege)
+- `offer_calculations.planning` (JSON, `src/lib/planningModel.ts`, Tests in `tests/`): `days[]` (date, title, entries[] mit time_from/time_to, title, kind programm|transfer|essen|freizeit|hotel|flug, location, supplier, item_id, route_from/to, distance_km, duration_min, vehicle, price_note, status, note), `suppliers[]` (DMC/Anbieter: name, type, contact, coverage, source, status kandidat|angefragt|angebot|gewaehlt|abgelehnt, inquiry_ids), `sources[]` (Belege: nr, ref, what, kind, item_ids), `not_included`.
+- UI `components/admin/PlanningPanel.tsx` (Reiter Ablauf, Schema = Timeline je Tag mit farbigen Blöcken und Transfer-Pfeilen, DMC & Anbieter, Belege). Gespeichert über den normalen Speichern-Knopf.
+- PDF: Liegt eine Reiseplanung vor, ersetzt sie das Positions-Programm. Intern zusätzlich Schema (A4 quer), DMC und Belege; im Angebots-PDF (nur mit `program_in_offer`) nur Zeiten, Programmpunkte, Orte und Strecken — keine Anbieter, Preise oder Status.
+- MCP: `get_offer_planning`, `set_offer_planning` (übergebene Listen ersetzen die bisherigen).
+
 ## Anfragen an Leistungsträger (je Kalkulation)
 - **Code:** `src/lib/inquiryModel.ts` (reine Logik, Tests in `tests/`), `src/lib/inquiryStore.ts` (Tabelle `calc_inquiries`, in `database.ts` UND `dbq.applyPgSchemaEnhancements()`), Routen `/api/admin/calculations/[id]/inquiries[/[inqId][/send]]`, UI `components/admin/InquiriesPanel.tsx` im Kalkulations-Editor.
 - **Ablauf:** Entwurf → „Senden" (Klick + Bestätigung) über Graph aus dem Portal-Postfach (`getMailbox()`, i. d. R. request@) → Status `gesendet`, Zeitpunkt/Absender/Empfänger im Verlauf. Danach sind Text und Empfänger gesperrt, gelöscht werden kann nur ein Entwurf. Statuswerte: entwurf, gesendet, beantwortet, angebot, abgelehnt, erledigt.

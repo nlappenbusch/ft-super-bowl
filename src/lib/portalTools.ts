@@ -21,6 +21,7 @@ import { getCurrentRates } from './fxRates';
 import { createInvoiceFromCalculation } from './offerInvoice';
 import { listInquiries, createInquiry, updateInquiry, getInquiry } from './inquiryStore';
 import { INQUIRY_STATUSES } from './inquiryModel';
+import { sanitizePlanning, PLAN_KINDS, SUPPLIER_TYPES, SUPPLIER_STATUSES, SOURCE_KINDS } from './planningModel';
 
 export const MCP_TOOL_GROUPS = [
   { id: 'content', label: 'Website-Inhalte', description: 'Events, Serien, Pakete, FAQs (nur lesen)' },
@@ -175,6 +176,7 @@ export const TOOLS: ToolDef[] = [
         customer_name: STR('Name für Neuanlage per customer_email, z.B. "Max Muster"'),
         travel_start: STR('Reisebeginn YYYY-MM-DD'), travel_end: STR('Reiseende YYYY-MM-DD'),
         pax: NUM('Teilnehmerzahl (Standard 1) — Basis der Gesamtsummen'),
+        program_in_offer: { type: 'boolean', description: 'Tagesablauf (ohne Preise/Anbieter) auch im Angebots-PDF zeigen' },
         target_currency: { type: 'string', enum: ['EUR', 'USD', 'CHF', 'GBP'], description: 'Zielwährung des Angebots (Standard EUR)' },
         margin_mode: { type: 'string', enum: ['percent', 'fixed', 'target_vk'], description: 'Margenmodell (Standard percent)' },
         margin_value: NUM('Marge in % bzw. Fixbetrag bzw. Ziel-VK, je nach margin_mode'),
@@ -192,6 +194,19 @@ export const TOOLS: ToolDef[] = [
               qty: NUM('Menge pro Person, z.B. 4 Hotelnächte (Standard 1)'),
               service_from: STR('Leistungsdatum von YYYY-MM-DD (z.B. Check-in, Flugtag)'),
               service_to: STR('Leistungsdatum bis YYYY-MM-DD (z.B. Check-out, Rückflug)'),
+              time_from: STR('Uhrzeit von HH:MM (z.B. Abholung, Abflug, Beginn)'),
+              time_to: STR('Uhrzeit bis HH:MM'),
+              supplier_name: STR('Anbieter (intern)'),
+              supplier_contact: STR('Kontakt des Anbieters, E-Mail/Telefon (intern)'),
+              supplier_ref: STR('Angebots-/Buchungscode beim Anbieter (intern)'),
+              price_status: { type: 'string', enum: ['vorgabe', 'listenpreis', 'richtwert', 'annahme', 'angebot', 'bestaetigt'], description: 'Verbindlichkeit des EK (intern)' },
+              source_url: STR('Quelle/Beleg-URL (intern)'),
+              route_from: STR('Transfer/Strecke: von'),
+              route_to: STR('Transfer/Strecke: nach'),
+              distance_km: NUM('Distanz in km'),
+              duration_min: NUM('Fahrzeit in Minuten'),
+              vehicle: STR('Fahrzeug, z.B. "VIP-Reisebus 50 Plätze"'),
+              pickup_point: STR('Treffpunkt/Abholort'),
             },
             required: ['category', 'description', 'amount'],
             additionalProperties: false,
@@ -221,17 +236,46 @@ export const TOOLS: ToolDef[] = [
         title: STR('Titel'), customer_id: STR('Kunden-ID'),
         travel_start: STR('YYYY-MM-DD'), travel_end: STR('YYYY-MM-DD'),
         pax: NUM('Teilnehmerzahl'),
+        program_in_offer: { type: 'boolean', description: 'Tagesablauf im Angebots-PDF zeigen' },
         target_currency: { type: 'string', enum: ['EUR', 'USD', 'CHF', 'GBP'] },
         margin_mode: { type: 'string', enum: ['percent', 'fixed', 'target_vk'] },
         margin_value: NUM('Marge/VK je nach margin_mode'),
         items: {
           type: 'array',
-          description: 'Neue Positionsliste (ersetzt die bestehende). Felder wie bei create_offer inkl. service_from/service_to.',
+          description: 'Neue Positionsliste (ersetzt die bestehende). Felder wie bei create_offer inkl. Leistungsdatum, Uhrzeit, Anbieter und Strecke — vorher get_offer lesen, sonst gehen Felder verloren.',
           items: { type: 'object' },
         },
         extras: { type: 'array', description: 'Neue Zusatzoptionen (ersetzen die bestehenden)', items: { type: 'object' } },
         status: { type: 'string', enum: ['entwurf', 'aktiv', 'archiviert'] },
         notes: STR('Notiz'),
+      },
+      required: ['offer'], additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_offer_planning', group: 'offers',
+    description: 'Reiseplanung einer Kalkulation lesen: Programm/Tagesablauf (Tage mit Einträgen), DMC-/Anbieter-Optionen, Belege/Quellen, nicht Kalkuliertes.',
+    inputSchema: { type: 'object', properties: { offer: STR('Kalkulations-ID oder Angebotsnummer') }, required: ['offer'], additionalProperties: false },
+  },
+  {
+    name: 'set_offer_planning', group: 'offers',
+    description:
+      'Reiseplanung einer Kalkulation schreiben. Jede übergebene Liste (days, suppliers, sources) ERSETZT die bisherige komplett; ' +
+      'nicht übergebene Teile bleiben. Vorher get_offer_planning lesen. ' +
+      `days[].entries[].kind: ${PLAN_KINDS.map((k) => k.id).join('|')}. suppliers[].type: ${SUPPLIER_TYPES.map((k) => k.id).join('|')}, ` +
+      `status: ${SUPPLIER_STATUSES.map((k) => k.id).join('|')}. sources[].kind: ${SOURCE_KINDS.map((k) => k.id).join('|')}. ` +
+      'Uhrzeiten HH:MM, Datum YYYY-MM-DD. supplier/price_note/status eines Eintrags sind intern (nie im Kunden-PDF).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        offer: STR('Kalkulations-ID oder Angebotsnummer'),
+        days: {
+          type: 'array', description: 'Tage: { date, title, entries: [{ time_from, time_to, title, kind, location, supplier, item_id, route_from, route_to, distance_km, duration_min, vehicle, price_note, status, note }] }',
+          items: { type: 'object' },
+        },
+        suppliers: { type: 'array', description: 'DMC/Anbieter: { name, type, contact, coverage, source, status, inquiry_ids[], note }', items: { type: 'object' } },
+        sources: { type: 'array', description: 'Belege: { nr, ref (URL oder interne Quelle), what, kind, item_ids[] }', items: { type: 'object' } },
+        not_included: STR('Freitext: was nicht kalkuliert ist'),
       },
       required: ['offer'], additionalProperties: false,
     },
@@ -559,7 +603,13 @@ export async function callTool(name: string, args: Record<string, unknown>, ctx:
           category: i.category, description: i.description, room_category: i.room_category || null,
           currency: i.currency, amount_per_person: i.amount, qty: i.qty,
           service_from: i.service_from || null, service_to: i.service_to || null,
+          time_from: i.time_from || null, time_to: i.time_to || null,
+          supplier_name: i.supplier_name || null, supplier_contact: i.supplier_contact || null, supplier_ref: i.supplier_ref || null,
+          price_status: i.price_status || null, source_url: i.source_url || null,
+          route_from: i.route_from || null, route_to: i.route_to || null, distance_km: i.distance_km ?? null,
+          duration_min: i.duration_min ?? null, vehicle: i.vehicle || null, pickup_point: i.pickup_point || null,
         })),
+        program_in_offer: c.program_in_offer,
         extras: (c.offer_extras || []).map((e) => ({ id: e.id, label: e.label, amount_per_person: e.amount })),
         purchase_total_per_person: totals ? Math.round(totals.ekTarget * 100) / 100 : null,
         margin: totals ? { amount: Math.round(totals.marginAmount * 100) / 100, percent: Math.round(totals.marginPercent * 10) / 10 } : null,
@@ -586,6 +636,7 @@ export async function callTool(name: string, args: Record<string, unknown>, ctx:
         travel_start: args.travel_start,
         travel_end: args.travel_end,
         pax: args.pax,
+        program_in_offer: args.program_in_offer,
         target_currency: args.target_currency,
         margin_mode: args.margin_mode ?? 'percent',
         margin_value: args.margin_value ?? 15,
@@ -607,7 +658,7 @@ export async function callTool(name: string, args: Record<string, unknown>, ctx:
       if (!existing) return { error: 'Angebot nicht gefunden.' };
       const updates: Record<string, unknown> = {};
       for (const [from, to] of [
-        ['title', 'title'], ['customer_id', 'customer_id'], ['travel_start', 'travel_start'], ['travel_end', 'travel_end'], ['pax', 'pax'],
+        ['title', 'title'], ['customer_id', 'customer_id'], ['travel_start', 'travel_start'], ['travel_end', 'travel_end'], ['pax', 'pax'], ['program_in_offer', 'program_in_offer'],
         ['target_currency', 'target_currency'], ['margin_mode', 'margin_mode'], ['margin_value', 'margin_value'],
         ['items', 'items'], ['extras', 'offer_extras'], ['status', 'status'], ['notes', 'notes'],
       ] as const) {
@@ -616,6 +667,24 @@ export async function callTool(name: string, args: Record<string, unknown>, ctx:
       const calc = await updateCalculation(existing.id, updates);
       if (!calc) return { error: 'Aktualisierung fehlgeschlagen.' };
       return offerSummary(calc, ctx);
+    }
+    case 'get_offer_planning': {
+      const c = await resolveOffer(String(args.offer || ''));
+      if (!c) return { error: 'Angebot nicht gefunden.' };
+      return { offer_number: c.calc_number, ...c.planning };
+    }
+    case 'set_offer_planning': {
+      const c = await resolveOffer(String(args.offer || ''));
+      if (!c) return { error: 'Angebot nicht gefunden.' };
+      const next = { ...c.planning } as Record<string, unknown>;
+      for (const k of ['days', 'suppliers', 'sources', 'not_included'] as const) if (k in args) next[k] = args[k];
+      const calc = await updateCalculation(c.id, { planning: sanitizePlanning(next) });
+      if (!calc) return { error: 'Speichern fehlgeschlagen.' };
+      const p = calc.planning;
+      return {
+        offer_number: calc.calc_number, days: p.days.length, entries: p.days.reduce((n, d) => n + d.entries.length, 0),
+        suppliers: p.suppliers.length, sources: p.sources.length, admin_url: `${ctx.base}/admin/kalkulation/${calc.id}`,
+      };
     }
     case 'list_offer_inquiries': {
       const c = await resolveOffer(String(args.offer || ''));

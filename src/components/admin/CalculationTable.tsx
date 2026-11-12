@@ -9,6 +9,7 @@
 import { COLORS } from '@/components/admin/ui';
 import {
   CALC_CATEGORIES, computeTotals, computeGroupTotals, itemEk, fmtMoney, categoryLabel, fmtServiceDate,
+  fmtRoute, fmtTimeRange, priceStatusLabel,
   type CalcItem, type MarginMode,
 } from '@/lib/calcModel';
 import { convertAmount, type CalcCurrency, type RatesSnapshot } from '@/lib/fxRates';
@@ -73,7 +74,15 @@ export default function CalculationTable({
                       )}
                       {fmtServiceDate(item.service_from, item.service_to) && (
                         <span className="block text-xs tabular-nums" style={{ color: COLORS.textMuted }}>
-                          Leistungsdatum {fmtServiceDate(item.service_from, item.service_to)}
+                          Leistungsdatum {fmtServiceDate(item.service_from, item.service_to)}{fmtTimeRange(item) ? ` · ${fmtTimeRange(item)}` : ''}
+                        </span>
+                      )}
+                      {fmtRoute(item) && (
+                        <span className="block text-xs" style={{ color: COLORS.textMuted }}>{fmtRoute(item)}{item.pickup_point ? ` · Treffpunkt ${item.pickup_point}` : ''}</span>
+                      )}
+                      {(item.supplier_name || item.price_status || item.supplier_ref) && (
+                        <span className="block text-[11px]" style={{ color: '#9ca3af' }}>
+                          {[item.supplier_name, item.supplier_ref, priceStatusLabel(item.price_status)].filter(Boolean).join(' · ')}
                         </span>
                       )}
                     </td>

@@ -13,6 +13,7 @@ export const INQUIRY_STATUSES = [
   { id: 'angebot', label: 'Angebot erhalten', tone: 'ok' },
   { id: 'abgelehnt', label: 'Abgelehnt / nicht verfügbar', tone: 'danger' },
   { id: 'erledigt', label: 'Erledigt', tone: 'navy' },
+  { id: 'ueberholt', label: 'Überholt / nicht senden', tone: 'muted' },
 ] as const;
 
 export type InquiryStatus = (typeof INQUIRY_STATUSES)[number]['id'];
