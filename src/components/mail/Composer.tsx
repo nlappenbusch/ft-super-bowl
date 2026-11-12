@@ -639,7 +639,7 @@ export default function Composer(p: Props) {
             <div className="pointer-events-none mt-1 select-none opacity-80" dangerouslySetInnerHTML={{ __html: signature }} />
           )}
           {seed.quoted && (
-            <div className="mt-4 rounded-lg border-l-2 bg-slate-50 px-3 py-2 text-[12px] text-slate-500" style={{ borderColor: '#cbd3dc' }}>
+            <div className="mt-4 rounded-lg border bg-slate-50 px-3 py-2 text-[12px] text-slate-500" style={{ borderColor: '#e3e8ef' }}>
               <div className="font-medium text-slate-600">{seed.quoted.from} · {seed.quoted.date}</div>
               <div className="mt-0.5 line-clamp-3">{seed.quoted.preview}</div>
               <div className="mt-1 text-[11px] text-slate-400">{seed.reference && seed.reference.mb === from ? 'Der Verlauf wird automatisch angehängt (wie in Outlook).' : 'Wird als Zitat unter die Mail gesetzt.'}</div>
