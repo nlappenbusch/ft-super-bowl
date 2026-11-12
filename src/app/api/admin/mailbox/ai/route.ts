@@ -4,6 +4,7 @@ import { aiSearch, extractMail, composeAssist } from '@/lib/mailbox/ai';
 import { conversationMessages, getMessage } from '@/lib/mailbox/graph';
 import { mailText } from '@/lib/mailbox/context';
 import { isWorkspaceAiConfigured } from '@/lib/workspace/claude';
+import { publicBaseUrl } from '@/lib/emailTemplates';
 import type { AssistMode } from '@/lib/mailbox/prefs';
 
 export const dynamic = 'force-dynamic';
@@ -27,8 +28,33 @@ export async function POST(req: Request) {
       const q = String(b.question || '').trim().slice(0, 1000);
       if (!q) throw new HttpError(400, 'Frage fehlt');
       const boxes = (await resolveMailboxes(user, b.mb || 'all')).filter((m) => m.canRead).map((m) => m.address);
-      const r = await aiSearch(q, boxes, user.name);
-      return NextResponse.json({ success: true, ...r });
+      const person = { name: user.name, employeeId: user.employeeId, base: publicBaseUrl() };
+      if (!b.stream) {
+        const r = await aiSearch(q, boxes, person, undefined, req.signal);
+        return NextResponse.json({ success: true, ...r });
+      }
+      // Live-Fortschritt als NDJSON: {type:'step'} … {type:'result'} bzw. {type:'error'}
+      const enc = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        async start(ctrl) {
+          const send = (o: unknown) => { try { ctrl.enqueue(enc.encode(JSON.stringify(o) + '\n')); } catch { /* Client weg */ } };
+          try {
+            const r = await aiSearch(q, boxes, person, (text) => send({ type: 'step', text }), req.signal);
+            send({ type: 'result', success: true, ...r });
+          } catch (e) {
+            if (!req.signal.aborted) {
+              const res = fail(e);
+              const body = (await res.json().catch(() => ({}))) as { error?: string };
+              send({ type: 'error', error: body.error || 'KI-Suche fehlgeschlagen' });
+            }
+          } finally {
+            try { ctrl.close(); } catch { /* schon zu */ }
+          }
+        },
+      });
+      return new Response(stream, {
+        headers: { 'content-type': 'application/x-ndjson; charset=utf-8', 'cache-control': 'no-cache, no-transform', 'x-accel-buffering': 'no' },
+      });
     }
 
     if (b.action === 'extract') {

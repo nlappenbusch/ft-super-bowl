@@ -20,16 +20,22 @@ export async function GET(req: Request) {
     const flag = (k: string) => sp.get(k) === '1';
     const top = q ? 25 : boxes.length > 1 ? 25 : 50;
 
+    // Sammelansicht: knappes Zeitlimit je Postfach. Ein hängendes Postfach (kommt bei Exchange
+    // vor) landet in `slow`, der Client zeigt die übrigen sofort und lädt es still nach.
+    const multi = boxes.length > 1;
+    const timing = multi ? { timeoutMs: 6000, deadlineMs: 9000 } : { timeoutMs: 15000, deadlineMs: 25000 };
+    const slow: string[] = [];
     const lists = await Promise.all(boxes.map(async (m) => {
       try {
         return q
           ? await searchMessages(m.address, q, top)
           : await listMessages(m.address, {
             folder: sp.get('folder') || 'inbox', before: sp.get('before') || undefined,
-            unread: flag('unread'), flagged: flag('flagged'), attachments: flag('attachments'), top,
+            unread: flag('unread'), flagged: flag('flagged'), attachments: flag('attachments'), top, timing,
           });
       } catch (e) {
         console.error(`[Mail] ${m.address}:`, (e as Error).message);
+        slow.push(m.address);
         return [] as MailSummary[];
       }
     }));
@@ -42,7 +48,7 @@ export async function GET(req: Request) {
     }
     rememberContacts(user.email, messages);
     const more = !q && lists.some((l) => l.length >= top);
-    return NextResponse.json({ success: true, messages, more });
+    return NextResponse.json({ success: true, messages, more, slow });
   } catch (e) {
     return fail(e);
   }

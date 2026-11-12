@@ -17,9 +17,9 @@ import SettingsDialog from './SettingsDialog';
 import type {
   AccountsResponse, AssistMode, ComposeSeed, MailAddress, MailDetail, MailExtraction, MailFolder, MailSummary, MailTemplate, ViewSel,
 } from './types';
-import { api, longTime, refsIn, textToHtml, escapeHtml, shortMailbox } from './util';
+import { api, apiStream, longTime, refsIn, textToHtml, escapeHtml, shortMailbox } from './util';
 
-interface AiAnswer { question: string; answer: string; sources: MailSummary[]; steps: string[] }
+interface AiAnswer { question: string; answer: string; sources: MailSummary[]; steps: string[]; seconds?: number }
 
 const OWN_DOMAINS = ['faltintravel.com', 'faltin-travel.ch', 'faltintravel.ch'];
 const isInternal = (a: string) => OWN_DOMAINS.some((d) => a.toLowerCase().endsWith('@' + d));
@@ -48,13 +48,21 @@ export default function MailApp() {
   const [messages, setMessages] = useState<MailSummary[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [more, setMore] = useState(false);
+  /** Postfächer, die bei der letzten Liste nicht rechtzeitig geantwortet haben */
+  const [slow, setSlow] = useState<string[]>([]);
+  /** Zuletzt geladene Listen je Ansicht: Wechsel zeigt sofort den letzten Stand, frisch kommt im Hintergrund. */
+  const listCache = useRef(new Map<string, { messages: MailSummary[]; more: boolean }>());
+  const slowRetry = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [filter, setFilter] = useState<ListFilter>('all');
   const [query, setQuery] = useState('');
   const [activeQuery, setActiveQuery] = useState('');
   const [aiMode, setAiMode] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiAnswer, setAiAnswer] = useState<AiAnswer | null>(null);
-  const [aiStep, setAiStep] = useState('');
+  const [aiSteps, setAiSteps] = useState<string[]>([]);
+  const aiAbort = useRef<AbortController | null>(null);
+  const aiAnswerRef = useRef<AiAnswer | null>(null);
+  useEffect(() => { aiAnswerRef.current = aiAnswer; }, [aiAnswer]);
 
   const [selected, setSelected] = useState<{ mailbox: string; id: string } | null>(null);
   const [detail, setDetail] = useState<MailDetail | null>(null);
@@ -135,16 +143,29 @@ export default function MailApp() {
     return `messages?${sp}`;
   }, [view, activeQuery, aiMode, filter]);
 
-  const loadList = useCallback(async (opts: { silent?: boolean } = {}) => {
+  const loadList = useCallback(async (opts: { silent?: boolean; retry?: number } = {}) => {
     if (!accounts) return;
     const my = ++listSeq.current;
-    if (!opts.silent) setListLoading(true);
+    const url = listUrl();
+    const cached = listCache.current.get(url);
+    if (slowRetry.current) { clearTimeout(slowRetry.current); slowRetry.current = null; }
+    if (!opts.silent) {
+      // Letzten Stand sofort zeigen, frische Daten kommen leise nach
+      if (cached) { setMessages(cached.messages); setMore(cached.more); setListLoading(false); }
+      else setListLoading(true);
+    }
     try {
-      const r = await api<{ messages: MailSummary[]; more: boolean }>(listUrl());
+      const r = await api<{ messages: MailSummary[]; more: boolean; slow?: string[] }>(url);
       if (my !== listSeq.current) return;
       setMessages(r.messages); setMore(r.more);
+      const lagging = r.slow || [];
+      setSlow(lagging);
+      if (!lagging.length) listCache.current.set(url, { messages: r.messages, more: r.more });
+      // Hängendes Postfach: nach kurzer Pause still erneut versuchen (max. 3×)
+      const n = opts.retry || 0;
+      if (lagging.length && n < 3) slowRetry.current = setTimeout(() => void loadList({ silent: true, retry: n + 1 }), 8000 + n * 7000);
     } catch (e) {
-      if (my === listSeq.current && !opts.silent) showToast((e as Error).message);
+      if (my === listSeq.current && !opts.silent && !cached) showToast((e as Error).message);
     } finally {
       if (my === listSeq.current) setListLoading(false);
     }
@@ -172,7 +193,8 @@ export default function MailApp() {
     if (!accounts) return;
     const t = setInterval(() => {
       if (document.hidden) return;
-      if (!activeQuery) void loadList({ silent: true });
+      // Nicht während/nach einer KI-Suche: die Quellen sollen stehen bleiben
+      if (!activeQuery && !aiAnswerRef.current && !aiAbort.current) void loadList({ silent: true });
       accounts.mailboxes.forEach((m) => void loadFolders(m.address));
     }, 60000);
     return () => clearInterval(t);
@@ -219,6 +241,7 @@ export default function MailApp() {
   };
 
   const removeFromList = (mb: string, id: string) => {
+    listCache.current.clear(); // Zwischenstände enthalten die Mail noch
     const i = messages.findIndex((m) => m.mailbox === mb && m.id === id);
     const next = messages[i + 1] || messages[i - 1];
     setMessages((ms) => ms.filter((m) => !(m.mailbox === mb && m.id === id)));
@@ -335,16 +358,34 @@ export default function MailApp() {
     const q = query.trim();
     if (!q) return;
     if (!aiMode) { setActiveQuery(q); return; }
-    setAiBusy(true); setAiAnswer(null); setAiStep('Durchsuche die Postfächer …');
+    aiAbort.current?.abort();
+    const ctl = new AbortController();
+    aiAbort.current = ctl;
+    setAiBusy(true); setAiAnswer(null); setAiSteps([]);
+    const started = Date.now();
     try {
-      const r = await api<{ answer: string; sources: MailSummary[]; steps: string[] }>('ai', { json: { action: 'search', question: q, mb: view.mb } });
-      setAiAnswer({ question: q, ...r });
-      if (r.sources.length) { setMessages(r.sources); setMore(false); }
+      let result: { answer: string; sources: MailSummary[]; steps: string[] } | null = null;
+      await apiStream('ai', { action: 'search', question: q, mb: view.mb, stream: true }, (ev) => {
+        if (ev.type === 'step') setAiSteps((s) => [...s, String(ev.text)]);
+        else if (ev.type === 'result') result = ev as unknown as typeof result;
+        else if (ev.type === 'error') throw new Error(String(ev.error || 'KI-Suche fehlgeschlagen'));
+      }, ctl.signal);
+      if (!result) throw new Error('Die KI-Suche wurde unterbrochen. Bitte nochmal versuchen.');
+      const r = result as { answer: string; sources: MailSummary[]; steps: string[] };
+      setAiAnswer({ question: q, ...r, seconds: Math.round((Date.now() - started) / 1000) });
+      if (r.sources.length) { listSeq.current++; setListLoading(false); setMessages(r.sources); setMore(false); }
     } catch (e) {
-      showToast((e as Error).message);
+      if (!ctl.signal.aborted) showToast((e as Error).message);
     } finally {
-      setAiBusy(false); setAiStep('');
+      if (aiAbort.current === ctl) { aiAbort.current = null; setAiBusy(false); }
     }
+  };
+
+  const cancelAi = () => {
+    aiAbort.current?.abort();
+    aiAbort.current = null;
+    setAiBusy(false); setAiSteps([]);
+    showToast('KI-Suche abgebrochen');
   };
 
   const clearQuery = () => {
@@ -465,7 +506,11 @@ export default function MailApp() {
             aiReady={accounts.aiReady}
             aiBusy={aiBusy}
             aiAnswer={aiAnswer}
-            aiStep={aiStep}
+            aiSteps={aiSteps}
+            onCancelAi={cancelAi}
+            notice={slow.length && !aiAnswer && !aiBusy
+              ? `${slow.map((a) => shortMailbox(accounts.mailboxes.find((m) => m.address === a) || { name: '', address: a })).join(', ')} antwortet gerade langsam (Microsoft) – wird im Hintergrund nachgeladen.`
+              : ''}
             onQuery={setQuery}
             onSubmitQuery={() => void submitQuery()}
             onClearQuery={clearQuery}

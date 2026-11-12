@@ -7,7 +7,7 @@ import { dayGroup, listTime, mailboxColor, shortMailbox, refsIn } from './util';
 
 export type ListFilter = 'all' | 'unread' | 'flagged' | 'attachments';
 
-interface AiAnswer { question: string; answer: string; sources: MailSummary[]; steps: string[] }
+interface AiAnswer { question: string; answer: string; sources: MailSummary[]; steps: string[]; seconds?: number }
 
 interface Props {
   title: string;
@@ -24,7 +24,10 @@ interface Props {
   aiReady: boolean;
   aiBusy: boolean;
   aiAnswer: AiAnswer | null;
-  aiStep: string;
+  aiSteps: string[];
+  onCancelAi: () => void;
+  /** Hinweis über der Liste, z. B. langsames Postfach */
+  notice?: string;
   onQuery: (q: string) => void;
   onSubmitQuery: () => void;
   onClearQuery: () => void;
@@ -141,6 +144,11 @@ export default function MessageList(p: Props) {
       </div>
 
       <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto">
+        {p.notice && (
+          <div className="mx-3 mb-2 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11.5px] leading-snug text-slate-600" style={{ background: '#f6f7f9' }}>
+            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-slate-400" /> {p.notice}
+          </div>
+        )}
         {/* KI-Antwort */}
         {(p.aiBusy || p.aiAnswer) && (
           <div className="mx-3 mb-3 rounded-2xl border p-3.5 text-[13px] leading-relaxed" style={{ borderColor: '#f1d2c3', background: 'linear-gradient(180deg,#fff8f4,#ffffff)' }}>
@@ -148,8 +156,17 @@ export default function MessageList(p: Props) {
               <Sparkles className="h-3.5 w-3.5" /> KI-Antwort
             </div>
             {p.aiBusy ? (
-              <div className="flex items-center gap-2 text-slate-500">
-                <Loader2 className="h-4 w-4 animate-spin" /> {p.aiStep || 'Durchsuche deine Postfächer …'}
+              <div className="text-slate-500">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" style={{ color: '#d9531e' }} />
+                  <span className="min-w-0 flex-1 truncate font-medium text-slate-700">{p.aiSteps[p.aiSteps.length - 1] || 'Verbinde mit der KI …'}</span>
+                  <button onClick={p.onCancelAi} className="shrink-0 rounded-md px-1.5 py-0.5 text-[11.5px] text-slate-500 hover:bg-slate-100 hover:text-slate-700">Abbrechen</button>
+                </div>
+                {p.aiSteps.length > 1 && (
+                  <ul className="mt-2 space-y-0.5 pl-6 text-[11.5px] leading-snug text-slate-400">
+                    {p.aiSteps.slice(0, -1).slice(-5).map((s, i) => <li key={i} className="truncate">✓ {s}</li>)}
+                  </ul>
+                )}
               </div>
             ) : p.aiAnswer && (
               <>
@@ -171,7 +188,7 @@ export default function MessageList(p: Props) {
                 )}
                 {p.aiAnswer.steps.length > 0 && (
                   <details className="mt-2 text-[11px] text-slate-400">
-                    <summary className="cursor-pointer">So wurde gesucht ({p.aiAnswer.steps.length} Schritte)</summary>
+                    <summary className="cursor-pointer">So wurde gesucht ({p.aiAnswer.steps.length} Schritte{p.aiAnswer.seconds ? `, ${p.aiAnswer.seconds} s` : ''})</summary>
                     <ul className="mt-1 list-disc pl-4">{p.aiAnswer.steps.map((s, i) => <li key={i}>{s}</li>)}</ul>
                   </details>
                 )}

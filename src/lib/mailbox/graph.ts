@@ -101,19 +101,40 @@ export class GraphError extends Error {
 const TRANSIENT = new Set([429, 500, 502, 503, 504]);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+export interface GraphCallOptions {
+  /** Zeitlimit je Versuch (Standard 15 s lesend, 60 s schreibend). */
+  timeoutMs?: number;
+  /** Gesamtbudget inkl. Wiederholungen (Standard 30 s). */
+  deadlineMs?: number;
+}
+
 /**
- * Graph-Aufruf mit JSON-Antwort. Lesende Aufrufe (GET) werden bei vorübergehenden Fehlern
- * bis zu zweimal wiederholt (Retry-After bzw. 0,8 s / 2 s). Schreibende nie, sonst
- * könnte z. B. eine Mail doppelt rausgehen.
+ * Graph-Aufruf mit JSON-Antwort. Lesende Aufrufe (GET) werden bei vorübergehenden Fehlern und
+ * Zeitüberschreitung wiederholt, solange das Gesamtbudget reicht (Retry-After bzw. 0,8 s / 2 s).
+ * Schreibende nie, sonst könnte z. B. eine Mail doppelt rausgehen. Einzelne Postfächer hängen bei
+ * Exchange gelegentlich 20–60 s; das Zeitlimit verhindert, dass dann die ganze Ansicht wartet.
  */
-async function gjson<T>(path: string, init?: RequestInit): Promise<T> {
+async function gjson<T>(path: string, init?: RequestInit, o: GraphCallOptions = {}): Promise<T> {
   const idempotent = !init?.method || init.method.toUpperCase() === 'GET';
-  let res = await graphRequest(path, init);
-  for (let i = 0; idempotent && i < 2 && TRANSIENT.has(res.status); i++) {
-    const ra = Number(res.headers.get('retry-after'));
-    await sleep(ra > 0 ? Math.min(ra, 10) * 1000 : i ? 2000 : 800);
-    res = await graphRequest(path, init);
+  const perTry = o.timeoutMs ?? (idempotent ? 15_000 : 60_000);
+  const deadline = Date.now() + (o.deadlineMs ?? 30_000);
+  const attempt = async (): Promise<Response | null> => {
+    try {
+      return await graphRequest(path, { ...init, signal: AbortSignal.timeout(Math.max(1000, Math.min(perTry, deadline - Date.now()))) });
+    } catch (e) {
+      if ((e as Error).name === 'TimeoutError' || (e as Error).name === 'AbortError') return null;
+      throw e;
+    }
+  };
+  let res = await attempt();
+  for (let i = 0; idempotent && i < 2 && (!res || TRANSIENT.has(res.status)); i++) {
+    const ra = res ? Number(res.headers.get('retry-after')) : 0;
+    const wait = ra > 0 ? Math.min(ra, 10) * 1000 : res ? (i ? 2000 : 800) : 0;
+    if (Date.now() + wait + 1000 > deadline) break;
+    await sleep(wait);
+    res = await attempt();
   }
+  if (!res) throw new GraphError(504, 'Microsoft 365 antwortet nicht rechtzeitig (Zeitüberschreitung).');
   if (!res.ok) {
     const t = await res.text().catch(() => '');
     let msg = t.slice(0, 300);
@@ -170,6 +191,8 @@ export interface ListOptions {
   flagged?: boolean;
   attachments?: boolean;
   top?: number;
+  /** Zeitlimits (z. B. knapp in der Sammelansicht, damit ein hängendes Postfach nicht alle bremst). */
+  timing?: GraphCallOptions;
 }
 
 export async function listMessages(mb: string, o: ListOptions = {}): Promise<MailSummary[]> {
@@ -186,7 +209,7 @@ export async function listMessages(mb: string, o: ListOptions = {}): Promise<Mai
     $orderby: 'receivedDateTime desc',
     $filter: filters.join(' and '),
   });
-  const r = await gjson<{ value: GMsg[] }>(`${base(mb)}/mailFolders/${enc(folder)}/messages?${qs}`);
+  const r = await gjson<{ value: GMsg[] }>(`${base(mb)}/mailFolders/${enc(folder)}/messages?${qs}`, undefined, o.timing);
   return (r.value || []).map((m) => toSummary(mb, m));
 }
 
@@ -203,7 +226,8 @@ export function buildKql(q: string): string {
 
 export async function searchMessages(mb: string, q: string, top = 25): Promise<MailSummary[]> {
   const qs = new URLSearchParams({ $search: `"${buildKql(q)}"`, $top: String(Math.min(top, 50)), $select: SUMMARY_SELECT });
-  const r = await gjson<{ value: GMsg[] }>(`${base(mb)}/messages?${qs}`, { headers: { ConsistencyLevel: 'eventual' } });
+  // Zeitlimit: ein hängendes Postfach soll Suche und KI-Suche nicht minutenlang aufhalten.
+  const r = await gjson<{ value: GMsg[] }>(`${base(mb)}/messages?${qs}`, { headers: { ConsistencyLevel: 'eventual' } }, { timeoutMs: 10_000, deadlineMs: 15_000 });
   return (r.value || []).map((m) => toSummary(mb, m)).sort((a, b) => b.receivedAt.localeCompare(a.receivedAt));
 }
 
