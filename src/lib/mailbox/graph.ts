@@ -97,8 +97,23 @@ export class GraphError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
 
+/** Vorübergehende Graph-/Exchange-Störungen (Drosselung, 5xx). */
+const TRANSIENT = new Set([429, 500, 502, 503, 504]);
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Graph-Aufruf mit JSON-Antwort. Lesende Aufrufe (GET) werden bei vorübergehenden Fehlern
+ * bis zu zweimal wiederholt (Retry-After bzw. 0,8 s / 2 s). Schreibende nie, sonst
+ * könnte z. B. eine Mail doppelt rausgehen.
+ */
 async function gjson<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await graphRequest(path, init);
+  const idempotent = !init?.method || init.method.toUpperCase() === 'GET';
+  let res = await graphRequest(path, init);
+  for (let i = 0; idempotent && i < 2 && TRANSIENT.has(res.status); i++) {
+    const ra = Number(res.headers.get('retry-after'));
+    await sleep(ra > 0 ? Math.min(ra, 10) * 1000 : i ? 2000 : 800);
+    res = await graphRequest(path, init);
+  }
   if (!res.ok) {
     const t = await res.text().catch(() => '');
     let msg = t.slice(0, 300);

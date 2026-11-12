@@ -40,7 +40,8 @@ export default function MailApp() {
   const [placeholders, setPlaceholders] = useState<Array<{ key: string; label: string }>>([]);
 
   const [view, setView] = useState<ViewSel>({ mb: 'all', folder: 'inbox', folderName: 'Alle Posteingänge' });
-  const [folders, setFolders] = useState<Record<string, MailFolder[] | undefined>>({});
+  /** undefined = lädt, null = Laden fehlgeschlagen */
+  const [folders, setFolders] = useState<Record<string, MailFolder[] | null | undefined>>({});
   const [childFolders, setChildFolders] = useState<Record<string, MailFolder[] | undefined>>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -94,9 +95,20 @@ export default function MailApp() {
   }, []);
 
   const loadFolders = useCallback(async (mb: string) => {
-    const r = await api<{ folders: MailFolder[] }>(`folders?mb=${encodeURIComponent(mb)}`).catch(() => ({ folders: [] as MailFolder[] }));
-    setFolders((f) => ({ ...f, [mb]: r.folders }));
+    const r = await api<{ folders: MailFolder[] }>(`folders?mb=${encodeURIComponent(mb)}`).catch(() => null);
+    // Bei einem Fehler den bisherigen Stand behalten; nur ohne Stand als Fehler markieren.
+    setFolders((f) => ({ ...f, [mb]: r ? r.folders : f[mb] || null }));
   }, []);
+
+  // Fehlen die Freigaben wegen einer Exchange-Störung, jede Minute still neu versuchen.
+  useEffect(() => {
+    if (!accounts?.warning) return;
+    const t = setTimeout(async () => {
+      const a = await loadAccounts(true);
+      if (a && !a.warning) a.mailboxes.forEach((m) => void loadFolders(m.address));
+    }, 65_000);
+    return () => clearTimeout(t);
+  }, [accounts, loadAccounts, loadFolders]);
 
   useEffect(() => {
     void (async () => {
@@ -400,6 +412,7 @@ export default function MailApp() {
           <Sidebar
             mailboxes={accounts.mailboxes}
             folders={folders}
+            onRetryFolders={(mb) => { setFolders((f) => ({ ...f, [mb]: undefined })); void loadFolders(mb); }}
             childFolders={childFolders}
             expanded={expanded}
             view={view}

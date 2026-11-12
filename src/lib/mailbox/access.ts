@@ -13,7 +13,7 @@
  * Die App selbst darf technisch auf alle Postfächer zugreifen (app-only). Deshalb
  * prüft JEDE Mail-API vor dem Zugriff `assertMailbox()`.
  */
-import { exchangeGet } from './exchange';
+import { exchangeGet, ExchangeError } from './exchange';
 import { getGlobalMailConfig } from './prefs';
 
 export interface MailboxInfo {
@@ -38,6 +38,8 @@ interface Directory {
   /** person → Postfach-Adressen mit SendAs */
   sendAs: Map<string, Set<string>>;
   error: string | null;
+  /** HTTP-Status des Exchange-Fehlers (401/403 = Rechte, sonst meist Störung). */
+  errorStatus?: number;
 }
 
 const TTL_MS = 15 * 60 * 1000;
@@ -90,6 +92,7 @@ async function loadDirectory(): Promise<Directory> {
     });
   } catch (e) {
     d.error = (e as Error).message;
+    d.errorStatus = e instanceof ExchangeError ? e.status : 0;
     console.error('[Mail] Postfachberechtigungen aus Exchange nicht lesbar:', d.error);
   }
   return d;
@@ -159,9 +162,14 @@ export async function mailboxesFor(personEmail: string | null | undefined): Prom
 
   const list = [...out.values()].sort((a, b) =>
     (a.kind === 'own' ? 0 : 1) - (b.kind === 'own' ? 0 : 1) || a.name.localeCompare(b.name, 'de'));
-  const warning = d.error
-    ? 'Freigegebene Postfächer konnten nicht aus Exchange gelesen werden (fehlt der App die Rolle Exchange-Administrator?). Es werden nur das eigene Postfach und manuelle Freigaben angezeigt.'
-    : null;
+  const rightsProblem = d.errorStatus === 401 || d.errorStatus === 403;
+  const warning = !d.error
+    ? null
+    : /nicht konfiguriert/.test(d.error)
+      ? 'Microsoft 365 ist in den Einstellungen (Mail/SSO) nicht eingerichtet, freigegebene Postfächer lassen sich deshalb nicht lesen.'
+    : rightsProblem
+      ? 'Freigegebene Postfächer konnten nicht aus Exchange gelesen werden: Der App fehlt die Berechtigung (Rolle Exchange-Administrator bzw. Exchange.ManageAsApp). Es werden nur das eigene Postfach und manuelle Freigaben angezeigt.'
+      : 'Exchange Online antwortet gerade nicht (Störung bei Microsoft), deshalb fehlen die freigegebenen Postfächer vorübergehend. Der Client versucht es jede Minute selbst neu; sofort geht es über das Neu-laden-Symbol neben «Postfächer».';
   return { mailboxes: list, warning };
 }
 

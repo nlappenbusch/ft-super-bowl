@@ -14,7 +14,9 @@ const FOLDER_ICON: Record<string, typeof Inbox> = {
 
 interface Props {
   mailboxes: MailboxInfo[];
-  folders: Record<string, MailFolder[] | undefined>;
+  /** undefined = lädt, null = Laden fehlgeschlagen */
+  folders: Record<string, MailFolder[] | null | undefined>;
+  onRetryFolders: (mb: string) => void;
   childFolders: Record<string, MailFolder[] | undefined>;
   expanded: Set<string>;
   view: ViewSel;
@@ -137,6 +139,13 @@ export default function Sidebar(p: Props) {
                 <div className="pb-1">
                   {p.folders[mb.address] === undefined ? (
                     <div className="py-1 pl-9 text-[12px] text-slate-400">Lade Ordner …</div>
+                  ) : p.folders[mb.address] === null ? (
+                    <div className="py-1 pl-9 pr-2 text-[12px] leading-snug text-slate-500">
+                      Ordner nicht erreichbar (Microsoft antwortet gerade nicht).{' '}
+                      <button onClick={() => p.onRetryFolders(mb.address)} className="font-medium underline underline-offset-2" style={{ color: '#143047' }}>
+                        Erneut laden
+                      </button>
+                    </div>
                   ) : (
                     p.folders[mb.address]!.map((f) => folderRow(mb, f))
                   )}
