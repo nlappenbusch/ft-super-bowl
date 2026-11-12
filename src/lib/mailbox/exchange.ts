@@ -8,6 +8,10 @@
  */
 import { getGraphCredentials, graphRequest } from '../graphMailer';
 
+export class ExchangeError extends Error {
+  constructor(public status: number, message: string) { super(message); }
+}
+
 let token: { value: string; expiresAt: number; clientId: string } | null = null;
 let initialDomain: string | null = null;
 
@@ -25,7 +29,8 @@ async function exchangeToken(): Promise<string> {
       grant_type: 'client_credentials',
     }).toString(),
   });
-  if (!res.ok) throw new Error(`Exchange-Token: ${res.status} ${(await res.text()).slice(0, 200)}`);
+  // 400/401 beim Token = falsches Secret/App → wie ein Rechteproblem behandeln.
+  if (!res.ok) throw new ExchangeError(res.status >= 500 ? res.status : 401, `Exchange-Token: ${res.status} ${(await res.text()).slice(0, 200)}`);
   const j = (await res.json()) as { access_token: string; expires_in: number };
   token = { value: j.access_token, expiresAt: Date.now() + j.expires_in * 1000, clientId };
   return j.access_token;
@@ -47,7 +52,7 @@ export async function exchangeGet<T = Record<string, unknown>>(cmdlet: string, p
   if (!/^Get-[A-Za-z]+$/.test(cmdlet)) throw new Error('Nur Get-Cmdlets sind erlaubt.');
   const { tenantId } = getGraphCredentials();
   const [tok, dom] = await Promise.all([exchangeToken(), tenantInitialDomain()]);
-  const res = await fetch(`https://outlook.office365.com/adminapi/beta/${encodeURIComponent(tenantId)}/InvokeCommand`, {
+  const call = () => fetch(`https://outlook.office365.com/adminapi/beta/${encodeURIComponent(tenantId)}/InvokeCommand`, {
     method: 'POST',
     headers: {
       authorization: `Bearer ${tok}`,
@@ -59,12 +64,20 @@ export async function exchangeGet<T = Record<string, unknown>>(cmdlet: string, p
     body: JSON.stringify({ CmdletInput: { CmdletName: cmdlet, Parameters: params } }),
     signal: AbortSignal.timeout(60_000),
   });
+  // Nur Get-* → gefahrlos wiederholbar. Exchange antwortet bei Last/Störung mit 429/5xx.
+  let res = await call();
+  for (let i = 0; i < 2 && [429, 500, 502, 503, 504].includes(res.status); i++) {
+    const ra = Number(res.headers.get('retry-after'));
+    await new Promise((r) => setTimeout(r, ra > 0 ? Math.min(ra, 15) * 1000 : i ? 4000 : 1500));
+    res = await call();
+  }
   const text = await res.text();
   let data: unknown = null;
   try { data = text ? JSON.parse(text) : {}; } catch { /* Rohtext */ }
   if (!res.ok) {
     const e = (data as { error?: { message?: string; details?: Array<{ message?: string }> } } | null)?.error;
-    throw new Error(`Exchange ${cmdlet}: ${res.status} ${e?.details?.[0]?.message || e?.message || text.slice(0, 200)}`);
+    const detail = e?.details?.[0]?.message || e?.message || (/^\s*</.test(text) ? 'Dienst nicht verfügbar' : text.slice(0, 200));
+    throw new ExchangeError(res.status, `Exchange ${cmdlet}: ${res.status} ${detail}`);
   }
   const v = (data as { value?: T[] } | null)?.value;
   return Array.isArray(v) ? v : [];
