@@ -3,6 +3,8 @@
  * IMMER mit explizitem Postfach. Zugriffsprüfung macht der Aufrufer (assertMailbox).
  */
 import { graphRequest } from '../graphMailer';
+import { hedged, isNetError } from './hedge';
+import { loadMailState, saveMailState } from './prefs';
 
 const enc = encodeURIComponent;
 const base = (mb: string) => `/users/${enc(mb)}`;
@@ -106,24 +108,38 @@ export interface GraphCallOptions {
   timeoutMs?: number;
   /** Gesamtbudget inkl. Wiederholungen (Standard 30 s). */
   deadlineMs?: number;
+  /** Lesend: nach so vielen ms ohne Antwort parallel ein zweiter Aufruf (Standard 2,5 s, 0 = aus). */
+  hedgeMs?: number;
 }
+
+/** Ab hier gilt ein lesender Aufruf als «hängt» (normal antwortet Graph in 0,2–1 s). */
+const HEDGE_MS = 2_500;
 
 /**
  * Graph-Aufruf mit JSON-Antwort. Lesende Aufrufe (GET) werden bei vorübergehenden Fehlern und
  * Zeitüberschreitung wiederholt, solange das Gesamtbudget reicht (Retry-After bzw. 0,8 s / 2 s).
  * Schreibende nie, sonst könnte z. B. eine Mail doppelt rausgehen. Einzelne Postfächer hängen bei
  * Exchange gelegentlich 20–60 s; das Zeitlimit verhindert, dass dann die ganze Ansicht wartet.
+ * Zusätzlich läuft bei lesenden Aufrufen nach 2,5 s ohne Antwort ein zweiter gleicher Aufruf
+ * (hedge.ts) — bei Exchange-Störungen hängen einzelne Anfragen, die Wiederholung kommt meist sofort.
  */
 export async function gjson<T>(path: string, init?: RequestInit, o: GraphCallOptions = {}): Promise<T> {
   const idempotent = !init?.method || init.method.toUpperCase() === 'GET';
   const perTry = o.timeoutMs ?? (idempotent ? 15_000 : 60_000);
   const deadline = Date.now() + (o.deadlineMs ?? 30_000);
+  const hedgeMs = idempotent ? (o.hedgeMs ?? HEDGE_MS) : 0;
+  const left = () => Math.max(1000, Math.min(perTry, deadline - Date.now()));
   const attempt = async (): Promise<Response | null> => {
+    if (hedgeMs > 0) {
+      return hedged((signal) => graphRequest(path, { ...init, signal }), {
+        hedgeMs, timeoutMs: left, transient: (s) => TRANSIENT.has(s),
+      });
+    }
     try {
-      return await graphRequest(path, { ...init, signal: AbortSignal.timeout(Math.max(1000, Math.min(perTry, deadline - Date.now()))) });
+      return await graphRequest(path, { ...init, signal: AbortSignal.timeout(left()) });
     } catch (e) {
       // Zeitüberschreitung oder Verbindungsfehler («fetch failed») → wie vorübergehender Fehler behandeln
-      if (e instanceof TypeError || (e as Error).name === 'TimeoutError' || (e as Error).name === 'AbortError') return null;
+      if (isNetError(e)) return null;
       throw e;
     }
   };
@@ -150,23 +166,74 @@ export async function gjson<T>(path: string, init?: RequestInit, o: GraphCallOpt
 // ───────────────────────── Ordner ─────────────────────────
 
 const WELL_KNOWN = ['inbox', 'sentitems', 'drafts', 'archive', 'deleteditems', 'junkemail'] as const;
-const wkCache = new Map<string, { at: number; ids: Record<string, string> }>();
+/**
+ * Zuordnung Ordner-ID → well-known Name (inbox …). Die IDs ändern sich praktisch nie, deshalb liegt
+ * die Zuordnung dauerhaft in mail_prefs (übersteht Neustarts/Deploys) und wird nur wöchentlich im
+ * Hintergrund aufgefrischt. Vorher kostete sie nach jedem Neustart 6 Graph-Aufrufe je Postfach —
+ * und ein einziger hängender Aufruf hielt die ganze Ordnerliste auf.
+ */
+type WkState = { at: number; ids: Record<string, string> };
+const wkKey = (mb: string) => `wellknown:${mb}`;
+const WK_REFRESH_MS = 7 * 24 * 3600_000;
+const wkCache = new Map<string, { until: number; ids: Record<string, string> }>();
+const wkRunning = new Map<string, Promise<Record<string, string>>>();
 
-async function wellKnownIds(mb: string): Promise<Record<string, string>> {
-  const c = wkCache.get(mb);
-  if (c && Date.now() - c.at < 6 * 3600_000) return c.ids;
+async function fetchWellKnown(mb: string, prev: Record<string, string>): Promise<Record<string, string>> {
   const ids: Record<string, string> = {};
+  let complete = true;
   await Promise.all(WELL_KNOWN.map(async (k) => {
     try {
-      const f = await gjson<{ id: string }>(`${base(mb)}/mailFolders/${k}?$select=id`);
+      const f = await gjson<{ id: string }>(`${base(mb)}/mailFolders/${k}?$select=id`, undefined, { timeoutMs: 8_000, deadlineMs: 15_000 });
       if (f.id) ids[f.id] = k;
-    } catch { /* Ordner fehlt (z. B. Archiv) */ }
+    } catch (e) {
+      // 404 = Ordner gibt es nicht (z. B. Archiv) — alles andere ist eine Störung
+      if (!(e instanceof GraphError && e.status === 404)) complete = false;
+    }
   }));
-  wkCache.set(mb, { at: Date.now(), ids });
-  return ids;
+  if (complete) {
+    wkCache.set(mb, { until: Date.now() + 3600_000, ids });
+    await saveMailState<WkState>(wkKey(mb), { at: Date.now(), ids }).catch(() => {});
+    return ids;
+  }
+  // Lückenhaft (Störung): nichts dauerhaft speichern, Bekanntes behalten, bald erneut versuchen
+  const merged = { ...prev, ...ids };
+  wkCache.set(mb, { until: Date.now() + 60_000, ids: merged });
+  return merged;
+}
+
+function refreshWellKnown(mb: string, prev: Record<string, string>): Promise<Record<string, string>> {
+  let p = wkRunning.get(mb);
+  if (!p) {
+    p = fetchWellKnown(mb, prev).finally(() => wkRunning.delete(mb));
+    wkRunning.set(mb, p);
+  }
+  return p;
+}
+
+async function wellKnownIds(mailbox: string): Promise<Record<string, string>> {
+  const mb = mailbox.toLowerCase();
+  const c = wkCache.get(mb);
+  if (c && Date.now() < c.until) return c.ids;
+  const saved = await loadMailState<WkState>(wkKey(mb)).catch(() => null);
+  if (saved?.ids && Object.keys(saved.ids).length) {
+    wkCache.set(mb, { until: Date.now() + 3600_000, ids: saved.ids });
+    if (Date.now() - (saved.at || 0) > WK_REFRESH_MS) void refreshWellKnown(mb, saved.ids).catch(() => {});
+    return saved.ids;
+  }
+  return refreshWellKnown(mb, c?.ids || {});
 }
 
 type GFolder = { id: string; displayName: string; unreadItemCount?: number; totalItemCount?: number; childFolderCount?: number; parentFolderId?: string };
+
+/** Letzte erfolgreich geladene Ordnerliste (oberste Ebene) je Postfach. */
+type FolderState = { at: number; folders: MailFolder[] };
+const foldersKey = (mb: string) => `folders:${mb.toLowerCase()}`;
+
+/** Gespeicherter Stand der Ordnerliste — sofort verfügbar, auch wenn Microsoft gerade hängt. */
+export async function cachedFolders(mb: string): Promise<FolderState | null> {
+  const s = await loadMailState<FolderState>(foldersKey(mb)).catch(() => null);
+  return s && Array.isArray(s.folders) ? s : null;
+}
 
 export async function listFolders(mb: string, parentId?: string): Promise<MailFolder[]> {
   const path = parentId
@@ -174,13 +241,18 @@ export async function listFolders(mb: string, parentId?: string): Promise<MailFo
     : `${base(mb)}/mailFolders?$top=200`;
   const [r, wk] = await Promise.all([gjson<{ value: GFolder[] }>(path), wellKnownIds(mb)]);
   const order = (k: string) => { const i = (WELL_KNOWN as readonly string[]).indexOf(k); return i < 0 ? 99 : i; };
-  return (r.value || [])
+  const folders = (r.value || [])
     .map((f) => ({
       id: f.id, name: f.displayName, key: wk[f.id] || '', unread: f.unreadItemCount || 0, total: f.totalItemCount || 0,
       childCount: f.childFolderCount || 0, parentId: f.parentFolderId || '',
     }))
     .filter((f) => !/^(Conversation History|Unterhaltungsverlauf|Sync Issues|Synchronisierungsprobleme|Outbox|Postausgang|RSS|Junk-E-Mail)$/i.test(f.name) || f.key)
     .sort((a, b) => order(a.key) - order(b.key) || a.name.localeCompare(b.name, 'de'));
+  // Nur mit Posteingang speichern — fehlt er, war die Zuordnung lückenhaft (Störung)
+  if (!parentId && folders.some((f) => f.key === 'inbox')) {
+    void saveMailState<FolderState>(foldersKey(mb), { at: Date.now(), folders }).catch(() => {});
+  }
+  return folders;
 }
 
 // ───────────────────────── Listen & Suche ─────────────────────────
