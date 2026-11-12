@@ -132,6 +132,15 @@ mit Übernahme in Prozesse, Vorlagen/Textbausteine und Schreib-Assistent.
   zuletzt angeklickte Mail füllt den Leser. Inhalt (`&thread=0`) und Verlauf (`part=thread&cid=`)
   laden getrennt und parallel. Geöffnete Mails liegen im Client-Cache (60), die Nachbarn werden
   vorgeladen. Zeitlimits: Inhalt 12/20 s, Verlauf 6/9 s.
+- **Spiegel (`src/lib/mailbox/mirror.ts`):** Listen kommen aus der eigenen DB statt live von
+  Microsoft. Gespiegelt werden NUR Kopfdaten (Tabellen `mail_sync_msgs`, `mail_sync_folders`), je
+  Postfach einmal, Fenster 12 Monate, ca. 1–2 KB je Mail. Ordner werden beim ersten Anzeigen
+  registriert und per Graph-Delta abgeglichen (Takt in `instrumentation.ts` alle 30 s: Posteingang
+  nach 60 s, andere Ordner nach 3 min fällig; beim Anzeigen zusätzlich, wenn älter als 15 s).
+  Erstabgleich in Etappen (15 Seiten à 100 je Lauf). Ordner, die 30 Tage niemand ansieht, fliegen
+  raus. Lesen/Markieren/Verschieben schreiben sofort durch. Suche und Verlauf laufen live, mit dem
+  Spiegel als Ersatz bei Hängern. Inhalte und Anhänge kommen immer live. Diagnose:
+  `GET /api/admin/mailbox/mirror` (Admins). Notbremse: `MAIL_MIRROR=off` (dann alles live).
 - **Exchange-Ausfall:** Graph und Exchange wiederholen auch bei Verbindungsfehlern («fetch failed»;
   einzelne Microsoft-Frontends sind zeitweise unerreichbar). Der letzte vollständige Stand der
   Freigaben liegt in `mail_prefs` (`__state__:exchange_directory`) und springt ein, wenn Exchange

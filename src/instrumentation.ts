@@ -87,6 +87,25 @@ export async function register() {
   (agentTimer as unknown as { unref?: () => void }).unref?.();
   console.log(`[ki-agent] Hintergrund-Agent aktiv (alle ${AGENT_INTERVAL_MS / 60000} min).`);
 
+  // Mail-Spiegel (Faltin Mail): Kopfdaten der angesehenen Ordner per Graph-Delta abgleichen.
+  // Takt 30 s; fällig sind Posteingänge nach 60 s, andere Ordner nach 3 min (src/lib/mailbox/mirror.ts).
+  const { mirrorTick, mirrorEnabled } = await import('./lib/mailbox/mirror');
+  if (mirrorEnabled()) {
+    const runMirror = async () => {
+      try {
+        const r = await mirrorTick();
+        if (r.errors) console.warn(`[Mail-Spiegel] Takt: ${r.synced} abgeglichen, ${r.errors} Fehler`);
+      } catch (err) {
+        console.error('[Mail-Spiegel] Takt fehlgeschlagen:', err);
+      }
+    };
+    const mirrorStart = setTimeout(runMirror, 20_000);
+    (mirrorStart as unknown as { unref?: () => void }).unref?.();
+    const mirrorTimer = setInterval(runMirror, 30_000);
+    (mirrorTimer as unknown as { unref?: () => void }).unref?.();
+    console.log('[Mail-Spiegel] Abgleich aktiv (Takt 30 s).');
+  }
+
   // Release-Notes einmalig nach dem Start (= nach jedem Deploy, der Container
   // startet neu). Verzögert, damit der Server erst sauber hochgefahren ist.
   const releaseTimer = setTimeout(async () => {

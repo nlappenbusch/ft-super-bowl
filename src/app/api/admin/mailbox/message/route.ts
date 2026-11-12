@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { mailUser, fail, resolveMailboxes, HttpError } from '@/lib/mailbox/api';
 import { getMessage, conversationMessages, updateMessage, moveMessage } from '@/lib/mailbox/graph';
+import { mirrorThread, mirrorPatch, mirrorRemove } from '@/lib/mailbox/mirror';
+
+/** Verlauf live; hängt Microsoft, kommt er aus dem Spiegel. */
+const threadOf = (mb: string, cid: string) =>
+  conversationMessages(mb, cid, THREAD_TIMING).catch(() => mirrorThread(mb, cid).catch(() => []));
 
 export const dynamic = 'force-dynamic';
 
@@ -22,14 +27,14 @@ export async function GET(req: Request) {
     const cid = sp.get('cid') || '';
     if (sp.get('part') === 'thread') {
       if (!mb || !cid) throw new HttpError(400, 'mb und cid erforderlich');
-      const thread = await conversationMessages(mb.address, cid, THREAD_TIMING).catch(() => []);
+      const thread = await threadOf(mb.address, cid);
       return NextResponse.json({ success: true, thread });
     }
     if (!mb || !id) throw new HttpError(400, 'mb und id erforderlich');
     const withThread = sp.get('thread') !== '0';
-    const threadP = withThread && cid ? conversationMessages(mb.address, cid, THREAD_TIMING).catch(() => []) : null;
+    const threadP = withThread && cid ? threadOf(mb.address, cid) : null;
     const message = await getMessage(mb.address, id, DETAIL_TIMING);
-    const thread = !withThread ? [] : await (threadP ?? conversationMessages(mb.address, message.conversationId, THREAD_TIMING).catch(() => []));
+    const thread = !withThread ? [] : await (threadP ?? threadOf(mb.address, message.conversationId));
     return NextResponse.json({ success: true, message, thread });
   } catch (e) {
     return fail(e);
@@ -44,7 +49,9 @@ export async function PATCH(req: Request) {
     const [mb] = await resolveMailboxes(user, body.mb);
     if (!mb || !body.id) throw new HttpError(400, 'mb und id erforderlich');
     const ids: string[] = Array.isArray(body.ids) ? body.ids : [body.id];
-    await Promise.all(ids.map((id) => updateMessage(mb.address, id, { isRead: body.isRead, flagged: body.flagged, done: body.done })));
+    const patch = { isRead: body.isRead, flagged: body.flagged, done: body.done };
+    await Promise.all(ids.map((id) => updateMessage(mb.address, id, patch)));
+    await mirrorPatch(mb.address, ids, patch).catch((e) => console.warn('[Mail-Spiegel] patch:', (e as Error).message));
     return NextResponse.json({ success: true });
   } catch (e) {
     return fail(e);
@@ -60,6 +67,7 @@ export async function POST(req: Request) {
     if (!mb || !body.id) throw new HttpError(400, 'mb und id erforderlich');
     if (body.action !== 'move' || !body.destination) throw new HttpError(400, 'Unbekannte Aktion');
     const newId = await moveMessage(mb.address, body.id, String(body.destination));
+    await mirrorRemove(mb.address, body.id).catch((e) => console.warn('[Mail-Spiegel] remove:', (e as Error).message));
     return NextResponse.json({ success: true, id: newId });
   } catch (e) {
     return fail(e);

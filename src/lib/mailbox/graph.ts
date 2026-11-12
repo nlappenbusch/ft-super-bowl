@@ -59,10 +59,10 @@ export interface MailFolder {
   parentId: string;
 }
 
-const SUMMARY_SELECT = 'id,conversationId,subject,from,toRecipients,receivedDateTime,bodyPreview,isRead,flag,hasAttachments,importance,isDraft,parentFolderId,categories';
+export const SUMMARY_SELECT = 'id,conversationId,subject,from,toRecipients,receivedDateTime,bodyPreview,isRead,flag,hasAttachments,importance,isDraft,parentFolderId,categories';
 
 type GAddr = { emailAddress?: { name?: string; address?: string } };
-type GMsg = {
+export type GMsg = {
   id: string; conversationId?: string; subject?: string; from?: GAddr; sender?: GAddr;
   toRecipients?: GAddr[]; ccRecipients?: GAddr[]; bccRecipients?: GAddr[]; replyTo?: GAddr[];
   receivedDateTime?: string; sentDateTime?: string; bodyPreview?: string; isRead?: boolean;
@@ -73,7 +73,7 @@ type GMsg = {
 
 const addr = (a?: GAddr): MailAddress => ({ name: a?.emailAddress?.name || '', address: (a?.emailAddress?.address || '').toLowerCase() });
 
-function toSummary(mb: string, m: GMsg): MailSummary {
+export function toSummary(mb: string, m: GMsg): MailSummary {
   return {
     id: m.id,
     mailbox: mb,
@@ -114,7 +114,7 @@ export interface GraphCallOptions {
  * Schreibende nie, sonst könnte z. B. eine Mail doppelt rausgehen. Einzelne Postfächer hängen bei
  * Exchange gelegentlich 20–60 s; das Zeitlimit verhindert, dass dann die ganze Ansicht wartet.
  */
-async function gjson<T>(path: string, init?: RequestInit, o: GraphCallOptions = {}): Promise<T> {
+export async function gjson<T>(path: string, init?: RequestInit, o: GraphCallOptions = {}): Promise<T> {
   const idempotent = !init?.method || init.method.toUpperCase() === 'GET';
   const perTry = o.timeoutMs ?? (idempotent ? 15_000 : 60_000);
   const deadline = Date.now() + (o.deadlineMs ?? 30_000);
