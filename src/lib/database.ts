@@ -273,6 +273,31 @@ export function initDatabase() {
       progress TEXT NOT NULL DEFAULT ''
     );
 
+    -- Anfragen an Leistungsträger je Kalkulation (Entwurf → gesendet → Antwort/Angebot)
+    CREATE TABLE IF NOT EXISTS calc_inquiries (
+      id TEXT PRIMARY KEY,
+      calc_id TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT '',
+      supplier TEXT NOT NULL DEFAULT '',
+      category TEXT NOT NULL DEFAULT '',
+      item_id TEXT NOT NULL DEFAULT '',
+      to_addr TEXT NOT NULL DEFAULT '',
+      cc_addr TEXT NOT NULL DEFAULT '',
+      subject TEXT NOT NULL DEFAULT '',
+      body TEXT NOT NULL DEFAULT '',
+      internal_note TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'entwurf',
+      sent_at TEXT NOT NULL DEFAULT '',
+      sent_by TEXT NOT NULL DEFAULT '',
+      sent_from TEXT NOT NULL DEFAULT '',
+      send_error TEXT NOT NULL DEFAULT '',
+      history TEXT NOT NULL DEFAULT '[]',
+      sort INTEGER NOT NULL DEFAULT 0,
+      created_by TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX IF NOT EXISTS idx_calc_inquiries_calc ON calc_inquiries(calc_id);
+
     -- ==================== PRAESENTATIONS-BUILDER ====================
     CREATE TABLE IF NOT EXISTS presentations (
       id TEXT PRIMARY KEY,

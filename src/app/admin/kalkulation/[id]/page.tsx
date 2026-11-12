@@ -17,6 +17,7 @@ import {
 } from '@/components/admin/ui';
 import CalculationTable from '@/components/admin/CalculationTable';
 import TrafficsSearchPanel from '@/components/admin/TrafficsSearchPanel';
+import InquiriesPanel from '@/components/admin/InquiriesPanel';
 import {
   ArrowLeft, Plus, X, Save, Trash2, FileText, TrendingDown, TrendingUp, Minus, RefreshCw, AlertTriangle,
   Landmark, CalendarDays, Table2, ArrowDownToLine, FileDown, Receipt, Hotel, Search, ExternalLink,
@@ -744,6 +745,8 @@ export default function KalkulationEditorPage() {
               </Button>
             </div>
           </SectionCard>
+
+          {!isNew && <InquiriesPanel calcId={id} items={items} />}
         </div>
 
         {/* ─── Rechte Spalte: Kalkulation + Kurse ─── */}

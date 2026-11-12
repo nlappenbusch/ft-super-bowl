@@ -22,6 +22,7 @@ import { convertAmount } from './fxRates';
 import { hotelInfoLine } from './hotelLookup';
 import { normalizeSalutation, type CustomerDetail } from './customerStore';
 import type { OfferCalculationRow } from './calculationStore';
+import { inquiryStatusLabel, type CalcInquiry } from './inquiryModel';
 
 export type CalcPdfVariant = 'kunde' | 'intern';
 
@@ -56,10 +57,22 @@ function loadPublicImageB64(relPath: string): { data: string; format: 'PNG' | 'W
   }
 }
 
+/** jsPDF-Standardschrift kann nur WinAnsi — Pfeile & Co. ersetzen, Unbekanntes entfernen. */
+function winAnsi(s: string): string {
+  const extra = '€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ';
+  return (s || '')
+    .replace(/→/g, '->').replace(/←/g, '<-').replace(/↔/g, '<->').replace(/−/g, '-').replace(/[★☆]/g, '*')
+    .replace(/[✓✔]/g, 'x').replace(/\u00A0/g, ' ')
+    .split('')
+    .filter((ch) => ch.charCodeAt(0) <= 255 || extra.includes(ch))
+    .join('');
+}
+
 export function buildCalculationPdf(
   calc: OfferCalculationRow,
   variant: CalcPdfVariant,
-  customer?: CustomerDetail | null
+  customer?: CustomerDetail | null,
+  inquiries: CalcInquiry[] = []
 ): ArrayBuffer {
   const settings = getSettings();
   const company = settings.company;
@@ -507,6 +520,88 @@ export function buildCalculationPdf(
         doc.text(`${e.label}: ${fmtSignedMoney(e.amount, target)} p.P.`, left, y);
         y += 3.8;
       }
+    }
+  }
+
+  /* ─── Interne Variante: Anfragen an Leistungsträger (voller Text) ─── */
+  if (variant === 'intern' && inquiries.length > 0) {
+    doc.addPage();
+    let y = 18;
+    const left = leftMargin;
+    const width = right - left;
+    const space = (needed: number) => { if (y + needed > 280) { doc.addPage(); y = 18; } };
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(...NAVY);
+    doc.text(`Anfragen an Leistungsträger ${calc.calc_number || ''}`.trim(), left, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(200, 0, 0);
+    doc.text('NUR FÜR DEN INTERNEN GEBRAUCH', left, y + 5);
+    y += 12;
+    // Übersicht
+    doc.setTextColor(...MUTED);
+    doc.setFontSize(8);
+    for (const [n, inq] of inquiries.entries()) {
+      space(5);
+      const line = winAnsi(`${n + 1}. ${inq.supplier || inq.subject || 'Anfrage'} — ${inquiryStatusLabel(inq.status)}${inq.sent_at ? `, gesendet ${fmtDate(inq.sent_at)}` : ''}`);
+      doc.text(doc.splitTextToSize(line, width), left, y);
+      y += 4.2;
+    }
+    y += 4;
+    for (const [n, inq] of inquiries.entries()) {
+      space(30);
+      doc.setDrawColor(...STROKE);
+      doc.setLineWidth(0.3);
+      doc.line(left, y, right, y);
+      y += 6;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...ACCENT);
+      doc.text(winAnsi(`${n + 1}. ${inq.supplier || 'Anfrage'}`), left, y);
+      doc.setFontSize(8);
+      doc.setTextColor(...NAVY);
+      doc.text(winAnsi(inquiryStatusLabel(inq.status) + (inq.sent_at ? ` · gesendet ${fmtDate(inq.sent_at)}${inq.sent_by ? ` von ${inq.sent_by}` : ''}` : ' · noch nicht gesendet')), right, y, { align: 'right' });
+      y += 5;
+      const meta: Array<[string, string]> = [
+        ['An:', inq.to_addr || '—'],
+        ...(inq.cc_addr ? [['Kopie:', inq.cc_addr] as [string, string]] : []),
+        ['Betreff:', inq.subject || '—'],
+        ...(inq.sent_from ? [['Von:', inq.sent_from] as [string, string]] : []),
+      ];
+      doc.setFontSize(8);
+      for (const [k, v] of meta) {
+        const lines = doc.splitTextToSize(winAnsi(v), width - 20);
+        space(lines.length * 3.8 + 1);
+        doc.setFont('helvetica', 'bold');
+        doc.text(k, left, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(lines, left + 20, y);
+        y += lines.length * 3.8;
+      }
+      y += 2;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(30, 30, 30);
+      for (const raw of winAnsi(inq.body || '').split('\n')) {
+        const lines = raw.trim() ? doc.splitTextToSize(raw, width) : [''];
+        for (const l of lines) {
+          space(4);
+          doc.text(l, left, y);
+          y += 3.9;
+        }
+      }
+      if (inq.internal_note.trim()) {
+        y += 2;
+        const lines = doc.splitTextToSize(winAnsi(`Interne Notiz: ${inq.internal_note.trim()}`), width);
+        space(lines.length * 3.8);
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8);
+        doc.setTextColor(...MUTED);
+        doc.text(lines, left, y);
+        y += lines.length * 3.8;
+      }
+      y += 6;
     }
   }
 

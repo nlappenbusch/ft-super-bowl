@@ -19,6 +19,8 @@ import {
 import { computeTotals, computeGroupTotals } from './calcModel';
 import { getCurrentRates } from './fxRates';
 import { createInvoiceFromCalculation } from './offerInvoice';
+import { listInquiries, createInquiry, updateInquiry, getInquiry } from './inquiryStore';
+import { INQUIRY_STATUSES } from './inquiryModel';
 
 export const MCP_TOOL_GROUPS = [
   { id: 'content', label: 'Website-Inhalte', description: 'Events, Serien, Pakete, FAQs (nur lesen)' },
@@ -232,6 +234,50 @@ export const TOOLS: ToolDef[] = [
         notes: STR('Notiz'),
       },
       required: ['offer'], additionalProperties: false,
+    },
+  },
+  {
+    name: 'list_offer_inquiries', group: 'offers',
+    description: 'Anfragen an Leistungsträger (Hotel, Bus, Yacht …) einer Kalkulation auflisten — mit Status, Empfänger, Betreff und Text.',
+    inputSchema: {
+      type: 'object',
+      properties: { offer: STR('Kalkulations-ID oder Angebotsnummer') },
+      required: ['offer'], additionalProperties: false,
+    },
+  },
+  {
+    name: 'add_offer_inquiry', group: 'offers',
+    description:
+      'Anfrage an einen Leistungsträger als ENTWURF an eine Kalkulation hängen. Wird NICHT gesendet — ' +
+      'das macht ein Mensch per Klick in der Kalkulation. Interne Hinweise ins Feld internal_note, nicht in den Mailtext.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        offer: STR('Kalkulations-ID oder Angebotsnummer'),
+        supplier: STR('Leistungsträger, z. B. "Nikki Beach Marbella"'),
+        category: { type: 'string', enum: ['ticket', 'hotel', 'flug', 'transfer', 'extras'] },
+        to: STR('Empfänger, mehrere mit Komma'),
+        cc: STR('Kopie, optional'),
+        subject: STR('Betreff'),
+        body: STR('Mailtext (Klartext), so wie er gesendet werden soll'),
+        internal_note: STR('Interne Notiz, wird nie gesendet'),
+        status: { type: 'string', enum: INQUIRY_STATUSES.map((x) => x.id), description: 'Standard entwurf; für bereits außerhalb verschickte Anfragen z. B. gesendet' },
+      },
+      required: ['offer', 'subject', 'body'], additionalProperties: false,
+    },
+  },
+  {
+    name: 'update_offer_inquiry', group: 'offers',
+    description: 'Anfrage ändern oder Status nachführen (z. B. angebot, abgelehnt, erledigt). Nach dem Versand sind Text und Empfänger gesperrt.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        inquiry_id: STR('ID der Anfrage (aus list_offer_inquiries)'),
+        supplier: STR('Leistungsträger'), to: STR('Empfänger'), cc: STR('Kopie'),
+        subject: STR('Betreff'), body: STR('Mailtext'), internal_note: STR('Interne Notiz'),
+        status: { type: 'string', enum: INQUIRY_STATUSES.map((x) => x.id) },
+      },
+      required: ['inquiry_id'], additionalProperties: false,
     },
   },
   {
@@ -570,6 +616,33 @@ export async function callTool(name: string, args: Record<string, unknown>, ctx:
       const calc = await updateCalculation(existing.id, updates);
       if (!calc) return { error: 'Aktualisierung fehlgeschlagen.' };
       return offerSummary(calc, ctx);
+    }
+    case 'list_offer_inquiries': {
+      const c = await resolveOffer(String(args.offer || ''));
+      if (!c) return { error: 'Angebot nicht gefunden.' };
+      return (await listInquiries(c.id)).map((i) => ({
+        id: i.id, supplier: i.supplier, category: i.category || null, status: i.status,
+        to: i.to_addr, cc: i.cc_addr || null, subject: i.subject, body: i.body, internal_note: i.internal_note || null,
+        sent_at: i.sent_at || null, sent_by: i.sent_by || null,
+      }));
+    }
+    case 'add_offer_inquiry': {
+      const c = await resolveOffer(String(args.offer || ''));
+      if (!c) return { error: 'Angebot nicht gefunden.' };
+      const inq = await createInquiry(c.id, {
+        supplier: args.supplier, category: args.category, to_addr: args.to, cc_addr: args.cc,
+        subject: args.subject, body: args.body, internal_note: args.internal_note, status: args.status,
+      }, ctx.actor);
+      return inq ? { id: inq.id, status: inq.status, admin_url: `${ctx.base}/admin/kalkulation/${c.id}` } : { error: 'Anlegen fehlgeschlagen.' };
+    }
+    case 'update_offer_inquiry': {
+      const existing = await getInquiry(String(args.inquiry_id || ''));
+      if (!existing) return { error: 'Anfrage nicht gefunden.' };
+      const map: Record<string, string> = { supplier: 'supplier', to: 'to_addr', cc: 'cc_addr', subject: 'subject', body: 'body', internal_note: 'internal_note', status: 'status' };
+      const input: Record<string, unknown> = {};
+      for (const [from, to] of Object.entries(map)) if (from in args) input[to] = args[from];
+      const inq = await updateInquiry(existing.id, input, ctx.actor);
+      return inq ? { id: inq.id, status: inq.status, locked: !!inq.sent_at } : { error: 'Aktualisierung fehlgeschlagen.' };
     }
     case 'create_invoice_from_offer': {
       const existing = await resolveOffer(String(args.offer || ''));
