@@ -2,12 +2,15 @@ import { NextResponse } from 'next/server';
 import { OAUTH_STATE_COOKIE, OAUTH_RETURN_COOKIE, isSecureRequest, safeReturnPath } from '@/lib/auth';
 import { siteConfig } from '@/lib/siteConfig';
 import { getGraphCredentials, getLoginBaseUrl } from '@/lib/graphMailer';
+import { isMailHost } from '@/lib/mailHost';
 
 function resolveBase(req: Request): string {
-  const admin = getLoginBaseUrl();
-  if (admin) return admin;
   const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
   const proto = req.headers.get('x-forwarded-proto') || 'https';
+  // Mail-Client (mail.faltintravel.com): Login kehrt auf denselben Host zurück (eigenes Cookie).
+  if (host && isMailHost(host)) return `${proto}://${host}`.replace(/\/+$/, '');
+  const admin = getLoginBaseUrl();
+  if (admin) return admin;
   if (host) return `${proto}://${host}`.replace(/\/+$/, '');
   return (process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url).replace(/\/+$/, '');
 }

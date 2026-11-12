@@ -6,12 +6,15 @@ import {
 } from '@/lib/auth';
 import { siteConfig } from '@/lib/siteConfig';
 import { getGraphCredentials, getLoginBaseUrl } from '@/lib/graphMailer';
+import { isMailHost } from '@/lib/mailHost';
 
 function resolveBase(req: Request): string {
-  const admin = getLoginBaseUrl();
-  if (admin) return admin;
   const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
   const proto = req.headers.get('x-forwarded-proto') || 'https';
+  // Mail-Client (mail.faltintravel.com): Login kehrt auf denselben Host zurück (eigenes Cookie).
+  if (host && isMailHost(host)) return `${proto}://${host}`.replace(/\/+$/, '');
+  const admin = getLoginBaseUrl();
+  if (admin) return admin;
   if (host) return `${proto}://${host}`.replace(/\/+$/, '');
   return (process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url).replace(/\/+$/, '');
 }
@@ -65,7 +68,7 @@ export async function GET(req: Request) {
   }
 
   const token = await createSessionToken({ sub, name, email, src: 'microsoft' });
-  const target = safeReturnPath(jar.get(OAUTH_RETURN_COOKIE)?.value) || DEFAULT_AFTER_LOGIN;
+  const target = safeReturnPath(jar.get(OAUTH_RETURN_COOKIE)?.value) || (isMailHost(new URL(base).host) ? '/mail' : DEFAULT_AFTER_LOGIN);
   const res = NextResponse.redirect(`${base}${target}`);
   res.cookies.set(SESSION_COOKIE, token, { httpOnly: true, sameSite: 'lax', secure: isSecureRequest(req), path: '/', maxAge: SESSION_MAX_AGE });
   res.cookies.set(OAUTH_STATE_COOKIE, '', { path: '/', maxAge: 0 });
