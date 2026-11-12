@@ -16,13 +16,14 @@ import {
   COLORS, SectionCard, Card, Spinner, Button, Field, TextInput, TextArea, SelectInput, Badge, PageHeader,
 } from '@/components/admin/ui';
 import CalculationTable from '@/components/admin/CalculationTable';
+import TrafficsSearchPanel from '@/components/admin/TrafficsSearchPanel';
 import {
   ArrowLeft, Plus, X, Save, Trash2, FileText, TrendingDown, TrendingUp, Minus, RefreshCw, AlertTriangle,
   Landmark, CalendarDays, Table2, ArrowDownToLine, FileDown, Receipt, Hotel, Search, ExternalLink,
 } from 'lucide-react';
 import {
-  CALC_CATEGORIES, EXTRAS_QUICK, DEFAULT_EXTRAS, computeTotals, compareEk, itemEk, fmtMoney, fmtPct,
-  fmtPeriod, fmtPeriodShort, buildIncludedServices, fmtSignedMoney,
+  CALC_CATEGORIES, EXTRAS_QUICK, DEFAULT_EXTRAS, computeTotals, computeGroupTotals, compareEk, itemEk, fmtMoney, fmtPct,
+  fmtPeriod, fmtPeriodShort, buildIncludedServices, fmtSignedMoney, normPax, MAX_PAX,
   type CalcItem, type MarginMode, type OfferExtra,
 } from '@/lib/calcModel';
 import { CALC_CURRENCIES, convertAmount, type CalcCurrency, type RatesSnapshot } from '@/lib/fxRates';
@@ -38,8 +39,11 @@ function hotelLine(h: HotelInfo): string {
   return addr ? `${h.name} — ${addr}` : h.name;
 }
 
-function newItem(category: string, currency: CalcCurrency): CalcItem {
-  return { id: crypto.randomUUID(), category, description: '', room_category: '', currency, amount: 0, qty: 1 };
+function newItem(category: string, currency: CalcCurrency, serviceFrom = '', serviceTo = ''): CalcItem {
+  return {
+    id: crypto.randomUUID(), category, description: '', room_category: '', currency, amount: 0, qty: 1,
+    service_from: serviceFrom, service_to: serviceTo,
+  };
 }
 
 const MARGIN_MODE_LABEL: Record<MarginMode, string> = {
@@ -66,6 +70,7 @@ export default function KalkulationEditorPage() {
   const [bookingId, setBookingId] = useState('');
   const [travelStart, setTravelStart] = useState('');
   const [travelEnd, setTravelEnd] = useState('');
+  const [pax, setPax] = useState(1);
   const [target, setTarget] = useState<CalcCurrency>('EUR');
   const [marginMode, setMarginMode] = useState<MarginMode>('percent');
   const [marginValue, setMarginValue] = useState(10);
@@ -132,6 +137,7 @@ export default function KalkulationEditorPage() {
         setBookingId(d.booking_id || '');
         setTravelStart(d.travel_start || '');
         setTravelEnd(d.travel_end || '');
+        setPax(normPax(d.pax));
         setTarget(d.target_currency || 'EUR');
         setMarginMode(d.margin_mode || 'percent');
         setMarginValue(Number(d.margin_value) || 0);
@@ -169,10 +175,21 @@ export default function KalkulationEditorPage() {
   const period = fmtPeriod(travelStart, travelEnd);
   const periodShort = fmtPeriodShort(travelStart, travelEnd);
   const negativeMargin = !!totals && totals.marginAmount < -0.005;
+  const group = useMemo(() => computeGroupTotals(totals, pax), [totals, pax]);
 
   /* ─── Positionen ────────────────────────────────────────────────────── */
 
-  const addItem = (category: string) => setItems((prev) => [...prev, newItem(category, target)]);
+  // Neue Hotel-Positionen übernehmen den Reisezeitraum als Leistungsdatum (Check-in/-out).
+  const addItem = (category: string) => setItems((prev) => [
+    ...prev,
+    category === 'hotel' ? newItem(category, target, travelStart, travelEnd) : newItem(category, target),
+  ]);
+  /** Positionen aus der Traffics-Suche anhängen (Hoteldaten optional übernehmen). */
+  const adoptItems = (adopted: CalcItem[], hotel?: HotelInfo | null) => {
+    setItems((prev) => [...prev, ...adopted]);
+    if (hotel && !hotelInfo) setHotelInfo(hotel);
+    setNotice(`${adopted.length} ${adopted.length === 1 ? 'Position' : 'Positionen'} aus der DERTOUR-Suche übernommen — bitte prüfen und speichern.`);
+  };
   const removeItem = (itemId: string) => setItems((prev) => prev.filter((i) => i.id !== itemId));
   const patchItem = (itemId: string, patch: Partial<CalcItem>) =>
     setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, ...patch } : i)));
@@ -209,7 +226,7 @@ export default function KalkulationEditorPage() {
     const payload = {
       title: effectiveTitle,
       customer_id: customerId || null, booking_id: bookingId || null,
-      travel_start: travelStart || '', travel_end: travelEnd || '',
+      travel_start: travelStart || '', travel_end: travelEnd || '', pax,
       target_currency: target, margin_mode: marginMode, margin_value: marginValue,
       items, offer_extras: offerExtras, status, notes, hotel_info: hotelInfo,
     };
@@ -282,7 +299,7 @@ export default function KalkulationEditorPage() {
   const openInvoiceDialog = () => {
     setInvServices(buildIncludedServices(items));
     const b = bookings.find((x) => x.id === bookingId);
-    setInvPersons(Math.max(1, Number(b?.number_of_persons) || 1));
+    setInvPersons(pax > 1 ? pax : Math.max(1, Number(b?.number_of_persons) || 1));
     setInvExtraIds([]);
     setInvoiceOpen(true);
   };
@@ -436,6 +453,13 @@ export default function KalkulationEditorPage() {
                   ))}
                 </SelectInput>
               </Field>
+              <Field label="Teilnehmer (Pax)" hint="Alle Positionen gelten pro Person — die Gesamtsummen rechnen × Pax.">
+                <TextInput
+                  type="number" min={1} max={MAX_PAX} step={1}
+                  value={pax}
+                  onChange={(e) => setPax(normPax(e.target.value))}
+                />
+              </Field>
               <Field label="Status">
                 <SelectInput value={status} onChange={(e) => setStatus(e.target.value as CalcStatus)}>
                   <option value="entwurf">Entwurf</option>
@@ -560,6 +584,35 @@ export default function KalkulationEditorPage() {
                                         onChange={(e) => patchItem(item.id, { room_category: e.target.value })}
                                       />
                                     )}
+                                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                      <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#9ca3af' }}>Leistungsdatum</span>
+                                      <input
+                                        type="date" title="Leistungsdatum von"
+                                        className={`${cellInput} w-auto py-1 text-xs`}
+                                        style={inputStyle}
+                                        value={item.service_from || ''}
+                                        onChange={(e) => patchItem(item.id, { service_from: e.target.value })}
+                                      />
+                                      <span className="text-xs" style={{ color: '#9ca3af' }}>–</span>
+                                      <input
+                                        type="date" title="Leistungsdatum bis"
+                                        className={`${cellInput} w-auto py-1 text-xs`}
+                                        style={inputStyle}
+                                        value={item.service_to || ''}
+                                        min={item.service_from || undefined}
+                                        onChange={(e) => patchItem(item.id, { service_to: e.target.value })}
+                                      />
+                                      {(travelStart || travelEnd) && !item.service_from && !item.service_to && (
+                                        <button
+                                          onClick={() => patchItem(item.id, { service_from: travelStart, service_to: travelEnd })}
+                                          className="text-[11px] font-semibold hover:underline"
+                                          style={{ color: COLORS.accent }}
+                                          title="Reisezeitraum als Leistungsdatum übernehmen"
+                                        >
+                                          = Reisezeitraum
+                                        </button>
+                                      )}
+                                    </div>
                                   </td>
                                   <td className="px-2 py-2">
                                     <input
@@ -615,6 +668,13 @@ export default function KalkulationEditorPage() {
             </div>
           </SectionCard>
 
+          <TrafficsSearchPanel
+            travelStart={travelStart}
+            travelEnd={travelEnd}
+            pax={pax}
+            onAdopt={adoptItems}
+          />
+
           <SectionCard
             title="Kalkulationstabelle"
             description={`Alle Positionen umgerechnet in ${target}, pro Person${snapshot ? ` — Kursbasis EZB ${snapshot.date}` : current ? ` — aktuelle Kurse (${current.date}), werden beim Speichern festgeschrieben` : ''}.`}
@@ -627,7 +687,7 @@ export default function KalkulationEditorPage() {
               </a>
             ) : undefined}
           >
-            <CalculationTable items={items} target={target} rates={baseRates} marginMode={marginMode} marginValue={marginValue} />
+            <CalculationTable items={items} target={target} rates={baseRates} marginMode={marginMode} marginValue={marginValue} pax={pax} />
           </SectionCard>
 
           <SectionCard
@@ -688,7 +748,7 @@ export default function KalkulationEditorPage() {
 
         {/* ─── Rechte Spalte: Kalkulation + Kurse ─── */}
         <div className="h-fit space-y-6 xl:sticky xl:top-20">
-          <SectionCard title="Kalkulation" description="Zielwährung, Marge/VK und Summen — alles pro Person.">
+          <SectionCard title="Kalkulation" description="Zielwährung, Marge/VK und Summen — pro Person und gesamt (× Pax).">
             <div className="space-y-4">
               <Field label="Zielwährung" hint="Die gesamte Kalkulation wird in diese Währung umgerechnet.">
                 <SelectInput value={target} onChange={(e) => setTarget(e.target.value as CalcCurrency)}>
@@ -755,6 +815,23 @@ export default function KalkulationEditorPage() {
                     <span className="text-sm font-bold" style={{ color: COLORS.navy }}>VK gesamt</span>
                     <span className="text-xl font-extrabold tabular-nums" style={{ color: COLORS.accent }}>{fmtMoney(totals.vkTarget, target)}</span>
                   </div>
+                  {group && group.pax > 1 && (
+                    <div className="mt-3 border-t pt-2" style={{ borderColor: COLORS.stroke }}>
+                      <div className="mb-1 text-[10px] font-bold uppercase tracking-wider" style={{ color: COLORS.textMuted }}>Gesamt · {group.pax} Pax</div>
+                      <div className="flex items-baseline justify-between text-sm">
+                        <span style={{ color: COLORS.textMuted }}>EK gesamt</span>
+                        <span className="font-bold tabular-nums" style={{ color: COLORS.navy }}>{fmtMoney(group.ekTotal, target)}</span>
+                      </div>
+                      <div className="mt-1 flex items-baseline justify-between text-sm">
+                        <span style={{ color: negativeMargin ? COLORS.danger : COLORS.textMuted }}>Marge gesamt</span>
+                        <span className="font-bold tabular-nums" style={{ color: negativeMargin ? COLORS.danger : COLORS.navy }}>{fmtMoney(group.marginTotal, target)}</span>
+                      </div>
+                      <div className="mt-1 flex items-baseline justify-between">
+                        <span className="text-sm font-bold" style={{ color: COLORS.navy }}>VK gesamt</span>
+                        <span className="text-lg font-extrabold tabular-nums" style={{ color: COLORS.accent }}>{fmtMoney(group.vkTotal, target)}</span>
+                      </div>
+                    </div>
+                  )}
                   {totals.byCurrency.length > 0 && (
                     <div className="mt-3 space-y-1 border-t pt-2 text-xs" style={{ borderColor: COLORS.stroke, color: COLORS.textMuted }}>
                       {totals.byCurrency.map((bc) => (

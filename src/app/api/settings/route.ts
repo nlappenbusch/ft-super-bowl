@@ -8,7 +8,9 @@ export async function GET() {
   const denied = await requireAdminSession();
   if (denied) return denied;
   try {
-    const settings = getSettings();
+    // Traffics-authKey nie an den Browser geben — Pflege über /api/admin/traffics/config.
+    const { traffics: _traffics, ...settings } = getSettings();
+    void _traffics;
     return NextResponse.json({ success: true, data: settings });
   } catch (error) {
     return NextResponse.json(
@@ -23,7 +25,9 @@ export async function PATCH(request: NextRequest) {
   if (denied) return denied;
   try {
     const body = await request.json();
-    const updated = saveSettings(body);
+    if (body && typeof body === 'object') delete body.traffics; // nur über /api/admin/traffics/config
+    const { traffics: _traffics, ...updated } = saveSettings(body);
+    void _traffics;
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
     return NextResponse.json(

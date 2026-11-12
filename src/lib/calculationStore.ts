@@ -10,7 +10,7 @@
 import './database';
 import { dbGet, dbAll, dbRun } from './dbq';
 import { isCalcCurrency, type CalcCurrency, type RatesSnapshot } from './fxRates';
-import { sanitizeItems, sanitizeExtras, type CalcItem, type MarginMode, type OfferExtra } from './calcModel';
+import { sanitizeItems, sanitizeExtras, normPax, type CalcItem, type MarginMode, type OfferExtra } from './calcModel';
 import type { HotelInfo } from './hotelLookup';
 
 export type CalcStatus = 'entwurf' | 'aktiv' | 'archiviert';
@@ -26,6 +26,8 @@ export interface OfferCalculation {
   /** Reisezeitraum (ISO-Datum "YYYY-MM-DD" oder ''). */
   travel_start: string;
   travel_end: string;
+  /** Teilnehmerzahl (Pax) — Basis der Gesamtsummen (Werte p.P. × Pax). */
+  pax: number;
   target_currency: CalcCurrency;
   margin_mode: MarginMode;
   margin_value: number;
@@ -59,6 +61,7 @@ interface DbRow {
   booking_id: string | null;
   travel_start: string | null;
   travel_end: string | null;
+  pax?: number | null;
   target_currency: string;
   margin_mode: string;
   margin_value: number;
@@ -132,6 +135,7 @@ function parseRow(r: DbRow): OfferCalculationRow {
     booking_id: r.booking_id || null,
     travel_start: r.travel_start || '',
     travel_end: r.travel_end || '',
+    pax: normPax(r.pax ?? 1),
     target_currency: isCalcCurrency(r.target_currency) ? r.target_currency : 'EUR',
     margin_mode: normMarginMode(r.margin_mode),
     margin_value: normMarginValue(r.margin_value),
@@ -180,6 +184,7 @@ export interface CalculationInput {
   booking_id?: unknown;
   travel_start?: unknown;
   travel_end?: unknown;
+  pax?: unknown;
   target_currency?: unknown;
   margin_mode?: unknown;
   margin_value?: unknown;
@@ -222,9 +227,9 @@ export async function createCalculation(
   await dbRun(
     `INSERT INTO offer_calculations (
       id, calc_number, created_at, updated_at, title, customer_id, booking_id,
-      travel_start, travel_end,
+      travel_start, travel_end, pax,
       target_currency, margin_mode, margin_value, items, offer_extras, rates_snapshot, status, notes, created_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       await nextCalcNumber(),
@@ -235,6 +240,7 @@ export async function createCalculation(
       normIdRef(input.booking_id),
       normDate(input.travel_start),
       normDate(input.travel_end),
+      normPax(input.pax),
       target,
       normMarginMode(input.margin_mode),
       normMarginValue(input.margin_value),
@@ -264,6 +270,7 @@ export async function updateCalculation(id: string, updates: CalculationUpdate):
   if ('booking_id' in updates) { sets.push('booking_id = ?'); vals.push(normIdRef(updates.booking_id)); }
   if ('travel_start' in updates) { sets.push('travel_start = ?'); vals.push(normDate(updates.travel_start)); }
   if ('travel_end' in updates) { sets.push('travel_end = ?'); vals.push(normDate(updates.travel_end)); }
+  if ('pax' in updates) { sets.push('pax = ?'); vals.push(normPax(updates.pax)); }
   if ('target_currency' in updates) { sets.push('target_currency = ?'); vals.push(target); }
   if ('margin_mode' in updates) { sets.push('margin_mode = ?'); vals.push(normMarginMode(updates.margin_mode)); }
   if ('margin_value' in updates) { sets.push('margin_value = ?'); vals.push(normMarginValue(updates.margin_value)); }

@@ -8,21 +8,24 @@
  */
 import { COLORS } from '@/components/admin/ui';
 import {
-  CALC_CATEGORIES, computeTotals, itemEk, fmtMoney, categoryLabel,
+  CALC_CATEGORIES, computeTotals, computeGroupTotals, itemEk, fmtMoney, categoryLabel, fmtServiceDate,
   type CalcItem, type MarginMode,
 } from '@/lib/calcModel';
 import { convertAmount, type CalcCurrency, type RatesSnapshot } from '@/lib/fxRates';
 
 export default function CalculationTable({
-  items, target, rates, marginMode, marginValue,
+  items, target, rates, marginMode, marginValue, pax = 1,
 }: {
   items: CalcItem[];
   target: CalcCurrency;
   rates: RatesSnapshot | null;
   marginMode: MarginMode;
   marginValue: number;
+  /** Teilnehmerzahl — bei > 1 zusätzlich Gesamtsummen (× Pax). */
+  pax?: number;
 }) {
   const totals = computeTotals(items, target, rates, marginMode, marginValue);
+  const group = computeGroupTotals(totals, pax);
 
   // Kategorien in Definitions-Reihenfolge + unbekannte Alt-Kategorien hinten anstellen.
   const knownIds = CALC_CATEGORIES.map((c) => c.id as string);
@@ -68,6 +71,11 @@ export default function CalculationTable({
                       {(item.room_category || '').trim() && (
                         <span className="block text-xs" style={{ color: COLORS.textMuted }}>{item.room_category}</span>
                       )}
+                      {fmtServiceDate(item.service_from, item.service_to) && (
+                        <span className="block text-xs tabular-nums" style={{ color: COLORS.textMuted }}>
+                          Leistungsdatum {fmtServiceDate(item.service_from, item.service_to)}
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-center tabular-nums text-gray-600">{item.qty}×</td>
                     <td className={cellNum} style={{ color: COLORS.navy }}>{fmtMoney(item.amount, item.currency)}</td>
@@ -108,6 +116,22 @@ export default function CalculationTable({
                 <td colSpan={4} className="px-3 pb-3 pt-1 text-right text-base font-extrabold" style={{ color: COLORS.navy }}>VK gesamt (pro Person)</td>
                 <td className="px-3 pb-3 pt-1 text-right text-base font-extrabold tabular-nums" style={{ color: COLORS.accent }}>{fmtMoney(totals.vkTarget, target)}</td>
               </tr>
+              {group && group.pax > 1 && (
+                <>
+                  <tr className="border-t" style={{ borderColor: COLORS.stroke, background: COLORS.surfaceMuted }}>
+                    <td colSpan={4} className="px-3 pb-1 pt-2.5 text-right text-sm font-semibold" style={{ color: COLORS.navy }}>EK gesamt ({group.pax} Pax)</td>
+                    <td className="px-3 pb-1 pt-2.5 text-right text-sm font-semibold tabular-nums" style={{ color: COLORS.navy }}>{fmtMoney(group.ekTotal, target)}</td>
+                  </tr>
+                  <tr style={{ background: COLORS.surfaceMuted }}>
+                    <td colSpan={4} className="px-3 py-1 text-right text-sm" style={{ color: group.marginTotal < 0 ? COLORS.danger : COLORS.textMuted }}>Marge gesamt ({group.pax} Pax)</td>
+                    <td className="px-3 py-1 text-right text-sm font-semibold tabular-nums" style={{ color: group.marginTotal < 0 ? COLORS.danger : COLORS.textMuted }}>{fmtMoney(group.marginTotal, target)}</td>
+                  </tr>
+                  <tr style={{ background: COLORS.surfaceMuted }}>
+                    <td colSpan={4} className="px-3 pb-3 pt-1 text-right text-base font-extrabold" style={{ color: COLORS.navy }}>VK gesamt ({group.pax} Pax)</td>
+                    <td className="px-3 pb-3 pt-1 text-right text-base font-extrabold tabular-nums" style={{ color: COLORS.accent }}>{fmtMoney(group.vkTotal, target)}</td>
+                  </tr>
+                </>
+              )}
             </>
           ) : (
             <tr className="border-t" style={{ borderColor: COLORS.stroke }}>

@@ -63,6 +63,29 @@ export interface CalcItem {
   amount: number;
   /** Menge pro Person (z. B. 3 Hotelnächte), Default 1. */
   qty: number;
+  /** Leistungsdatum von (ISO "YYYY-MM-DD" oder ''), z. B. Check-in bzw. Flugtag. */
+  service_from?: string;
+  /** Leistungsdatum bis (ISO "YYYY-MM-DD" oder ''), z. B. Check-out bzw. Rückflug. */
+  service_to?: string;
+  /** Herkunft der Position, z. B. "traffics:DER" (nur Info, erscheint nicht auf dem Angebot). */
+  source?: string;
+}
+
+/** ISO-Datum "YYYY-MM-DD" oder leerer String. */
+export function normIsoDate(v: unknown): string {
+  const s = typeof v === 'string' ? v.trim() : '';
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : '';
+}
+
+/* ─── Teilnehmer (Pax) ───────────────────────────────────────────────────── */
+
+export const MAX_PAX = 10_000;
+
+/** Teilnehmerzahl absichern: ganze Zahl 1…10 000, Default 1. */
+export function normPax(v: unknown): number {
+  const n = Math.round(Number(v));
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.min(n, MAX_PAX);
 }
 
 /**
@@ -92,6 +115,9 @@ export function sanitizeItems(raw: unknown, fallbackCurrency: CalcCurrency = 'CH
       currency: isCalcCurrency(it.currency) ? it.currency : fallbackCurrency,
       amount: Math.max(0, Number(it.amount) || 0),
       qty: Math.max(0, Number(it.qty) || 0) || 1,
+      service_from: normIsoDate(it.service_from),
+      service_to: normIsoDate(it.service_to),
+      ...(typeof it.source === 'string' && it.source.trim() ? { source: it.source.trim().slice(0, 80) } : {}),
     }));
 }
 
@@ -179,6 +205,25 @@ export function computeTotals(
   };
 }
 
+/** Gruppensummen: Pro-Person-Werte × Teilnehmerzahl. */
+export interface GroupTotals {
+  pax: number;
+  ekTotal: number;
+  marginTotal: number;
+  vkTotal: number;
+}
+
+export function computeGroupTotals(totals: CalcTotals | null, pax: unknown): GroupTotals | null {
+  if (!totals) return null;
+  const n = normPax(pax);
+  return {
+    pax: n,
+    ekTotal: totals.ekTarget * n,
+    marginTotal: totals.marginAmount * n,
+    vkTotal: totals.vkTarget * n,
+  };
+}
+
 /* ─── FX-Vergleich (Snapshot vs. aktuell) ────────────────────────────────── */
 
 export interface FxComparison {
@@ -251,7 +296,8 @@ export function buildIncludedServices(items: CalcItem[]): string {
     for (const item of items.filter((i) => i.category === catId && (i.description.trim() || i.amount > 0))) {
       const qty = item.qty > 1 ? `${item.qty}× ` : '';
       const room = (item.room_category || '').trim() ? ` — ${item.room_category}` : '';
-      lines.push(`Inkl. ${qty}${item.description.trim() || categoryLabel(catId)}${room}`);
+      const date = fmtServiceDate(item.service_from, item.service_to);
+      lines.push(`Inkl. ${qty}${item.description.trim() || categoryLabel(catId)}${room}${date ? ` (${date})` : ''}`);
     }
   }
   return lines.join('\n');
@@ -324,4 +370,22 @@ export function fmtPeriodShort(startIso: string, endIso: string): string | null 
   const n = nightsBetween(startIso, endIso);
   const nights = n === null ? '' : ` (${n} ${n === 1 ? 'Nacht' : 'Nächte'})`;
   return `${dm(a)}–${dm(b)}${b.getFullYear()}${nights}`;
+}
+
+/**
+ * Leistungsdatum einer Position kompakt: "10.05.2027", "10.05.–13.05.2027"
+ * bzw. "28.12.2026–02.01.2027" über den Jahreswechsel. '' ohne Datum.
+ */
+export function fmtServiceDate(fromIso?: string, toIso?: string): string {
+  const a = parseIsoDate(fromIso || '');
+  const b = parseIsoDate(toIso || '');
+  const dmy = (d: Date) => `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+  const dm = (d: Date) => `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.`;
+  if (a && b) {
+    if (fromIso === toIso) return dmy(a);
+    return a.getFullYear() === b.getFullYear() ? `${dm(a)}–${dmy(b)}` : `${dmy(a)}–${dmy(b)}`;
+  }
+  if (a) return dmy(a);
+  if (b) return `bis ${dmy(b)}`;
+  return '';
 }
