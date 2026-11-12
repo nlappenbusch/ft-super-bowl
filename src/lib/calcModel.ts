@@ -69,6 +69,114 @@ export interface CalcItem {
   service_to?: string;
   /** Herkunft der Position, z. B. "traffics:DER" (nur Info, erscheint nicht auf dem Angebot). */
   source?: string;
+
+  /* ── Programm/Ablauf (alle optional) ── */
+  /** Uhrzeit von "HH:MM" (z. B. Abholung, Beginn). */
+  time_from?: string;
+  /** Uhrzeit bis "HH:MM". */
+  time_to?: string;
+
+  /* ── Anbieter (intern, nie im Kunden-PDF) ── */
+  supplier_name?: string;
+  /** E-Mail und/oder Telefon */
+  supplier_contact?: string;
+  /** Angebots-/Buchungscode beim Anbieter */
+  supplier_ref?: string;
+  /** Verbindlichkeit des EK: vorgabe | listenpreis | richtwert | annahme | angebot | bestaetigt */
+  price_status?: PriceStatus | '';
+  /** Quelle/Beleg (Website, Angebot) */
+  source_url?: string;
+
+  /* ── Transfer/Strecke ── */
+  route_from?: string;
+  route_to?: string;
+  distance_km?: number;
+  duration_min?: number;
+  /** z. B. "VIP-Reisebus 50 Plätze" */
+  vehicle?: string;
+  /** Treffpunkt/Abholort */
+  pickup_point?: string;
+}
+
+/* ─── Preisstatus (Verbindlichkeit des EK) ───────────────────────────────── */
+
+export const PRICE_STATUSES = [
+  { id: 'vorgabe', label: 'Vorgabe' },
+  { id: 'listenpreis', label: 'Listenpreis' },
+  { id: 'richtwert', label: 'Richtwert' },
+  { id: 'annahme', label: 'Annahme' },
+  { id: 'angebot', label: 'Angebot' },
+  { id: 'bestaetigt', label: 'Bestätigt' },
+] as const;
+
+export type PriceStatus = (typeof PRICE_STATUSES)[number]['id'];
+
+export function priceStatusLabel(s?: string): string {
+  return PRICE_STATUSES.find((p) => p.id === s)?.label || '';
+}
+
+/** "HH:MM" (auch "9:5", "0935", "9.35") → "09:35"; sonst ''. */
+export function normTime(v: unknown): string {
+  const s = typeof v === 'string' ? v.trim() : '';
+  const m = s.match(/^(\d{1,2})[:.h]?(\d{2})$/);
+  if (!m) return '';
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  return h <= 23 && min <= 59 ? `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}` : '';
+}
+
+function optStr(v: unknown, max: number): string | undefined {
+  const s = typeof v === 'string' ? v.trim().slice(0, max) : '';
+  return s || undefined;
+}
+
+function optNum(v: unknown, max: number): number | undefined {
+  if (v === '' || v === null || v === undefined) return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? Math.min(Math.round(n * 10) / 10, max) : undefined;
+}
+
+/** Nur gesetzte Detailfelder übernehmen (hält das Items-JSON schlank). */
+function sanitizeDetails(it: Record<string, unknown>): Partial<CalcItem> {
+  const ps = PRICE_STATUSES.some((p) => p.id === it.price_status) ? (it.price_status as PriceStatus) : undefined;
+  const out: Partial<CalcItem> = {
+    time_from: normTime(it.time_from) || undefined,
+    time_to: normTime(it.time_to) || undefined,
+    supplier_name: optStr(it.supplier_name, 160),
+    supplier_contact: optStr(it.supplier_contact, 200),
+    supplier_ref: optStr(it.supplier_ref, 200),
+    price_status: ps,
+    source_url: optStr(it.source_url, 500),
+    route_from: optStr(it.route_from, 160),
+    route_to: optStr(it.route_to, 160),
+    distance_km: optNum(it.distance_km, 100_000),
+    duration_min: optNum(it.duration_min, 100_000),
+    vehicle: optStr(it.vehicle, 160),
+    pickup_point: optStr(it.pickup_point, 200),
+  };
+  for (const k of Object.keys(out) as Array<keyof CalcItem>) if (out[k] === undefined) delete out[k];
+  return out;
+}
+
+/** Dauer in Minuten → "2 h 15 min" bzw. "45 min". */
+export function fmtDuration(min?: number): string {
+  if (!min || min <= 0) return '';
+  const h = Math.floor(min / 60);
+  const m = Math.round(min % 60);
+  return h ? `${h} h${m ? ` ${m} min` : ''}` : `${m} min`;
+}
+
+/** Strecke als Text: "Flughafen AGP → Gran Hotel Miramar · 12 km · 25 min · VIP-Reisebus". */
+export function fmtRoute(i: Partial<CalcItem>, arrow = '→'): string {
+  const route = i.route_from || i.route_to ? `${i.route_from || '?'} ${arrow} ${i.route_to || '?'}` : '';
+  return [route, i.distance_km ? `${String(i.distance_km).replace('.', ',')} km` : '', fmtDuration(i.duration_min), i.vehicle || '']
+    .filter(Boolean).join(' · ');
+}
+
+/** Zeitspanne "09:35–12:25" / "09:35" / "". */
+export function fmtTimeRange(i: Partial<CalcItem>): string {
+  if (i.time_from && i.time_to) return `${i.time_from}–${i.time_to}`;
+  return i.time_from || (i.time_to ? `bis ${i.time_to}` : '');
 }
 
 /** ISO-Datum "YYYY-MM-DD" oder leerer String. */
@@ -118,6 +226,7 @@ export function sanitizeItems(raw: unknown, fallbackCurrency: CalcCurrency = 'CH
       service_from: normIsoDate(it.service_from),
       service_to: normIsoDate(it.service_to),
       ...(typeof it.source === 'string' && it.source.trim() ? { source: it.source.trim().slice(0, 80) } : {}),
+      ...sanitizeDetails(it),
     }));
 }
 
@@ -388,4 +497,76 @@ export function fmtServiceDate(fromIso?: string, toIso?: string): string {
   if (a) return dmy(a);
   if (b) return `bis ${dmy(b)}`;
   return '';
+}
+
+/* ─── Programm / Tagesablauf ─────────────────────────────────────────────── */
+
+export interface ProgramEntry {
+  item: CalcItem;
+  /** Mehrtägige Leistung (z. B. Hotel): an diesem Tag Beginn, laufend oder Ende */
+  phase: 'single' | 'start' | 'end';
+}
+
+export interface ProgramDay {
+  date: string;
+  entries: ProgramEntry[];
+}
+
+/**
+ * Tagesablauf aus den Positionen: je Tag (Leistungsdatum) die Leistungen nach
+ * Uhrzeit sortiert. Mehrtägige Leistungen erscheinen am ersten und letzten Tag
+ * (z. B. Hotel Check-in/Check-out); ohne Datum landen sie unter date ''.
+ * Leere Platzhalter-Positionen (ohne Text und EK) fallen weg.
+ */
+export function buildProgram(items: CalcItem[]): ProgramDay[] {
+  const days = new Map<string, ProgramEntry[]>();
+  const push = (date: string, e: ProgramEntry) => {
+    if (!days.has(date)) days.set(date, []);
+    days.get(date)!.push(e);
+  };
+  for (const item of items) {
+    if (!item.description.trim() && !(item.amount > 0)) continue;
+    const from = item.service_from || '';
+    const to = item.service_to || '';
+    if (from && to && to !== from) {
+      push(from, { item, phase: 'start' });
+      push(to, { item, phase: 'end' });
+    } else {
+      push(from || to, { item, phase: 'single' });
+    }
+  }
+  const timeKey = (e: ProgramEntry) =>
+    (e.phase === 'end' ? e.item.time_to || e.item.time_from : e.item.time_from) || (e.phase === 'end' ? '23:58' : '23:59');
+  return Array.from(days.entries())
+    .sort(([a], [b]) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b)))
+    .map(([date, entries]) => ({ date, entries: entries.sort((x, y) => timeKey(x).localeCompare(timeKey(y))) }));
+}
+
+/** Zeit für eine Programmzeile (berücksichtigt Beginn/Ende mehrtägiger Leistungen). */
+export function programTime(e: ProgramEntry): string {
+  if (e.phase === 'start') return e.item.time_from || '';
+  if (e.phase === 'end') return e.item.time_to || '';
+  return fmtTimeRange(e.item);
+}
+
+/** Hat irgendeine Position Programmdaten (Datum/Zeit/Strecke)? */
+export function hasProgramData(items: CalcItem[]): boolean {
+  return items.some((i) => i.service_from || i.time_from || i.route_from || i.route_to);
+}
+
+/** "Tag N" ab dem ersten Programmtag (Kalendertage, nicht Reihenfolge). */
+export function programDayLabel(days: ProgramDay[], date: string): string {
+  const first = days.find((d) => d.date)?.date || '';
+  if (!date) return 'Ohne Datum';
+  const n = first ? nightsBetween(first, date) : null;
+  return `Tag ${(n ?? 0) + 1} · ${fmtDateWeekday(date)}`;
+}
+
+/** Präfix für Beginn/Ende mehrtägiger Leistungen ("Check-in: ", "Hinflug: " …). */
+export function programPrefix(e: ProgramEntry): string {
+  if (e.phase === 'single') return '';
+  const c = e.item.category;
+  if (c === 'hotel') return e.phase === 'start' ? 'Check-in: ' : 'Check-out: ';
+  if (c === 'flug') return e.phase === 'start' ? 'Hinflug: ' : 'Rückflug: ';
+  return e.phase === 'start' ? 'Beginn: ' : 'Ende: ';
 }

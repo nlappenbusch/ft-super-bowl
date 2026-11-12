@@ -18,6 +18,8 @@ import {
 import CalculationTable from '@/components/admin/CalculationTable';
 import TrafficsSearchPanel from '@/components/admin/TrafficsSearchPanel';
 import InquiriesPanel from '@/components/admin/InquiriesPanel';
+import CalcItemDetails from '@/components/admin/CalcItemDetails';
+import ProgramView from '@/components/admin/ProgramView';
 import {
   ArrowLeft, Plus, X, Save, Trash2, FileText, TrendingDown, TrendingUp, Minus, RefreshCw, AlertTriangle,
   Landmark, CalendarDays, Table2, ArrowDownToLine, FileDown, Receipt, Hotel, Search, ExternalLink,
@@ -72,6 +74,7 @@ export default function KalkulationEditorPage() {
   const [travelStart, setTravelStart] = useState('');
   const [travelEnd, setTravelEnd] = useState('');
   const [pax, setPax] = useState(1);
+  const [programInOffer, setProgramInOffer] = useState(false);
   const [target, setTarget] = useState<CalcCurrency>('EUR');
   const [marginMode, setMarginMode] = useState<MarginMode>('percent');
   const [marginValue, setMarginValue] = useState(10);
@@ -139,6 +142,7 @@ export default function KalkulationEditorPage() {
         setTravelStart(d.travel_start || '');
         setTravelEnd(d.travel_end || '');
         setPax(normPax(d.pax));
+        setProgramInOffer(!!d.program_in_offer);
         setTarget(d.target_currency || 'EUR');
         setMarginMode(d.margin_mode || 'percent');
         setMarginValue(Number(d.margin_value) || 0);
@@ -227,7 +231,7 @@ export default function KalkulationEditorPage() {
     const payload = {
       title: effectiveTitle,
       customer_id: customerId || null, booking_id: bookingId || null,
-      travel_start: travelStart || '', travel_end: travelEnd || '', pax,
+      travel_start: travelStart || '', travel_end: travelEnd || '', pax, program_in_offer: programInOffer,
       target_currency: target, margin_mode: marginMode, margin_value: marginValue,
       items, offer_extras: offerExtras, status, notes, hotel_info: hotelInfo,
     };
@@ -614,6 +618,7 @@ export default function KalkulationEditorPage() {
                                         </button>
                                       )}
                                     </div>
+                                    <CalcItemDetails item={item} onPatch={(p) => patchItem(item.id, p)} />
                                   </td>
                                   <td className="px-2 py-2">
                                     <input
@@ -689,6 +694,20 @@ export default function KalkulationEditorPage() {
             ) : undefined}
           >
             <CalculationTable items={items} target={target} rates={baseRates} marginMode={marginMode} marginValue={marginValue} pax={pax} />
+          </SectionCard>
+
+          <SectionCard
+            title="Programm / Tagesablauf"
+            description="Aus Leistungsdatum, Uhrzeit und Strecke der Positionen — sortiert je Tag. Anbieter und Preisstatus nur intern."
+            icon={<CalendarDays className="h-5 w-5" />}
+            actions={
+              <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold" style={{ color: COLORS.navy }}>
+                <input type="checkbox" checked={programInOffer} onChange={(e) => setProgramInOffer(e.target.checked)} style={{ accentColor: COLORS.accent }} />
+                Im Angebots-PDF zeigen
+              </label>
+            }
+          >
+            <ProgramView items={items} />
           </SectionCard>
 
           <SectionCard

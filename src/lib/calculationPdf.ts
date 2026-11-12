@@ -16,7 +16,8 @@ import path from 'path';
 import { getSettings } from './settingsStore';
 import {
   CALC_CATEGORIES, categoryLabel, computeTotals, computeGroupTotals, itemEk, fmtPeriod, nightsBetween,
-  fmtSignedMoney, fmtServiceDate, type CalcItem,
+  fmtSignedMoney, fmtServiceDate, fmtRoute, fmtTimeRange, priceStatusLabel, buildProgram, programTime,
+  hasProgramData, programDayLabel, programPrefix, type CalcItem,
 } from './calcModel';
 import { convertAmount } from './fxRates';
 import { hotelInfoLine } from './hotelLookup';
@@ -367,6 +368,73 @@ export function buildCalculationPdf(
   doc.text(`Sitz der Gesellschaft und Gerichtsstand: ${company.city}`, leftMargin, footerY + 7);
   doc.setTextColor(0, 0, 0);
 
+  /* ─── Programm / Tagesablauf (intern immer, Angebot nur mit Schalter) ─── */
+  const showProgram = hasProgramData(calc.items) && (variant === 'intern' || calc.program_in_offer);
+  if (showProgram) {
+    const internal = variant === 'intern';
+    doc.addPage();
+    let y = 18;
+    const left = leftMargin;
+    const timeX = left;
+    const textX = left + 26;
+    const width = right - textX;
+    const space = (needed: number) => { if (y + needed > 280) { doc.addPage(); y = 18; } };
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(...NAVY);
+    doc.text(winAnsi(`Programm${calc.title ? ` — ${calc.title}` : ''}`), left, y);
+    if (period) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(...MUTED);
+      doc.text(winAnsi(period), left, y + 5);
+    }
+    if (internal) {
+      doc.setFontSize(8);
+      doc.setTextColor(200, 0, 0);
+      doc.text('INTERN — mit Anbietern und Preisstatus', right, y, { align: 'right' });
+    }
+    y += 13;
+    const days = buildProgram(calc.items);
+    days.forEach((d) => {
+      space(14);
+      doc.setFillColor(245, 247, 250);
+      doc.rect(left, y - 4.2, right - left, 6.2, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(...ACCENT);
+      doc.text(winAnsi(programDayLabel(days, d.date)), left + 1.5, y);
+      y += 7;
+      for (const e of d.entries) {
+        const it = e.item;
+        const prefix = programPrefix(e);
+        const title = doc.splitTextToSize(winAnsi(prefix + (it.description.trim() || categoryLabel(it.category))), width);
+        const sub: string[] = [];
+        const route = fmtRoute(it, '->');
+        if (route) sub.push(route);
+        if (it.pickup_point) sub.push(`Treffpunkt: ${it.pickup_point}`);
+        if (internal) {
+          const sup = [it.supplier_name, it.supplier_contact, it.supplier_ref, priceStatusLabel(it.price_status)].filter(Boolean).join(' · ');
+          if (sup) sub.push(sup);
+        }
+        const subLines = sub.flatMap((t) => doc.splitTextToSize(winAnsi(t), width) as string[]);
+        space(title.length * 4.2 + subLines.length * 3.7 + 2);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(...NAVY);
+        doc.text(winAnsi(programTime(e) || '—'), timeX + 1.5, y);
+        doc.text(title, textX, y);
+        y += title.length * 4.2;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...MUTED);
+        for (const l of subLines) { doc.text(l, textX, y); y += 3.7; }
+        y += 1.8;
+      }
+      y += 3;
+    });
+  }
+
   /* ─── Interne Variante: Kalkulationstabelle auf Seite 2 ─── */
   if (variant === 'intern') {
     doc.addPage();
@@ -427,8 +495,12 @@ export function buildCalculationPdf(
         doc.setFontSize(8.5);
         doc.setTextColor(...NAVY);
         const serviceDate = fmtServiceDate(item.service_from, item.service_to);
+        const details = [
+          fmtTimeRange(item), fmtRoute(item, '->'), item.pickup_point ? `Treffpunkt ${item.pickup_point}` : '',
+          item.supplier_name, item.supplier_contact, item.supplier_ref, priceStatusLabel(item.price_status),
+        ].filter(Boolean).join(' · ');
         const desc = doc.splitTextToSize(
-          `${item.description.trim() || g.label}${(item.room_category || '').trim() ? ` — ${item.room_category}` : ''}${serviceDate ? ` (${serviceDate})` : ''}`,
+          winAnsi(`${item.description.trim() || g.label}${(item.room_category || '').trim() ? ` — ${item.room_category}` : ''}${serviceDate ? ` (${serviceDate})` : ''}${details ? `\n${details}` : ''}`),
           92
         );
         doc.text(desc, colPos + 1, y);

@@ -28,6 +28,8 @@ export interface OfferCalculation {
   travel_end: string;
   /** Teilnehmerzahl (Pax) — Basis der Gesamtsummen (Werte p.P. × Pax). */
   pax: number;
+  /** Tagesablauf (ohne Preise/Anbieter) auch im Kunden-PDF zeigen */
+  program_in_offer: boolean;
   target_currency: CalcCurrency;
   margin_mode: MarginMode;
   margin_value: number;
@@ -62,6 +64,7 @@ interface DbRow {
   travel_start: string | null;
   travel_end: string | null;
   pax?: number | null;
+  program_in_offer?: number | boolean | null;
   target_currency: string;
   margin_mode: string;
   margin_value: number;
@@ -136,6 +139,7 @@ function parseRow(r: DbRow): OfferCalculationRow {
     travel_start: r.travel_start || '',
     travel_end: r.travel_end || '',
     pax: normPax(r.pax ?? 1),
+    program_in_offer: !!Number(r.program_in_offer || 0),
     target_currency: isCalcCurrency(r.target_currency) ? r.target_currency : 'EUR',
     margin_mode: normMarginMode(r.margin_mode),
     margin_value: normMarginValue(r.margin_value),
@@ -185,6 +189,7 @@ export interface CalculationInput {
   travel_start?: unknown;
   travel_end?: unknown;
   pax?: unknown;
+  program_in_offer?: unknown;
   target_currency?: unknown;
   margin_mode?: unknown;
   margin_value?: unknown;
@@ -227,9 +232,9 @@ export async function createCalculation(
   await dbRun(
     `INSERT INTO offer_calculations (
       id, calc_number, created_at, updated_at, title, customer_id, booking_id,
-      travel_start, travel_end, pax,
+      travel_start, travel_end, pax, program_in_offer,
       target_currency, margin_mode, margin_value, items, offer_extras, rates_snapshot, status, notes, created_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       await nextCalcNumber(),
@@ -241,6 +246,7 @@ export async function createCalculation(
       normDate(input.travel_start),
       normDate(input.travel_end),
       normPax(input.pax),
+      input.program_in_offer === true || input.program_in_offer === 1 ? 1 : 0,
       target,
       normMarginMode(input.margin_mode),
       normMarginValue(input.margin_value),
@@ -271,6 +277,7 @@ export async function updateCalculation(id: string, updates: CalculationUpdate):
   if ('travel_start' in updates) { sets.push('travel_start = ?'); vals.push(normDate(updates.travel_start)); }
   if ('travel_end' in updates) { sets.push('travel_end = ?'); vals.push(normDate(updates.travel_end)); }
   if ('pax' in updates) { sets.push('pax = ?'); vals.push(normPax(updates.pax)); }
+  if ('program_in_offer' in updates) { sets.push('program_in_offer = ?'); vals.push(updates.program_in_offer === true || updates.program_in_offer === 1 ? 1 : 0); }
   if ('target_currency' in updates) { sets.push('target_currency = ?'); vals.push(target); }
   if ('margin_mode' in updates) { sets.push('margin_mode = ?'); vals.push(normMarginMode(updates.margin_mode)); }
   if ('margin_value' in updates) { sets.push('margin_value = ?'); vals.push(normMarginValue(updates.margin_value)); }
