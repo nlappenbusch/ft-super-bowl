@@ -190,6 +190,36 @@ Teil der Instanz, eigene Adresse: Dateien hochladen, Link an Externe, automatisc
 - **Ablauf:** Standard 30 Tage, wählbar 7/14/30/90 Tage oder Datum (max. 365), verlängern/verkürzen jederzeit. `runFilesCleanup()` läuft stündlich (`instrumentation.ts`): abgelaufene Freigaben → Dateien endgültig weg, Zeile bleibt 180 Tage als Protokoll (`deleted_by`); abgebrochene Uploads nach 24 h weg.
 - **Tests:** `tests/filesModel.test.ts` (reine Logik in `lib/files/model.ts`).
 
+## Faltin Belege (Belege & Spesen, `belege.faltintravel.com`)
+Belege per Handy fotografieren (oder PDF/Foto am Desktop hochladen), automatisch lesen, kontieren,
+von der Buchhaltung prüfen/freigeben und als CSV exportieren. Mit Punktespiel (Stufen, Serien,
+Abzeichen, Jackpot), damit sofortiges Erfassen Spass macht.
+
+- **Adressen:** `belege.faltintravel.com` → `/` wird auf `/belege` umgeschrieben (Handy-App, auf
+  grossen Bildschirmen Prüfansicht, umschaltbar). Intern `/admin/belege` (Nav „Verkauf → Belege & Spesen“).
+  SSO kehrt auf denselben Host zurück (`isBelegeHost()` in `lib/belege/config.ts`); Redirect-URI
+  `https://belege.faltintravel.com/api/auth/microsoft/callback` muss in der Entra-App registriert sein.
+- **Code:** `src/lib/belege/*` (Server + reine Logik), `src/components/belege/*` (UI),
+  `src/app/api/admin/belege/*` (API, Middleware-geschützt), Upload `POST /api/belege/upload` bewusst
+  AUSSERHALB `/api/admin` (Middleware puffert Bodies) mit eigenem Session-Guard.
+- **Daten:** Tabellen `bel_receipts` / `bel_log` legt `lib/belege/schema.ts` selbst an (SQLite + Postgres).
+  Dateien unter `data/belege/<jahr>/<id>.<ext>` (+ `.thumb.jpg`), Regeln in `data/belege/regeln.json`.
+- **Lesen (`analyze.ts`, im Hintergrund nach dem Upload):** PDF-Text (pdf-parse) bzw. OCR (tesseract.js,
+  deu/eng/fra, Sprachdaten-Cache `data/belege/ocr-cache`, beim ersten Lauf Download vom CDN) → Parser
+  `parse.ts` (Lieferant, Datum, Total, MWST, UID, RQ-/FT-Nummern). Ist das dünn oder die OCR unsicher,
+  liest Claude das Bild/PDF (`ai.ts`, Modell `settings.ai.belege_model`, Standard `claude-sonnet-5-5`,
+  strukturierte Ausgabe). Ergebnisse füllen nur leere Felder — was ein Mensch gesetzt hat
+  (`user_fields`), bleibt.
+- **Kontierung (`kontenplan.ts`):** Kontenplan Faltin Travel AG (Treuhand). Kategorie → Aufwandkonto
+  (Inland/Ausland), Zahlungsart → Gegenkonto (Firmenkarte, Kasse, Mitarbeitende, Gesellschafter-KK,
+  Kreditoren/Bank je Währung), Vorsteuer 117000/117100 nur bei CH/LI-MWST. Gegenkonten für Firmenkarte
+  und Privat sind in der Prüfansicht („Kontierung“) einstellbar — mit dem Treuhänder abzustimmen.
+- **Ablauf:** eingang → (Erfasser „Fertig“) erfasst → Buchhaltung: freigegeben | Rückfrage → Export
+  (`POST /api/admin/belege/export` markiert «verbucht»). Freigabe legt bei Event/Anfrage einen Eintrag in
+  `expenses` an (Finanzen). Prüfende = Admins + localadmin.
+- **Build:** `next.config.ts` hat `serverExternalPackages` + `outputFileTracingIncludes` für tesseract.js
+  (Standalone-Output). **Tests:** `tests/belege.test.ts`.
+
 ## DERTOUR-Suche (Traffics Connector API v3) in der Kalkulation
 - **Code:** `src/lib/trafficsModel.ts` (reine Logik: Parameter, Query, Antwort → Treffer, Treffer → Positionen; Tests in `tests/`, `npm test`), `src/lib/traffics.ts` (Server: Fetch, Cache, Drossel), Routen `/api/admin/traffics/{config,search,verify}`, Panel `components/admin/TrafficsSearchPanel.tsx` im Kalkulations-Editor.
 - **Endpunkte:** Suche über `GET /offers` (bzw. `/offers/flight`), weil nur dort Zimmer, Verpflegung und Flugzeiten in EINER Anfrage kommen; `/hotels` bräuchte Folgeanfragen. `/offers/{code}` geht live bis zum Veranstalter und läuft nur per Klick auf „Verfügbarkeit prüfen“.
