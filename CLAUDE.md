@@ -179,6 +179,17 @@ Bildspalte rechts) — Vorlage ist das gedruckte Ryder-Cup-Deck.
   Bildsuche (`incentive/images.ts`) und Übersetzung des ganzen Decks (de/en/fr).
 - **Übernahme aus dem Incentive-Planer:** `templates.ts → slidesFromIncentive()`.
 
+## Faltin Files (Filesharing, `files.faltintravel.com`)
+Teil der Instanz, eigene Adresse: Dateien hochladen, Link an Externe, automatisches Löschen.
+
+- **Adressen:** Intern `/admin/files` (Nav „Studio → Dateien teilen“) und `files.faltintravel.com` → `/` wird per Middleware auf `/files` umgeschrieben (eigenständige Oberfläche, gleicher Code `components/files/FilesApp.tsx`). Login wie beim Mail-Host: M365-SSO kehrt auf denselben Host zurück (`isFilesHost()` in `lib/files/config.ts`); Redirect-URI `https://files.faltintravel.com/api/auth/microsoft/callback` muss in der Entra-App registriert sein.
+- **Rechte:** Alle Interne (M365-Tenant + localadmin) sehen und verwalten ALLE Freigaben. Externe nur über `/s/[token]` (Token = Berechtigung, optional Passwort → httpOnly-Cookie, das am Passwort-Hash hängt). `robots` sperrt `/s/` und `/files`.
+- **Daten:** Tabellen `fs_shares` / `fs_items` legt `lib/files/schema.ts` selbst an (SQLite + Postgres). Bytes unter `data/files/<shareId>/<itemId>` (persistentes Volume), nie im Webroot.
+- **Upload:** in 16-MB-Stücken über `PUT /api/files/chunk/[itemId]?offset=` — bewusst AUSSERHALB `/api/admin` (Middleware puffert Bodies), daher eigener `requireAdminSession()`-Guard. Idempotent (Wiederholung kürzt auf `offset`), Client wiederholt bei Abbrüchen. Max. 20 GB/Datei, 2 GB Platzreserve.
+- **Download:** Range-fähig (`lib/files/http.ts`), „Alle herunterladen“ als gestreamtes ZIP (stored, ohne ZIP64 → bis ~4 GB gesamt).
+- **Ablauf:** Standard 30 Tage, wählbar 7/14/30/90 Tage oder Datum (max. 365), verlängern/verkürzen jederzeit. `runFilesCleanup()` läuft stündlich (`instrumentation.ts`): abgelaufene Freigaben → Dateien endgültig weg, Zeile bleibt 180 Tage als Protokoll (`deleted_by`); abgebrochene Uploads nach 24 h weg.
+- **Tests:** `tests/filesModel.test.ts` (reine Logik in `lib/files/model.ts`).
+
 ## DERTOUR-Suche (Traffics Connector API v3) in der Kalkulation
 - **Code:** `src/lib/trafficsModel.ts` (reine Logik: Parameter, Query, Antwort → Treffer, Treffer → Positionen; Tests in `tests/`, `npm test`), `src/lib/traffics.ts` (Server: Fetch, Cache, Drossel), Routen `/api/admin/traffics/{config,search,verify}`, Panel `components/admin/TrafficsSearchPanel.tsx` im Kalkulations-Editor.
 - **Endpunkte:** Suche über `GET /offers` (bzw. `/offers/flight`), weil nur dort Zimmer, Verpflegung und Flugzeiten in EINER Anfrage kommen; `/hotels` bräuchte Folgeanfragen. `/offers/{code}` geht live bis zum Veranstalter und läuft nur per Klick auf „Verfügbarkeit prüfen“.

@@ -15,7 +15,8 @@ export const DEFAULT_AFTER_LOGIN = '/working-dashboard';
 /** Nur geschützte interne Pfade als Rücksprung zulassen (kein Open Redirect). */
 export function safeReturnPath(p: string | null | undefined): string | null {
   if (!p || !p.startsWith('/') || p.startsWith('//') || p.includes('\\')) return null;
-  return p.startsWith('/admin') || p.startsWith('/working-dashboard') || p === '/mail' || p.startsWith('/mail/') || p.startsWith('/mail?') ? p : null;
+  return p.startsWith('/admin') || p.startsWith('/working-dashboard') || p === '/mail' || p.startsWith('/mail/') || p.startsWith('/mail?')
+    || p === '/files' || p.startsWith('/files/') || p.startsWith('/files?') ? p : null;
 }
 
 export interface Session {
