@@ -108,12 +108,15 @@ async function analyze(id: string, opts: { forceAi?: boolean }): Promise<void> {
   if (hist?.payment) fields.payment = hist.payment;
   else if (useAi && ai!.payment_hint && ai!.payment_hint !== 'unbekannt') fields.payment = ai!.payment_hint;
   const head = ocr.text.slice(0, 4000);
-  if (!fields.payment && /\b(bar|bargeld|barzahlung|cash|esp[èe]ces|r[üu]ckgeld)\b/i.test(head)) fields.payment = 'bar';
+  const card = /\b(visa|mastercard|master card|amex|american express|maestro|kreditkarte|debitkarte|credit card|debit|carte de cr[ée]dit|twint|apple pay|google pay)\b/i.test(head);
+  const cash = /\b(bar|bargeld|barzahlung|cash|esp[èe]ces|r[üu]ckgeld)\b/i.test(head);
+  if (!fields.payment && cash && !card) fields.payment = 'bar';
   if (!fields.payment) {
     const pd = await personDefaults(r.created_by);
-    if (pd.payment) fields.payment = pd.payment;
+    // Gewohnheit nur, wenn sie zum Beleg passt (Karte → Firmenkarte oder privat)
+    if (pd.payment && (!card || pd.payment === 'firmenkarte' || pd.payment === 'privat')) fields.payment = pd.payment;
   }
-  if (!fields.payment && /\b(visa|mastercard|master card|amex|american express|maestro|kreditkarte|credit card|carte de cr[ée]dit)\b/i.test(head)) {
+  if (!fields.payment && card) {
     fields.payment = 'firmenkarte';
     suggestions.push({ field: 'payment', value: 'firmenkarte', label: 'Karte auf dem Beleg – Firmenkarte?', source: 'beleg' });
   }

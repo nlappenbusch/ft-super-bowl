@@ -7,6 +7,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Camera, FileUp, Flame, Loader2, Trophy, ChevronRight, X, Monitor } from 'lucide-react';
 import ReceiptEditor, { type SubmittedInfo } from './ReceiptEditor';
 import Celebration, { type CelebrationData } from './Celebration';
+import CameraCapture, { type Shot } from './CameraCapture';
+import CropReview from './CropReview';
+import { hasLiveCamera, getPref, PREF_AUTOSTART, fileToCanvas, detectIn } from './scanDom';
 import { api, uploadReceipt, shrinkImage, money, dateCH, fileUrl, STATUS_TONE, type Meta, type Receipt } from './belegeClient';
 
 const NAVY = '#143047';
@@ -24,6 +27,9 @@ export default function BelegeMobile() {
   const [party, setParty] = useState<CelebrationData | null>(null);
   const camRef = useRef<HTMLInputElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const [camOpen, setCamOpen] = useState(false);
+  const [shot, setShot] = useState<Shot | null>(null);
+  const autoStarted = useRef(false);
 
   const reload = useCallback(async () => {
     try {
@@ -46,28 +52,76 @@ export default function BelegeMobile() {
     if (id) setOpenId(id);
   }, []);
 
+  const uploadOne = async (blob: Blob, name: string): Promise<string | null> => {
+    const key = `${Date.now()}-${Math.random()}`;
+    setUploads((u) => [...u, { key, name, p: 0 }]);
+    try {
+      const r = await uploadReceipt(blob, name, 'handy', (p) => setUploads((u) => u.map((x) => (x.key === key ? { ...x, p } : x))));
+      setItems((it) => [r, ...it.filter((x) => x.id !== r.id)]);
+      setUploads((u) => u.filter((x) => x.key !== key));
+      return r.id;
+    } catch (e) {
+      setUploads((u) => u.map((x) => (x.key === key ? { ...x, err: (e as Error).message } : x)));
+      setTimeout(() => setUploads((u) => u.filter((x) => x.key !== key)), 6000);
+      return null;
+    }
+  };
+
   const onFiles = async (files: FileList | null) => {
     if (!files || !files.length) return;
     const list = Array.from(files);
-    let first: string | null = null;
-    for (const f of list) {
-      const key = `${Date.now()}-${Math.random()}`;
-      setUploads((u) => [...u, { key, name: f.name, p: 0 }]);
-      try {
-        const { blob, name } = await shrinkImage(f);
-        const r = await uploadReceipt(blob, name, 'handy', (p) => setUploads((u) => u.map((x) => (x.key === key ? { ...x, p } : x))));
-        setItems((it) => [r, ...it.filter((x) => x.id !== r.id)]);
-        if (!first) first = r.id;
-        setUploads((u) => u.filter((x) => x.key !== key));
-      } catch (e) {
-        setUploads((u) => u.map((x) => (x.key === key ? { ...x, err: (e as Error).message } : x)));
-        setTimeout(() => setUploads((u) => u.filter((x) => x.key !== key)), 6000);
-      }
-    }
-    if (first) setOpenId(first);
     if (camRef.current) camRef.current.value = '';
     if (fileRef.current) fileRef.current.value = '';
+    // Einzelnes Foto: Ausschnitt erkennen und zur Kontrolle zeigen
+    if (list.length === 1 && list[0].type.startsWith('image/')) {
+      try {
+        const canvas = await fileToCanvas(list[0]);
+        const q = detectIn(canvas, canvas.width, canvas.height)?.quad || null;
+        setShot({ canvas, quad: q, name: list[0].name.replace(/\.[^.]+$/, '') + '.jpg' });
+        return;
+      } catch { /* unbekanntes Format (z. B. HEIC) → unverändert hochladen */ }
+    }
+    let first: string | null = null;
+    for (const f of list) {
+      const { blob, name } = await shrinkImage(f);
+      const id = await uploadOne(blob, name);
+      if (!first && id) first = id;
+    }
+    if (first) setOpenId(first);
   };
+
+  const openCamera = () => {
+    if (hasLiveCamera()) setCamOpen(true);
+    else camRef.current?.click();
+  };
+
+  const onShot = useCallback((s: Shot) => { setCamOpen(false); setShot(s); }, []);
+  const onCamFallback = useCallback((reason: string) => {
+    setCamOpen(false);
+    if (reason) setErr(reason);
+  }, []);
+  const onCamFile = useCallback((f: File) => {
+    setCamOpen(false);
+    void uploadOne(f, f.name).then((id) => { if (id) setOpenId(id); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const onCropped = async (blob: Blob) => {
+    const name = shot?.name || 'beleg.jpg';
+    setShot(null);
+    const id = await uploadOne(blob, name);
+    if (id) setOpenId(id);
+  };
+
+  // Handy: Kamera beim Öffnen der App gleich starten (abschaltbar im Sucher)
+  useEffect(() => {
+    if (!meta || autoStarted.current) return;
+    autoStarted.current = true;
+    const phone = window.matchMedia('(pointer: coarse)').matches && window.matchMedia('(max-width: 1023px)').matches;
+    const linked = new URLSearchParams(window.location.search).get('id');
+    const wanted = new URLSearchParams(window.location.search).get('kamera');
+    if ((wanted === '1' || (phone && getPref(PREF_AUTOSTART, true))) && !linked && hasLiveCamera()) setCamOpen(true);
+  }, [meta]);
 
   const onSubmitted = async (info: SubmittedInfo) => {
     const before = meta?.stats;
@@ -146,7 +200,7 @@ export default function BelegeMobile() {
       {tab === 'start' ? (
         <main className="-mt-4 space-y-5 rounded-t-3xl bg-[#f4f6f9] px-4 pb-28 pt-5">
           {/* Grosse Aufnahme-Taste */}
-          <button type="button" onClick={() => camRef.current?.click()}
+          <button type="button" onClick={openCamera}
             className="flex w-full items-center justify-center gap-3 rounded-3xl py-6 text-xl font-black text-white shadow-[0_10px_30px_-10px_rgba(217,83,30,.7)] transition active:scale-[.98]"
             style={{ background: ORANGE }}>
             <Camera className="h-7 w-7" /> Beleg fotografieren
@@ -209,6 +263,8 @@ export default function BelegeMobile() {
         </div>
       )}
 
+      {camOpen && <CameraCapture onShot={onShot} onClose={() => setCamOpen(false)} onFallback={onCamFallback} onFile={onCamFile} />}
+      {shot && <CropReview canvas={shot.canvas} quad={shot.quad} onRetake={() => { setShot(null); if (hasLiveCamera()) setCamOpen(true); else camRef.current?.click(); }} onDone={(b) => void onCropped(b)} />}
       {party && <Celebration data={party} onClose={() => setParty(null)} />}
     </Shell>
   );
