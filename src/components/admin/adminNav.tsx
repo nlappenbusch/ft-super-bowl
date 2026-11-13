@@ -10,7 +10,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Sparkles, LayoutDashboard, ListTodo, MailOpen,
-  KanbanSquare, Voicemail, Inbox, Contact, Calculator, Wallet,
+  KanbanSquare, Voicemail, Ticket, Inbox, Contact, Calculator, Wallet,
   Wand2, Presentation, Share2,
   CalendarDays, Layers, Package, HelpCircle, Tag, Globe, Code2, MapPin, Trophy,
   Timer, Plane, FileClock, Users,
@@ -77,6 +77,10 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       {
         href: '/admin/voicemails', label: 'Voicemails', icon: Voicemail,
         keywords: ['Voicemail', 'Anrufbeantworter', 'Combox', 'Telefon', 'Anruf', 'Rückruf', 'Transkript', 'Teams'],
+      },
+      {
+        href: '/admin/event-tickets', label: 'E-Tickets', icon: Ticket,
+        keywords: ['Ticket', 'E-Ticket', 'Wallet', 'Apple Wallet', 'Google Wallet', 'pkpass', 'White-Label', 'Ticketversand', 'NFL'],
       },
       {
         href: '/admin/buchungen', label: 'Buchungen', icon: Inbox,

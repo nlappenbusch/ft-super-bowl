@@ -385,7 +385,11 @@ export async function moveMessage(mb: string, id: string, destination: string): 
 
 // ───────────────────────── Senden ─────────────────────────
 
-export interface OutgoingAttachment { name: string; contentType: string; contentBytes: string }
+export interface OutgoingAttachment {
+  name: string; contentType: string; contentBytes: string;
+  /** Eingebettetes Bild: im HTML per `cid:<contentId>` referenziert (nur kleine Dateien). */
+  isInline?: boolean; contentId?: string;
+}
 
 export interface OutgoingMail {
   mailbox: string;
@@ -421,7 +425,10 @@ async function addAttachment(mb: string, draftId: string, a: OutgoingAttachment)
   if (raw.length <= INLINE_LIMIT) {
     await gjson(`${base(mb)}/messages/${enc(draftId)}/attachments`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ '@odata.type': '#microsoft.graph.fileAttachment', name: a.name, contentType: a.contentType, contentBytes: a.contentBytes }),
+      body: JSON.stringify({
+        '@odata.type': '#microsoft.graph.fileAttachment', name: a.name, contentType: a.contentType, contentBytes: a.contentBytes,
+        ...(a.isInline && a.contentId ? { isInline: true, contentId: a.contentId } : {}),
+      }),
     });
     return;
   }
