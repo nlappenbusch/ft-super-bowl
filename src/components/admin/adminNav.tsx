@@ -11,7 +11,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Sparkles, LayoutDashboard, ListTodo, MailOpen,
   KanbanSquare, Voicemail, Inbox, Contact, Calculator, Wallet,
-  Wand2, Presentation,
+  Wand2, Presentation, Share2,
   CalendarDays, Layers, Package, HelpCircle, Tag, Globe, Code2, MapPin, Trophy,
   Timer, Plane, FileClock, Users,
   Mail, Activity, Bot, KeyRound, Settings,
@@ -107,6 +107,10 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       {
         href: '/admin/praesentationen', label: 'Präsentationen', icon: Presentation,
         keywords: ['Präsentation', 'Deck', 'Folien', 'Slides', 'PowerPoint', 'PPTX', 'PDF', 'Kundendeck'],
+      },
+      {
+        href: '/admin/files', label: 'Dateien teilen', icon: Share2,
+        keywords: ['Files', 'Filesharing', 'Datei', 'Dateien', 'Upload', 'Link', 'teilen', 'WeTransfer', 'Transfer', 'Download', 'files.faltintravel.com'],
       },
       {
         href: '/admin/ai', label: 'KI-Redaktion', icon: Sparkles,

@@ -3,12 +3,14 @@ import { OAUTH_STATE_COOKIE, OAUTH_RETURN_COOKIE, isSecureRequest, safeReturnPat
 import { siteConfig } from '@/lib/siteConfig';
 import { getGraphCredentials, getLoginBaseUrl } from '@/lib/graphMailer';
 import { isMailHost } from '@/lib/mailHost';
+import { isFilesHost } from '@/lib/files/config';
 
 function resolveBase(req: Request): string {
   const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
   const proto = req.headers.get('x-forwarded-proto') || 'https';
   // Mail-Client (mail.faltintravel.com): Login kehrt auf denselben Host zurück (eigenes Cookie).
-  if (host && isMailHost(host)) return `${proto}://${host}`.replace(/\/+$/, '');
+  // Ebenso Faltin Files (files.faltintravel.com).
+  if (host && (isMailHost(host) || isFilesHost(host))) return `${proto}://${host}`.replace(/\/+$/, '');
   const admin = getLoginBaseUrl();
   if (admin) return admin;
   if (host) return `${proto}://${host}`.replace(/\/+$/, '');

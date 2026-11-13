@@ -7,6 +7,7 @@
  *     konfigurierten Stunde, dedupliziert über data/briefing-state.json)
  *   – KI-Arbeitsplatz-Agent (alle 10 min): Mails sortieren, Antwortvorschläge,
  *     Erinnerungen an Genehmigende/Zuständige (src/lib/workspace/agentRunner.ts)
+ *   – Faltin Files: abgelaufene Freigaben stündlich endgültig löschen
  *   – Release-Notes-Mail (einmalig ~90 s nach Start = nach jedem Deploy;
  *     kündigt seit dem letzten Lauf gemergte PRs an, ohne neue Merges keine Mail)
  * Läuft nur im Node.js-Runtime-Prozess; Fehler werden geloggt, crashen aber
@@ -105,6 +106,25 @@ export async function register() {
     (mirrorTimer as unknown as { unref?: () => void }).unref?.();
     console.log('[Mail-Spiegel] Abgleich aktiv (Takt 30 s).');
   }
+
+  // Faltin Files: abgelaufene Freigaben endgültig löschen, abgebrochene Uploads aufräumen.
+  // Erster Lauf 60 s nach Start, danach stündlich (src/lib/files/store.ts).
+  const runFiles = async () => {
+    try {
+      const { runFilesCleanup } = await import('./lib/files/store');
+      const r = await runFilesCleanup();
+      if (r.expired || r.staleItems || r.emptyShares || r.purged) {
+        console.log(`[files] Aufräumen: abgelaufen=${r.expired} Uploadreste=${r.staleItems} leer=${r.emptyShares} Protokoll entfernt=${r.purged}`);
+      }
+    } catch (err) {
+      console.error('[files] Aufräumen fehlgeschlagen:', err);
+    }
+  };
+  const filesStart = setTimeout(runFiles, 60_000);
+  (filesStart as unknown as { unref?: () => void }).unref?.();
+  const filesTimer = setInterval(runFiles, 3_600_000);
+  (filesTimer as unknown as { unref?: () => void }).unref?.();
+  console.log('[files] Automatisches Löschen aktiv (stündlich).');
 
   // Release-Notes einmalig nach dem Start (= nach jedem Deploy, der Container
   // startet neu). Verzögert, damit der Server erst sauber hochgefahren ist.
