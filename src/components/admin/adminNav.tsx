@@ -10,7 +10,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Sparkles, LayoutDashboard, ListTodo, MailOpen,
-  KanbanSquare, Voicemail, Ticket, Inbox, Contact, Calculator, Wallet,
+  KanbanSquare, Voicemail, Ticket, Inbox, Contact, Calculator, Wallet, Receipt,
   Wand2, Presentation, Share2,
   CalendarDays, Layers, Package, HelpCircle, Tag, Globe, Code2, MapPin, Trophy,
   Timer, Plane, FileClock, Users,
@@ -97,6 +97,10 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       {
         href: '/admin/finanzen', label: 'Finanzen', icon: Wallet,
         keywords: ['Rechnung', 'Rechnungen', 'Zahlung', 'Spesen', 'Mahnung', 'Umsatz', 'Buchhaltung', 'Saferpay', 'Belege'],
+      },
+      {
+        href: '/admin/belege', label: 'Belege & Spesen', icon: Receipt,
+        keywords: ['Beleg', 'Belege', 'Quittung', 'Spesen', 'Spesenabrechnung', 'Kassenzettel', 'OCR', 'Vorsteuer', 'MWST', 'Kontierung', 'Buchhaltung', 'Treuhand'],
       },
     ],
   },

@@ -4,6 +4,40 @@ const nextConfig: NextConfig = {
   // Docker Production Build
   output: 'standalone',
 
+  // OCR für Faltin Belege: tesseract.js startet einen Worker aus node_modules (nicht bündeln)
+  // und braucht seine Abhängigkeiten im Standalone-Output.
+  serverExternalPackages: ['tesseract.js', 'tesseract.js-core'],
+  outputFileTracingIncludes: {
+    '/api/belege/upload': [
+      './node_modules/tesseract.js/**/*',
+      './node_modules/tesseract.js-core/**/*',
+      './node_modules/bmp-js/**/*',
+      './node_modules/zlibjs/**/*',
+      './node_modules/is-url/**/*',
+      './node_modules/node-fetch/**/*',
+      './node_modules/wasm-feature-detect/**/*',
+      './node_modules/regenerator-runtime/**/*',
+      './node_modules/idb-keyval/**/*',
+      './node_modules/whatwg-url/**/*',
+      './node_modules/tr46/**/*',
+      './node_modules/webidl-conversions/**/*',
+    ],
+    '/api/admin/belege/**/*': [
+      './node_modules/tesseract.js/**/*',
+      './node_modules/tesseract.js-core/**/*',
+      './node_modules/bmp-js/**/*',
+      './node_modules/zlibjs/**/*',
+      './node_modules/is-url/**/*',
+      './node_modules/node-fetch/**/*',
+      './node_modules/wasm-feature-detect/**/*',
+      './node_modules/regenerator-runtime/**/*',
+      './node_modules/idb-keyval/**/*',
+      './node_modules/whatwg-url/**/*',
+      './node_modules/tr46/**/*',
+      './node_modules/webidl-conversions/**/*',
+    ],
+  },
+
   // @hello-pangea/dnd (Drag&Drop) bricht unter React-StrictMode im Dev-Modus -> aus.
   reactStrictMode: false,
   

@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import NavBar, { type NavItem } from './NavBar';
 
-const EXCLUDED_PREFIXES = ['/admin', '/working-dashboard', '/mail', '/embed', '/wordpress-preview', '/shortcode-test', '/tippspiel', '/games', '/files', '/s/'];
+const EXCLUDED_PREFIXES = ['/admin', '/working-dashboard', '/mail', '/embed', '/wordpress-preview', '/shortcode-test', '/tippspiel', '/games', '/files', '/belege', '/s/'];
 
 /**
  * Buchungsseite im Embed-Modus (?embed=1, gesetzt von den WordPress-
