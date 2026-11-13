@@ -282,6 +282,44 @@ export async function applyPgSchemaEnhancements(): Promise<void> {
         created_by text NOT NULL DEFAULT ''
       )`);
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_calc_inquiries_calc ON calc_inquiries(calc_id)`);
+      // E-Tickets für Kund:innen (eventTicketStore)
+      await pool.query(`CREATE TABLE IF NOT EXISTS event_tickets (
+        id text PRIMARY KEY,
+        created_at text NOT NULL DEFAULT '',
+        updated_at text NOT NULL DEFAULT '',
+        created_by text NOT NULL DEFAULT '',
+        branding text NOT NULL DEFAULT 'ft',
+        lang text NOT NULL DEFAULT 'de',
+        hide_holder integer NOT NULL DEFAULT 0,
+        event_id text NOT NULL DEFAULT '',
+        event_title text NOT NULL DEFAULT '',
+        match_title text NOT NULL DEFAULT '',
+        event_date text NOT NULL DEFAULT '',
+        kickoff text NOT NULL DEFAULT '',
+        venue text NOT NULL DEFAULT '',
+        venue_address text NOT NULL DEFAULT '',
+        entrance text NOT NULL DEFAULT '',
+        category text NOT NULL DEFAULT '',
+        area text NOT NULL DEFAULT '',
+        row_no text NOT NULL DEFAULT '',
+        seat text NOT NULL DEFAULT '',
+        holder_raw text NOT NULL DEFAULT '',
+        holder_salutation text NOT NULL DEFAULT '',
+        holder_first text NOT NULL DEFAULT '',
+        holder_last text NOT NULL DEFAULT '',
+        recipient_email text NOT NULL DEFAULT '',
+        apple_url text NOT NULL DEFAULT '',
+        android_url text NOT NULL DEFAULT '',
+        booking_ref text NOT NULL DEFAULT '',
+        internal_note text NOT NULL DEFAULT '',
+        status text NOT NULL DEFAULT 'offen',
+        draft_mailbox text NOT NULL DEFAULT '',
+        draft_web_link text NOT NULL DEFAULT '',
+        draft_at text NOT NULL DEFAULT '',
+        draft_by text NOT NULL DEFAULT '',
+        sort integer NOT NULL DEFAULT 0
+      )`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_event_tickets_event ON event_tickets(event_id)`);
       // Praesentations-Builder (Decks aus Folien; TASK-00126)
       await pool.query(`CREATE TABLE IF NOT EXISTS presentations (
         id text PRIMARY KEY,

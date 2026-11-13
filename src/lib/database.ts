@@ -300,6 +300,45 @@ export function initDatabase() {
     );
     CREATE INDEX IF NOT EXISTS idx_calc_inquiries_calc ON calc_inquiries(calc_id);
 
+    -- E-Tickets für Kund:innen (ein Platz je Zeile, Mail mit Wallet-Knöpfen; FT oder White-Label)
+    CREATE TABLE IF NOT EXISTS event_tickets (
+      id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT '',
+      created_by TEXT NOT NULL DEFAULT '',
+      branding TEXT NOT NULL DEFAULT 'ft',
+      lang TEXT NOT NULL DEFAULT 'de',
+      hide_holder INTEGER NOT NULL DEFAULT 0,
+      event_id TEXT NOT NULL DEFAULT '',
+      event_title TEXT NOT NULL DEFAULT '',
+      match_title TEXT NOT NULL DEFAULT '',
+      event_date TEXT NOT NULL DEFAULT '',
+      kickoff TEXT NOT NULL DEFAULT '',
+      venue TEXT NOT NULL DEFAULT '',
+      venue_address TEXT NOT NULL DEFAULT '',
+      entrance TEXT NOT NULL DEFAULT '',
+      category TEXT NOT NULL DEFAULT '',
+      area TEXT NOT NULL DEFAULT '',
+      row_no TEXT NOT NULL DEFAULT '',
+      seat TEXT NOT NULL DEFAULT '',
+      holder_raw TEXT NOT NULL DEFAULT '',
+      holder_salutation TEXT NOT NULL DEFAULT '',
+      holder_first TEXT NOT NULL DEFAULT '',
+      holder_last TEXT NOT NULL DEFAULT '',
+      recipient_email TEXT NOT NULL DEFAULT '',
+      apple_url TEXT NOT NULL DEFAULT '',
+      android_url TEXT NOT NULL DEFAULT '',
+      booking_ref TEXT NOT NULL DEFAULT '',
+      internal_note TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'offen',
+      draft_mailbox TEXT NOT NULL DEFAULT '',
+      draft_web_link TEXT NOT NULL DEFAULT '',
+      draft_at TEXT NOT NULL DEFAULT '',
+      draft_by TEXT NOT NULL DEFAULT '',
+      sort INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_event_tickets_event ON event_tickets(event_id);
+
     -- ==================== PRAESENTATIONS-BUILDER ====================
     CREATE TABLE IF NOT EXISTS presentations (
       id TEXT PRIMARY KEY,

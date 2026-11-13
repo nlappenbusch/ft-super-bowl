@@ -216,6 +216,14 @@ Teil der Instanz, eigene Adresse: Dateien hochladen, Link an Externe, automatisc
 - **Schutz:** Text mit `[INTERN` wird nicht gesendet; interne Hinweise gehören ins Feld `internal_note` (geht nie raus).
 - **PDF/MCP:** Das interne PDF (`?variant=intern`) hängt alle Anfragen mit vollem Text an, das Kunden-PDF nie. MCP: `list_offer_inquiries`, `add_offer_inquiry`, `update_offer_inquiry` — Senden gibt es bewusst NICHT per MCP/KI.
 
+## E-Tickets an Kund:innen (`/admin/event-tickets`)
+Ticket-Mails mit Wallet-Knöpfen (Apple / Google) je Empfänger und Spiel.
+
+- **Code:** `src/lib/eventTicketModel.ts` (reine Logik: Import der Lieferantenliste, Gruppierung, Mail-HTML DE/EN; Tests `tests/eventTicketModel.test.ts`), `src/lib/eventTicketStore.ts` (Tabelle `event_tickets`, in `database.ts` UND `dbq.applyPgSchemaEnhancements()`), `src/lib/eventTicketMail.ts` (Server: .pkpass laden, Entwurf anlegen), Routen `/api/admin/event-tickets[/[id]|/mail]`.
+- **Je Ticket:** Spielangaben (leer = aus dem verknüpften Event via `eventDefaults()`), Platz, Wallet-Links, Empfänger, `branding` (`ft` | `neutral` = White-Label ohne Faltin-Spuren), `lang` (`de` | `en`), `hide_holder` (keine Zeile «Ticket auf», neutrale Anrede – z. B. für Wiederverkäufer).
+- **Import:** Tabelle aus der Lieferantenmail einfügen (Outlook liefert eine Zelle pro Zeile); `type=0` = Apple (.pkpass), `type=1` = Google-Link.
+- **Versand:** nur als Outlook-Entwurf im gewählten Postfach (`sendMessage(draftOnly)`), Bilder als `cid:`-Anhänge (White-Label verrät so keine Faltin-Adresse), .pkpass optional angehängt. Gesendet wird von einem Menschen in Outlook.
+
 ## Wichtige Komponenten
 - `src/components/event/EventPageView.tsx` — rendert alle Event-Module (live-editierbar via `EventLiveEditor`).
 - `src/components/PackageCardPro.tsx` — professionelle Paketkarte (Leistungs-Checkliste).
