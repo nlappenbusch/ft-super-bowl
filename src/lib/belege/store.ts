@@ -386,7 +386,7 @@ async function derive(r: Row, userFields: Set<string>): Promise<Partial<Row>> {
   const cur = r.currency || 'CHF';
   if (!userFields.has('account') && r.category) out.account = kontoFuerKategorie(r.category, r.country);
   const account = (out.account ?? r.account) as string;
-  if (!userFields.has('contra_account') && r.payment) out.contra_account = gegenkonto(r.payment, cur, r.created_by_email, getRegeln());
+  if (!userFields.has('contra_account')) out.contra_account = r.payment ? gegenkonto(r.payment, cur, r.created_by_email, getRegeln()) : '';
 
   // MWST: genau ein Satz → aus Bruttobetrag rechnen (bleibt stimmig, wenn sich der Betrag ändert)
   const lines = parseJson<VatLine[]>(r.vat_lines, []);

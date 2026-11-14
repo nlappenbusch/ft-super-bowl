@@ -249,10 +249,10 @@ export default function ReceiptEditor({
 
       {/* Foto (Handy) mit Scan-Animation */}
       {!desk && (
-        <a href={fileUrl(r)} target="_blank" rel="noreferrer" className="relative block overflow-hidden rounded-3xl bg-slate-900" style={{ height: isImage ? 220 : 120 }}>
+        <a href={fileUrl(r)} target="_blank" rel="noreferrer" className="relative block overflow-hidden rounded-3xl bg-slate-900" style={{ height: isImage ? 260 : 120 }}>
           {isImage ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={fileUrl(r, true)} alt="Beleg" className="h-full w-full object-cover opacity-90" />
+            <img src={fileUrl(r, true)} alt="Beleg" className="h-full w-full object-contain" />
           ) : (
             <div className="flex h-full items-center justify-center gap-2 text-white/80"><span className="text-4xl">📄</span><span className="font-semibold">{r.file_name}</span></div>
           )}

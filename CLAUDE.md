@@ -217,8 +217,17 @@ Abzeichen, Jackpot), damit sofortiges Erfassen Spass macht.
 - **Ablauf:** eingang → (Erfasser „Fertig“) erfasst → Buchhaltung: freigegeben | Rückfrage → Export
   (`POST /api/admin/belege/export` markiert «verbucht»). Freigabe legt bei Event/Anfrage einen Eintrag in
   `expenses` an (Finanzen). Prüfende = Admins + localadmin.
+- **Kamera + Zuschnitt (Handy):** `CameraCapture.tsx` öffnet die Live-Kamera (getUserMedia, Rückkamera, Licht,
+  volle Auflösung per `ImageCapture.takePhoto()` wo verfügbar), sucht den Beleg ca. 6×/s im Sucher und löst
+  automatisch aus, wenn er ~1 s ruhig liegt (Schalter «Auto»). Auf dem Handy startet sie beim Öffnen der App
+  (abschaltbar im Sucher, `localStorage`), `?kamera=1` erzwingt den Start. `CropReview.tsx` zeigt den erkannten
+  Ausschnitt mit verschiebbaren Ecken; «Übernehmen» entzerrt perspektivisch und hebt den Kontrast an.
+  Erkennung/Entzerrung als reine Logik in `lib/belege/scan.ts` (Otsu-Schwelle, Morphologie, grösste helle
+  Fläche → 4 Ecken, Homographie), Browser-Teil `components/belege/scanDom.ts`. Ohne Kamera-Freigabe bzw.
+  ohne getUserMedia greift die normale Dateiauswahl; einzelne Fotos aus der Galerie laufen ebenfalls durch
+  den Zuschnitt.
 - **Build:** `next.config.ts` hat `serverExternalPackages` + `outputFileTracingIncludes` für tesseract.js
-  (Standalone-Output). **Tests:** `tests/belege.test.ts`.
+  (Standalone-Output). **Tests:** `tests/belege.test.ts`, `tests/belegeScan.test.ts`.
 
 ## DERTOUR-Suche (Traffics Connector API v3) in der Kalkulation
 - **Code:** `src/lib/trafficsModel.ts` (reine Logik: Parameter, Query, Antwort → Treffer, Treffer → Positionen; Tests in `tests/`, `npm test`), `src/lib/traffics.ts` (Server: Fetch, Cache, Drossel), Routen `/api/admin/traffics/{config,search,verify}`, Panel `components/admin/TrafficsSearchPanel.tsx` im Kalkulations-Editor.
